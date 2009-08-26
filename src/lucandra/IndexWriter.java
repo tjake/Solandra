@@ -2,10 +2,12 @@ package lucandra;
 
 import java.io.IOException;
 import java.io.StringReader;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import org.apache.cassandra.service.BatchMutationSuper;
 import org.apache.cassandra.service.Cassandra;
@@ -25,12 +27,8 @@ import org.apache.lucene.index.Term;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Similarity;
 import org.apache.thrift.TException;
-import org.apache.thrift.protocol.TBinaryProtocol;
-import org.apache.thrift.protocol.TProtocol;
-import org.apache.thrift.transport.TFramedTransport;
-import org.apache.thrift.transport.TSocket;
-import org.apache.thrift.transport.TTransport;
-import org.apache.thrift.transport.TTransportException;
+
+import com.sun.xml.internal.fastinfoset.algorithm.UUIDEncodingAlgorithm;
 
 public class IndexWriter {
 
@@ -66,14 +64,11 @@ public class IndexWriter {
         List<SuperColumn> docs = new ArrayList<SuperColumn>();
         cfMap.put("Documents", docs);
               
-        
-        //Hack! using hashCode of string representation of document.
-        //the String.hashCode is generally consistent across JVMs 
-        //see http://www.terracotta.org/web/display/docs/Gotchas
-        byte[] docId = CassandraUtils.intToByteArray(doc.toString().hashCode());
+        byte[] docId = CassandraUtils.randomUUID();
         
         SuperColumn docColumn = new SuperColumn();
         docColumn.setName(docId);
+        docColumn.setColumns(new ArrayList<Column>());
         docs.add(docColumn);
         
         for (Field field : (List<Field>) doc.getFields()) {
@@ -97,11 +92,10 @@ public class IndexWriter {
                     Integer freq = termDocFreq.get(term);
                     
                     if(freq == null){
-                        freq = new Integer(0);
-                        termDocFreq.put(term, freq);
+                        freq = new Integer(0);                      
                     }
                     
-                    freq++;
+                    termDocFreq.put(term, ++freq);
                 }
             
                 for(Map.Entry<String,Integer> term : termDocFreq.entrySet()){
@@ -112,7 +106,7 @@ public class IndexWriter {
                     //Add to terms table
                     terms.add(termColumn);                  
                                      
-                    Column idColumn = new Column(docId,term.getValue().toString().getBytes(),System.currentTimeMillis());
+                    Column idColumn = new Column(docId,CassandraUtils.intToByteArray(term.getValue()),System.currentTimeMillis());
                     
                     //add to termColumn
                     termColumn.getColumns().add(idColumn);                   

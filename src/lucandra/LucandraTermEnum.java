@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.cassandra.service.Cassandra;
+import org.apache.cassandra.service.Column;
 import org.apache.cassandra.service.ColumnOrSuperColumn;
 import org.apache.cassandra.service.ColumnParent;
 import org.apache.cassandra.service.ConsistencyLevel;
@@ -20,20 +21,22 @@ import org.apache.thrift.TException;
 
 public class LucandraTermEnum extends TermEnum {
 
+    private final IndexReader      indexReader;
     private final String           indexName;
     private int                    termPosition;       
     private List<Term>             termBuffer;
-    private List<Integer>          termDocFreqBuffer;
+    private List<List<Column>>     termDocFreqBuffer;
     private final int              bufferSize; 
     private final Cassandra.Client    client;
     
-    public LucandraTermEnum(String indexName, Cassandra.Client client){
-        this.indexName  = indexName;
-        this.client     = client;
-        this.bufferSize = 100;
+    public LucandraTermEnum(IndexReader indexReader){
+        this.indexReader= indexReader;
+        this.indexName  = indexReader.getIndexName();
+        this.client     = indexReader.getClient();
+        this.bufferSize = 128;
         this.termPosition = 0;
         this.termBuffer        = new ArrayList<Term>(bufferSize);
-        this.termDocFreqBuffer = new ArrayList<Integer>(bufferSize);
+        this.termDocFreqBuffer = new ArrayList<List<Column>>(bufferSize);
     }
     
     @Override
@@ -51,7 +54,7 @@ public class LucandraTermEnum extends TermEnum {
 
     @Override
     public int docFreq() {
-        return termDocFreqBuffer.get(termPosition);
+        return termDocFreqBuffer.get(termPosition).size();
     }
 
     @Override
@@ -63,12 +66,7 @@ public class LucandraTermEnum extends TermEnum {
             termPosition++;
         }
         
-        if(termPosition < termBuffer.size()){
-            return true;
-        }else{
-            return false;
-        }
-        
+        return termPosition < termBuffer.size();        
     }
 
     @Override
@@ -80,7 +78,7 @@ public class LucandraTermEnum extends TermEnum {
         
       
         ColumnParent columnParent = new ColumnParent();
-        columnParent.setSuper_column(CassandraUtils.termColumn);
+        columnParent.setColumn_family(CassandraUtils.termColumn);
       
         
         //create predicate
@@ -103,6 +101,7 @@ public class LucandraTermEnum extends TermEnum {
         }
         
         sliceRange.setStart(startTerm.getBytes());
+        sliceRange.setFinish("zzz".getBytes());
         sliceRange.setCount(bufferSize);
         
         List<ColumnOrSuperColumn> termColumns;
@@ -125,10 +124,14 @@ public class LucandraTermEnum extends TermEnum {
             SuperColumn termSuperColumn = termColumn.getSuper_column();
             
             termBuffer.add(CassandraUtils.parseTerm(termSuperColumn.getName()));
-            termDocFreqBuffer.add(termSuperColumn.getColumns().size());
+            termDocFreqBuffer.add(termSuperColumn.getColumns());
         }
         
         termPosition = 0;
+    }
+    
+    public final List<Column> getTermDocFreq() {
+        return termDocFreqBuffer.get(termPosition);
     }
     
 }

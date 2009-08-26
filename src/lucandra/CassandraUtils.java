@@ -1,6 +1,8 @@
 package lucandra;
 
 import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
+import java.util.UUID;
 
 import org.apache.cassandra.service.Cassandra;
 import org.apache.lucene.index.Term;
@@ -14,14 +16,14 @@ import org.apache.thrift.transport.TTransportException;
 public class CassandraUtils {
     
     public static final String keySpace  = "Lucandra";
-    public static final byte[] termColumn = "Terms".getBytes();
-    public static final byte[] docColumn  = "Documents".getBytes();
+    public static final String termColumn = "Terms";
+    public static final String docColumn  = "Documents";
 
     public static final String delimeter = "|x|";
     
     public static Cassandra.Client createConnection() throws TTransportException {
       // temporarily connect to cassandra
-      TSocket socket = new TSocket("localhost", 1960);
+      TSocket socket = new TSocket("localhost", 9160);
       TTransport trans = new TFramedTransport(socket);
       trans.open();
       TProtocol protocol = new TBinaryProtocol(trans);
@@ -66,5 +68,14 @@ public class CassandraUtils {
                 + ((b[1] & 0xFF) << 16)
                 + ((b[2] & 0xFF) << 8)
                 + (b[3] & 0xFF);
+    }
+    
+    public static final byte[] randomUUID(){
+      
+        ByteBuffer buffer = ByteBuffer.allocate(16);
+        UUID docUUID = UUID.randomUUID();
+        buffer.putLong(docUUID.getMostSignificantBits());
+        buffer.putLong(docUUID.getLeastSignificantBits());
+        return buffer.array();        
     }
 }

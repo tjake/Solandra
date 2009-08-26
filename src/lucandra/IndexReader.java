@@ -1,7 +1,10 @@
 package lucandra;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 
 import org.apache.cassandra.service.Cassandra;
 import org.apache.cassandra.service.ColumnParent;
@@ -16,19 +19,21 @@ import org.apache.lucene.index.TermEnum;
 import org.apache.lucene.index.TermFreqVector;
 import org.apache.lucene.index.TermPositions;
 import org.apache.lucene.index.TermVectorMapper;
+import org.apache.lucene.search.DefaultSimilarity;
 import org.apache.thrift.TException;
 import org.apache.thrift.transport.TTransportException;
 
 public class IndexReader extends org.apache.lucene.index.IndexReader {
 
-    private final String keySpace = "Lucandra";
     private final String indexName; 
     private final Cassandra.Client client;
+    private final List<byte[]>   documents;
     
     public IndexReader(String name, Cassandra.Client client) throws TTransportException {
        super();
        this.indexName = name;
        this.client    = client;
+       this.documents = new ArrayList<byte[]>();
     }
     
     @Override
@@ -59,11 +64,11 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     @Override
     public int docFreq(Term term) throws IOException {
         ColumnParent columnParent = new ColumnParent();
-        columnParent.setSuper_column("Terms".getBytes());
-        columnParent.setColumn_family(term.field()+"|x|"+term.text());
+        columnParent.setColumn_family(CassandraUtils.termColumn);
+        columnParent.setSuper_column(CassandraUtils.createColumnName(term).getBytes());
         
         try {
-            return client.get_count(keySpace, indexName, columnParent, ConsistencyLevel.ONE);
+            return client.get_count(CassandraUtils.keySpace, indexName, columnParent, ConsistencyLevel.ONE);
         } catch (TException e) {
             throw new RuntimeException(e);
         } catch (InvalidRequestException e) {
@@ -75,14 +80,13 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     public Document document(int docNum, FieldSelector selector) throws CorruptIndexException, IOException {
         
         byte[] docId = CassandraUtils.intToByteArray(docNum);
-        client.get_slice(CassandraUtils.keySpace, indexName, column_parent, predicate, consistency_level)
-        
+        //client.get_slice(CassandraUtils.keySpace, indexName, column_parent, predicate, consistency_level)
+        return null;
     }
     
     @Override
     public Collection getFieldNames(FieldOption arg0) {
-        // TODO Auto-generated method stub
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -127,8 +131,10 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     }
 
     @Override
-    public byte[] norms(String arg0) throws IOException {
-        return null;
+    public byte[] norms(String term) throws IOException {        
+        byte[] ones = new byte[this.maxDoc()];
+        Arrays.fill(ones, DefaultSimilarity.encodeNorm(1.0f));
+        return ones;
     }
 
     @Override
@@ -140,10 +146,10 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     @Override
     public int numDocs() {
         ColumnParent columnParent = new ColumnParent();
-        columnParent.setSuper_column("Documents".getBytes());
+        columnParent.setColumn_family(CassandraUtils.docColumn);
 
         try {
-            return client.get_count(keySpace, indexName, columnParent, ConsistencyLevel.ONE);
+            return client.get_count(CassandraUtils.keySpace, indexName, columnParent, ConsistencyLevel.ONE);
         } catch (TException e) {
             throw new RuntimeException(e);
         } catch (InvalidRequestException e) {
@@ -153,8 +159,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     @Override
     public TermDocs termDocs() throws IOException {
-        // TODO Auto-generated method stub
-        return null;
+        return new LucandraTermDocs(this);
     }
 
     @Override
@@ -165,14 +170,27 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     @Override
     public TermEnum terms() throws IOException {
-        return new LucandraTermEnum(indexName, client);
+        return new LucandraTermEnum(this);
     }
 
     @Override
     public TermEnum terms(Term term) throws IOException {
-       TermEnum termEnum = new LucandraTermEnum(indexName,client);
+       TermEnum termEnum = new LucandraTermEnum(this);
        
        return termEnum.skipTo(term) ? termEnum : null;
+    }
+
+    public int addDocument(byte[] docId){
+        documents.add(docId);
+        return documents.size()-1;
+    }
+    
+    public String getIndexName() {
+        return indexName;
+    }
+
+    public Cassandra.Client getClient() {
+        return client;
     }
 
 }
