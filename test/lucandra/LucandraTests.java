@@ -22,36 +22,62 @@ public class LucandraTests extends TestCase {
             String indexName = String.valueOf(System.nanoTime());
             Analyzer analyzer = new StandardAnalyzer();
             Cassandra.Client client = CassandraUtils.createConnection();
-            IndexWriter indexWriter = new IndexWriter(indexName, analyzer, client);
+            IndexWriter indexWriter = new IndexWriter(indexName, client);
             
             Document doc1 = new Document();
-            Field f = new Field("key","this is an example value foobar",Field.Store.YES,Field.Index.ANALYZED_NO_NORMS);
+            Field f = new Field("key","this is an example value foobar",Field.Store.YES,Field.Index.ANALYZED);
             doc1.add(f);
             
-            indexWriter.addDocument(doc1);
+            indexWriter.addDocument(doc1,analyzer);
            
             
             Document doc2 = new Document();
-            Field f2 = new Field("key","this is another example",Field.Store.YES,Field.Index.ANALYZED_NO_NORMS);
+            Field f2 = new Field("key","this is another example",Field.Store.YES,Field.Index.ANALYZED);
             doc2.add(f2);
-            indexWriter.addDocument(doc2);
+            indexWriter.addDocument(doc2,analyzer);
+            
+            Document doc3 = new Document();
+            Field f3 = new Field("text","social marketers are the cockroach of the internet",Field.Store.YES,Field.Index.ANALYZED);
+            doc3.add(f3);
+            indexWriter.addDocument(doc3,analyzer);
+            
             
             ColumnParent columnParent = new ColumnParent();
-            columnParent.setColumn_family("Terms");
+            columnParent.setColumn_family(CassandraUtils.termVecColumn);
             
-            assertEquals(4,client.get_count(CassandraUtils.keySpace, indexName, columnParent, ConsistencyLevel.ONE));
+            //assertEquals(4,client.get_count(CassandraUtils.keySpace, indexName, columnParent, ConsistencyLevel.ONE));
             
             
             IndexReader   indexReader = new IndexReader(indexName,client);
             IndexSearcher searcher = new IndexSearcher(indexReader);
             
             
-            QueryParser qp = new QueryParser("key",analyzer);
-            Query q = qp.parse("+key:example");
+            QueryParser qp = new QueryParser("text",analyzer);
+            Query q = qp.parse("+text:social");
             
             TopDocs docs = searcher.search(q,10);
+                    
+            assertEquals(1,docs.totalHits);
+           
+            //Document doc = searcher.doc(docs.scoreDocs[0].doc);
             
-            assertEquals(2,docs.totalHits);
+            //assertTrue(doc.getField("key") != null);
+            
+            
+//            //check something that doesn't exist
+//            q = qp.parse("+key:bogus");            
+//            docs = searcher.search(q,10);
+//                    
+//            assertEquals(0,docs.totalHits);
+//           
+//            
+//            //check wildcard
+//            q = qp.parse("+key:anoth*");
+//            docs = searcher.search(q,10);
+//            
+//            assertEquals(1,docs.totalHits);
+//           
+            
             
         } catch (Exception e) {
             e.printStackTrace();

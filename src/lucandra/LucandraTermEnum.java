@@ -2,6 +2,7 @@ package lucandra;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.cassandra.service.Cassandra;
@@ -15,7 +16,6 @@ import org.apache.cassandra.service.SlicePredicate;
 import org.apache.cassandra.service.SliceRange;
 import org.apache.cassandra.service.SuperColumn;
 import org.apache.lucene.index.Term;
-import org.apache.lucene.index.TermDocs;
 import org.apache.lucene.index.TermEnum;
 import org.apache.thrift.TException;
 
@@ -40,11 +40,10 @@ public class LucandraTermEnum extends TermEnum {
     }
     
     @Override
-    public boolean skipTo(Term term){
+    public boolean skipTo(Term term) throws IOException{
         loadTerms(term);
-        
+          
         return termBuffer.isEmpty() ? false : true;
-            
     }
      
     @Override
@@ -78,7 +77,7 @@ public class LucandraTermEnum extends TermEnum {
         
       
         ColumnParent columnParent = new ColumnParent();
-        columnParent.setColumn_family(CassandraUtils.termColumn);
+        columnParent.setColumn_family(CassandraUtils.termVecColumn);
       
         
         //create predicate
@@ -131,7 +130,10 @@ public class LucandraTermEnum extends TermEnum {
     }
     
     public final List<Column> getTermDocFreq() {
-        return termDocFreqBuffer.get(termPosition);
+        List<Column> termDocs = termDocFreqBuffer.get(termPosition);
+        Collections.reverse(termDocs);
+        
+        return termDocs;
     }
     
 }

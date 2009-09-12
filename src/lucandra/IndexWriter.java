@@ -2,21 +2,22 @@ package lucandra;
 
 import java.io.IOException;
 import java.io.StringReader;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
-import org.apache.cassandra.service.BatchMutationSuper;
+import org.apache.cassandra.service.BatchMutation;
 import org.apache.cassandra.service.Cassandra;
 import org.apache.cassandra.service.Column;
+import org.apache.cassandra.service.ColumnOrSuperColumn;
 import org.apache.cassandra.service.ColumnParent;
 import org.apache.cassandra.service.ConsistencyLevel;
 import org.apache.cassandra.service.InvalidRequestException;
 import org.apache.cassandra.service.SuperColumn;
 import org.apache.cassandra.service.UnavailableException;
+import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.Token;
 import org.apache.lucene.analysis.TokenStream;
@@ -25,51 +26,50 @@ import org.apache.lucene.document.Field;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.Query;
-import org.apache.lucene.search.Similarity;
 import org.apache.thrift.TException;
-
-import com.sun.xml.internal.fastinfoset.algorithm.UUIDEncodingAlgorithm;
 
 public class IndexWriter {
 
-    private final String keySpace = "Lucandra";
     private final String indexName;
-    private final Analyzer analyzer;
     private final Cassandra.Client client;
-    private final Similarity similarity;
 
-    public IndexWriter(String name, Analyzer a, Cassandra.Client client)  {
+    private static final Logger logger = Logger.getLogger(IndexWriter.class);
 
-        this.indexName = name;
-        this.analyzer = a;
-        this.similarity = Similarity.getDefault();
-        this.client = client;
+    public IndexWriter(String indexName, Cassandra.Client client)  {
+
+        this.indexName = indexName;
+        this.client    = client;
 
     }
 
-    public void addDocument(Document doc) throws CorruptIndexException, IOException {
+    public void addDocument(Document doc, Analyzer analyzer) throws CorruptIndexException, IOException {
 
         Token token = new Token();
        
         //Build wacky batch struct
-        BatchMutationSuper inserts = new BatchMutationSuper();
+        BatchMutation inserts = new BatchMutation();
         inserts.setKey(indexName);
         
-        Map<String, List<SuperColumn>> cfMap = new HashMap<String, List<SuperColumn>>();
-        inserts.setCfmap(cfMap);
+        Map<String, List<ColumnOrSuperColumn>> cfMap = new HashMap<String, List<ColumnOrSuperColumn>>();
+        inserts.setCfmap(cfMap);      
         
-        List<SuperColumn> terms = new ArrayList<SuperColumn>();
-        cfMap.put("Terms", terms);
+        List<ColumnOrSuperColumn> termVec = new ArrayList<ColumnOrSuperColumn>();
+        cfMap.put(CassandraUtils.termVecColumn, termVec);
         
-        List<SuperColumn> docs = new ArrayList<SuperColumn>();
-        cfMap.put("Documents", docs);
+        List<ColumnOrSuperColumn> docs = new ArrayList<ColumnOrSuperColumn>();
+        cfMap.put(CassandraUtils.docColumn, docs);
               
-        byte[] docId = CassandraUtils.randomUUID();
+        
+        Long.valueOf(System.nanoTime()).byteValue();
+        
+        byte[] docId = CassandraUtils.encodeLong(System.nanoTime());
         
         SuperColumn docColumn = new SuperColumn();
         docColumn.setName(docId);
         docColumn.setColumns(new ArrayList<Column>());
-        docs.add(docColumn);
+        docs.add(new ColumnOrSuperColumn(null,docColumn));
+        
+        int position = 0;
         
         for (Field field : (List<Field>) doc.getFields()) {
 
@@ -83,34 +83,56 @@ public class IndexWriter {
                 }
 
                 //collect term frequencies per doc
-                Map<String,Integer> termDocFreq = new HashMap<String,Integer>();
+                Map<String,List<Integer>> termPositions = new HashMap<String,List<Integer>>();
+                int lastOffset = 0;
+                if(position > 0){
+                    position += analyzer.getPositionIncrementGap(field.name());
+                }
                 
-                while (tokens.next(token) != null) {
-                    //may need to l/r pad this
+                while (tokens.next(token) != null) {                   
                     String term = CassandraUtils.createColumnName(field.name(), token.term());
+                    logger.debug("Indexing term: "+field.name()+":"+token.term());
                     
-                    Integer freq = termDocFreq.get(term);
+                    List<Integer> pvec = termPositions.get(term);
                     
-                    if(freq == null){
-                        freq = new Integer(0);                      
+                    if(pvec == null){
+                        pvec = new ArrayList<Integer>();
+                        termPositions.put(term, pvec);
                     }
                     
-                    termDocFreq.put(term, ++freq);
+                    position += (token.getPositionIncrement() - 1);
+                    pvec.add(++position);
+                    
                 }
             
-                for(Map.Entry<String,Integer> term : termDocFreq.entrySet()){
-                    SuperColumn termColumn = new SuperColumn();
-                    termColumn.setName(term.getKey().getBytes());
-                    termColumn.setColumns(new ArrayList<Column>());
-                   
+                for(Map.Entry<String,List<Integer>> term : termPositions.entrySet()){
+
+                    SuperColumn termVecColumn = new SuperColumn(term.getKey().getBytes(), new ArrayList<Column>());
+                    
                     //Add to terms table
-                    terms.add(termColumn);                  
+                    termVec.add(new ColumnOrSuperColumn(null,termVecColumn));
                                      
-                    Column idColumn = new Column(docId,CassandraUtils.intToByteArray(term.getValue()),System.currentTimeMillis());
+                    //stores the freq count
+                    Column vecColumn  = new Column(docId,CassandraUtils.intVectorToByteArray(term.getValue()),System.currentTimeMillis());
                     
                     //add to termColumn
-                    termColumn.getColumns().add(idColumn);                   
+                    termVecColumn.getColumns().add(vecColumn);
                 }
+            }
+            
+            if( field.isIndexed() && !field.isTokenized()) {
+                String term = CassandraUtils.createColumnName(field.name(), field.stringValue());
+                
+                SuperColumn termVecColumn = new SuperColumn(term.getBytes(), new ArrayList<Column>());
+                
+                //Add to terms table
+                termVec.add(new ColumnOrSuperColumn(null,termVecColumn));
+                                 
+                //stores the freq count
+                Column vecColumn  = new Column(docId,CassandraUtils.intVectorToByteArray(Arrays.asList(new Integer[]{0})),System.currentTimeMillis());
+                
+                //add to termColumn
+                termVecColumn.getColumns().add(vecColumn);
             }
             
             if( field.isStored() ) {
@@ -125,7 +147,9 @@ public class IndexWriter {
         
         //send document
         try {
-            client.batch_insert_super_column(keySpace, inserts, ConsistencyLevel.ONE);
+            long startTime = System.currentTimeMillis();
+            client.batch_insert(CassandraUtils.keySpace, inserts, ConsistencyLevel.ZERO);
+            logger.info("Inserted in "+(startTime - System.currentTimeMillis())/1000+"ms" );
         } catch (TException e) {
             throw new RuntimeException(e);
         } catch (InvalidRequestException e) {
@@ -136,19 +160,19 @@ public class IndexWriter {
     }
 
     public void deleteDocuments(Query query) throws CorruptIndexException, IOException {
-        
+        throw new UnsupportedOperationException();
     }
 
     public void deleteDocuments(Term arg0) throws CorruptIndexException, IOException {
-
+        throw new UnsupportedOperationException();
     }
 
     public int docCount() {
         ColumnParent columnParent = new ColumnParent();
-        columnParent.setSuper_column("Documents".getBytes());
+        columnParent.setColumn_family(CassandraUtils.docColumn);
 
         try {
-            return client.get_count(keySpace, indexName, columnParent, ConsistencyLevel.ONE);
+            return client.get_count(CassandraUtils.keySpace, indexName, columnParent, ConsistencyLevel.ONE);    
         } catch (TException e) {
             throw new RuntimeException(e);
         } catch (InvalidRequestException e) {

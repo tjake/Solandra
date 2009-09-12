@@ -2,6 +2,7 @@ package lucandra;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.UUID;
 
 import org.apache.cassandra.service.Cassandra;
@@ -14,68 +15,128 @@ import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
 
 public class CassandraUtils {
-    
-    public static final String keySpace  = "Lucandra";
-    public static final String termColumn = "Terms";
-    public static final String docColumn  = "Documents";
+
+    public static final String keySpace = "Lucandra";
+    public static final String termVecColumn = "TermVectors";
+    public static final String docColumn = "Documents";
 
     public static final String delimeter = "|x|";
-    
-    public static Cassandra.Client createConnection() throws TTransportException {
-      // temporarily connect to cassandra
-      TSocket socket = new TSocket("localhost", 9160);
-      TTransport trans = new TFramedTransport(socket);
-      trans.open();
-      TProtocol protocol = new TBinaryProtocol(trans);
 
-      return new Cassandra.Client(protocol);
+    public static Cassandra.Client createConnection() throws TTransportException {
+        // temporarily connect to cassandra
+        TSocket socket = new TSocket("localhost", 9160);
+        TTransport trans = new TFramedTransport(socket);
+        trans.open();
+        TProtocol protocol = new TBinaryProtocol(trans);
+
+        return new Cassandra.Client(protocol);
     }
-    
-    public static String createColumnName(Term term){
+
+    public static String createColumnName(Term term) {
         return createColumnName(term.field(), term.text());
     }
-    
-    public static String createColumnName(String field, String text){
-        return field+delimeter+text;
-    }
-    
-    public static Term parseTerm(byte[] termStr){
-        String[] parts = null;
-        
-        try{
-            parts = new String(termStr,"UTF-8").split("\\|x\\|");
-        }catch(UnsupportedEncodingException e){
-            throw new RuntimeException(e);
-        }
-        
-        if(parts == null || parts.length != 2){
-            throw new RuntimeException("invalid term format: "+termStr);
-        }
-        
-        return new Term(parts[0],parts[1]);
-    }
-    
-    public static final byte[] intToByteArray(int value) {
-        return new byte[] {
-                (byte)(value >>> 24),
-                (byte)(value >>> 16),
-                (byte)(value >>> 8),
-                (byte)value};
+
+    public static String createColumnName(String field, String text) {
+        return field + delimeter + text;
     }
 
-    public static final int byteArrayToInt(byte [] b) {
-        return (b[0] << 24)
-                + ((b[1] & 0xFF) << 16)
-                + ((b[2] & 0xFF) << 8)
-                + (b[3] & 0xFF);
+    public static Term parseTerm(byte[] termStr) {
+        String[] parts = null;
+
+        try {
+            parts = new String(termStr, "UTF-8").split("\\|x\\|");
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
+        }
+
+        if (parts == null || parts.length != 2) {
+            throw new RuntimeException("invalid term format: " + termStr);
+        }
+
+        return new Term(parts[0], parts[1]);
+    }
+
+    public static final byte[] intToByteArray(int value) {
+        return new byte[] { (byte) (value >>> 24), (byte) (value >>> 16), (byte) (value >>> 8), (byte) value };
+    }
+
+    public static final int byteArrayToInt(byte[] b) {
+        return (b[0] << 24) + ((b[1] & 0xFF) << 16) + ((b[2] & 0xFF) << 8) + (b[3] & 0xFF);
+    }
+
+    public static final byte[] intVectorToByteArray(List<Integer> intVector) {
+        ByteBuffer buffer = ByteBuffer.allocate(4 * intVector.size());
+
+        for (int i : intVector) {
+            buffer.putInt(i);
+        }
+
+        return buffer.array();
+    }
+
+    public static boolean compareByteArrays(byte[] a, byte[] b) {
+
+        if (a.length != b.length)
+            return false;
+
+        for (int i = 0; i < a.length; i++) {
+            if (a[i] != b[i])
+                return false;
+        }
+
+        return true;
+
+    }
+
+    public static final int[] byteArrayToIntArray(byte[] b) {
+
+        if (b.length % 4 != 0)
+            throw new RuntimeException("Not a valid int array:" + b.length);
+
+        int[] intArray = new int[b.length / 4];
+        int idx = 0;
+
+        for (int i = 0; i < b.length; i += 4) {
+            intArray[idx] = (b[i] << 24) + ((b[i + 1] & 0xFF) << 16) + ((b[i + 2] & 0xFF) << 8) + (b[i + 3] & 0xFF);
+        }
+
+        return intArray;
+    }
+
+    public static final byte[] encodeLong(long l){
+        ByteBuffer buffer = ByteBuffer.allocate(8);
+        
+        buffer.putLong(l);
+        
+        return buffer.array();
     }
     
-    public static final byte[] randomUUID(){
-      
+    public static final long decodeLong(byte[] bytes){
+        
+        if(bytes.length != 8)
+            throw new RuntimeException("must be 8 bytes");
+        
+        ByteBuffer buffer = ByteBuffer.wrap(bytes);
+        
+        return buffer.getLong();
+    }
+    
+    public static final byte[] encodeUUID(UUID docUUID) {
+
         ByteBuffer buffer = ByteBuffer.allocate(16);
-        UUID docUUID = UUID.randomUUID();
+       
         buffer.putLong(docUUID.getMostSignificantBits());
         buffer.putLong(docUUID.getLeastSignificantBits());
-        return buffer.array();        
+        return buffer.array();
     }
+    
+    public static final UUID readUUID(byte[] bytes){
+        
+        if(bytes.length != 16)
+            throw new RuntimeException("uuid must be exactly 16 bytes");
+        
+        return UUID.nameUUIDFromBytes(bytes);
+              
+    }
+
 }

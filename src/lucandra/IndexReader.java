@@ -4,14 +4,21 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.cassandra.service.Cassandra;
+import org.apache.cassandra.service.ColumnOrSuperColumn;
 import org.apache.cassandra.service.ColumnParent;
 import org.apache.cassandra.service.ConsistencyLevel;
 import org.apache.cassandra.service.InvalidRequestException;
+import org.apache.cassandra.service.SlicePredicate;
+import org.apache.cassandra.service.SliceRange;
 import org.apache.lucene.document.Document;
+import org.apache.lucene.document.Field;
 import org.apache.lucene.document.FieldSelector;
+import org.apache.lucene.document.Field.Store;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.TermDocs;
@@ -21,24 +28,28 @@ import org.apache.lucene.index.TermPositions;
 import org.apache.lucene.index.TermVectorMapper;
 import org.apache.lucene.search.DefaultSimilarity;
 import org.apache.thrift.TException;
-import org.apache.thrift.transport.TTransportException;
 
 public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     private final String indexName; 
     private final Cassandra.Client client;
-    private final List<byte[]>   documents;
+    private final Set<Long>   documentSet;
+    private final List<Long>  documents;
+   
     
-    public IndexReader(String name, Cassandra.Client client) throws TTransportException {
+    public IndexReader(String name, Cassandra.Client client) {
        super();
        this.indexName = name;
        this.client    = client;
-       this.documents = new ArrayList<byte[]>();
+       
+       documents   = new ArrayList<Long>();
+       documentSet = new HashSet<Long>();
     }
     
     @Override
     protected void doClose() throws IOException {
-        //nothing
+        documents.clear();
+        documentSet.clear();
     }
 
     @Override
@@ -64,7 +75,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     @Override
     public int docFreq(Term term) throws IOException {
         ColumnParent columnParent = new ColumnParent();
-        columnParent.setColumn_family(CassandraUtils.termColumn);
+        columnParent.setColumn_family(CassandraUtils.termVecColumn);
         columnParent.setSuper_column(CassandraUtils.createColumnName(term).getBytes());
         
         try {
@@ -79,9 +90,32 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     @Override
     public Document document(int docNum, FieldSelector selector) throws CorruptIndexException, IOException {
         
-        byte[] docId = CassandraUtils.intToByteArray(docNum);
-        //client.get_slice(CassandraUtils.keySpace, indexName, column_parent, predicate, consistency_level)
-        return null;
+        byte[] docId = CassandraUtils.encodeLong(documents.get(docNum));    
+        
+        ColumnParent columnParent = new ColumnParent();
+        columnParent.setColumn_family(CassandraUtils.docColumn);
+        columnParent.setSuper_column(docId);
+        
+        SlicePredicate slicePredicate = new SlicePredicate();
+       
+        slicePredicate.setSlice_range(new SliceRange(new byte[]{},new byte[]{},false,100));
+        
+        try{
+            List<ColumnOrSuperColumn> cols = client.get_slice(CassandraUtils.keySpace, indexName, columnParent, slicePredicate, ConsistencyLevel.ONE);
+        
+            Document doc = new Document();
+            for(ColumnOrSuperColumn col : cols){
+                Field field = new Field(new String(col.column.name,"UTF-8"), col.column.value,Store.YES);
+                
+                doc.add(field);
+            }
+            
+            return doc;
+            
+        }catch(Exception e){
+            throw new IOException(e);
+        }
+        
     }
     
     @Override
@@ -164,8 +198,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     @Override
     public TermPositions termPositions() throws IOException {
-        // TODO Auto-generated method stub
-        return null;
+        return new LucandraTermDocs(this);
     }
 
     @Override
@@ -181,9 +214,25 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     }
 
     public int addDocument(byte[] docId){
-        documents.add(docId);
-        return documents.size()-1;
+        
+        long id = CassandraUtils.decodeLong(docId);
+             
+        if(!documents.contains(id)){
+            documents.add(id);
+            documentSet.add(id);
+            
+            return documents.size()-1;
+            
+        }
+        
+        return documents.indexOf(id);       
     }
+    
+    public long getDocumentId(int docNum){
+        return documents.get(docNum);
+    }
+    
+   
     
     public String getIndexName() {
         return indexName;
