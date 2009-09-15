@@ -1,6 +1,7 @@
 package lucandra;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -28,6 +29,7 @@ public class LucandraTermEnum extends TermEnum {
     private List<List<Column>>     termDocFreqBuffer;
     private final int              bufferSize; 
     private final Cassandra.Client    client;
+    private String savedSkipTo = null;
     
     public LucandraTermEnum(IndexReader indexReader){
         this.indexReader= indexReader;
@@ -42,7 +44,7 @@ public class LucandraTermEnum extends TermEnum {
     @Override
     public boolean skipTo(Term term) throws IOException{
         loadTerms(term);
-          
+       
         return termBuffer.isEmpty() ? false : true;
     }
      
@@ -59,7 +61,7 @@ public class LucandraTermEnum extends TermEnum {
     @Override
     public boolean next() throws IOException {
         
-        if(termPosition >= termBuffer.size() && termBuffer.size()<bufferSize){
+        if(termPosition >= (termBuffer.size()-1) && termBuffer.size() >= bufferSize){
             loadTerms(null);
         }else{
             termPosition++;
@@ -91,6 +93,8 @@ public class LucandraTermEnum extends TermEnum {
         if(skipTo != null ){
         
             startTerm = CassandraUtils.createColumnName(skipTo);
+            //this is where we stop;
+            savedSkipTo = startTerm+"zzzzzzzzzzzzzzzzzzzzzzz";
     
         } else if(!termBuffer.isEmpty()){
             Term endTerm = termBuffer.get(termBuffer.size()-1);
@@ -98,9 +102,9 @@ public class LucandraTermEnum extends TermEnum {
                 startTerm = CassandraUtils.createColumnName(endTerm);
             }
         }
-        
+       
         sliceRange.setStart(startTerm.getBytes());
-        sliceRange.setFinish("zzz".getBytes());
+        sliceRange.setFinish(savedSkipTo.getBytes());
         sliceRange.setCount(bufferSize);
         
         List<ColumnOrSuperColumn> termColumns;
@@ -122,6 +126,14 @@ public class LucandraTermEnum extends TermEnum {
         for(ColumnOrSuperColumn termColumn : termColumns){
             SuperColumn termSuperColumn = termColumn.getSuper_column();
             
+            try{
+                if(savedSkipTo.compareToIgnoreCase(new String(termSuperColumn.getName(),"UTF-8")) < 0){
+                    break;
+                }
+            }catch(UnsupportedEncodingException e){
+                throw new RuntimeException(e);
+            }
+            
             termBuffer.add(CassandraUtils.parseTerm(termSuperColumn.getName()));
             termDocFreqBuffer.add(termSuperColumn.getColumns());
         }
@@ -131,6 +143,8 @@ public class LucandraTermEnum extends TermEnum {
     
     public final List<Column> getTermDocFreq() {
         List<Column> termDocs = termDocFreqBuffer.get(termPosition);
+        
+        //reverse time ordering
         Collections.reverse(termDocs);
         
         return termDocs;

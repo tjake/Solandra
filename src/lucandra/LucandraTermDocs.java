@@ -47,6 +47,10 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
 
     @Override
     public boolean next() throws IOException {
+       
+        if(termDocs == null)
+            return false;
+        
         return ++docPosition < termDocs.size();
     }
 
@@ -54,7 +58,7 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
     public int read(int[] docs, int[] freqs) throws IOException {
 
         int i = 0;
-        for (; (termDocs != null && docPosition < termDocs.size() && docPosition < docs.length); i++, docPosition++) {
+        for (; (termDocs != null && docPosition < termDocs.size() && i < docs.length); i++, docPosition++) {
             docs[i] = doc();
             freqs[i] = freq();
         }
@@ -82,7 +86,7 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         if (termEnum instanceof LucandraTermEnum) {
             this.termEnum = (LucandraTermEnum) termEnum;
             termDocs = this.termEnum.getTermDocFreq();
-            docPosition = 0;
+            docPosition = -1;
         } else {
             throw new RuntimeException("TermEnum is not compatable with Lucandra");
         }

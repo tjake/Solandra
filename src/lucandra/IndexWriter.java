@@ -8,7 +8,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.cassandra.service.BatchMutation;
 import org.apache.cassandra.service.Cassandra;
 import org.apache.cassandra.service.Column;
 import org.apache.cassandra.service.ColumnOrSuperColumn;
@@ -47,20 +46,18 @@ public class IndexWriter {
         Token token = new Token();
        
         //Build wacky batch struct
-        BatchMutation inserts = new BatchMutation();
-        inserts.setKey(indexName);
+        //BatchMutation inserts = new BatchMutation();
+        //inserts.setKey(indexName);
         
         Map<String, List<ColumnOrSuperColumn>> cfMap = new HashMap<String, List<ColumnOrSuperColumn>>();
-        inserts.setCfmap(cfMap);      
+        //inserts.setCfmap(cfMap);      
         
         List<ColumnOrSuperColumn> termVec = new ArrayList<ColumnOrSuperColumn>();
         cfMap.put(CassandraUtils.termVecColumn, termVec);
         
         List<ColumnOrSuperColumn> docs = new ArrayList<ColumnOrSuperColumn>();
         cfMap.put(CassandraUtils.docColumn, docs);
-              
         
-        Long.valueOf(System.nanoTime()).byteValue();
         
         byte[] docId = CassandraUtils.encodeLong(System.nanoTime());
         
@@ -91,7 +88,6 @@ public class IndexWriter {
                 
                 while (tokens.next(token) != null) {                   
                     String term = CassandraUtils.createColumnName(field.name(), token.term());
-                    logger.debug("Indexing term: "+field.name()+":"+token.term());
                     
                     List<Integer> pvec = termPositions.get(term);
                     
@@ -148,7 +144,7 @@ public class IndexWriter {
         //send document
         try {
             long startTime = System.currentTimeMillis();
-            client.batch_insert(CassandraUtils.keySpace, inserts, ConsistencyLevel.ZERO);
+            client.batch_insert(CassandraUtils.keySpace, indexName,cfMap, ConsistencyLevel.ZERO);
             logger.info("Inserted in "+(startTime - System.currentTimeMillis())/1000+"ms" );
         } catch (TException e) {
             throw new RuntimeException(e);
