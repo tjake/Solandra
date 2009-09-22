@@ -173,6 +173,8 @@ public class IndexWriter {
             throw new RuntimeException(e);
         } catch (InvalidRequestException e) {
             throw new RuntimeException(e);
+        } catch (UnavailableException e) {
+            throw new RuntimeException(e);
         }
 
     }

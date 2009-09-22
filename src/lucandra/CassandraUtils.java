@@ -24,7 +24,7 @@ public class CassandraUtils {
 
     public static Cassandra.Client createConnection() throws TTransportException {
         // temporarily connect to cassandra
-        TSocket socket = new TSocket("192.168.1.70", 9160);
+        TSocket socket = new TSocket("127.0.0.1", 9160);
         TTransport trans = new TFramedTransport(socket);
         trans.open();
         TProtocol protocol = new TBinaryProtocol(trans);

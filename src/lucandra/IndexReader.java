@@ -4,9 +4,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.cassandra.service.Cassandra;
 import org.apache.cassandra.service.ColumnOrSuperColumn;
@@ -15,6 +18,8 @@ import org.apache.cassandra.service.ConsistencyLevel;
 import org.apache.cassandra.service.InvalidRequestException;
 import org.apache.cassandra.service.SlicePredicate;
 import org.apache.cassandra.service.SliceRange;
+import org.apache.cassandra.service.UnavailableException;
+import org.apache.log4j.Logger;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.FieldSelector;
@@ -29,32 +34,50 @@ import org.apache.lucene.index.TermVectorMapper;
 import org.apache.lucene.search.DefaultSimilarity;
 import org.apache.thrift.TException;
 
+import com.sun.org.apache.xerces.internal.dom.DocumentImpl;
+
 public class IndexReader extends org.apache.lucene.index.IndexReader {
 
-    private final String indexName; 
-    private final Cassandra.Client client;
-    private final Set<Long>   documentSet;
-    private final List<Long>  documents;
-   
-    
-    public IndexReader(String name, Cassandra.Client client) {
-       super();
-       this.indexName = name;
-       this.client    = client;
-       
-       documents   = new ArrayList<Long>();
-       documentSet = new HashSet<Long>();
+    private final static int numDocs = 1000000;
+    private final static byte[] norms = new byte[numDocs];
+    static{
+        Arrays.fill(norms, DefaultSimilarity.encodeNorm(1.0f));
     }
     
+    private final String indexName;
+    private final Cassandra.Client client;
+    private final Map<Long,Integer> docIdToDocIndex;
+    private final Map<Integer,Long> docIndexToDocId;
+    private final AtomicInteger docCounter;
+   
+    private final Map<Term, LucandraTermEnum> termCache;
+
+
+    private static final Logger logger = Logger.getLogger(IndexReader.class);
+
+    public IndexReader(String name, Cassandra.Client client) {
+        super();
+        this.indexName = name;
+        this.client = client;
+
+        docCounter         = new AtomicInteger(0);
+        docIdToDocIndex    = new HashMap<Long,Integer>();
+        docIndexToDocId    = new HashMap<Integer,Long>();
+        
+        termCache = new HashMap<Term, LucandraTermEnum>();
+    }
+
     @Override
     protected void doClose() throws IOException {
-        documents.clear();
-        documentSet.clear();
+        docCounter.set(0);
+        docIdToDocIndex.clear();
+        docIndexToDocId.clear();
+        termCache.clear();
     }
 
     @Override
     protected void doCommit() throws IOException {
-        //nothing
+        // nothing
     }
 
     @Override
@@ -74,50 +97,62 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     @Override
     public int docFreq(Term term) throws IOException {
-        ColumnParent columnParent = new ColumnParent();
-        columnParent.setColumn_family(CassandraUtils.termVecColumn);
-        columnParent.setSuper_column(CassandraUtils.createColumnName(term).getBytes());
-        
-        try {
-            return client.get_count(CassandraUtils.keySpace, indexName, columnParent, ConsistencyLevel.ONE);
-        } catch (TException e) {
-            throw new RuntimeException(e);
-        } catch (InvalidRequestException e) {
-            throw new RuntimeException(e);
+
+        LucandraTermEnum termEnum = termCache.get(term);
+        if (termEnum == null) {
+
+            long start = System.currentTimeMillis();
+
+            termEnum = new LucandraTermEnum(this);
+            termEnum.skipTo(term);
+
+            long end = System.currentTimeMillis();
+
+            //logger.info("docFreq() took: " + (end - start) + "ms");
+
+            termCache.put(term, termEnum);   
         }
+        
+        return termEnum.docFreq();
     }
 
     @Override
     public Document document(int docNum, FieldSelector selector) throws CorruptIndexException, IOException {
-        
-        byte[] docId = CassandraUtils.encodeLong(documents.get(docNum));    
-        
+
+        byte[] docId = CassandraUtils.encodeLong(docIndexToDocId.get(docNum));
+
         ColumnParent columnParent = new ColumnParent();
         columnParent.setColumn_family(CassandraUtils.docColumn);
         columnParent.setSuper_column(docId);
-        
+
         SlicePredicate slicePredicate = new SlicePredicate();
-       
-        slicePredicate.setSlice_range(new SliceRange(new byte[]{},new byte[]{},false,100));
-        
-        try{
+
+        slicePredicate.setSlice_range(new SliceRange(new byte[] {}, new byte[] {}, false, 100));
+
+        long start = System.currentTimeMillis();
+
+        try {
             List<ColumnOrSuperColumn> cols = client.get_slice(CassandraUtils.keySpace, indexName, columnParent, slicePredicate, ConsistencyLevel.ONE);
-        
+
             Document doc = new Document();
-            for(ColumnOrSuperColumn col : cols){
-                Field field = new Field(new String(col.column.name,"UTF-8"), col.column.value,Store.YES);
-                
+            for (ColumnOrSuperColumn col : cols) {
+                Field field = new Field(new String(col.column.name, "UTF-8"), col.column.value, Store.YES);
+
                 doc.add(field);
             }
-            
+
+            long end = System.currentTimeMillis();
+
+            logger.info("Document read took: " + (end - start) + "ms");
+
             return doc;
-            
-        }catch(Exception e){
-            throw new IOException(e);
+
+        } catch (Exception e) {
+            throw new IOException(e.getLocalizedMessage());
         }
-        
+
     }
-    
+
     @Override
     public Collection getFieldNames(FieldOption arg0) {
         throw new UnsupportedOperationException();
@@ -149,26 +184,27 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     @Override
     public boolean hasDeletions() {
-        
+
         return false;
     }
 
     @Override
     public boolean isDeleted(int arg0) {
-        
+
         return false;
     }
 
     @Override
     public int maxDoc() {
-        return numDocs()+1;
+        //if (numDocs == null)
+        //    numDocs();
+
+        return numDocs + 1;
     }
 
     @Override
-    public byte[] norms(String term) throws IOException {        
-        byte[] ones = new byte[this.maxDoc()];
-        Arrays.fill(ones, DefaultSimilarity.encodeNorm(1.0f));
-        return ones;
+    public byte[] norms(String term) throws IOException {
+        return norms;     
     }
 
     @Override
@@ -179,16 +215,33 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     @Override
     public int numDocs() {
+
+        return numDocs;
+        
+        //get count is too slow!!!
+        /*if (numDocs != null)
+            return numDocs;
+
         ColumnParent columnParent = new ColumnParent();
         columnParent.setColumn_family(CassandraUtils.docColumn);
 
         try {
-            return client.get_count(CassandraUtils.keySpace, indexName, columnParent, ConsistencyLevel.ONE);
+            long start = System.currentTimeMillis();
+            int num = client.get_count(CassandraUtils.keySpace, indexName, columnParent, ConsistencyLevel.ONE);
+            long end = System.currentTimeMillis();
+
+            logger.info("numDocs took: " + (end - start) + "ms");
+
+            numDocs = num;
+
+            return numDocs;
         } catch (TException e) {
             throw new RuntimeException(e);
         } catch (InvalidRequestException e) {
             throw new RuntimeException(e);
-        }
+        } catch (UnavailableException e) {
+            throw new RuntimeException(e);
+        } */
     }
 
     @Override
@@ -208,38 +261,57 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     @Override
     public TermEnum terms(Term term) throws IOException {
-       TermEnum termEnum = new LucandraTermEnum(this);
        
-       return termEnum.skipTo(term) ? termEnum : null;
-    }
-
-    public int addDocument(byte[] docId){
+        LucandraTermEnum termEnum = termCache.get(term);
         
-        long id = CassandraUtils.decodeLong(docId);
-             
-        if(!documents.contains(id)){
-            documents.add(id);
-            documentSet.add(id);
-            
-            return documents.size()-1;
+        if(termEnum == null){
+        
+            termEnum = new LucandraTermEnum(this);
+            if( termEnum.skipTo(term) ) 
+                termCache.put(term, termEnum);
+            else
+                termEnum = null;
             
         }
         
-        return documents.indexOf(id);       
+        return termEnum;
     }
-    
-    public long getDocumentId(int docNum){
-        return documents.get(docNum);
+
+    public int addDocument(byte[] docId) {
+
+        long id = CassandraUtils.decodeLong(docId);
+
+        Integer idx = docIdToDocIndex.get(id);
+        
+        if(idx == null){
+            idx = docCounter.incrementAndGet();
+
+            if(idx > numDocs)
+                throw new IllegalStateException("numDocs reached");
+            
+            docIdToDocIndex.put(id, idx);
+            docIndexToDocId.put(idx, id);
+
+            return idx;
+        }
+
+        return idx;
     }
-    
-   
-    
+
+    public long getDocumentId(int docNum) {
+        return docIndexToDocId.get(docNum);
+    }
+
     public String getIndexName() {
         return indexName;
     }
 
     public Cassandra.Client getClient() {
         return client;
+    }
+    
+    public LucandraTermEnum checkTermCache(Term term){
+        return termCache.get(term);
     }
 
 }

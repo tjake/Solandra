@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.cassandra.service.Column;
+import org.apache.log4j.Logger;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.TermDocs;
 import org.apache.lucene.index.TermEnum;
@@ -17,6 +18,7 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
     private int docPosition;
     private int[] termPositionArray;
     private int termPosition;
+    private static final Logger logger = Logger.getLogger(LucandraTermDocs.class);
 
     public LucandraTermDocs(IndexReader indexReader) {
         this.indexReader = indexReader;
@@ -31,14 +33,17 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
 
     @Override
     public int doc() {
-        if(docPosition < 0)
+        if (docPosition < 0)
             docPosition = 0;
-        
-        return indexReader.addDocument(termDocs.get(docPosition).getName());
+
+        int docid = indexReader.addDocument(termDocs.get(docPosition).getName());
+
+        return docid;
     }
 
     @Override
     public int freq() {
+
         termPositionArray = CassandraUtils.byteArrayToIntArray(termDocs.get(docPosition).getValue());
         termPosition = 0;
 
@@ -47,10 +52,10 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
 
     @Override
     public boolean next() throws IOException {
-       
-        if(termDocs == null)
+
+        if (termDocs == null)
             return false;
-        
+
         return ++docPosition < termDocs.size();
     }
 
@@ -68,16 +73,23 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
 
     @Override
     public void seek(Term term) throws IOException {
-        // on a new term so flush the caches??
+        // on a new term so check cached
+        LucandraTermEnum tmp = indexReader.checkTermCache(term);
+        if (tmp == null) {
 
-        if(termEnum.skipTo(term)){
-            if(termEnum.term().compareTo(term) == 0){
-                termDocs = termEnum.getTermDocFreq();            
-            }else{
-                termDocs = null;
+            if (termEnum.skipTo(term)) {
+                if (termEnum.term().compareTo(term) == 0) {
+                    termDocs = termEnum.getTermDocFreq();
+                } else {
+                    termDocs = null;
+                }
             }
+        } else {
+            termEnum = tmp;
+            termEnum.skipTo(term);
+            termDocs = termEnum.getTermDocFreq();
         }
-        
+
         docPosition = -1;
     }
 
@@ -121,8 +133,6 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
     public int nextPosition() throws IOException {
         int pos = termPositionArray[termPosition];
         termPosition++;
-
-        System.err.println(pos);
 
         return pos;
     }
