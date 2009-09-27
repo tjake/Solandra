@@ -1,6 +1,7 @@
 package lucandra;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -46,8 +47,8 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     
     private final String indexName;
     private final Cassandra.Client client;
-    private final Map<Long,Integer> docIdToDocIndex;
-    private final Map<Integer,Long> docIndexToDocId;
+    private final Map<String,Integer> docIdToDocIndex;
+    private final Map<Integer,String> docIndexToDocId;
     private final AtomicInteger docCounter;
    
     private final Map<Term, LucandraTermEnum> termCache;
@@ -61,8 +62,8 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         this.client = client;
 
         docCounter         = new AtomicInteger(0);
-        docIdToDocIndex    = new HashMap<Long,Integer>();
-        docIndexToDocId    = new HashMap<Integer,Long>();
+        docIdToDocIndex    = new HashMap<String,Integer>();
+        docIndexToDocId    = new HashMap<Integer,String>();
         
         termCache = new HashMap<Term, LucandraTermEnum>();
     }
@@ -119,20 +120,22 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     @Override
     public Document document(int docNum, FieldSelector selector) throws CorruptIndexException, IOException {
 
-        byte[] docId = CassandraUtils.encodeLong(docIndexToDocId.get(docNum));
+        //byte[] docId = CassandraUtils.encodeLong(docIndexToDocId.get(docNum));
 
+        String key = indexName +"/"+docIndexToDocId.get(docNum);
+        
         ColumnParent columnParent = new ColumnParent();
-        columnParent.setColumn_family(CassandraUtils.docColumn);
-        columnParent.setSuper_column(docId);
+        columnParent.setColumn_family(CassandraUtils.docColumnFamily);
+        
 
+        //get all columns
         SlicePredicate slicePredicate = new SlicePredicate();
-
         slicePredicate.setSlice_range(new SliceRange(new byte[] {}, new byte[] {}, false, 100));
 
         long start = System.currentTimeMillis();
 
         try {
-            List<ColumnOrSuperColumn> cols = client.get_slice(CassandraUtils.keySpace, indexName, columnParent, slicePredicate, ConsistencyLevel.ONE);
+            List<ColumnOrSuperColumn> cols = client.get_slice(CassandraUtils.keySpace, key, columnParent, slicePredicate, ConsistencyLevel.ONE);
 
             Document doc = new Document();
             for (ColumnOrSuperColumn col : cols) {
@@ -279,8 +282,14 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     public int addDocument(byte[] docId) {
 
-        long id = CassandraUtils.decodeLong(docId);
-
+        
+        String id;
+        try {
+            id = new String(docId,"UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            throw new IllegalStateException("Cant make docId a string");
+        }
+        
         Integer idx = docIdToDocIndex.get(id);
         
         if(idx == null){
@@ -298,7 +307,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         return idx;
     }
 
-    public long getDocumentId(int docNum) {
+    public String getDocumentId(int docNum) {
         return docIndexToDocId.get(docNum);
     }
 

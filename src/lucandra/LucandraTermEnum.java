@@ -1,7 +1,6 @@
 package lucandra;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -9,26 +8,22 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.cassandra.service.Cassandra;
-import org.apache.cassandra.service.Column;
 import org.apache.cassandra.service.ColumnOrSuperColumn;
 import org.apache.cassandra.service.ColumnParent;
 import org.apache.cassandra.service.ConsistencyLevel;
 import org.apache.cassandra.service.InvalidRequestException;
-import org.apache.cassandra.service.NotFoundException;
 import org.apache.cassandra.service.SlicePredicate;
 import org.apache.cassandra.service.SliceRange;
-import org.apache.cassandra.service.SuperColumn;
 import org.apache.cassandra.service.UnavailableException;
 import org.apache.log4j.Logger;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.TermEnum;
 import org.apache.thrift.TException;
 
-
 /**
  * 
  * @author jake
- *
+ * 
  */
 public class LucandraTermEnum extends TermEnum {
 
@@ -37,9 +32,9 @@ public class LucandraTermEnum extends TermEnum {
 
     private int termPosition;
     private Term[] termBuffer;
-    private TreeMap<Term, List<Column>> termDocFreqBuffer;
+    private TreeMap<Term, List<ColumnOrSuperColumn>> termDocFreqBuffer;
 
-    private Map<String, TreeMap<Term, List<Column>>> termCache;
+    private Map<String, TreeMap<Term, List<ColumnOrSuperColumn>>> termCache;
 
     private final Cassandra.Client client;
 
@@ -51,7 +46,7 @@ public class LucandraTermEnum extends TermEnum {
         this.client = indexReader.getClient();
         this.termPosition = 0;
 
-        this.termCache = new HashMap<String, TreeMap<Term, List<Column>>>();
+        this.termCache = new HashMap<String, TreeMap<Term, List<ColumnOrSuperColumn>>>();
     }
 
     @Override
@@ -92,10 +87,9 @@ public class LucandraTermEnum extends TermEnum {
     private void loadTerms(Term skipTo) {
 
         // chose starting term
-        String startTerm = CassandraUtils.createColumnName(skipTo);
-
+        String startTerm = indexName + "/" + CassandraUtils.createColumnName(skipTo);
         // this is where we stop;
-        String endTerm = startTerm + "zzzzzzzzzzzzzzzzzzzzzzz";
+        String endTerm = startTerm + new Character((char) 255);
 
         termDocFreqBuffer = termCache.get(startTerm);
 
@@ -108,29 +102,14 @@ public class LucandraTermEnum extends TermEnum {
             return;
         }
 
-        ColumnParent columnParent = new ColumnParent();
-        columnParent.setColumn_family(CassandraUtils.termVecColumn);
-
-        // create predicate
-        SlicePredicate slicePredicate = new SlicePredicate();
-        SliceRange sliceRange = new SliceRange();
-        slicePredicate.setSlice_range(sliceRange);
-
-        sliceRange.setStart(startTerm.getBytes());
-        sliceRange.setFinish(endTerm.getBytes());
-        sliceRange.setCount(Integer.MAX_VALUE);
-
-        List<ColumnOrSuperColumn> termColumns;
-
         long start = System.currentTimeMillis();
 
+        // First buffer the keys in this term range
+        List<String> keys;
         try {
-
-            termColumns = client.get_slice(CassandraUtils.keySpace, indexName, columnParent, slicePredicate, ConsistencyLevel.ONE);
-
+            keys = client.get_key_range(CassandraUtils.keySpace, CassandraUtils.termVecColumnFamily, startTerm, endTerm, Integer.MAX_VALUE,
+                    ConsistencyLevel.ONE);
         } catch (InvalidRequestException e) {
-            throw new RuntimeException(e);
-        } catch (NotFoundException e) {
             throw new RuntimeException(e);
         } catch (TException e) {
             throw new RuntimeException(e);
@@ -138,21 +117,37 @@ public class LucandraTermEnum extends TermEnum {
             throw new RuntimeException(e);
         }
 
-        termDocFreqBuffer = new TreeMap<Term, List<Column>>();
+        logger.info("Found " + keys.size() + " keys in range:" + startTerm + " to " + endTerm);
 
-        // parse results
-        for (ColumnOrSuperColumn termColumn : termColumns) {
-            SuperColumn termSuperColumn = termColumn.getSuper_column();
+        termDocFreqBuffer = new TreeMap<Term, List<ColumnOrSuperColumn>>();
+
+        if (!keys.isEmpty()) {
+            ColumnParent columnParent = new ColumnParent(CassandraUtils.termVecColumnFamily, null);
+            SlicePredicate slicePredicate = new SlicePredicate();
+
+            // Get all columns
+            SliceRange sliceRange = new SliceRange(new byte[] {}, new byte[] {}, false, Integer.MAX_VALUE);
+            slicePredicate.setSlice_range(sliceRange);
+
+            Map<String, List<ColumnOrSuperColumn>> columns;
 
             try {
-                if (endTerm.compareToIgnoreCase(new String(termSuperColumn.getName(), "UTF-8")) < 0) {
-                    break;
-                }
-            } catch (UnsupportedEncodingException e) {
+                columns = client.multiget_slice(CassandraUtils.keySpace, keys, columnParent, slicePredicate, ConsistencyLevel.ONE);
+            } catch (InvalidRequestException e) {
+                throw new RuntimeException(e);
+            } catch (TException e) {
+                throw new RuntimeException(e);
+            } catch (UnavailableException e) {
                 throw new RuntimeException(e);
             }
 
-            termDocFreqBuffer.put(CassandraUtils.parseTerm(termSuperColumn.getName()), termSuperColumn.getColumns());
+            for (Map.Entry<String, List<ColumnOrSuperColumn>> entry : columns.entrySet()) {
+
+                String termStr = entry.getKey().split("/")[1];
+                Term term = CassandraUtils.parseTerm(termStr.getBytes());
+
+                termDocFreqBuffer.put(term, entry.getValue());
+            }
         }
 
         // put in cache
@@ -167,8 +162,11 @@ public class LucandraTermEnum extends TermEnum {
 
     }
 
-    public final List<Column> getTermDocFreq() {
-        List<Column> termDocs = termDocFreqBuffer.get(termBuffer[termPosition]);
+    public final List<ColumnOrSuperColumn> getTermDocFreq() {
+        if(termBuffer.length == 0)
+            return null;
+        
+        List<ColumnOrSuperColumn> termDocs = termDocFreqBuffer.get(termBuffer[termPosition]);
 
         // reverse time ordering
         Collections.reverse(termDocs);

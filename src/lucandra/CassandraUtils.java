@@ -6,7 +6,13 @@ import java.util.List;
 import java.util.UUID;
 
 import org.apache.cassandra.service.Cassandra;
+import org.apache.cassandra.service.ColumnPath;
+import org.apache.cassandra.service.ConsistencyLevel;
+import org.apache.cassandra.service.InvalidRequestException;
+import org.apache.cassandra.service.UnavailableException;
+import org.apache.log4j.Logger;
 import org.apache.lucene.index.Term;
+import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TFramedTransport;
@@ -17,10 +23,11 @@ import org.apache.thrift.transport.TTransportException;
 public class CassandraUtils {
 
     public static final String keySpace = "Lucandra";
-    public static final String termVecColumn = "TermVectors";
-    public static final String docColumn = "Documents";
-
+    public static final String termVecColumnFamily = "TermVectors";
+    public static final String docColumnFamily = "Documents";
     public static final String delimeter = "|x|";
+
+    private static final Logger logger = Logger.getLogger(CassandraUtils.class);
 
     public static Cassandra.Client createConnection() throws TTransportException {
         // temporarily connect to cassandra
@@ -103,40 +110,66 @@ public class CassandraUtils {
         return intArray;
     }
 
-    public static final byte[] encodeLong(long l){
+    public static final byte[] encodeLong(long l) {
         ByteBuffer buffer = ByteBuffer.allocate(8);
-        
+
         buffer.putLong(l);
-        
+
         return buffer.array();
     }
-    
-    public static final long decodeLong(byte[] bytes){
-        
-        if(bytes.length != 8)
+
+    public static final long decodeLong(byte[] bytes) {
+
+        if (bytes.length != 8)
             throw new RuntimeException("must be 8 bytes");
-        
+
         ByteBuffer buffer = ByteBuffer.wrap(bytes);
-        
+
         return buffer.getLong();
     }
-    
+
     public static final byte[] encodeUUID(UUID docUUID) {
 
         ByteBuffer buffer = ByteBuffer.allocate(16);
-       
+
         buffer.putLong(docUUID.getMostSignificantBits());
         buffer.putLong(docUUID.getLeastSignificantBits());
         return buffer.array();
     }
-    
-    public static final UUID readUUID(byte[] bytes){
-        
-        if(bytes.length != 16)
+
+    public static final UUID readUUID(byte[] bytes) {
+
+        if (bytes.length != 16)
             throw new RuntimeException("uuid must be exactly 16 bytes");
-        
+
         return UUID.nameUUIDFromBytes(bytes);
-              
+
     }
 
+    public static void robustInsert(Cassandra.Client client, String key, ColumnPath columnPath, byte[] value) {
+
+        // Should use a circut breaker here
+        boolean try_again = false;
+        int attempts = 0;
+        long startTime = System.currentTimeMillis();
+        do {
+            try {
+                attempts = 0;
+                try_again = false;
+                client.insert(CassandraUtils.keySpace, key, columnPath, value, System.currentTimeMillis(), ConsistencyLevel.ONE);
+                logger.info("Inserted in " + (startTime - System.currentTimeMillis()) / 1000 + "ms");
+            } catch (TException e) {
+                throw new RuntimeException(e);
+            } catch (InvalidRequestException e) {
+                throw new RuntimeException(e);
+            } catch (UnavailableException e) {
+                try_again = true;
+            }
+        } while (try_again && attempts < 10);
+        
+        //fail
+        if(try_again){
+            throw new RuntimeException("Insert still failed after 10 attempts");
+        }
+    }
 }
