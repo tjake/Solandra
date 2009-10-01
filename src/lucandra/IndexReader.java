@@ -51,8 +51,8 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     private final Map<Integer,String> docIndexToDocId;
     private final AtomicInteger docCounter;
    
-    private final Map<Term, LucandraTermEnum> termCache;
-
+    private final Map<Term, LucandraTermEnum> termEnumCache;
+   
 
     private static final Logger logger = Logger.getLogger(IndexReader.class);
 
@@ -65,7 +65,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         docIdToDocIndex    = new HashMap<String,Integer>();
         docIndexToDocId    = new HashMap<Integer,String>();
         
-        termCache = new HashMap<Term, LucandraTermEnum>();
+        termEnumCache = new HashMap<Term, LucandraTermEnum>();
     }
 
     @Override
@@ -73,8 +73,8 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         docCounter.set(0);
         docIdToDocIndex.clear();
         docIndexToDocId.clear();
-        termCache.clear();
-    }
+        termEnumCache.clear();
+    } 
 
     @Override
     protected void doCommit() throws IOException {
@@ -99,7 +99,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     @Override
     public int docFreq(Term term) throws IOException {
 
-        LucandraTermEnum termEnum = termCache.get(term);
+        LucandraTermEnum termEnum = termEnumCache.get(term);
         if (termEnum == null) {
 
             long start = System.currentTimeMillis();
@@ -111,7 +111,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
             //logger.info("docFreq() took: " + (end - start) + "ms");
 
-            termCache.put(term, termEnum);   
+            termEnumCache.put(term, termEnum);   
         }
         
         return termEnum.docFreq();
@@ -119,8 +119,6 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     @Override
     public Document document(int docNum, FieldSelector selector) throws CorruptIndexException, IOException {
-
-        //byte[] docId = CassandraUtils.encodeLong(docIndexToDocId.get(docNum));
 
         String key = indexName +"/"+docIndexToDocId.get(docNum);
         
@@ -265,14 +263,12 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     @Override
     public TermEnum terms(Term term) throws IOException {
        
-        LucandraTermEnum termEnum = termCache.get(term);
+        LucandraTermEnum termEnum = termEnumCache.get(term);
         
         if(termEnum == null){
         
             termEnum = new LucandraTermEnum(this);
-            if( termEnum.skipTo(term) ) 
-                termCache.put(term, termEnum);
-            else
+            if( !termEnum.skipTo(term) )           
                 termEnum = null;
             
         }
@@ -320,7 +316,11 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     }
     
     public LucandraTermEnum checkTermCache(Term term){
-        return termCache.get(term);
+        return termEnumCache.get(term);
+    }
+    
+    public void addTermEnumCache(Term term, LucandraTermEnum termEnum){
+        termEnumCache.put(term, termEnum);
     }
 
 }

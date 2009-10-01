@@ -31,7 +31,7 @@ public class CassandraUtils {
 
     public static Cassandra.Client createConnection() throws TTransportException {
         // temporarily connect to cassandra
-        TSocket socket = new TSocket("127.0.0.1", 9160);
+        TSocket socket = new TSocket("192.168.1.70", 9160);
         TTransport trans = new TFramedTransport(socket);
         trans.open();
         TProtocol protocol = new TBinaryProtocol(trans);
@@ -60,7 +60,7 @@ public class CassandraUtils {
             throw new RuntimeException("invalid term format: " + termStr);
         }
 
-        return new Term(parts[0], parts[1]);
+        return new Term(parts[0].intern(), parts[1]);
     }
 
     public static final byte[] intToByteArray(int value) {
