@@ -1,12 +1,13 @@
 package lucandra;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableMap;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.TreeMap;
 
 import org.apache.cassandra.service.Cassandra;
@@ -34,8 +35,8 @@ public class LucandraTermEnum extends TermEnum {
 
     private int termPosition;
     private Term[] termBuffer;
-    private NavigableMap<Term, List<ColumnOrSuperColumn>> termDocFreqBuffer;
-    private Map<Term, NavigableMap<Term, List<ColumnOrSuperColumn>>> termCache;
+    private SortedMap<Term, List<ColumnOrSuperColumn>> termDocFreqBuffer;
+    private Map<Term, SortedMap<Term, List<ColumnOrSuperColumn>>> termCache;
 
     //number of sequential terms to read initially
     private final int maxInitSize = 16;
@@ -53,7 +54,7 @@ public class LucandraTermEnum extends TermEnum {
         this.client = indexReader.getClient();
         this.termPosition = 0;
 
-        this.termCache = new HashMap<Term, NavigableMap<Term, List<ColumnOrSuperColumn>>>();
+        this.termCache = new HashMap<Term, SortedMap<Term, List<ColumnOrSuperColumn>>>();
     }
 
     @Override
@@ -187,10 +188,13 @@ public class LucandraTermEnum extends TermEnum {
             }
         }
 
+        //add a final key (excluded in submap below)
+        termDocFreqBuffer.put(new Term(""+new Character((char)255), ""+new Character((char)255)), null);
+        
         // put in cache
         for (Term termKey : termDocFreqBuffer.keySet()) {
-          
-            NavigableMap<Term, List<ColumnOrSuperColumn>> subMap = termDocFreqBuffer.subMap(termKey, true, termDocFreqBuffer.lastKey(), true);
+                      
+            SortedMap<Term, List<ColumnOrSuperColumn>> subMap = termDocFreqBuffer.subMap(termKey, termDocFreqBuffer.lastKey());
             
             logger.info("Caching "+termKey+" with "+subMap.size()+" siblings");
             termCache.put(termKey, subMap);
@@ -215,7 +219,7 @@ public class LucandraTermEnum extends TermEnum {
         List<ColumnOrSuperColumn> termDocs = termDocFreqBuffer.get(termBuffer[termPosition]);
 
         // reverse time ordering
-        Collections.reverse(termDocs);
+        //  Collections.reverse(termDocs);
 
         return termDocs;
     }

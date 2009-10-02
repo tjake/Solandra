@@ -34,7 +34,7 @@ public class BookmarksDemo {
         try {
             client = CassandraUtils.createConnection();
         } catch (TTransportException e) {
-            System.err.println(e.getMessage());
+            System.err.println("Error connecting to Cassandra: "+e.getMessage());
             System.exit(2);
         }
     }
@@ -51,15 +51,18 @@ public class BookmarksDemo {
 
     public static void loadTSVFile(File file) throws IOException {
         long t0 = System.currentTimeMillis();
-
+        
         FileReader input = new FileReader(file);
         BufferedReader buf = new BufferedReader(input);
 
         String line;
+        Integer number = 1;
 
         while ((line = buf.readLine()) != null) {
             String[] arr = line.split("\t");
             addBookmark(arr[0], arr[1], arr[2]);
+            System.out.println("Indexed "+number);
+            number++;
         }
 
         input.close();
@@ -86,15 +89,15 @@ public class BookmarksDemo {
         TopDocs docs = indexSearcher.search(q, 10);
         
         System.out.println("Search matched: "+docs.totalHits+" item(s)");
-        
+        Integer number = 0;
         for( ScoreDoc score: docs.scoreDocs ){
             Document doc = indexSearcher.doc(score.doc);         
-            
+            number++;
             //this is wierd
             String title =  new String(doc.getBinaryValue("title"),"UTF-8");
             String url   =  new String(doc.getBinaryValue("url"),"UTF-8");
             
-            System.out.println(title+"("+url+")");          
+            System.out.println(number+". "+title+"\n\t"+url);          
         }       
     }
 

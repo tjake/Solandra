@@ -1,0 +1,80 @@
+
+<project name="lucandra" default="lucandra.jar" basedir=".">
+
+        <description>Lucandra</description>
+
+        <property name="src"           location="src" />
+        <property name="gen"           location="gen-java" />
+        <property name="test"          location="test" />
+        <property name="config"        location="config" />
+        <property name="build"         location="build" />
+        <property name="build.classes" location="${build}/classes"/>
+        <property name="build.test.classes" location="${build}/test-classes"/>
+        <property name="lib"           location="lib" />
+
+        <path id="lucandra.classpath">
+          <pathelement location="${build.classes}"/>
+          <pathelement location="${build.test.classes}"/>
+          <pathelement location="${config}"/>
+          <fileset dir="${lib}">
+            <include name="**/*.jar" />
+          </fileset>
+        </path>
+
+        <target name="init">
+          <tstamp />
+          <mkdir dir="${build}" />
+          <mkdir dir="${build}/output" />
+          <mkdir dir="${build.classes}" />
+          <mkdir dir="${build.test.classes}"/>
+        </target>
+
+        <target name="compile" depends="init">
+          <javac debug="true" destdir="${build.classes}">
+            <src path="${gen}"/>
+            <src path="${src}"/>
+            <classpath refid="lucandra.classpath"/>
+          </javac>
+        </target>
+
+        <target name="compile.tests" depends="compile">
+          <javac debug="true" destdir="${build.test.classes}">
+            <src path="${test}"/>
+            <classpath refid="lucandra.classpath"/>
+          </javac>
+        </target>
+
+
+        <target name="test" depends="compile.tests">
+          <echo message="running tests"/>
+          <mkdir dir="${build.test.dir}/output"/>
+          <junit fork="on" failureproperty="testfailed">
+            <classpath refid="lucandra.classpath"/>
+            <formatter type="xml" usefile="true"/>
+            <formatter type="brief" usefile="false"/>
+
+            <batchtest todir="${build}/output">
+              <fileset dir="${build.test.classes}" includes="**/*Test*" />
+            </batchtest>
+          </junit>
+          <fail if="testfailed" message="Some test(s) failed."/>
+        </target>
+
+        <target name="lucandra.jar" depends="clean,compile,compile.tests">
+          <jar jarfile="lucandra.jar" basedir="${build.classes}" />
+          <jar jarfile="lucandra-tests.jar" basedir="${build.test.classes}" />
+        </target>
+
+        <target name="demo" depends="compile.tests">
+          <java classname="lucandra.demo.BookmarksDemo">
+            <classpath refid="lucandra.classpath"/>
+          </java>
+        </target>
+
+        <target name="clean">
+          <delete dir="${build}" />
+          <delete file="lucandra.jar" />
+          <delete file="lucandra-tests.jar" />
+        </target>
+
+</project>

@@ -25,13 +25,13 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         termEnum = new LucandraTermEnum(indexReader);
     }
 
-    @Override
+    
     public void close() throws IOException {
         // TODO Auto-generated method stub
 
     }
 
-    @Override
+    
     public int doc() {
         if (docPosition < 0)
             docPosition = 0;
@@ -41,7 +41,7 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         return docid;
     }
 
-    @Override
+    
     public int freq() {
 
         termPositionArray = CassandraUtils.byteArrayToIntArray(termDocs.get(docPosition).column.getValue());
@@ -50,7 +50,7 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         return termPositionArray.length;
     }
 
-    @Override
+    
     public boolean next() throws IOException {
 
         if (termDocs == null)
@@ -59,7 +59,7 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         return ++docPosition < termDocs.size();
     }
 
-    @Override
+    
     public int read(int[] docs, int[] freqs) throws IOException {
 
         int i = 0;
@@ -71,7 +71,7 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         return i;
     }
 
-    @Override
+    
     public void seek(Term term) throws IOException {
         // on a new term so check cached
         LucandraTermEnum tmp = indexReader.checkTermCache(term);
@@ -93,7 +93,6 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         docPosition = -1;
     }
 
-    @Override
     public void seek(TermEnum termEnum) throws IOException {
         if (termEnum instanceof LucandraTermEnum) {
             this.termEnum = (LucandraTermEnum) termEnum;
@@ -104,7 +103,7 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         }
     }
 
-    @Override
+    
     public boolean skipTo(int target) throws IOException {
         do {
             if (!next())
@@ -114,22 +113,22 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         return true;
     }
 
-    @Override
+    
     public byte[] getPayload(byte[] data, int offset) throws IOException {
         return null;
     }
 
-    @Override
+    
     public int getPayloadLength() {
         return 0;
     }
 
-    @Override
+    
     public boolean isPayloadAvailable() {
         return false;
     }
 
-    @Override
+    
     public int nextPosition() throws IOException {
         int pos = termPositionArray[termPosition];
         termPosition++;

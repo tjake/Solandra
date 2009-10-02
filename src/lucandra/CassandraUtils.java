@@ -1,8 +1,11 @@
 package lucandra;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Properties;
 import java.util.UUID;
 
 import org.apache.cassandra.service.Cassandra;
@@ -26,12 +29,22 @@ public class CassandraUtils {
     public static final String termVecColumnFamily = "TermVectors";
     public static final String docColumnFamily = "Documents";
     public static final String delimeter = "|x|";
+    
+    
 
     private static final Logger logger = Logger.getLogger(CassandraUtils.class);
 
     public static Cassandra.Client createConnection() throws TTransportException {
-        // temporarily connect to cassandra
-        TSocket socket = new TSocket("192.168.1.70", 9160);
+        
+        if(System.getProperty("cassandra.host") == null || System.getProperty("cassandra.port") == null) {
+            throw new RuntimeException("cassandra.host and/or cassandra.port is missing");
+        }
+        
+        //connect to cassandra
+        TSocket socket = new TSocket(
+                System.getProperty("cassandra.host"), 
+                Integer.valueOf(System.getProperty("cassandra.port")));
+        
         TTransport trans = new TFramedTransport(socket);
         trans.open();
         TProtocol protocol = new TBinaryProtocol(trans);

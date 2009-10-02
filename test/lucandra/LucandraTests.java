@@ -17,7 +17,7 @@ import org.apache.lucene.search.TopDocs;
 
 public class LucandraTests extends TestCase {
 
-    private static final String indexName = "wikipedia";//String.valueOf(System.nanoTime());
+    private static final String indexName = String.valueOf(System.nanoTime());
     private static final Analyzer analyzer = new StandardAnalyzer();
     private static Cassandra.Client client;
     static{
@@ -30,7 +30,7 @@ public class LucandraTests extends TestCase {
     
     private static final IndexWriter indexWriter = new IndexWriter(indexName, client);
 
-    /*public void testWriter() {
+    public void testWriter() {
 
         try {
 
@@ -95,24 +95,6 @@ public class LucandraTests extends TestCase {
             e.printStackTrace();
             fail(e.toString());
         }
-    }*/
-    
-    
-    public void testSearch() {
-        try {
-            IndexReader indexReader = new IndexReader(indexName, client);
-            IndexSearcher searcher = new IndexSearcher(indexReader);
-
-            QueryParser qp = new QueryParser("text", analyzer);
-            Query q = qp.parse("+body:(alex wiki)");
-
-            TopDocs docs = searcher.search(q, 10);
-            
-            System.err.println(docs.totalHits);
-        }catch(Exception e){
-            e.printStackTrace();
-        }
-        
     }
     
 }
