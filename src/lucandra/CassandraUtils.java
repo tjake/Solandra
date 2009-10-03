@@ -1,11 +1,8 @@
 package lucandra;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.util.List;
-import java.util.Properties;
 import java.util.UUID;
 
 import org.apache.cassandra.service.Cassandra;
@@ -28,7 +25,7 @@ public class CassandraUtils {
     public static final String keySpace = "Lucandra";
     public static final String termVecColumnFamily = "TermVectors";
     public static final String docColumnFamily = "Documents";
-    public static final String delimeter = "|x|";
+    public static final String delimeter = ""+new Character((char)255)+new Character((char)255);
     
     
 
@@ -36,8 +33,9 @@ public class CassandraUtils {
 
     public static Cassandra.Client createConnection() throws TTransportException {
         
+        
         if(System.getProperty("cassandra.host") == null || System.getProperty("cassandra.port") == null) {
-            throw new RuntimeException("cassandra.host and/or cassandra.port is missing");
+            throw new RuntimeException("cassandra.host and/or cassandra.port properties missing");
         }
         
         //connect to cassandra
@@ -45,7 +43,14 @@ public class CassandraUtils {
                 System.getProperty("cassandra.host"), 
                 Integer.valueOf(System.getProperty("cassandra.port")));
         
-        TTransport trans = new TFramedTransport(socket);
+        
+        TTransport trans;
+        
+        if(Boolean.valueOf(System.getProperty("cassandra.framed", "false")))
+            trans = new TFramedTransport(socket);
+        else
+            trans = socket;
+        
         trans.open();
         TProtocol protocol = new TBinaryProtocol(trans);
 
@@ -63,11 +68,9 @@ public class CassandraUtils {
     public static Term parseTerm(byte[] termStr) {
         String[] parts = null;
 
-        try {
-            parts = new String(termStr, "UTF-8").split("\\|x\\|");
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
+       
+        parts = new String(termStr).split(delimeter);
+        
 
         if (parts == null || parts.length != 2) {
             throw new RuntimeException("invalid term format: " + termStr);
