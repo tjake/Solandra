@@ -59,10 +59,11 @@ public class LucandraTermEnum extends TermEnum {
     private final int maxInitSize = 16;
     private int actualInitSize = -1;
     private Term initTerm;
-    
-    
+     
     private final Cassandra.Client client;
-
+    private final Term finalTerm = new Term(""+new Character((char)255), ""+new Character((char)255));
+    
+    
     private static final Logger logger = Logger.getLogger(LucandraTermEnum.class);
 
     public LucandraTermEnum(IndexReader indexReader) {
@@ -98,6 +99,11 @@ public class LucandraTermEnum extends TermEnum {
 
         boolean hasNext = termPosition < termBuffer.length;
 
+        if(hasNext && termBuffer[termPosition].equals(finalTerm)){
+            termPosition++;
+            hasNext = termPosition < termBuffer.length;
+        }
+        
         if (!hasNext) {           
         
             //if we've already done init try grabbing more
@@ -205,12 +211,14 @@ public class LucandraTermEnum extends TermEnum {
             }
         }
 
+        
         //add a final key (excluded in submap below)
-        termDocFreqBuffer.put(new Term(""+new Character((char)255), ""+new Character((char)255)), null);
+        termDocFreqBuffer.put(finalTerm, null);
         
         // put in cache
         for (Term termKey : termDocFreqBuffer.keySet()) {
-                      
+                    
+            
             SortedMap<Term, List<ColumnOrSuperColumn>> subMap = termDocFreqBuffer.subMap(termKey, termDocFreqBuffer.lastKey());
             
             logger.debug("Caching "+termKey+" with "+subMap.size()+" siblings");
@@ -219,7 +227,9 @@ public class LucandraTermEnum extends TermEnum {
             indexReader.addTermEnumCache(termKey, this);
         }
 
-      
+        //cache the initial term too
+        indexReader.addTermEnumCache(skipTo, this);
+        
         termBuffer = termDocFreqBuffer.keySet().toArray(new Term[] {});
         termPosition = 0;
 

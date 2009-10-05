@@ -66,7 +66,7 @@
 
         <target name="test" depends="compile.tests">
           <echo message="running tests"/>
-          <mkdir dir="${build.test.dir}/output"/>
+          <mkdir dir="${build}/output"/>
           <junit fork="on" failureproperty="testfailed">
             <classpath refid="lucandra.classpath"/>
             <formatter type="xml" usefile="true"/>
@@ -75,6 +75,9 @@
             <batchtest todir="${build}/output">
               <fileset dir="${build.test.classes}" includes="**/*Test*" />
             </batchtest>
+            <jvmarg value="-Dcassandra.host=192.168.1.70"/>
+            <jvmarg value="-Dcassandra.port=9160"/>
+            <jvmarg value="-Dcassandra.framed=true"/>
           </junit>
           <fail if="testfailed" message="Some test(s) failed."/>
         </target>

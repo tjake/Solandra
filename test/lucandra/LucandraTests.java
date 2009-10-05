@@ -32,6 +32,7 @@ import org.apache.lucene.document.Field;
 import org.apache.lucene.queryParser.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
+import org.apache.lucene.search.Sort;
 import org.apache.lucene.search.TopDocs;
 
 public class LucandraTests extends TestCase {
@@ -73,9 +74,10 @@ public class LucandraTests extends TestCase {
             
             
             //Index 10 documents to test order
-            for(int i=0; i<10; i++){
+            for(int i=300; i>=200; i--){
                 Document doc = new Document();
-                doc.add(new Field("date",""+i,Field.Store.YES, Field.Index.NOT_ANALYZED));
+                doc.add(new Field("key", "sort this",Field.Store.YES,Field.Index.ANALYZED));
+                doc.add(new Field("date","test"+i,Field.Store.YES, Field.Index.NOT_ANALYZED));
                 indexWriter.addDocument(doc, analyzer);
             }
                 
@@ -119,6 +121,18 @@ public class LucandraTests extends TestCase {
 
             String val = new String(d.getBinaryValue("key"),"UTF-8");
             assertTrue(val.equals("this is another example"));
+            
+            
+            // check sort
+            Sort sort = new Sort("date");
+            q = qp.parse("+key:sort");
+            docs = searcher.search(q,null,10, sort);
+            
+            for(int i=0; i<10; i++){
+                d = indexReader.document(docs.scoreDocs[i].doc);
+                String dval = new String(d.getBinaryValue("date"));
+                assertEquals("test"+(i+200), dval);
+            }
             
         } catch (Exception e) {
             e.printStackTrace();
