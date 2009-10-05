@@ -19,7 +19,7 @@ To get started run the following:
 Background
 ==========
 
-Storing an Inverted index in cassandra is actually the initial use-case for Facebook.
+Storing an inverted index in Cassandra was the initial use-case for Cassandra at Facebook.
 The Cassandra wiki discusses this:
 
 "You can think of each super column name as a term and the columns within as the docids
