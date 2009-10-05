@@ -1,4 +1,5 @@
 Lucandra - Lucene on Cassandra
+http://twitter.com/tjake
 ==============================
 
 Lucandra provides a Lucene IndexReader and IndexWriter that interfaces with Cassandra.
