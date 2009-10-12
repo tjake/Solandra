@@ -20,6 +20,7 @@
 package lucandra;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -244,6 +245,9 @@ public class LucandraTermEnum extends TermEnum {
             return null;
 
         List<ColumnOrSuperColumn> termDocs = termDocFreqBuffer.get(termBuffer[termPosition]);
+        
+        //show results in descending order by default
+        Collections.reverse(termDocs); 
 
         return termDocs;
     }
