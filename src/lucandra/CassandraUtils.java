@@ -40,11 +40,11 @@ import org.apache.thrift.transport.TTransportException;
 
 public class CassandraUtils {
 
-    public static final String keySpace = "Lucandra";
+    public static final String keySpace            = "Lucandra";
     public static final String termVecColumnFamily = "TermVectors";
-    public static final String docColumnFamily = "Documents";
-    public static final String delimeter = ""+new Character((char)255)+new Character((char)255);
-    
+    public static final String docColumnFamily     = "Documents";
+    public static final String delimeter           = ""+new Character((char)255)+new Character((char)255);
+    public static final String documentIdField     = "__KEY__";
     
 
     private static final Logger logger = Logger.getLogger(CassandraUtils.class);
@@ -53,13 +53,13 @@ public class CassandraUtils {
         
         
         if(System.getProperty("cassandra.host") == null || System.getProperty("cassandra.port") == null) {
-            throw new RuntimeException("cassandra.host and/or cassandra.port properties missing");
+           logger.warn("cassandra.host or cassandra.port is not defined, using default");
         }
         
         //connect to cassandra
         TSocket socket = new TSocket(
-                System.getProperty("cassandra.host"), 
-                Integer.valueOf(System.getProperty("cassandra.port")));
+                System.getProperty("cassandra.host","localhost"), 
+                Integer.valueOf(System.getProperty("cassandra.port","9160")));
         
         
         TTransport trans;

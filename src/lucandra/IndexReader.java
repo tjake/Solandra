@@ -78,18 +78,27 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         
         termEnumCache = new HashMap<Term, LucandraTermEnum>();
     }
-
+    
+  
     @Override
-    protected void doClose() throws IOException {
+    public IndexReader reopen(){
+        
         docCounter.set(0);
         docIdToDocIndex.clear();
         docIndexToDocId.clear();
         termEnumCache.clear();
+        
+        return this;
+    }
+    
+    @Override
+    protected void doClose() throws IOException {
+        
     } 
-
+    
     @Override
     protected void doCommit() throws IOException {
-        // nothing
+      
     }
 
     @Override

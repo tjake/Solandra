@@ -64,10 +64,14 @@ public class IndexWriter {
 
         // Build wacky batch struct
         Map<String, List<ColumnOrSuperColumn>> cfMap = new HashMap<String, List<ColumnOrSuperColumn>>();
-
-        // FIXME: This should accept
-        String docId = Long.toHexString(System.nanoTime());
-
+        
+        //check for special field name
+        String docId = doc.get(CassandraUtils.documentIdField);
+ 
+        if(docId == null)
+            docId = Long.toHexString(System.nanoTime());
+        
+       
         ColumnPath termVecColumnPath = new ColumnPath(CassandraUtils.termVecColumnFamily, null, docId.getBytes());
         
         
