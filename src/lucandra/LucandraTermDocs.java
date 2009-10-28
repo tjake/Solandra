@@ -44,13 +44,11 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         termEnum = new LucandraTermEnum(indexReader);
     }
 
-    
     public void close() throws IOException {
         // TODO Auto-generated method stub
 
     }
 
-    
     public int doc() {
         if (docPosition < 0)
             docPosition = 0;
@@ -60,7 +58,6 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         return docid;
     }
 
-    
     public int freq() {
 
         termPositionArray = CassandraUtils.byteArrayToIntArray(termDocs.get(docPosition).column.getValue());
@@ -69,7 +66,6 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         return termPositionArray.length;
     }
 
-    
     public boolean next() throws IOException {
 
         if (termDocs == null)
@@ -78,7 +74,6 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         return ++docPosition < termDocs.size();
     }
 
-    
     public int read(int[] docs, int[] freqs) throws IOException {
 
         int i = 0;
@@ -90,7 +85,6 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         return i;
     }
 
-    
     public void seek(Term term) throws IOException {
         // on a new term so check cached
         LucandraTermEnum tmp = indexReader.checkTermCache(term);
@@ -106,7 +100,12 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         } else {
             termEnum = tmp;
             termEnum.skipTo(term);
-            termDocs = termEnum.getTermDocFreq();
+
+            if (termEnum.term().equals(term)) {
+                termDocs = termEnum.getTermDocFreq();
+            } else {
+                termDocs = null;
+            }
         }
 
         docPosition = -1;
@@ -122,7 +121,6 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         }
     }
 
-    
     public boolean skipTo(int target) throws IOException {
         do {
             if (!next())
@@ -132,22 +130,18 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         return true;
     }
 
-    
     public byte[] getPayload(byte[] data, int offset) throws IOException {
         return null;
     }
 
-    
     public int getPayloadLength() {
         return 0;
     }
 
-    
     public boolean isPayloadAvailable() {
         return false;
     }
 
-    
     public int nextPosition() throws IOException {
         int pos = termPositionArray[termPosition];
         termPosition++;

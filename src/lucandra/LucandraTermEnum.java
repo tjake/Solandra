@@ -57,7 +57,7 @@ public class LucandraTermEnum extends TermEnum {
     private Map<Term, SortedMap<Term, List<ColumnOrSuperColumn>>> termCache;
 
     //number of sequential terms to read initially
-    private final int maxInitSize = 16;
+    private final int maxInitSize = 2;
     private int actualInitSize = -1;
     private Term initTerm;
      
@@ -78,6 +78,10 @@ public class LucandraTermEnum extends TermEnum {
 
     @Override
     public boolean skipTo(Term term) throws IOException {
+        
+        if(term == null)
+            return false;
+        
         loadTerms(term);
 
         return termBuffer.length == 0 ? false : true;
@@ -129,7 +133,7 @@ public class LucandraTermEnum extends TermEnum {
         // chose starting term
         String startTerm = indexName + "/" + CassandraUtils.createColumnName(skipTo);
         // this is where we stop;
-        String endTerm = startTerm + new Character((char) 255);
+        String endTerm = indexName + "/" + skipTo.field() + CassandraUtils.delimeter + CassandraUtils.delimeter; //startTerm + new Character((char) 255);
 
         if(!skipTo.equals(initTerm) || termPosition == 0) {
             termDocFreqBuffer = termCache.get(skipTo);
@@ -151,7 +155,7 @@ public class LucandraTermEnum extends TermEnum {
         
         //otherwise we grab all the rest of the keys 
         if( initTerm != null ){
-            count = Integer.MAX_VALUE; 
+            count = 1024; 
         }
             
         long start = System.currentTimeMillis();
@@ -204,7 +208,7 @@ public class LucandraTermEnum extends TermEnum {
 
             for (Map.Entry<String, List<ColumnOrSuperColumn>> entry : columns.entrySet()) {
 
-                // term keys look like wikipedia/body|x|wiki
+                // term keys look like wikipedia/body/wiki
                 String termStr = entry.getKey().substring(entry.getKey().indexOf("/")+1);
                 Term term = CassandraUtils.parseTerm(termStr.getBytes());
                 
@@ -248,6 +252,15 @@ public class LucandraTermEnum extends TermEnum {
         
         //show results in descending order by default
         Collections.reverse(termDocs); 
+        
+        //create proper docIds.
+        //We do this now because of how lucene fetches the results
+        //in buffered chunks. This way all the doc ids are consistent
+        for(ColumnOrSuperColumn col: termDocs){
+            indexReader.addDocument(col.getColumn().getName());
+        }
+        
+        
 
         return termDocs;
     }

@@ -129,7 +129,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
             long end = System.currentTimeMillis();
 
-            //logger.info("docFreq() took: " + (end - start) + "ms");
+            logger.info("docFreq() took: " + (end - start) + "ms");
 
             termEnumCache.put(term, termEnum);   
         }
@@ -293,7 +293,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
             docIndexToDocId.put(idx, id);
 
             return idx;
-        }
+        } 
 
         return idx;
     }
