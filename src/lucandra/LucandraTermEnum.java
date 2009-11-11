@@ -20,8 +20,6 @@
 package lucandra;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -54,12 +52,14 @@ public class LucandraTermEnum extends TermEnum {
     private int termPosition;
     private Term[] termBuffer;
     private SortedMap<Term, List<ColumnOrSuperColumn>> termDocFreqBuffer;
-    private Map<Term, SortedMap<Term, List<ColumnOrSuperColumn>>> termCache;
+    private SortedMap<Term, List<ColumnOrSuperColumn>> termCache;
 
     //number of sequential terms to read initially
     private final int maxInitSize = 2;
+    private final int maxChunkSize = 64;
     private int actualInitSize = -1;
     private Term initTerm;
+    private int chunkCount = 0;
      
     private final Cassandra.Client client;
     private final Term finalTerm = new Term(""+new Character((char)255), ""+new Character((char)255));
@@ -72,8 +72,6 @@ public class LucandraTermEnum extends TermEnum {
         this.indexName = indexReader.getIndexName();
         this.client = indexReader.getClient();
         this.termPosition = 0;
-
-        this.termCache = new HashMap<Term, SortedMap<Term, List<ColumnOrSuperColumn>>>();
     }
 
     @Override
@@ -112,11 +110,12 @@ public class LucandraTermEnum extends TermEnum {
         if (!hasNext) {           
         
             //if we've already done init try grabbing more
-            if(actualInitSize == maxInitSize){
+            if((chunkCount == 1 && actualInitSize == maxInitSize) || (chunkCount > 1 && actualInitSize == maxChunkSize)){
                 loadTerms(initTerm);
                 hasNext = termBuffer.length > 0;
+            }else if((chunkCount == 1 && actualInitSize < maxInitSize) || (chunkCount > 1 && actualInitSize < maxChunkSize) ){
+                hasNext = false;
             }
-            
             termPosition = 0;
         }
             
@@ -125,7 +124,7 @@ public class LucandraTermEnum extends TermEnum {
 
     @Override
     public Term term() {
-        return termBuffer[termPosition];
+       return termBuffer[termPosition];
     }
 
     private void loadTerms(Term skipTo) {
@@ -135,8 +134,8 @@ public class LucandraTermEnum extends TermEnum {
         // this is where we stop;
         String endTerm = indexName + "/" + skipTo.field() + CassandraUtils.delimeter + CassandraUtils.delimeter; //startTerm + new Character((char) 255);
 
-        if(!skipTo.equals(initTerm) || termPosition == 0) {
-            termDocFreqBuffer = termCache.get(skipTo);
+        if((!skipTo.equals(initTerm) || termPosition == 0) && termCache != null ) {            
+            termDocFreqBuffer = termCache.subMap(skipTo, termCache.lastKey());
         }else{
             termDocFreqBuffer = null;
         }
@@ -148,14 +147,21 @@ public class LucandraTermEnum extends TermEnum {
 
             logger.debug("Found " + startTerm + " in cache");
             return;
+        }else if(chunkCount > 1 && actualInitSize < maxChunkSize) {
+            termBuffer = new Term[]{};
+            termPosition = 0;
+            return; //done!
         }
+    
+        chunkCount++;
 
         //The first time we grab just a few keys
         int count = maxInitSize;
         
         //otherwise we grab all the rest of the keys 
         if( initTerm != null ){
-            count = 1024; 
+            count = maxChunkSize; 
+            startTerm = indexName + "/" + CassandraUtils.createColumnName(initTerm);
         }
             
         long start = System.currentTimeMillis();
@@ -175,14 +181,9 @@ public class LucandraTermEnum extends TermEnum {
 
         logger.debug("Found " + keys.size() + " keys in range:" + startTerm + " to " + endTerm + " in " + (System.currentTimeMillis() - start)+"ms");
 
-        if(initTerm == null){
-            initTerm = skipTo;
-            actualInitSize = keys.size();
-        }else{
-            keys.subList(0,actualInitSize).clear();
-            actualInitSize = -1; 
-            initTerm = null;
-        }
+        //term to start with next time
+        actualInitSize = keys.size();
+       
             
         termDocFreqBuffer = new TreeMap<Term, List<ColumnOrSuperColumn>>();
 
@@ -191,7 +192,7 @@ public class LucandraTermEnum extends TermEnum {
             SlicePredicate slicePredicate = new SlicePredicate();
 
             // Get all columns
-            SliceRange sliceRange = new SliceRange(new byte[] {}, new byte[] {}, false, Integer.MAX_VALUE);
+            SliceRange sliceRange = new SliceRange(new byte[] {}, new byte[] {}, true, Integer.MAX_VALUE);
             slicePredicate.setSlice_range(sliceRange);
 
             Map<String, List<ColumnOrSuperColumn>> columns;
@@ -214,6 +215,8 @@ public class LucandraTermEnum extends TermEnum {
                 
                 termDocFreqBuffer.put(term, entry.getValue());
             }
+            
+            initTerm = termDocFreqBuffer.lastKey();         
         }
 
         
@@ -224,18 +227,22 @@ public class LucandraTermEnum extends TermEnum {
         for (Term termKey : termDocFreqBuffer.keySet()) {
                     
             
-            SortedMap<Term, List<ColumnOrSuperColumn>> subMap = termDocFreqBuffer.subMap(termKey, termDocFreqBuffer.lastKey());
+            //SortedMap<Term, List<ColumnOrSuperColumn>> subMap = termDocFreqBuffer.subMap(termKey, termDocFreqBuffer.lastKey());
+            if(termCache == null){
+                termCache = termDocFreqBuffer;
+            } else {
+                termCache.putAll(termDocFreqBuffer);
+            }
             
-            logger.debug("Caching "+termKey+" with "+subMap.size()+" siblings");
-            termCache.put(termKey, subMap);
-            
+             
             indexReader.addTermEnumCache(termKey, this);
         }
 
         //cache the initial term too
         indexReader.addTermEnumCache(skipTo, this);
+               
+        termBuffer = termDocFreqBuffer.keySet().toArray(new Term[] {});    
         
-        termBuffer = termDocFreqBuffer.keySet().toArray(new Term[] {});
         termPosition = 0;
 
         long end = System.currentTimeMillis();
@@ -250,8 +257,6 @@ public class LucandraTermEnum extends TermEnum {
 
         List<ColumnOrSuperColumn> termDocs = termDocFreqBuffer.get(termBuffer[termPosition]);
         
-        //show results in descending order by default
-        Collections.reverse(termDocs); 
         
         //create proper docIds.
         //We do this now because of how lucene fetches the results

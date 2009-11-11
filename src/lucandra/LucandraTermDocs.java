@@ -99,11 +99,14 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
             }
         } else {
             termEnum = tmp;
-            termEnum.skipTo(term);
+            if(termEnum.skipTo(term)){
 
-            if (termEnum.term().equals(term)) {
-                termDocs = termEnum.getTermDocFreq();
-            } else {
+                if (termEnum.term().equals(term)) {
+                    termDocs = termEnum.getTermDocFreq();
+                } else {
+                    termDocs = null;
+                }
+            }else{
                 termDocs = null;
             }
         }

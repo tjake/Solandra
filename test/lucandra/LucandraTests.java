@@ -134,6 +134,20 @@ public class LucandraTests extends TestCase {
                 assertEquals("test"+(i+200), dval);
             }
             
+            
+            
+         // check wildcard
+         q = qp.parse("+date:test*");
+         docs = searcher.search(q, 10);
+
+         assertEquals(101, docs.totalHits);
+            
+            
+         // check range queries
+         // check wildcard
+         q = qp.parse("+key:[apple TO zoo]");
+         docs = searcher.search(q, 10);
+            
         } catch (Exception e) {
             e.printStackTrace();
             fail(e.toString());
