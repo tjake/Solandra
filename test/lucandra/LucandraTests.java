@@ -40,14 +40,14 @@ public class LucandraTests extends TestCase {
     private static final String indexName = String.valueOf(System.nanoTime());
     private static final Analyzer analyzer = new StandardAnalyzer();
     private static Cassandra.Client client;
-    static{
-        try{
+    static {
+        try {
             client = CassandraUtils.createConnection();
-        }catch(Exception e){
+        } catch (Exception e) {
             fail(e.getLocalizedMessage());
         }
     }
-    
+
     private static final IndexWriter indexWriter = new IndexWriter(indexName, client);
 
     public void testWriter() {
@@ -65,93 +65,126 @@ public class LucandraTests extends TestCase {
             doc2.add(f2);
             indexWriter.addDocument(doc2, analyzer);
 
-            String start  = indexName+"/";
+            String start = indexName + "/";
             String finish = indexName + new Character((char) 255);
 
-            List<String> keys = client.get_key_range(CassandraUtils.keySpace, CassandraUtils.termVecColumnFamily, start, finish, Integer.MAX_VALUE, ConsistencyLevel.ONE);
+            List<String> keys = client.get_key_range(CassandraUtils.keySpace, CassandraUtils.termVecColumnFamily, start, finish, Integer.MAX_VALUE,
+                    ConsistencyLevel.ONE);
             assertEquals(4, keys.size());
             assertEquals(2, indexWriter.docCount());
-            
-            
-            //Index 10 documents to test order
-            for(int i=300; i>=200; i--){
+
+            // Index 10 documents to test order
+            for (int i = 300; i >= 200; i--) {
                 Document doc = new Document();
-                doc.add(new Field("key", "sort this",Field.Store.YES,Field.Index.ANALYZED));
-                doc.add(new Field("date","test"+i,Field.Store.YES, Field.Index.NOT_ANALYZED));
+                doc.add(new Field("key", "sort this", Field.Store.YES, Field.Index.ANALYZED));
+                doc.add(new Field("date", "test" + i, Field.Store.YES, Field.Index.NOT_ANALYZED));
                 indexWriter.addDocument(doc, analyzer);
             }
-                
-            
-            
+
         } catch (Exception e) {
             e.printStackTrace();
             fail(e.toString());
         }
     }
 
-    public void testReader() {
-        try {
-            IndexReader indexReader = new IndexReader(indexName, client);
-            IndexSearcher searcher = new IndexSearcher(indexReader);
+    public void testSearch() throws Exception {
 
-            QueryParser qp = new QueryParser("key", analyzer);
-            Query q = qp.parse("+key:another");
+        IndexReader indexReader = new IndexReader(indexName, client);
+        IndexSearcher searcher = new IndexSearcher(indexReader);
 
-            TopDocs docs = searcher.search(q, 10);
+        QueryParser qp = new QueryParser("key", analyzer);
+        Query q = qp.parse("+key:another");
 
-            assertEquals(1, docs.totalHits);
+        TopDocs docs = searcher.search(q, 10);
 
-            Document doc = searcher.doc(docs.scoreDocs[0].doc);
+        assertEquals(1, docs.totalHits);
 
-            assertTrue(doc.getField("key") != null);
+        Document doc = searcher.doc(docs.scoreDocs[0].doc);
 
-            // check something that doesn't exist
-            q = qp.parse("+key:bogus");
-            docs = searcher.search(q, 10);
-
-            assertEquals(0, docs.totalHits);
-
-            // check wildcard
-            q = qp.parse("+key:anoth*");
-            docs = searcher.search(q, 10);
-
-            assertEquals(1, docs.totalHits);
-            
-            Document d = indexReader.document(1);
-
-            String val = new String(d.getBinaryValue("key"),"UTF-8");
-            assertTrue(val.equals("this is another example"));
-            
-            
-            // check sort
-            Sort sort = new Sort("date");
-            q = qp.parse("+key:sort");
-            docs = searcher.search(q,null,10, sort);
-            
-            for(int i=0; i<10; i++){
-                d = indexReader.document(docs.scoreDocs[i].doc);
-                String dval = new String(d.getBinaryValue("date"));
-                assertEquals("test"+(i+200), dval);
-            }
-            
-            
-            
-         // check wildcard
-         q = qp.parse("+date:test*");
-         docs = searcher.search(q, 10);
-
-         assertEquals(101, docs.totalHits);
-            
-            
-         // check range queries
-         // check wildcard
-         q = qp.parse("+key:[apple TO zoo]");
-         docs = searcher.search(q, 10);
-            
-        } catch (Exception e) {
-            e.printStackTrace();
-            fail(e.toString());
-        }
+        assertNotNull(doc.getField("key"));
     }
-    
+
+    public void testMissingQuery() throws Exception {
+
+        IndexReader indexReader = new IndexReader(indexName, client);
+        IndexSearcher searcher = new IndexSearcher(indexReader);
+        QueryParser qp = new QueryParser("key", analyzer);
+
+        // check something that doesn't exist
+        Query q = qp.parse("+key:bogus");
+        TopDocs docs = searcher.search(q, 10);
+
+        assertEquals(0, docs.totalHits);
+    }
+
+    public void testWildcardQuery() throws Exception {
+        IndexReader indexReader = new IndexReader(indexName, client);
+        IndexSearcher searcher = new IndexSearcher(indexReader);
+        QueryParser qp = new QueryParser("key", analyzer);
+
+        // check wildcard
+        Query q = qp.parse("+key:anoth*");
+        TopDocs docs = searcher.search(q, 10);
+
+        assertEquals(1, docs.totalHits);
+
+        Document d = indexReader.document(1);
+
+        String val = new String(d.getBinaryValue("key"), "UTF-8");
+        assertTrue(val.equals("this is another example"));
+
+        // check wildcard
+        q = qp.parse("+date:test*");
+        docs = searcher.search(q, 10);
+
+        assertEquals(101, docs.totalHits);
+
+    }
+
+    public void testSortQuery() throws Exception {
+
+        IndexReader indexReader = new IndexReader(indexName, client);
+        IndexSearcher searcher = new IndexSearcher(indexReader);
+        QueryParser qp = new QueryParser("key", analyzer);
+
+        // check sort
+        Sort sort = new Sort("date");
+        Query q = qp.parse("+key:sort");
+        TopDocs docs = searcher.search(q, null, 10, sort);
+
+        for (int i = 0; i < 10; i++) {
+            Document d = indexReader.document(docs.scoreDocs[i].doc);
+            String dval = new String(d.getBinaryValue("date"));
+            assertEquals("test" + (i + 200), dval);
+        }
+
+    }
+
+    public void testRangeQuery() throws Exception {
+
+        IndexReader indexReader = new IndexReader(indexName, client);
+        IndexSearcher searcher = new IndexSearcher(indexReader);
+        QueryParser qp = new QueryParser("key", analyzer);
+
+        // check range queries
+
+        Query q = qp.parse("+key:[apple TO zoo]");
+        TopDocs docs = searcher.search(q, 10);
+        assertEquals(103, docs.totalHits);
+
+    }
+
+    public void testExactQuery() throws Exception {
+
+        IndexReader indexReader = new IndexReader(indexName, client);
+        IndexSearcher searcher = new IndexSearcher(indexReader);
+        QueryParser qp = new QueryParser("key", analyzer);
+
+        // check exact
+        Query q = qp.parse("+key:\"example value\"");
+        TopDocs docs = searcher.search(q, 10);
+        assertEquals(1, docs.totalHits);
+
+    }
+
 }
