@@ -140,7 +140,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     @Override
     public Document document(int docNum, FieldSelector selector) throws CorruptIndexException, IOException {
 
-        String key = indexName +"/"+docIndexToDocId.get(docNum);
+        String key = indexName +CassandraUtils.delimeter+docIndexToDocId.get(docNum);
         
         ColumnParent columnParent = new ColumnParent();
         columnParent.setColumn_family(CassandraUtils.docColumnFamily);

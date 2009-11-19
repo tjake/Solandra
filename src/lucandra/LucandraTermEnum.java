@@ -130,9 +130,9 @@ public class LucandraTermEnum extends TermEnum {
     private void loadTerms(Term skipTo) {
                   
         // chose starting term
-        String startTerm = indexName + "/" + CassandraUtils.createColumnName(skipTo);
+        String startTerm = indexName + CassandraUtils.delimeter + CassandraUtils.createColumnName(skipTo);
         // this is where we stop;
-        String endTerm = indexName + "/" + skipTo.field() + CassandraUtils.delimeter + CassandraUtils.delimeter; //startTerm + new Character((char) 255);
+        String endTerm = indexName + CassandraUtils.delimeter + skipTo.field() + CassandraUtils.delimeter + CassandraUtils.delimeter; //startTerm + new Character((char) 255);
 
         if((!skipTo.equals(initTerm) || termPosition == 0) && termCache != null ) {            
             termDocFreqBuffer = termCache.subMap(skipTo, termCache.lastKey());
@@ -161,7 +161,7 @@ public class LucandraTermEnum extends TermEnum {
         //otherwise we grab all the rest of the keys 
         if( initTerm != null ){
             count = maxChunkSize; 
-            startTerm = indexName + "/" + CassandraUtils.createColumnName(initTerm);
+            startTerm = indexName + CassandraUtils.delimeter + CassandraUtils.createColumnName(initTerm);
         }
             
         long start = System.currentTimeMillis();
@@ -210,7 +210,7 @@ public class LucandraTermEnum extends TermEnum {
             for (Map.Entry<String, List<ColumnOrSuperColumn>> entry : columns.entrySet()) {
 
                 // term keys look like wikipedia/body/wiki
-                String termStr = entry.getKey().substring(entry.getKey().indexOf("/")+1);
+                String termStr = entry.getKey().substring(entry.getKey().indexOf(CassandraUtils.delimeter)+CassandraUtils.delimeter.length());
                 Term term = CassandraUtils.parseTerm(termStr.getBytes());
                 
                 termDocFreqBuffer.put(term, entry.getValue());
@@ -226,8 +226,6 @@ public class LucandraTermEnum extends TermEnum {
         // put in cache
         for (Term termKey : termDocFreqBuffer.keySet()) {
                     
-            
-            //SortedMap<Term, List<ColumnOrSuperColumn>> subMap = termDocFreqBuffer.subMap(termKey, termDocFreqBuffer.lastKey());
             if(termCache == null){
                 termCache = termDocFreqBuffer;
             } else {

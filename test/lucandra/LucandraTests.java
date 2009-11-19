@@ -65,8 +65,8 @@ public class LucandraTests extends TestCase {
             doc2.add(f2);
             indexWriter.addDocument(doc2, analyzer);
 
-            String start = indexName + "/";
-            String finish = indexName + new Character((char) 255);
+            String start = indexName + CassandraUtils.delimeter;
+            String finish = indexName + CassandraUtils.delimeter+CassandraUtils.delimeter;
 
             List<String> keys = client.get_key_range(CassandraUtils.keySpace, CassandraUtils.termVecColumnFamily, start, finish, Integer.MAX_VALUE,
                     ConsistencyLevel.ONE);

@@ -116,7 +116,7 @@ public class IndexWriter {
                     // Terms are stored within a unique key combination
                     // This is required since cassandra loads all column
                     // families for a key into memory
-                    String key = indexName + "/" + term.getKey();
+                    String key = indexName + CassandraUtils.delimeter + term.getKey();
 
                     CassandraUtils.robustInsert(client, key, termVecColumnPath, CassandraUtils.intVectorToByteArray(term.getValue()));
                 }
@@ -126,7 +126,7 @@ public class IndexWriter {
             if (field.isIndexed() && !field.isTokenized()) {
                 String term = CassandraUtils.createColumnName(field.name(), field.stringValue());
 
-                String key = indexName + "/" + term;
+                String key = indexName + CassandraUtils.delimeter + term;
 
                 CassandraUtils.robustInsert(client, key, termVecColumnPath, CassandraUtils.intVectorToByteArray(Arrays.asList(new Integer[] { 0 })));
             }
@@ -138,7 +138,7 @@ public class IndexWriter {
 
                 ColumnPath docColumnPath = new ColumnPath(CassandraUtils.docColumnFamily, null, field.name().getBytes());
 
-                CassandraUtils.robustInsert(client, indexName+"/"+docId, docColumnPath, value);
+                CassandraUtils.robustInsert(client, indexName+CassandraUtils.delimeter+docId, docColumnPath, value);
             }
         }
     }
@@ -154,8 +154,8 @@ public class IndexWriter {
     public int docCount() {
 
         try {
-            String start = indexName + "/";
-            String finish = indexName + new Character((char) 255);
+            String start = indexName + CassandraUtils.delimeter;
+            String finish = indexName + CassandraUtils.delimeter + CassandraUtils.delimeter;
 
             return client.get_key_range(CassandraUtils.keySpace, CassandraUtils.docColumnFamily, start, finish, Integer.MAX_VALUE, ConsistencyLevel.ONE).size();
         } catch (TException e) {
