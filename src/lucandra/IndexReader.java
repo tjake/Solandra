@@ -281,6 +281,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
             throw new IllegalStateException("Cant make docId a string");
         }
         
+        
         Integer idx = docIdToDocIndex.get(id);
         
         if(idx == null){
@@ -290,11 +291,10 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
                 throw new IllegalStateException("numDocs reached");
             
             docIdToDocIndex.put(id, idx);
-            docIndexToDocId.put(idx, id);
+            docIndexToDocId.put(idx, id);         
+        }
 
-            return idx;
-        } 
-
+     
         return idx;
     }
 

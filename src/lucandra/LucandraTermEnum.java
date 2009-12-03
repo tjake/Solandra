@@ -20,6 +20,9 @@
 package lucandra;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -213,6 +216,8 @@ public class LucandraTermEnum extends TermEnum {
                 String termStr = entry.getKey().substring(entry.getKey().indexOf(CassandraUtils.delimeter)+CassandraUtils.delimeter.length());
                 Term term = CassandraUtils.parseTerm(termStr.getBytes());
                 
+                logger.debug(termStr+" has "+entry.getValue().size());
+                
                 termDocFreqBuffer.put(term, entry.getValue());
             }
             
@@ -254,18 +259,30 @@ public class LucandraTermEnum extends TermEnum {
             return null;
 
         List<ColumnOrSuperColumn> termDocs = termDocFreqBuffer.get(termBuffer[termPosition]);
-        
-        
+            
         //create proper docIds.
-        //We do this now because of how lucene fetches the results
-        //in buffered chunks. This way all the doc ids are consistent
+        //Make sure these ids are sorted in ascending order since lucene requires this.       
+        int docIds[] = new int[termDocs.size()];
+        int idx = 0;
+        List<ColumnOrSuperColumn> sortedTermDocs = new ArrayList<ColumnOrSuperColumn>(termDocs.size());
+        Map<Integer, ColumnOrSuperColumn> termDocMap = new HashMap<Integer,ColumnOrSuperColumn>();
+        
         for(ColumnOrSuperColumn col: termDocs){
-            indexReader.addDocument(col.getColumn().getName());
+            int docId = indexReader.addDocument(col.getColumn().getName());
+            termDocMap.put(docId, col);
+            docIds[idx++] = docId;
         }
         
-        
+        //sort
+        Arrays.sort(docIds);
 
-        return termDocs;
+        
+        //move
+        for(idx=0; idx<termDocs.size(); idx++){
+            sortedTermDocs.add(termDocMap.get(docIds[idx]));
+        }
+        
+        return sortedTermDocs;
     }
     
     public Set<Term> getCachedTerms(){

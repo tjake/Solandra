@@ -20,6 +20,7 @@
 package lucandra;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.cassandra.service.ColumnOrSuperColumn;
@@ -81,7 +82,7 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
             docs[i] = doc();
             freqs[i] = freq();
         }
-
+      
         return i;
     }
 
