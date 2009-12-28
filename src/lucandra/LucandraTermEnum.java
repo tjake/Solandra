@@ -20,6 +20,7 @@
 package lucandra;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -135,7 +136,7 @@ public class LucandraTermEnum extends TermEnum {
         // chose starting term
         String startTerm = indexName + CassandraUtils.delimeter + CassandraUtils.createColumnName(skipTo);
         // this is where we stop;
-        String endTerm = indexName + CassandraUtils.delimeter + skipTo.field() + CassandraUtils.delimeter + CassandraUtils.delimeter; //startTerm + new Character((char) 255);
+        String endTerm = indexName + CassandraUtils.delimeter + skipTo.field().substring(0, skipTo.field().length()-1)+new Character((char) (skipTo.field().toCharArray()[skipTo.field().length()-1]+1));  //; 
 
         if((!skipTo.equals(initTerm) || termPosition == 0) && termCache != null ) {            
             termDocFreqBuffer = termCache.subMap(skipTo, termCache.lastKey());
@@ -214,7 +215,12 @@ public class LucandraTermEnum extends TermEnum {
 
                 // term keys look like wikipedia/body/wiki
                 String termStr = entry.getKey().substring(entry.getKey().indexOf(CassandraUtils.delimeter)+CassandraUtils.delimeter.length());
-                Term term = CassandraUtils.parseTerm(termStr.getBytes());
+                Term term;
+                try {
+                    term = CassandraUtils.parseTerm(termStr.getBytes("UTF-8"));
+                } catch (UnsupportedEncodingException e) {
+                    throw new RuntimeException(e);
+                }
                 
                 logger.debug(termStr+" has "+entry.getValue().size());
                 

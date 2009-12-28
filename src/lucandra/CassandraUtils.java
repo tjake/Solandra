@@ -19,6 +19,7 @@
  */
 package lucandra;
 
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.UUID;
@@ -86,12 +87,16 @@ public class CassandraUtils {
     public static Term parseTerm(byte[] termStr) {
         String[] parts = null;
 
+              
+        try {
+            parts = new String(termStr,"UTF-8").split(delimeter);
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
+        }
        
-        parts = new String(termStr).split(delimeter);
-        
 
         if (parts == null || parts.length != 2) {
-            throw new RuntimeException("invalid term format: " + termStr);
+            throw new RuntimeException("invalid term format: " + parts[0]);
         }
 
         return new Term(parts[0].intern(), parts[1]);
