@@ -61,18 +61,18 @@ The Lucandra Cassandra config looks like this.
 
 The IndexReader caches terms aggressively during search and tries to avoid lots of back and forth with Cassandra.
 
-
 What Works
 ==========
-* Indexing (though slow for now)
+* Real-Time index updates
+* No optimize() required
+* Indexing (though fairly slow for now)
 * Search
 * Sort
+* Delete
 * Wildcards and other Lucene magic
-* Real-Time
 
 What's Missing (for now)
 ==============
-* You can't delete/update
 * No normalizations are stored (no scoring)
 * Document fields are always stored as binary
 * You can't walk the documents with index reader
