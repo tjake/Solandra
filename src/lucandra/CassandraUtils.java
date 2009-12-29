@@ -19,6 +19,11 @@
  */
 package lucandra;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -46,6 +51,7 @@ public class CassandraUtils {
     public static final String docColumnFamily     = "Documents";
     public static final String delimeter           = ""+new Character((char)255)+new Character((char)255);
     public static final String documentIdField     = "__KEY__";
+    public static final String documentMetaField   = "__META__";
     
 
     private static final Logger logger = Logger.getLogger(CassandraUtils.class);
@@ -210,5 +216,24 @@ public class CassandraUtils {
         if(try_again){
             throw new RuntimeException("Insert still failed after 10 attempts");
         }
+    }
+    
+    /** Read the object from bytes string. */
+    public static Object fromBytes(byte[] data) throws IOException,
+            ClassNotFoundException {
+ 
+        ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(data));
+        Object o = ois.readObject();
+        ois.close();
+        return o;
+    }
+ 
+    /** Write the object to bytes. */
+    public static byte[] toBytes(Object o) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ObjectOutputStream oos = new ObjectOutputStream(baos);
+        oos.writeObject(o);
+        oos.close();
+        return baos.toByteArray();
     }
 }

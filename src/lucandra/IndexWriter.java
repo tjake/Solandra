@@ -29,9 +29,13 @@ import java.util.Map;
 
 import org.apache.cassandra.service.Cassandra;
 import org.apache.cassandra.service.ColumnOrSuperColumn;
+import org.apache.cassandra.service.ColumnParent;
 import org.apache.cassandra.service.ColumnPath;
 import org.apache.cassandra.service.ConsistencyLevel;
 import org.apache.cassandra.service.InvalidRequestException;
+import org.apache.cassandra.service.NotFoundException;
+import org.apache.cassandra.service.SlicePredicate;
+import org.apache.cassandra.service.SliceRange;
 import org.apache.cassandra.service.UnavailableException;
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.Analyzer;
@@ -48,6 +52,8 @@ public class IndexWriter {
 
     private final String indexName;
     private final Cassandra.Client client;
+    private final ColumnPath docAllColumnPath = new ColumnPath(CassandraUtils.docColumnFamily, null, null);
+    private final ColumnPath metaColumnPath = new ColumnPath(CassandraUtils.docColumnFamily, null, CassandraUtils.documentMetaField.getBytes());
 
     private static final Logger logger = Logger.getLogger(IndexWriter.class);
 
@@ -58,12 +64,12 @@ public class IndexWriter {
 
     }
 
+    @SuppressWarnings("unchecked")
     public void addDocument(Document doc, Analyzer analyzer) throws CorruptIndexException, IOException {
 
         Token token = new Token();
-
-        // Build wacky batch struct
-        Map<String, List<ColumnOrSuperColumn>> cfMap = new HashMap<String, List<ColumnOrSuperColumn>>();
+        List<String> allIndexedTerms = new ArrayList<String>();
+        
         
         //check for special field name
         String docId = doc.get(CassandraUtils.documentIdField);
@@ -98,7 +104,8 @@ public class IndexWriter {
                 // Build the termPositions vector for all terms
                 while (tokens.next(token) != null) {
                     String term = CassandraUtils.createColumnName(field.name(), token.term());
-
+                    allIndexedTerms.add(term);
+                    
                     List<Integer> pvec = termPositions.get(term);
 
                     if (pvec == null) {
@@ -125,7 +132,8 @@ public class IndexWriter {
             //Untokenized fields go in without a termPosition
             if (field.isIndexed() && !field.isTokenized()) {
                 String term = CassandraUtils.createColumnName(field.name(), field.stringValue());
-
+                allIndexedTerms.add(term);
+                
                 String key = indexName + CassandraUtils.delimeter + term;
 
                 CassandraUtils.robustInsert(client, key, termVecColumnPath, CassandraUtils.intVectorToByteArray(Arrays.asList(new Integer[] { 0 })));
@@ -141,14 +149,49 @@ public class IndexWriter {
                 CassandraUtils.robustInsert(client, indexName+CassandraUtils.delimeter+docId, docColumnPath, value);
             }
         }
+        
+        //Store meta-data so we can delete this document
+        CassandraUtils.robustInsert(client, indexName+CassandraUtils.delimeter+docId, metaColumnPath, CassandraUtils.toBytes(allIndexedTerms));    
     }
 
     public void deleteDocuments(Query query) throws CorruptIndexException, IOException {
         throw new UnsupportedOperationException();
     }
 
-    public void deleteDocuments(Term arg0) throws CorruptIndexException, IOException {
-        throw new UnsupportedOperationException();
+    @SuppressWarnings("unchecked")
+    public void deleteDocuments(Term term) throws CorruptIndexException, IOException {
+        try {
+            
+            ColumnParent cp = new ColumnParent(CassandraUtils.termVecColumnFamily,null);
+            List<ColumnOrSuperColumn> docs = client.get_slice(CassandraUtils.keySpace, indexName+CassandraUtils.delimeter+CassandraUtils.createColumnName(term), cp, new SlicePredicate(null,new SliceRange(new byte[]{}, new byte[]{},true,Integer.MAX_VALUE)), ConsistencyLevel.ONE);
+                
+            //delete by documentId
+            for(ColumnOrSuperColumn docInfo : docs){
+            
+                ColumnOrSuperColumn column = client.get(CassandraUtils.keySpace, indexName+CassandraUtils.delimeter+new String(docInfo.column.name), metaColumnPath, ConsistencyLevel.ONE);
+            
+                List<String> terms = (List<String>) CassandraUtils.fromBytes(column.column.value);
+            
+                for(String termStr : terms){
+                    ColumnPath termVecColumnPath = new ColumnPath(CassandraUtils.termVecColumnFamily, null, docInfo.column.name);
+                    
+                    client.remove(CassandraUtils.keySpace, indexName+CassandraUtils.delimeter+termStr, termVecColumnPath, System.currentTimeMillis(), ConsistencyLevel.ONE);
+                }
+            
+                //finally delete ourselves
+                client.remove(CassandraUtils.keySpace, indexName+CassandraUtils.delimeter+new String(docInfo.column.name), docAllColumnPath, System.currentTimeMillis(), ConsistencyLevel.ONE);
+            }
+        } catch (InvalidRequestException e) {
+            throw new RuntimeException(e);
+        } catch (NotFoundException e) {
+            return;
+        } catch (UnavailableException e) {
+            throw new RuntimeException(e);
+        } catch (TException e) {
+            throw new RuntimeException(e);
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }  
     }
 
     public int docCount() {

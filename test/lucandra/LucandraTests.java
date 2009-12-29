@@ -29,6 +29,7 @@ import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.cjk.CJKAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
+import org.apache.lucene.index.Term;
 import org.apache.lucene.queryParser.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
@@ -87,7 +88,7 @@ public class LucandraTests extends TestCase {
             }
             
             //Unicode doc
-            Document d3 = new Document();
+            Document d3 = new Document();          
             d3.add(new Field("key", new String("\u5639\u563b"), Field.Store.YES, Field.Index.ANALYZED));
             indexWriter.addDocument(d3, analyzer);
         } catch (Exception e) {
@@ -110,6 +111,19 @@ public class LucandraTests extends TestCase {
         Document doc = searcher.doc(docs.scoreDocs[0].doc);
 
         assertNotNull(doc.getField("key"));
+    }
+    
+    public void testDelete() throws Exception {
+        indexWriter.deleteDocuments(new Term("key",new String("\u5639\u563b")));
+        IndexReader indexReader = new IndexReader(indexName, client);
+        IndexSearcher searcher = new IndexSearcher(indexReader);
+
+        QueryParser qp = new QueryParser("key", analyzer);
+        Query q = qp.parse("+key:\u5639\u563b");
+
+        TopDocs docs = searcher.search(q, 10);
+
+        assertEquals(0, docs.totalHits);
     }
 
     public void testSearch() throws Exception {
