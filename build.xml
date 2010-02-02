@@ -75,7 +75,7 @@
             <batchtest todir="${build}/output">
               <fileset dir="${build.test.classes}" includes="**/*Test*" />
             </batchtest>
-            <jvmarg value="-Dcassandra.host=192.168.1.70"/>
+            <jvmarg value="-Dcassandra.host=127.0.0.1"/>
             <jvmarg value="-Dcassandra.port=9160"/>
             <jvmarg value="-Dcassandra.framed=true"/>
           </junit>

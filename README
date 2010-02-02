@@ -6,10 +6,10 @@ Lucandra provides a Lucene IndexReader and IndexWriter that interfaces with Cass
 
 To get started run the following:
 
-1. Setup Cassandra with storage-conf.xml in config
+1. Setup Cassandra 0.5 with storage-conf.xml in config
 
 2. ant lucandra.jar
-3. ant test -Dcassandra.host=127.0.0.1 -Dcassandra.port=9999 -Dcassandra.framed=false
+3. ant test -Dcassandra.host=127.0.0.1 -Dcassandra.port=9160 -Dcassandra.framed=false
 
 #edit run-demo with appropriate settings (delicious clone)
 4. run_demo.sh -index bookmarks.tsv

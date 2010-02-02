@@ -27,6 +27,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.management.RuntimeErrorException;
+
 import org.apache.cassandra.service.Cassandra;
 import org.apache.cassandra.service.ColumnOrSuperColumn;
 import org.apache.cassandra.service.ColumnParent;
@@ -36,6 +38,7 @@ import org.apache.cassandra.service.InvalidRequestException;
 import org.apache.cassandra.service.NotFoundException;
 import org.apache.cassandra.service.SlicePredicate;
 import org.apache.cassandra.service.SliceRange;
+import org.apache.cassandra.service.TimedOutException;
 import org.apache.cassandra.service.UnavailableException;
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.Analyzer;
@@ -191,6 +194,8 @@ public class IndexWriter {
             throw new RuntimeException(e);
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
+        } catch (TimedOutException e) {
+            throw new RuntimeException(e);
         }  
     }
 
@@ -200,12 +205,14 @@ public class IndexWriter {
             String start = indexName + CassandraUtils.delimeter;
             String finish = indexName + CassandraUtils.delimeter + CassandraUtils.delimeter;
 
-            return client.get_key_range(CassandraUtils.keySpace, CassandraUtils.docColumnFamily, start, finish, Integer.MAX_VALUE, ConsistencyLevel.ONE).size();
+            return client.get_key_range(CassandraUtils.keySpace, CassandraUtils.docColumnFamily, start, finish, 10000, ConsistencyLevel.ONE).size();
         } catch (TException e) {
             throw new RuntimeException(e);
         } catch (InvalidRequestException e) {
             throw new RuntimeException(e);
         } catch (UnavailableException e) {
+            throw new RuntimeException(e);
+        } catch (TimedOutException e) {
             throw new RuntimeException(e);
         }
 

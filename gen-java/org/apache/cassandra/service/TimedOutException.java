@@ -43,34 +43,34 @@ import org.apache.thrift.meta_data.*;
 import org.apache.thrift.protocol.*;
 
 /**
- * Not all the replicas required could be created and/or read.
+ * RPC timeout was exceeded.  either a node failed mid-operation, or load was too high, or the requested op was too large.
  */
-public class UnavailableException extends Exception implements TBase, java.io.Serializable, Cloneable, Comparable<UnavailableException> {
-  private static final TStruct STRUCT_DESC = new TStruct("UnavailableException");
+public class TimedOutException extends Exception implements TBase, java.io.Serializable, Cloneable, Comparable<TimedOutException> {
+  private static final TStruct STRUCT_DESC = new TStruct("TimedOutException");
 
   public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
   }});
 
   static {
-    FieldMetaData.addStructMetaDataMap(UnavailableException.class, metaDataMap);
+    FieldMetaData.addStructMetaDataMap(TimedOutException.class, metaDataMap);
   }
 
-  public UnavailableException() {
+  public TimedOutException() {
   }
 
   /**
    * Performs a deep copy on <i>other</i>.
    */
-  public UnavailableException(UnavailableException other) {
+  public TimedOutException(TimedOutException other) {
   }
 
-  public UnavailableException deepCopy() {
-    return new UnavailableException(this);
+  public TimedOutException deepCopy() {
+    return new TimedOutException(this);
   }
 
   @Deprecated
-  public UnavailableException clone() {
-    return new UnavailableException(this);
+  public TimedOutException clone() {
+    return new TimedOutException(this);
   }
 
   public void setFieldValue(int fieldID, Object value) {
@@ -99,12 +99,12 @@ public class UnavailableException extends Exception implements TBase, java.io.Se
   public boolean equals(Object that) {
     if (that == null)
       return false;
-    if (that instanceof UnavailableException)
-      return this.equals((UnavailableException)that);
+    if (that instanceof TimedOutException)
+      return this.equals((TimedOutException)that);
     return false;
   }
 
-  public boolean equals(UnavailableException that) {
+  public boolean equals(TimedOutException that) {
     if (that == null)
       return false;
 
@@ -116,13 +116,13 @@ public class UnavailableException extends Exception implements TBase, java.io.Se
     return 0;
   }
 
-  public int compareTo(UnavailableException other) {
+  public int compareTo(TimedOutException other) {
     if (!getClass().equals(other.getClass())) {
       return getClass().getName().compareTo(other.getClass().getName());
     }
 
     int lastComparison = 0;
-    UnavailableException typedOther = (UnavailableException)other;
+    TimedOutException typedOther = (TimedOutException)other;
 
     return 0;
   }
@@ -161,7 +161,7 @@ public class UnavailableException extends Exception implements TBase, java.io.Se
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder("UnavailableException(");
+    StringBuilder sb = new StringBuilder("TimedOutException(");
     boolean first = true;
 
     sb.append(")");

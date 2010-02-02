@@ -74,7 +74,7 @@ public class LucandraTests extends TestCase {
             String start = indexName + CassandraUtils.delimeter;
             String finish = indexName + CassandraUtils.delimeter+CassandraUtils.delimeter;
 
-            List<String> keys = client.get_key_range(CassandraUtils.keySpace, CassandraUtils.termVecColumnFamily, start, finish, Integer.MAX_VALUE,
+            List<String> keys = client.get_key_range(CassandraUtils.keySpace, CassandraUtils.termVecColumnFamily, start, finish, 1000,
                     ConsistencyLevel.ONE);
             assertEquals(5, keys.size());
             assertEquals(2, indexWriter.docCount());

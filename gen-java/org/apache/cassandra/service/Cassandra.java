@@ -4,6 +4,27 @@
  * DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING
  */
 package org.apache.cassandra.service;
+/*
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ */
+
 
 import java.util.List;
 import java.util.ArrayList;
@@ -25,28 +46,145 @@ public class Cassandra {
 
   public interface Iface {
 
-    public ColumnOrSuperColumn get(String keyspace, String key, ColumnPath column_path, int consistency_level) throws InvalidRequestException, NotFoundException, UnavailableException, TException;
+    /**
+     * Get the Column or SuperColumn at the given column_path. If no value is present, NotFoundException is thrown. (This is
+     * the only method that can throw an exception under non-failure conditions.)
+     * 
+     * @param keyspace
+     * @param key
+     * @param column_path
+     * @param consistency_level
+     */
+    public ColumnOrSuperColumn get(String keyspace, String key, ColumnPath column_path, int consistency_level) throws InvalidRequestException, NotFoundException, UnavailableException, TimedOutException, TException;
 
-    public List<ColumnOrSuperColumn> get_slice(String keyspace, String key, ColumnParent column_parent, SlicePredicate predicate, int consistency_level) throws InvalidRequestException, NotFoundException, UnavailableException, TException;
+    /**
+     * Get the group of columns contained by column_parent (either a ColumnFamily name or a ColumnFamily/SuperColumn name
+     * pair) specified by the given SlicePredicate. If no matching values are found, an empty list is returned.
+     * 
+     * @param keyspace
+     * @param key
+     * @param column_parent
+     * @param predicate
+     * @param consistency_level
+     */
+    public List<ColumnOrSuperColumn> get_slice(String keyspace, String key, ColumnParent column_parent, SlicePredicate predicate, int consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException;
 
-    public Map<String,ColumnOrSuperColumn> multiget(String keyspace, List<String> keys, ColumnPath column_path, int consistency_level) throws InvalidRequestException, UnavailableException, TException;
+    /**
+     * Perform a get for column_path in parallel on the given list<string> keys. The return value maps keys to the
+     * ColumnOrSuperColumn found. If no value corresponding to a key is present, the key will still be in the map, but both
+     * the column and super_column references of the ColumnOrSuperColumn object it maps to will be null.
+     * 
+     * @param keyspace
+     * @param keys
+     * @param column_path
+     * @param consistency_level
+     */
+    public Map<String,ColumnOrSuperColumn> multiget(String keyspace, List<String> keys, ColumnPath column_path, int consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException;
 
-    public Map<String,List<ColumnOrSuperColumn>> multiget_slice(String keyspace, List<String> keys, ColumnParent column_parent, SlicePredicate predicate, int consistency_level) throws InvalidRequestException, UnavailableException, TException;
+    /**
+     * Performs a get_slice for column_parent and predicate for the given keys in parallel.
+     * 
+     * @param keyspace
+     * @param keys
+     * @param column_parent
+     * @param predicate
+     * @param consistency_level
+     */
+    public Map<String,List<ColumnOrSuperColumn>> multiget_slice(String keyspace, List<String> keys, ColumnParent column_parent, SlicePredicate predicate, int consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException;
 
-    public int get_count(String keyspace, String key, ColumnParent column_parent, int consistency_level) throws InvalidRequestException, UnavailableException, TException;
+    /**
+     * returns the number of columns for a particular <code>key</code> and <code>ColumnFamily</code> or <code>SuperColumn</code>.
+     * 
+     * @param keyspace
+     * @param key
+     * @param column_parent
+     * @param consistency_level
+     */
+    public int get_count(String keyspace, String key, ColumnParent column_parent, int consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException;
 
-    public List<String> get_key_range(String keyspace, String column_family, String start, String finish, int count, int consistency_level) throws InvalidRequestException, UnavailableException, TException;
+    /**
+     * @deprecated; use get_range_slice instead
+     * 
+     * @param keyspace
+     * @param column_family
+     * @param start
+     * @param finish
+     * @param count
+     * @param consistency_level
+     */
+    public List<String> get_key_range(String keyspace, String column_family, String start, String finish, int count, int consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException;
 
-    public void insert(String keyspace, String key, ColumnPath column_path, byte[] value, long timestamp, int consistency_level) throws InvalidRequestException, UnavailableException, TException;
+    /**
+     * returns a subset of columns for a range of keys.
+     * 
+     * @param keyspace
+     * @param column_parent
+     * @param predicate
+     * @param start_key
+     * @param finish_key
+     * @param row_count
+     * @param consistency_level
+     */
+    public List<KeySlice> get_range_slice(String keyspace, ColumnParent column_parent, SlicePredicate predicate, String start_key, String finish_key, int row_count, int consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException;
 
-    public void batch_insert(String keyspace, String key, Map<String,List<ColumnOrSuperColumn>> cfmap, int consistency_level) throws InvalidRequestException, UnavailableException, TException;
+    /**
+     * Insert a Column consisting of (column_path.column, value, timestamp) at the given column_path.column_family and optional
+     * column_path.super_column. Note that column_path.column is here required, since a SuperColumn cannot directly contain binary
+     * values -- it can only contain sub-Columns.
+     * 
+     * @param keyspace
+     * @param key
+     * @param column_path
+     * @param value
+     * @param timestamp
+     * @param consistency_level
+     */
+    public void insert(String keyspace, String key, ColumnPath column_path, byte[] value, long timestamp, int consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException;
 
-    public void remove(String keyspace, String key, ColumnPath column_path, long timestamp, int consistency_level) throws InvalidRequestException, UnavailableException, TException;
+    /**
+     * Insert Columns or SuperColumns across different Column Families for the same row key. batch_mutation is a
+     * map<string, list<ColumnOrSuperColumn>> -- a map which pairs column family names with the relevant ColumnOrSuperColumn
+     * objects to insert.
+     * 
+     * @param keyspace
+     * @param key
+     * @param cfmap
+     * @param consistency_level
+     */
+    public void batch_insert(String keyspace, String key, Map<String,List<ColumnOrSuperColumn>> cfmap, int consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException;
 
+    /**
+     * Remove data from the row specified by key at the granularity specified by column_path, and the given timestamp. Note
+     * that all the values in column_path besides column_path.column_family are truly optional: you can remove the entire
+     * row by just specifying the ColumnFamily, or you can remove a SuperColumn or a single Column by specifying those levels too.
+     * 
+     * @param keyspace
+     * @param key
+     * @param column_path
+     * @param timestamp
+     * @param consistency_level
+     */
+    public void remove(String keyspace, String key, ColumnPath column_path, long timestamp, int consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException;
+
+    /**
+     * get property whose value is of type string.
+     * 
+     * @param property
+     */
     public String get_string_property(String property) throws TException;
 
+    /**
+     * get property whose value is list of strings.
+     * 
+     * @param property
+     */
     public List<String> get_string_list_property(String property) throws TException;
 
+    /**
+     * describe specified keyspace
+     * 
+     * @param keyspace
+     */
     public Map<String,Map<String,String>> describe_keyspace(String keyspace) throws NotFoundException, TException;
 
   }
@@ -78,7 +216,7 @@ public class Cassandra {
       return this.oprot_;
     }
 
-    public ColumnOrSuperColumn get(String keyspace, String key, ColumnPath column_path, int consistency_level) throws InvalidRequestException, NotFoundException, UnavailableException, TException
+    public ColumnOrSuperColumn get(String keyspace, String key, ColumnPath column_path, int consistency_level) throws InvalidRequestException, NotFoundException, UnavailableException, TimedOutException, TException
     {
       send_get(keyspace, key, column_path, consistency_level);
       return recv_get();
@@ -97,7 +235,7 @@ public class Cassandra {
       oprot_.getTransport().flush();
     }
 
-    public ColumnOrSuperColumn recv_get() throws InvalidRequestException, NotFoundException, UnavailableException, TException
+    public ColumnOrSuperColumn recv_get() throws InvalidRequestException, NotFoundException, UnavailableException, TimedOutException, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -120,10 +258,13 @@ public class Cassandra {
       if (result.ue != null) {
         throw result.ue;
       }
+      if (result.te != null) {
+        throw result.te;
+      }
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "get failed: unknown result");
     }
 
-    public List<ColumnOrSuperColumn> get_slice(String keyspace, String key, ColumnParent column_parent, SlicePredicate predicate, int consistency_level) throws InvalidRequestException, NotFoundException, UnavailableException, TException
+    public List<ColumnOrSuperColumn> get_slice(String keyspace, String key, ColumnParent column_parent, SlicePredicate predicate, int consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException
     {
       send_get_slice(keyspace, key, column_parent, predicate, consistency_level);
       return recv_get_slice();
@@ -143,7 +284,7 @@ public class Cassandra {
       oprot_.getTransport().flush();
     }
 
-    public List<ColumnOrSuperColumn> recv_get_slice() throws InvalidRequestException, NotFoundException, UnavailableException, TException
+    public List<ColumnOrSuperColumn> recv_get_slice() throws InvalidRequestException, UnavailableException, TimedOutException, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -160,16 +301,16 @@ public class Cassandra {
       if (result.ire != null) {
         throw result.ire;
       }
-      if (result.nfe != null) {
-        throw result.nfe;
-      }
       if (result.ue != null) {
         throw result.ue;
+      }
+      if (result.te != null) {
+        throw result.te;
       }
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "get_slice failed: unknown result");
     }
 
-    public Map<String,ColumnOrSuperColumn> multiget(String keyspace, List<String> keys, ColumnPath column_path, int consistency_level) throws InvalidRequestException, UnavailableException, TException
+    public Map<String,ColumnOrSuperColumn> multiget(String keyspace, List<String> keys, ColumnPath column_path, int consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException
     {
       send_multiget(keyspace, keys, column_path, consistency_level);
       return recv_multiget();
@@ -188,7 +329,7 @@ public class Cassandra {
       oprot_.getTransport().flush();
     }
 
-    public Map<String,ColumnOrSuperColumn> recv_multiget() throws InvalidRequestException, UnavailableException, TException
+    public Map<String,ColumnOrSuperColumn> recv_multiget() throws InvalidRequestException, UnavailableException, TimedOutException, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -208,10 +349,13 @@ public class Cassandra {
       if (result.ue != null) {
         throw result.ue;
       }
+      if (result.te != null) {
+        throw result.te;
+      }
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "multiget failed: unknown result");
     }
 
-    public Map<String,List<ColumnOrSuperColumn>> multiget_slice(String keyspace, List<String> keys, ColumnParent column_parent, SlicePredicate predicate, int consistency_level) throws InvalidRequestException, UnavailableException, TException
+    public Map<String,List<ColumnOrSuperColumn>> multiget_slice(String keyspace, List<String> keys, ColumnParent column_parent, SlicePredicate predicate, int consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException
     {
       send_multiget_slice(keyspace, keys, column_parent, predicate, consistency_level);
       return recv_multiget_slice();
@@ -231,7 +375,7 @@ public class Cassandra {
       oprot_.getTransport().flush();
     }
 
-    public Map<String,List<ColumnOrSuperColumn>> recv_multiget_slice() throws InvalidRequestException, UnavailableException, TException
+    public Map<String,List<ColumnOrSuperColumn>> recv_multiget_slice() throws InvalidRequestException, UnavailableException, TimedOutException, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -251,10 +395,13 @@ public class Cassandra {
       if (result.ue != null) {
         throw result.ue;
       }
+      if (result.te != null) {
+        throw result.te;
+      }
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "multiget_slice failed: unknown result");
     }
 
-    public int get_count(String keyspace, String key, ColumnParent column_parent, int consistency_level) throws InvalidRequestException, UnavailableException, TException
+    public int get_count(String keyspace, String key, ColumnParent column_parent, int consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException
     {
       send_get_count(keyspace, key, column_parent, consistency_level);
       return recv_get_count();
@@ -273,7 +420,7 @@ public class Cassandra {
       oprot_.getTransport().flush();
     }
 
-    public int recv_get_count() throws InvalidRequestException, UnavailableException, TException
+    public int recv_get_count() throws InvalidRequestException, UnavailableException, TimedOutException, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -293,10 +440,13 @@ public class Cassandra {
       if (result.ue != null) {
         throw result.ue;
       }
+      if (result.te != null) {
+        throw result.te;
+      }
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "get_count failed: unknown result");
     }
 
-    public List<String> get_key_range(String keyspace, String column_family, String start, String finish, int count, int consistency_level) throws InvalidRequestException, UnavailableException, TException
+    public List<String> get_key_range(String keyspace, String column_family, String start, String finish, int count, int consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException
     {
       send_get_key_range(keyspace, column_family, start, finish, count, consistency_level);
       return recv_get_key_range();
@@ -317,7 +467,7 @@ public class Cassandra {
       oprot_.getTransport().flush();
     }
 
-    public List<String> recv_get_key_range() throws InvalidRequestException, UnavailableException, TException
+    public List<String> recv_get_key_range() throws InvalidRequestException, UnavailableException, TimedOutException, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -337,10 +487,61 @@ public class Cassandra {
       if (result.ue != null) {
         throw result.ue;
       }
+      if (result.te != null) {
+        throw result.te;
+      }
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "get_key_range failed: unknown result");
     }
 
-    public void insert(String keyspace, String key, ColumnPath column_path, byte[] value, long timestamp, int consistency_level) throws InvalidRequestException, UnavailableException, TException
+    public List<KeySlice> get_range_slice(String keyspace, ColumnParent column_parent, SlicePredicate predicate, String start_key, String finish_key, int row_count, int consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException
+    {
+      send_get_range_slice(keyspace, column_parent, predicate, start_key, finish_key, row_count, consistency_level);
+      return recv_get_range_slice();
+    }
+
+    public void send_get_range_slice(String keyspace, ColumnParent column_parent, SlicePredicate predicate, String start_key, String finish_key, int row_count, int consistency_level) throws TException
+    {
+      oprot_.writeMessageBegin(new TMessage("get_range_slice", TMessageType.CALL, seqid_));
+      get_range_slice_args args = new get_range_slice_args();
+      args.keyspace = keyspace;
+      args.column_parent = column_parent;
+      args.predicate = predicate;
+      args.start_key = start_key;
+      args.finish_key = finish_key;
+      args.row_count = row_count;
+      args.consistency_level = consistency_level;
+      args.write(oprot_);
+      oprot_.writeMessageEnd();
+      oprot_.getTransport().flush();
+    }
+
+    public List<KeySlice> recv_get_range_slice() throws InvalidRequestException, UnavailableException, TimedOutException, TException
+    {
+      TMessage msg = iprot_.readMessageBegin();
+      if (msg.type == TMessageType.EXCEPTION) {
+        TApplicationException x = TApplicationException.read(iprot_);
+        iprot_.readMessageEnd();
+        throw x;
+      }
+      get_range_slice_result result = new get_range_slice_result();
+      result.read(iprot_);
+      iprot_.readMessageEnd();
+      if (result.isSetSuccess()) {
+        return result.success;
+      }
+      if (result.ire != null) {
+        throw result.ire;
+      }
+      if (result.ue != null) {
+        throw result.ue;
+      }
+      if (result.te != null) {
+        throw result.te;
+      }
+      throw new TApplicationException(TApplicationException.MISSING_RESULT, "get_range_slice failed: unknown result");
+    }
+
+    public void insert(String keyspace, String key, ColumnPath column_path, byte[] value, long timestamp, int consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException
     {
       send_insert(keyspace, key, column_path, value, timestamp, consistency_level);
       recv_insert();
@@ -361,7 +562,7 @@ public class Cassandra {
       oprot_.getTransport().flush();
     }
 
-    public void recv_insert() throws InvalidRequestException, UnavailableException, TException
+    public void recv_insert() throws InvalidRequestException, UnavailableException, TimedOutException, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -378,10 +579,13 @@ public class Cassandra {
       if (result.ue != null) {
         throw result.ue;
       }
+      if (result.te != null) {
+        throw result.te;
+      }
       return;
     }
 
-    public void batch_insert(String keyspace, String key, Map<String,List<ColumnOrSuperColumn>> cfmap, int consistency_level) throws InvalidRequestException, UnavailableException, TException
+    public void batch_insert(String keyspace, String key, Map<String,List<ColumnOrSuperColumn>> cfmap, int consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException
     {
       send_batch_insert(keyspace, key, cfmap, consistency_level);
       recv_batch_insert();
@@ -400,7 +604,7 @@ public class Cassandra {
       oprot_.getTransport().flush();
     }
 
-    public void recv_batch_insert() throws InvalidRequestException, UnavailableException, TException
+    public void recv_batch_insert() throws InvalidRequestException, UnavailableException, TimedOutException, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -417,10 +621,13 @@ public class Cassandra {
       if (result.ue != null) {
         throw result.ue;
       }
+      if (result.te != null) {
+        throw result.te;
+      }
       return;
     }
 
-    public void remove(String keyspace, String key, ColumnPath column_path, long timestamp, int consistency_level) throws InvalidRequestException, UnavailableException, TException
+    public void remove(String keyspace, String key, ColumnPath column_path, long timestamp, int consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException
     {
       send_remove(keyspace, key, column_path, timestamp, consistency_level);
       recv_remove();
@@ -440,7 +647,7 @@ public class Cassandra {
       oprot_.getTransport().flush();
     }
 
-    public void recv_remove() throws InvalidRequestException, UnavailableException, TException
+    public void recv_remove() throws InvalidRequestException, UnavailableException, TimedOutException, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -456,6 +663,9 @@ public class Cassandra {
       }
       if (result.ue != null) {
         throw result.ue;
+      }
+      if (result.te != null) {
+        throw result.te;
       }
       return;
     }
@@ -574,6 +784,7 @@ public class Cassandra {
       processMap_.put("multiget_slice", new multiget_slice());
       processMap_.put("get_count", new get_count());
       processMap_.put("get_key_range", new get_key_range());
+      processMap_.put("get_range_slice", new get_range_slice());
       processMap_.put("insert", new insert());
       processMap_.put("batch_insert", new batch_insert());
       processMap_.put("remove", new remove());
@@ -622,6 +833,8 @@ public class Cassandra {
           result.nfe = nfe;
         } catch (UnavailableException ue) {
           result.ue = ue;
+        } catch (TimedOutException te) {
+          result.te = te;
         } catch (Throwable th) {
           LOGGER.error("Internal error processing get", th);
           TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing get");
@@ -650,10 +863,10 @@ public class Cassandra {
           result.success = iface_.get_slice(args.keyspace, args.key, args.column_parent, args.predicate, args.consistency_level);
         } catch (InvalidRequestException ire) {
           result.ire = ire;
-        } catch (NotFoundException nfe) {
-          result.nfe = nfe;
         } catch (UnavailableException ue) {
           result.ue = ue;
+        } catch (TimedOutException te) {
+          result.te = te;
         } catch (Throwable th) {
           LOGGER.error("Internal error processing get_slice", th);
           TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing get_slice");
@@ -684,6 +897,8 @@ public class Cassandra {
           result.ire = ire;
         } catch (UnavailableException ue) {
           result.ue = ue;
+        } catch (TimedOutException te) {
+          result.te = te;
         } catch (Throwable th) {
           LOGGER.error("Internal error processing multiget", th);
           TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing multiget");
@@ -714,6 +929,8 @@ public class Cassandra {
           result.ire = ire;
         } catch (UnavailableException ue) {
           result.ue = ue;
+        } catch (TimedOutException te) {
+          result.te = te;
         } catch (Throwable th) {
           LOGGER.error("Internal error processing multiget_slice", th);
           TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing multiget_slice");
@@ -745,6 +962,8 @@ public class Cassandra {
           result.ire = ire;
         } catch (UnavailableException ue) {
           result.ue = ue;
+        } catch (TimedOutException te) {
+          result.te = te;
         } catch (Throwable th) {
           LOGGER.error("Internal error processing get_count", th);
           TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing get_count");
@@ -775,6 +994,8 @@ public class Cassandra {
           result.ire = ire;
         } catch (UnavailableException ue) {
           result.ue = ue;
+        } catch (TimedOutException te) {
+          result.te = te;
         } catch (Throwable th) {
           LOGGER.error("Internal error processing get_key_range", th);
           TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing get_key_range");
@@ -785,6 +1006,38 @@ public class Cassandra {
           return;
         }
         oprot.writeMessageBegin(new TMessage("get_key_range", TMessageType.REPLY, seqid));
+        result.write(oprot);
+        oprot.writeMessageEnd();
+        oprot.getTransport().flush();
+      }
+
+    }
+
+    private class get_range_slice implements ProcessFunction {
+      public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
+      {
+        get_range_slice_args args = new get_range_slice_args();
+        args.read(iprot);
+        iprot.readMessageEnd();
+        get_range_slice_result result = new get_range_slice_result();
+        try {
+          result.success = iface_.get_range_slice(args.keyspace, args.column_parent, args.predicate, args.start_key, args.finish_key, args.row_count, args.consistency_level);
+        } catch (InvalidRequestException ire) {
+          result.ire = ire;
+        } catch (UnavailableException ue) {
+          result.ue = ue;
+        } catch (TimedOutException te) {
+          result.te = te;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing get_range_slice", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing get_range_slice");
+          oprot.writeMessageBegin(new TMessage("get_range_slice", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
+        }
+        oprot.writeMessageBegin(new TMessage("get_range_slice", TMessageType.REPLY, seqid));
         result.write(oprot);
         oprot.writeMessageEnd();
         oprot.getTransport().flush();
@@ -805,6 +1058,8 @@ public class Cassandra {
           result.ire = ire;
         } catch (UnavailableException ue) {
           result.ue = ue;
+        } catch (TimedOutException te) {
+          result.te = te;
         } catch (Throwable th) {
           LOGGER.error("Internal error processing insert", th);
           TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing insert");
@@ -835,6 +1090,8 @@ public class Cassandra {
           result.ire = ire;
         } catch (UnavailableException ue) {
           result.ue = ue;
+        } catch (TimedOutException te) {
+          result.te = te;
         } catch (Throwable th) {
           LOGGER.error("Internal error processing batch_insert", th);
           TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing batch_insert");
@@ -865,6 +1122,8 @@ public class Cassandra {
           result.ire = ire;
         } catch (UnavailableException ue) {
           result.ue = ue;
+        } catch (TimedOutException te) {
+          result.te = te;
         } catch (Throwable th) {
           LOGGER.error("Internal error processing remove", th);
           TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing remove");
@@ -1459,15 +1718,18 @@ public class Cassandra {
     private static final TField IRE_FIELD_DESC = new TField("ire", TType.STRUCT, (short)1);
     private static final TField NFE_FIELD_DESC = new TField("nfe", TType.STRUCT, (short)2);
     private static final TField UE_FIELD_DESC = new TField("ue", TType.STRUCT, (short)3);
+    private static final TField TE_FIELD_DESC = new TField("te", TType.STRUCT, (short)4);
 
     public ColumnOrSuperColumn success;
     public InvalidRequestException ire;
     public NotFoundException nfe;
     public UnavailableException ue;
+    public TimedOutException te;
     public static final int SUCCESS = 0;
     public static final int IRE = 1;
     public static final int NFE = 2;
     public static final int UE = 3;
+    public static final int TE = 4;
 
     // isset id assignments
 
@@ -1479,6 +1741,8 @@ public class Cassandra {
       put(NFE, new FieldMetaData("nfe", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
       put(UE, new FieldMetaData("ue", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRUCT)));
+      put(TE, new FieldMetaData("te", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -1493,13 +1757,15 @@ public class Cassandra {
       ColumnOrSuperColumn success,
       InvalidRequestException ire,
       NotFoundException nfe,
-      UnavailableException ue)
+      UnavailableException ue,
+      TimedOutException te)
     {
       this();
       this.success = success;
       this.ire = ire;
       this.nfe = nfe;
       this.ue = ue;
+      this.te = te;
     }
 
     /**
@@ -1517,6 +1783,9 @@ public class Cassandra {
       }
       if (other.isSetUe()) {
         this.ue = new UnavailableException(other.ue);
+      }
+      if (other.isSetTe()) {
+        this.te = new TimedOutException(other.te);
       }
     }
 
@@ -1625,6 +1894,30 @@ public class Cassandra {
       }
     }
 
+    public TimedOutException getTe() {
+      return this.te;
+    }
+
+    public get_result setTe(TimedOutException te) {
+      this.te = te;
+      return this;
+    }
+
+    public void unsetTe() {
+      this.te = null;
+    }
+
+    // Returns true if field te is set (has been asigned a value) and false otherwise
+    public boolean isSetTe() {
+      return this.te != null;
+    }
+
+    public void setTeIsSet(boolean value) {
+      if (!value) {
+        this.te = null;
+      }
+    }
+
     public void setFieldValue(int fieldID, Object value) {
       switch (fieldID) {
       case SUCCESS:
@@ -1659,6 +1952,14 @@ public class Cassandra {
         }
         break;
 
+      case TE:
+        if (value == null) {
+          unsetTe();
+        } else {
+          setTe((TimedOutException)value);
+        }
+        break;
+
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
@@ -1678,6 +1979,9 @@ public class Cassandra {
       case UE:
         return getUe();
 
+      case TE:
+        return getTe();
+
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
@@ -1694,6 +1998,8 @@ public class Cassandra {
         return isSetNfe();
       case UE:
         return isSetUe();
+      case TE:
+        return isSetTe();
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
@@ -1748,6 +2054,15 @@ public class Cassandra {
           return false;
       }
 
+      boolean this_present_te = true && this.isSetTe();
+      boolean that_present_te = true && that.isSetTe();
+      if (this_present_te || that_present_te) {
+        if (!(this_present_te && that_present_te))
+          return false;
+        if (!this.te.equals(that.te))
+          return false;
+      }
+
       return true;
     }
 
@@ -1793,6 +2108,14 @@ public class Cassandra {
         return lastComparison;
       }
       lastComparison = TBaseHelper.compareTo(ue, typedOther.ue);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetTe()).compareTo(isSetTe());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(te, typedOther.te);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -1842,6 +2165,14 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
+          case TE:
+            if (field.type == TType.STRUCT) {
+              this.te = new TimedOutException();
+              this.te.read(iprot);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
           default:
             TProtocolUtil.skip(iprot, field.type);
             break;
@@ -1873,6 +2204,10 @@ public class Cassandra {
       } else if (this.isSetUe()) {
         oprot.writeFieldBegin(UE_FIELD_DESC);
         this.ue.write(oprot);
+        oprot.writeFieldEnd();
+      } else if (this.isSetTe()) {
+        oprot.writeFieldBegin(TE_FIELD_DESC);
+        this.te.write(oprot);
         oprot.writeFieldEnd();
       }
       oprot.writeFieldStop();
@@ -1913,6 +2248,14 @@ public class Cassandra {
         sb.append("null");
       } else {
         sb.append(this.ue);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("te:");
+      if (this.te == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.te);
       }
       first = false;
       sb.append(")");
@@ -2527,17 +2870,17 @@ public class Cassandra {
     private static final TStruct STRUCT_DESC = new TStruct("get_slice_result");
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
     private static final TField IRE_FIELD_DESC = new TField("ire", TType.STRUCT, (short)1);
-    private static final TField NFE_FIELD_DESC = new TField("nfe", TType.STRUCT, (short)2);
-    private static final TField UE_FIELD_DESC = new TField("ue", TType.STRUCT, (short)3);
+    private static final TField UE_FIELD_DESC = new TField("ue", TType.STRUCT, (short)2);
+    private static final TField TE_FIELD_DESC = new TField("te", TType.STRUCT, (short)3);
 
     public List<ColumnOrSuperColumn> success;
     public InvalidRequestException ire;
-    public NotFoundException nfe;
     public UnavailableException ue;
+    public TimedOutException te;
     public static final int SUCCESS = 0;
     public static final int IRE = 1;
-    public static final int NFE = 2;
-    public static final int UE = 3;
+    public static final int UE = 2;
+    public static final int TE = 3;
 
     // isset id assignments
 
@@ -2547,9 +2890,9 @@ public class Cassandra {
               new StructMetaData(TType.STRUCT, ColumnOrSuperColumn.class))));
       put(IRE, new FieldMetaData("ire", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
-      put(NFE, new FieldMetaData("nfe", TFieldRequirementType.DEFAULT, 
-          new FieldValueMetaData(TType.STRUCT)));
       put(UE, new FieldMetaData("ue", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRUCT)));
+      put(TE, new FieldMetaData("te", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -2563,14 +2906,14 @@ public class Cassandra {
     public get_slice_result(
       List<ColumnOrSuperColumn> success,
       InvalidRequestException ire,
-      NotFoundException nfe,
-      UnavailableException ue)
+      UnavailableException ue,
+      TimedOutException te)
     {
       this();
       this.success = success;
       this.ire = ire;
-      this.nfe = nfe;
       this.ue = ue;
+      this.te = te;
     }
 
     /**
@@ -2587,11 +2930,11 @@ public class Cassandra {
       if (other.isSetIre()) {
         this.ire = new InvalidRequestException(other.ire);
       }
-      if (other.isSetNfe()) {
-        this.nfe = new NotFoundException(other.nfe);
-      }
       if (other.isSetUe()) {
         this.ue = new UnavailableException(other.ue);
+      }
+      if (other.isSetTe()) {
+        this.te = new TimedOutException(other.te);
       }
     }
 
@@ -2602,6 +2945,21 @@ public class Cassandra {
     @Deprecated
     public get_slice_result clone() {
       return new get_slice_result(this);
+    }
+
+    public int getSuccessSize() {
+      return (this.success == null) ? 0 : this.success.size();
+    }
+
+    public java.util.Iterator<ColumnOrSuperColumn> getSuccessIterator() {
+      return (this.success == null) ? null : this.success.iterator();
+    }
+
+    public void addToSuccess(ColumnOrSuperColumn elem) {
+      if (this.success == null) {
+        this.success = new ArrayList<ColumnOrSuperColumn>();
+      }
+      this.success.add(elem);
     }
 
     public List<ColumnOrSuperColumn> getSuccess() {
@@ -2652,30 +3010,6 @@ public class Cassandra {
       }
     }
 
-    public NotFoundException getNfe() {
-      return this.nfe;
-    }
-
-    public get_slice_result setNfe(NotFoundException nfe) {
-      this.nfe = nfe;
-      return this;
-    }
-
-    public void unsetNfe() {
-      this.nfe = null;
-    }
-
-    // Returns true if field nfe is set (has been asigned a value) and false otherwise
-    public boolean isSetNfe() {
-      return this.nfe != null;
-    }
-
-    public void setNfeIsSet(boolean value) {
-      if (!value) {
-        this.nfe = null;
-      }
-    }
-
     public UnavailableException getUe() {
       return this.ue;
     }
@@ -2700,6 +3034,30 @@ public class Cassandra {
       }
     }
 
+    public TimedOutException getTe() {
+      return this.te;
+    }
+
+    public get_slice_result setTe(TimedOutException te) {
+      this.te = te;
+      return this;
+    }
+
+    public void unsetTe() {
+      this.te = null;
+    }
+
+    // Returns true if field te is set (has been asigned a value) and false otherwise
+    public boolean isSetTe() {
+      return this.te != null;
+    }
+
+    public void setTeIsSet(boolean value) {
+      if (!value) {
+        this.te = null;
+      }
+    }
+
     public void setFieldValue(int fieldID, Object value) {
       switch (fieldID) {
       case SUCCESS:
@@ -2718,19 +3076,19 @@ public class Cassandra {
         }
         break;
 
-      case NFE:
-        if (value == null) {
-          unsetNfe();
-        } else {
-          setNfe((NotFoundException)value);
-        }
-        break;
-
       case UE:
         if (value == null) {
           unsetUe();
         } else {
           setUe((UnavailableException)value);
+        }
+        break;
+
+      case TE:
+        if (value == null) {
+          unsetTe();
+        } else {
+          setTe((TimedOutException)value);
         }
         break;
 
@@ -2747,11 +3105,11 @@ public class Cassandra {
       case IRE:
         return getIre();
 
-      case NFE:
-        return getNfe();
-
       case UE:
         return getUe();
+
+      case TE:
+        return getTe();
 
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
@@ -2765,10 +3123,10 @@ public class Cassandra {
         return isSetSuccess();
       case IRE:
         return isSetIre();
-      case NFE:
-        return isSetNfe();
       case UE:
         return isSetUe();
+      case TE:
+        return isSetTe();
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
@@ -2805,21 +3163,21 @@ public class Cassandra {
           return false;
       }
 
-      boolean this_present_nfe = true && this.isSetNfe();
-      boolean that_present_nfe = true && that.isSetNfe();
-      if (this_present_nfe || that_present_nfe) {
-        if (!(this_present_nfe && that_present_nfe))
-          return false;
-        if (!this.nfe.equals(that.nfe))
-          return false;
-      }
-
       boolean this_present_ue = true && this.isSetUe();
       boolean that_present_ue = true && that.isSetUe();
       if (this_present_ue || that_present_ue) {
         if (!(this_present_ue && that_present_ue))
           return false;
         if (!this.ue.equals(that.ue))
+          return false;
+      }
+
+      boolean this_present_te = true && this.isSetTe();
+      boolean that_present_te = true && that.isSetTe();
+      if (this_present_te || that_present_te) {
+        if (!(this_present_te && that_present_te))
+          return false;
+        if (!this.te.equals(that.te))
           return false;
       }
 
@@ -2855,19 +3213,19 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      lastComparison = Boolean.valueOf(isSetNfe()).compareTo(isSetNfe());
-      if (lastComparison != 0) {
-        return lastComparison;
-      }
-      lastComparison = TBaseHelper.compareTo(nfe, typedOther.nfe);
-      if (lastComparison != 0) {
-        return lastComparison;
-      }
       lastComparison = Boolean.valueOf(isSetUe()).compareTo(isSetUe());
       if (lastComparison != 0) {
         return lastComparison;
       }
       lastComparison = TBaseHelper.compareTo(ue, typedOther.ue);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetTe()).compareTo(isSetTe());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(te, typedOther.te);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -2888,14 +3246,14 @@ public class Cassandra {
           case SUCCESS:
             if (field.type == TType.LIST) {
               {
-                TList _list8 = iprot.readListBegin();
-                this.success = new ArrayList<ColumnOrSuperColumn>(_list8.size);
-                for (int _i9 = 0; _i9 < _list8.size; ++_i9)
+                TList _list12 = iprot.readListBegin();
+                this.success = new ArrayList<ColumnOrSuperColumn>(_list12.size);
+                for (int _i13 = 0; _i13 < _list12.size; ++_i13)
                 {
-                  ColumnOrSuperColumn _elem10;
-                  _elem10 = new ColumnOrSuperColumn();
-                  _elem10.read(iprot);
-                  this.success.add(_elem10);
+                  ColumnOrSuperColumn _elem14;
+                  _elem14 = new ColumnOrSuperColumn();
+                  _elem14.read(iprot);
+                  this.success.add(_elem14);
                 }
                 iprot.readListEnd();
               }
@@ -2911,18 +3269,18 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
-          case NFE:
-            if (field.type == TType.STRUCT) {
-              this.nfe = new NotFoundException();
-              this.nfe.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
           case UE:
             if (field.type == TType.STRUCT) {
               this.ue = new UnavailableException();
               this.ue.read(iprot);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case TE:
+            if (field.type == TType.STRUCT) {
+              this.te = new TimedOutException();
+              this.te.read(iprot);
             } else { 
               TProtocolUtil.skip(iprot, field.type);
             }
@@ -2947,9 +3305,9 @@ public class Cassandra {
         oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
-          for (ColumnOrSuperColumn _iter11 : this.success)
+          for (ColumnOrSuperColumn _iter15 : this.success)
           {
-            _iter11.write(oprot);
+            _iter15.write(oprot);
           }
           oprot.writeListEnd();
         }
@@ -2958,13 +3316,13 @@ public class Cassandra {
         oprot.writeFieldBegin(IRE_FIELD_DESC);
         this.ire.write(oprot);
         oprot.writeFieldEnd();
-      } else if (this.isSetNfe()) {
-        oprot.writeFieldBegin(NFE_FIELD_DESC);
-        this.nfe.write(oprot);
-        oprot.writeFieldEnd();
       } else if (this.isSetUe()) {
         oprot.writeFieldBegin(UE_FIELD_DESC);
         this.ue.write(oprot);
+        oprot.writeFieldEnd();
+      } else if (this.isSetTe()) {
+        oprot.writeFieldBegin(TE_FIELD_DESC);
+        this.te.write(oprot);
         oprot.writeFieldEnd();
       }
       oprot.writeFieldStop();
@@ -2992,19 +3350,19 @@ public class Cassandra {
       }
       first = false;
       if (!first) sb.append(", ");
-      sb.append("nfe:");
-      if (this.nfe == null) {
-        sb.append("null");
-      } else {
-        sb.append(this.nfe);
-      }
-      first = false;
-      if (!first) sb.append(", ");
       sb.append("ue:");
       if (this.ue == null) {
         sb.append("null");
       } else {
         sb.append(this.ue);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("te:");
+      if (this.te == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.te);
       }
       first = false;
       sb.append(")");
@@ -3130,6 +3488,21 @@ public class Cassandra {
       if (!value) {
         this.keyspace = null;
       }
+    }
+
+    public int getKeysSize() {
+      return (this.keys == null) ? 0 : this.keys.size();
+    }
+
+    public java.util.Iterator<String> getKeysIterator() {
+      return (this.keys == null) ? null : this.keys.iterator();
+    }
+
+    public void addToKeys(String elem) {
+      if (this.keys == null) {
+        this.keys = new ArrayList<String>();
+      }
+      this.keys.add(elem);
     }
 
     public List<String> getKeys() {
@@ -3406,13 +3779,13 @@ public class Cassandra {
           case KEYS:
             if (field.type == TType.LIST) {
               {
-                TList _list12 = iprot.readListBegin();
-                this.keys = new ArrayList<String>(_list12.size);
-                for (int _i13 = 0; _i13 < _list12.size; ++_i13)
+                TList _list16 = iprot.readListBegin();
+                this.keys = new ArrayList<String>(_list16.size);
+                for (int _i17 = 0; _i17 < _list16.size; ++_i17)
                 {
-                  String _elem14;
-                  _elem14 = iprot.readString();
-                  this.keys.add(_elem14);
+                  String _elem18;
+                  _elem18 = iprot.readString();
+                  this.keys.add(_elem18);
                 }
                 iprot.readListEnd();
               }
@@ -3465,9 +3838,9 @@ public class Cassandra {
         oprot.writeFieldBegin(KEYS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRING, this.keys.size()));
-          for (String _iter15 : this.keys)
+          for (String _iter19 : this.keys)
           {
-            oprot.writeString(_iter15);
+            oprot.writeString(_iter19);
           }
           oprot.writeListEnd();
         }
@@ -3554,13 +3927,16 @@ public class Cassandra {
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.MAP, (short)0);
     private static final TField IRE_FIELD_DESC = new TField("ire", TType.STRUCT, (short)1);
     private static final TField UE_FIELD_DESC = new TField("ue", TType.STRUCT, (short)2);
+    private static final TField TE_FIELD_DESC = new TField("te", TType.STRUCT, (short)3);
 
     public Map<String,ColumnOrSuperColumn> success;
     public InvalidRequestException ire;
     public UnavailableException ue;
+    public TimedOutException te;
     public static final int SUCCESS = 0;
     public static final int IRE = 1;
     public static final int UE = 2;
+    public static final int TE = 3;
 
     // isset id assignments
 
@@ -3572,6 +3948,8 @@ public class Cassandra {
       put(IRE, new FieldMetaData("ire", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
       put(UE, new FieldMetaData("ue", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRUCT)));
+      put(TE, new FieldMetaData("te", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -3585,12 +3963,14 @@ public class Cassandra {
     public multiget_result(
       Map<String,ColumnOrSuperColumn> success,
       InvalidRequestException ire,
-      UnavailableException ue)
+      UnavailableException ue,
+      TimedOutException te)
     {
       this();
       this.success = success;
       this.ire = ire;
       this.ue = ue;
+      this.te = te;
     }
 
     /**
@@ -3618,6 +3998,9 @@ public class Cassandra {
       if (other.isSetUe()) {
         this.ue = new UnavailableException(other.ue);
       }
+      if (other.isSetTe()) {
+        this.te = new TimedOutException(other.te);
+      }
     }
 
     public multiget_result deepCopy() {
@@ -3627,6 +4010,17 @@ public class Cassandra {
     @Deprecated
     public multiget_result clone() {
       return new multiget_result(this);
+    }
+
+    public int getSuccessSize() {
+      return (this.success == null) ? 0 : this.success.size();
+    }
+
+    public void putToSuccess(String key, ColumnOrSuperColumn val) {
+      if (this.success == null) {
+        this.success = new HashMap<String,ColumnOrSuperColumn>();
+      }
+      this.success.put(key, val);
     }
 
     public Map<String,ColumnOrSuperColumn> getSuccess() {
@@ -3701,6 +4095,30 @@ public class Cassandra {
       }
     }
 
+    public TimedOutException getTe() {
+      return this.te;
+    }
+
+    public multiget_result setTe(TimedOutException te) {
+      this.te = te;
+      return this;
+    }
+
+    public void unsetTe() {
+      this.te = null;
+    }
+
+    // Returns true if field te is set (has been asigned a value) and false otherwise
+    public boolean isSetTe() {
+      return this.te != null;
+    }
+
+    public void setTeIsSet(boolean value) {
+      if (!value) {
+        this.te = null;
+      }
+    }
+
     public void setFieldValue(int fieldID, Object value) {
       switch (fieldID) {
       case SUCCESS:
@@ -3727,6 +4145,14 @@ public class Cassandra {
         }
         break;
 
+      case TE:
+        if (value == null) {
+          unsetTe();
+        } else {
+          setTe((TimedOutException)value);
+        }
+        break;
+
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
@@ -3743,6 +4169,9 @@ public class Cassandra {
       case UE:
         return getUe();
 
+      case TE:
+        return getTe();
+
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
@@ -3757,6 +4186,8 @@ public class Cassandra {
         return isSetIre();
       case UE:
         return isSetUe();
+      case TE:
+        return isSetTe();
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
@@ -3802,6 +4233,15 @@ public class Cassandra {
           return false;
       }
 
+      boolean this_present_te = true && this.isSetTe();
+      boolean that_present_te = true && that.isSetTe();
+      if (this_present_te || that_present_te) {
+        if (!(this_present_te && that_present_te))
+          return false;
+        if (!this.te.equals(that.te))
+          return false;
+      }
+
       return true;
     }
 
@@ -3824,16 +4264,16 @@ public class Cassandra {
           case SUCCESS:
             if (field.type == TType.MAP) {
               {
-                TMap _map16 = iprot.readMapBegin();
-                this.success = new HashMap<String,ColumnOrSuperColumn>(2*_map16.size);
-                for (int _i17 = 0; _i17 < _map16.size; ++_i17)
+                TMap _map20 = iprot.readMapBegin();
+                this.success = new HashMap<String,ColumnOrSuperColumn>(2*_map20.size);
+                for (int _i21 = 0; _i21 < _map20.size; ++_i21)
                 {
-                  String _key18;
-                  ColumnOrSuperColumn _val19;
-                  _key18 = iprot.readString();
-                  _val19 = new ColumnOrSuperColumn();
-                  _val19.read(iprot);
-                  this.success.put(_key18, _val19);
+                  String _key22;
+                  ColumnOrSuperColumn _val23;
+                  _key22 = iprot.readString();
+                  _val23 = new ColumnOrSuperColumn();
+                  _val23.read(iprot);
+                  this.success.put(_key22, _val23);
                 }
                 iprot.readMapEnd();
               }
@@ -3853,6 +4293,14 @@ public class Cassandra {
             if (field.type == TType.STRUCT) {
               this.ue = new UnavailableException();
               this.ue.read(iprot);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case TE:
+            if (field.type == TType.STRUCT) {
+              this.te = new TimedOutException();
+              this.te.read(iprot);
             } else { 
               TProtocolUtil.skip(iprot, field.type);
             }
@@ -3877,10 +4325,10 @@ public class Cassandra {
         oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
         {
           oprot.writeMapBegin(new TMap(TType.STRING, TType.STRUCT, this.success.size()));
-          for (Map.Entry<String, ColumnOrSuperColumn> _iter20 : this.success.entrySet())
+          for (Map.Entry<String, ColumnOrSuperColumn> _iter24 : this.success.entrySet())
           {
-            oprot.writeString(_iter20.getKey());
-            _iter20.getValue().write(oprot);
+            oprot.writeString(_iter24.getKey());
+            _iter24.getValue().write(oprot);
           }
           oprot.writeMapEnd();
         }
@@ -3892,6 +4340,10 @@ public class Cassandra {
       } else if (this.isSetUe()) {
         oprot.writeFieldBegin(UE_FIELD_DESC);
         this.ue.write(oprot);
+        oprot.writeFieldEnd();
+      } else if (this.isSetTe()) {
+        oprot.writeFieldBegin(TE_FIELD_DESC);
+        this.te.write(oprot);
         oprot.writeFieldEnd();
       }
       oprot.writeFieldStop();
@@ -3924,6 +4376,14 @@ public class Cassandra {
         sb.append("null");
       } else {
         sb.append(this.ue);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("te:");
+      if (this.te == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.te);
       }
       first = false;
       sb.append(")");
@@ -4059,6 +4519,21 @@ public class Cassandra {
       if (!value) {
         this.keyspace = null;
       }
+    }
+
+    public int getKeysSize() {
+      return (this.keys == null) ? 0 : this.keys.size();
+    }
+
+    public java.util.Iterator<String> getKeysIterator() {
+      return (this.keys == null) ? null : this.keys.iterator();
+    }
+
+    public void addToKeys(String elem) {
+      if (this.keys == null) {
+        this.keys = new ArrayList<String>();
+      }
+      this.keys.add(elem);
     }
 
     public List<String> getKeys() {
@@ -4389,13 +4864,13 @@ public class Cassandra {
           case KEYS:
             if (field.type == TType.LIST) {
               {
-                TList _list21 = iprot.readListBegin();
-                this.keys = new ArrayList<String>(_list21.size);
-                for (int _i22 = 0; _i22 < _list21.size; ++_i22)
+                TList _list25 = iprot.readListBegin();
+                this.keys = new ArrayList<String>(_list25.size);
+                for (int _i26 = 0; _i26 < _list25.size; ++_i26)
                 {
-                  String _elem23;
-                  _elem23 = iprot.readString();
-                  this.keys.add(_elem23);
+                  String _elem27;
+                  _elem27 = iprot.readString();
+                  this.keys.add(_elem27);
                 }
                 iprot.readListEnd();
               }
@@ -4456,9 +4931,9 @@ public class Cassandra {
         oprot.writeFieldBegin(KEYS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRING, this.keys.size()));
-          for (String _iter24 : this.keys)
+          for (String _iter28 : this.keys)
           {
-            oprot.writeString(_iter24);
+            oprot.writeString(_iter28);
           }
           oprot.writeListEnd();
         }
@@ -4561,13 +5036,16 @@ public class Cassandra {
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.MAP, (short)0);
     private static final TField IRE_FIELD_DESC = new TField("ire", TType.STRUCT, (short)1);
     private static final TField UE_FIELD_DESC = new TField("ue", TType.STRUCT, (short)2);
+    private static final TField TE_FIELD_DESC = new TField("te", TType.STRUCT, (short)3);
 
     public Map<String,List<ColumnOrSuperColumn>> success;
     public InvalidRequestException ire;
     public UnavailableException ue;
+    public TimedOutException te;
     public static final int SUCCESS = 0;
     public static final int IRE = 1;
     public static final int UE = 2;
+    public static final int TE = 3;
 
     // isset id assignments
 
@@ -4581,6 +5059,8 @@ public class Cassandra {
           new FieldValueMetaData(TType.STRUCT)));
       put(UE, new FieldMetaData("ue", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
+      put(TE, new FieldMetaData("te", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRUCT)));
     }});
 
     static {
@@ -4593,12 +5073,14 @@ public class Cassandra {
     public multiget_slice_result(
       Map<String,List<ColumnOrSuperColumn>> success,
       InvalidRequestException ire,
-      UnavailableException ue)
+      UnavailableException ue,
+      TimedOutException te)
     {
       this();
       this.success = success;
       this.ire = ire;
       this.ue = ue;
+      this.te = te;
     }
 
     /**
@@ -4629,6 +5111,9 @@ public class Cassandra {
       if (other.isSetUe()) {
         this.ue = new UnavailableException(other.ue);
       }
+      if (other.isSetTe()) {
+        this.te = new TimedOutException(other.te);
+      }
     }
 
     public multiget_slice_result deepCopy() {
@@ -4638,6 +5123,17 @@ public class Cassandra {
     @Deprecated
     public multiget_slice_result clone() {
       return new multiget_slice_result(this);
+    }
+
+    public int getSuccessSize() {
+      return (this.success == null) ? 0 : this.success.size();
+    }
+
+    public void putToSuccess(String key, List<ColumnOrSuperColumn> val) {
+      if (this.success == null) {
+        this.success = new HashMap<String,List<ColumnOrSuperColumn>>();
+      }
+      this.success.put(key, val);
     }
 
     public Map<String,List<ColumnOrSuperColumn>> getSuccess() {
@@ -4712,6 +5208,30 @@ public class Cassandra {
       }
     }
 
+    public TimedOutException getTe() {
+      return this.te;
+    }
+
+    public multiget_slice_result setTe(TimedOutException te) {
+      this.te = te;
+      return this;
+    }
+
+    public void unsetTe() {
+      this.te = null;
+    }
+
+    // Returns true if field te is set (has been asigned a value) and false otherwise
+    public boolean isSetTe() {
+      return this.te != null;
+    }
+
+    public void setTeIsSet(boolean value) {
+      if (!value) {
+        this.te = null;
+      }
+    }
+
     public void setFieldValue(int fieldID, Object value) {
       switch (fieldID) {
       case SUCCESS:
@@ -4738,6 +5258,14 @@ public class Cassandra {
         }
         break;
 
+      case TE:
+        if (value == null) {
+          unsetTe();
+        } else {
+          setTe((TimedOutException)value);
+        }
+        break;
+
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
@@ -4754,6 +5282,9 @@ public class Cassandra {
       case UE:
         return getUe();
 
+      case TE:
+        return getTe();
+
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
@@ -4768,6 +5299,8 @@ public class Cassandra {
         return isSetIre();
       case UE:
         return isSetUe();
+      case TE:
+        return isSetTe();
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
@@ -4813,6 +5346,15 @@ public class Cassandra {
           return false;
       }
 
+      boolean this_present_te = true && this.isSetTe();
+      boolean that_present_te = true && that.isSetTe();
+      if (this_present_te || that_present_te) {
+        if (!(this_present_te && that_present_te))
+          return false;
+        if (!this.te.equals(that.te))
+          return false;
+      }
+
       return true;
     }
 
@@ -4835,26 +5377,26 @@ public class Cassandra {
           case SUCCESS:
             if (field.type == TType.MAP) {
               {
-                TMap _map25 = iprot.readMapBegin();
-                this.success = new HashMap<String,List<ColumnOrSuperColumn>>(2*_map25.size);
-                for (int _i26 = 0; _i26 < _map25.size; ++_i26)
+                TMap _map29 = iprot.readMapBegin();
+                this.success = new HashMap<String,List<ColumnOrSuperColumn>>(2*_map29.size);
+                for (int _i30 = 0; _i30 < _map29.size; ++_i30)
                 {
-                  String _key27;
-                  List<ColumnOrSuperColumn> _val28;
-                  _key27 = iprot.readString();
+                  String _key31;
+                  List<ColumnOrSuperColumn> _val32;
+                  _key31 = iprot.readString();
                   {
-                    TList _list29 = iprot.readListBegin();
-                    _val28 = new ArrayList<ColumnOrSuperColumn>(_list29.size);
-                    for (int _i30 = 0; _i30 < _list29.size; ++_i30)
+                    TList _list33 = iprot.readListBegin();
+                    _val32 = new ArrayList<ColumnOrSuperColumn>(_list33.size);
+                    for (int _i34 = 0; _i34 < _list33.size; ++_i34)
                     {
-                      ColumnOrSuperColumn _elem31;
-                      _elem31 = new ColumnOrSuperColumn();
-                      _elem31.read(iprot);
-                      _val28.add(_elem31);
+                      ColumnOrSuperColumn _elem35;
+                      _elem35 = new ColumnOrSuperColumn();
+                      _elem35.read(iprot);
+                      _val32.add(_elem35);
                     }
                     iprot.readListEnd();
                   }
-                  this.success.put(_key27, _val28);
+                  this.success.put(_key31, _val32);
                 }
                 iprot.readMapEnd();
               }
@@ -4874,6 +5416,14 @@ public class Cassandra {
             if (field.type == TType.STRUCT) {
               this.ue = new UnavailableException();
               this.ue.read(iprot);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case TE:
+            if (field.type == TType.STRUCT) {
+              this.te = new TimedOutException();
+              this.te.read(iprot);
             } else { 
               TProtocolUtil.skip(iprot, field.type);
             }
@@ -4898,14 +5448,14 @@ public class Cassandra {
         oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
         {
           oprot.writeMapBegin(new TMap(TType.STRING, TType.LIST, this.success.size()));
-          for (Map.Entry<String, List<ColumnOrSuperColumn>> _iter32 : this.success.entrySet())
+          for (Map.Entry<String, List<ColumnOrSuperColumn>> _iter36 : this.success.entrySet())
           {
-            oprot.writeString(_iter32.getKey());
+            oprot.writeString(_iter36.getKey());
             {
-              oprot.writeListBegin(new TList(TType.STRUCT, _iter32.getValue().size()));
-              for (ColumnOrSuperColumn _iter33 : _iter32.getValue())
+              oprot.writeListBegin(new TList(TType.STRUCT, _iter36.getValue().size()));
+              for (ColumnOrSuperColumn _iter37 : _iter36.getValue())
               {
-                _iter33.write(oprot);
+                _iter37.write(oprot);
               }
               oprot.writeListEnd();
             }
@@ -4920,6 +5470,10 @@ public class Cassandra {
       } else if (this.isSetUe()) {
         oprot.writeFieldBegin(UE_FIELD_DESC);
         this.ue.write(oprot);
+        oprot.writeFieldEnd();
+      } else if (this.isSetTe()) {
+        oprot.writeFieldBegin(TE_FIELD_DESC);
+        this.te.write(oprot);
         oprot.writeFieldEnd();
       }
       oprot.writeFieldStop();
@@ -4952,6 +5506,14 @@ public class Cassandra {
         sb.append("null");
       } else {
         sb.append(this.ue);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("te:");
+      if (this.te == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.te);
       }
       first = false;
       sb.append(")");
@@ -5479,13 +6041,16 @@ public class Cassandra {
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.I32, (short)0);
     private static final TField IRE_FIELD_DESC = new TField("ire", TType.STRUCT, (short)1);
     private static final TField UE_FIELD_DESC = new TField("ue", TType.STRUCT, (short)2);
+    private static final TField TE_FIELD_DESC = new TField("te", TType.STRUCT, (short)3);
 
     public int success;
     public InvalidRequestException ire;
     public UnavailableException ue;
+    public TimedOutException te;
     public static final int SUCCESS = 0;
     public static final int IRE = 1;
     public static final int UE = 2;
+    public static final int TE = 3;
 
     // isset id assignments
     private static final int __SUCCESS_ISSET_ID = 0;
@@ -5497,6 +6062,8 @@ public class Cassandra {
       put(IRE, new FieldMetaData("ire", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
       put(UE, new FieldMetaData("ue", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRUCT)));
+      put(TE, new FieldMetaData("te", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -5510,13 +6077,15 @@ public class Cassandra {
     public get_count_result(
       int success,
       InvalidRequestException ire,
-      UnavailableException ue)
+      UnavailableException ue,
+      TimedOutException te)
     {
       this();
       this.success = success;
       setSuccessIsSet(true);
       this.ire = ire;
       this.ue = ue;
+      this.te = te;
     }
 
     /**
@@ -5531,6 +6100,9 @@ public class Cassandra {
       }
       if (other.isSetUe()) {
         this.ue = new UnavailableException(other.ue);
+      }
+      if (other.isSetTe()) {
+        this.te = new TimedOutException(other.te);
       }
     }
 
@@ -5614,6 +6186,30 @@ public class Cassandra {
       }
     }
 
+    public TimedOutException getTe() {
+      return this.te;
+    }
+
+    public get_count_result setTe(TimedOutException te) {
+      this.te = te;
+      return this;
+    }
+
+    public void unsetTe() {
+      this.te = null;
+    }
+
+    // Returns true if field te is set (has been asigned a value) and false otherwise
+    public boolean isSetTe() {
+      return this.te != null;
+    }
+
+    public void setTeIsSet(boolean value) {
+      if (!value) {
+        this.te = null;
+      }
+    }
+
     public void setFieldValue(int fieldID, Object value) {
       switch (fieldID) {
       case SUCCESS:
@@ -5640,6 +6236,14 @@ public class Cassandra {
         }
         break;
 
+      case TE:
+        if (value == null) {
+          unsetTe();
+        } else {
+          setTe((TimedOutException)value);
+        }
+        break;
+
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
@@ -5656,6 +6260,9 @@ public class Cassandra {
       case UE:
         return getUe();
 
+      case TE:
+        return getTe();
+
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
@@ -5670,6 +6277,8 @@ public class Cassandra {
         return isSetIre();
       case UE:
         return isSetUe();
+      case TE:
+        return isSetTe();
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
@@ -5715,6 +6324,15 @@ public class Cassandra {
           return false;
       }
 
+      boolean this_present_te = true && this.isSetTe();
+      boolean that_present_te = true && that.isSetTe();
+      if (this_present_te || that_present_te) {
+        if (!(this_present_te && that_present_te))
+          return false;
+        if (!this.te.equals(that.te))
+          return false;
+      }
+
       return true;
     }
 
@@ -5752,6 +6370,14 @@ public class Cassandra {
         return lastComparison;
       }
       lastComparison = TBaseHelper.compareTo(ue, typedOther.ue);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetTe()).compareTo(isSetTe());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(te, typedOther.te);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -5793,6 +6419,14 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
+          case TE:
+            if (field.type == TType.STRUCT) {
+              this.te = new TimedOutException();
+              this.te.read(iprot);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
           default:
             TProtocolUtil.skip(iprot, field.type);
             break;
@@ -5821,6 +6455,10 @@ public class Cassandra {
         oprot.writeFieldBegin(UE_FIELD_DESC);
         this.ue.write(oprot);
         oprot.writeFieldEnd();
+      } else if (this.isSetTe()) {
+        oprot.writeFieldBegin(TE_FIELD_DESC);
+        this.te.write(oprot);
+        oprot.writeFieldEnd();
       }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
@@ -5848,6 +6486,14 @@ public class Cassandra {
         sb.append("null");
       } else {
         sb.append(this.ue);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("te:");
+      if (this.te == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.te);
       }
       first = false;
       sb.append(")");
@@ -6549,13 +7195,16 @@ public class Cassandra {
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
     private static final TField IRE_FIELD_DESC = new TField("ire", TType.STRUCT, (short)1);
     private static final TField UE_FIELD_DESC = new TField("ue", TType.STRUCT, (short)2);
+    private static final TField TE_FIELD_DESC = new TField("te", TType.STRUCT, (short)3);
 
     public List<String> success;
     public InvalidRequestException ire;
     public UnavailableException ue;
+    public TimedOutException te;
     public static final int SUCCESS = 0;
     public static final int IRE = 1;
     public static final int UE = 2;
+    public static final int TE = 3;
 
     // isset id assignments
 
@@ -6566,6 +7215,8 @@ public class Cassandra {
       put(IRE, new FieldMetaData("ire", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
       put(UE, new FieldMetaData("ue", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRUCT)));
+      put(TE, new FieldMetaData("te", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -6579,12 +7230,14 @@ public class Cassandra {
     public get_key_range_result(
       List<String> success,
       InvalidRequestException ire,
-      UnavailableException ue)
+      UnavailableException ue,
+      TimedOutException te)
     {
       this();
       this.success = success;
       this.ire = ire;
       this.ue = ue;
+      this.te = te;
     }
 
     /**
@@ -6604,6 +7257,9 @@ public class Cassandra {
       if (other.isSetUe()) {
         this.ue = new UnavailableException(other.ue);
       }
+      if (other.isSetTe()) {
+        this.te = new TimedOutException(other.te);
+      }
     }
 
     public get_key_range_result deepCopy() {
@@ -6613,6 +7269,21 @@ public class Cassandra {
     @Deprecated
     public get_key_range_result clone() {
       return new get_key_range_result(this);
+    }
+
+    public int getSuccessSize() {
+      return (this.success == null) ? 0 : this.success.size();
+    }
+
+    public java.util.Iterator<String> getSuccessIterator() {
+      return (this.success == null) ? null : this.success.iterator();
+    }
+
+    public void addToSuccess(String elem) {
+      if (this.success == null) {
+        this.success = new ArrayList<String>();
+      }
+      this.success.add(elem);
     }
 
     public List<String> getSuccess() {
@@ -6687,6 +7358,30 @@ public class Cassandra {
       }
     }
 
+    public TimedOutException getTe() {
+      return this.te;
+    }
+
+    public get_key_range_result setTe(TimedOutException te) {
+      this.te = te;
+      return this;
+    }
+
+    public void unsetTe() {
+      this.te = null;
+    }
+
+    // Returns true if field te is set (has been asigned a value) and false otherwise
+    public boolean isSetTe() {
+      return this.te != null;
+    }
+
+    public void setTeIsSet(boolean value) {
+      if (!value) {
+        this.te = null;
+      }
+    }
+
     public void setFieldValue(int fieldID, Object value) {
       switch (fieldID) {
       case SUCCESS:
@@ -6713,6 +7408,14 @@ public class Cassandra {
         }
         break;
 
+      case TE:
+        if (value == null) {
+          unsetTe();
+        } else {
+          setTe((TimedOutException)value);
+        }
+        break;
+
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
@@ -6729,6 +7432,9 @@ public class Cassandra {
       case UE:
         return getUe();
 
+      case TE:
+        return getTe();
+
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
@@ -6743,6 +7449,8 @@ public class Cassandra {
         return isSetIre();
       case UE:
         return isSetUe();
+      case TE:
+        return isSetTe();
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
@@ -6788,6 +7496,15 @@ public class Cassandra {
           return false;
       }
 
+      boolean this_present_te = true && this.isSetTe();
+      boolean that_present_te = true && that.isSetTe();
+      if (this_present_te || that_present_te) {
+        if (!(this_present_te && that_present_te))
+          return false;
+        if (!this.te.equals(that.te))
+          return false;
+      }
+
       return true;
     }
 
@@ -6828,6 +7545,14 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
+      lastComparison = Boolean.valueOf(isSetTe()).compareTo(isSetTe());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(te, typedOther.te);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -6845,13 +7570,13 @@ public class Cassandra {
           case SUCCESS:
             if (field.type == TType.LIST) {
               {
-                TList _list34 = iprot.readListBegin();
-                this.success = new ArrayList<String>(_list34.size);
-                for (int _i35 = 0; _i35 < _list34.size; ++_i35)
+                TList _list38 = iprot.readListBegin();
+                this.success = new ArrayList<String>(_list38.size);
+                for (int _i39 = 0; _i39 < _list38.size; ++_i39)
                 {
-                  String _elem36;
-                  _elem36 = iprot.readString();
-                  this.success.add(_elem36);
+                  String _elem40;
+                  _elem40 = iprot.readString();
+                  this.success.add(_elem40);
                 }
                 iprot.readListEnd();
               }
@@ -6871,6 +7596,14 @@ public class Cassandra {
             if (field.type == TType.STRUCT) {
               this.ue = new UnavailableException();
               this.ue.read(iprot);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case TE:
+            if (field.type == TType.STRUCT) {
+              this.te = new TimedOutException();
+              this.te.read(iprot);
             } else { 
               TProtocolUtil.skip(iprot, field.type);
             }
@@ -6895,9 +7628,9 @@ public class Cassandra {
         oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRING, this.success.size()));
-          for (String _iter37 : this.success)
+          for (String _iter41 : this.success)
           {
-            oprot.writeString(_iter37);
+            oprot.writeString(_iter41);
           }
           oprot.writeListEnd();
         }
@@ -6909,6 +7642,10 @@ public class Cassandra {
       } else if (this.isSetUe()) {
         oprot.writeFieldBegin(UE_FIELD_DESC);
         this.ue.write(oprot);
+        oprot.writeFieldEnd();
+      } else if (this.isSetTe()) {
+        oprot.writeFieldBegin(TE_FIELD_DESC);
+        this.te.write(oprot);
         oprot.writeFieldEnd();
       }
       oprot.writeFieldStop();
@@ -6941,6 +7678,1296 @@ public class Cassandra {
         sb.append("null");
       } else {
         sb.append(this.ue);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("te:");
+      if (this.te == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.te);
+      }
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws TException {
+      // check for required fields
+      // check that fields of type enum have valid values
+    }
+
+  }
+
+  public static class get_range_slice_args implements TBase, java.io.Serializable, Cloneable, Comparable<get_range_slice_args>   {
+    private static final TStruct STRUCT_DESC = new TStruct("get_range_slice_args");
+    private static final TField KEYSPACE_FIELD_DESC = new TField("keyspace", TType.STRING, (short)1);
+    private static final TField COLUMN_PARENT_FIELD_DESC = new TField("column_parent", TType.STRUCT, (short)2);
+    private static final TField PREDICATE_FIELD_DESC = new TField("predicate", TType.STRUCT, (short)3);
+    private static final TField START_KEY_FIELD_DESC = new TField("start_key", TType.STRING, (short)4);
+    private static final TField FINISH_KEY_FIELD_DESC = new TField("finish_key", TType.STRING, (short)5);
+    private static final TField ROW_COUNT_FIELD_DESC = new TField("row_count", TType.I32, (short)6);
+    private static final TField CONSISTENCY_LEVEL_FIELD_DESC = new TField("consistency_level", TType.I32, (short)7);
+
+    public String keyspace;
+    public ColumnParent column_parent;
+    public SlicePredicate predicate;
+    public String start_key;
+    public String finish_key;
+    public int row_count;
+    /**
+     * 
+     * @see ConsistencyLevel
+     */
+    public int consistency_level;
+    public static final int KEYSPACE = 1;
+    public static final int COLUMN_PARENT = 2;
+    public static final int PREDICATE = 3;
+    public static final int START_KEY = 4;
+    public static final int FINISH_KEY = 5;
+    public static final int ROW_COUNT = 6;
+    public static final int CONSISTENCY_LEVEL = 7;
+
+    // isset id assignments
+    private static final int __ROW_COUNT_ISSET_ID = 0;
+    private static final int __CONSISTENCY_LEVEL_ISSET_ID = 1;
+    private BitSet __isset_bit_vector = new BitSet(2);
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+      put(KEYSPACE, new FieldMetaData("keyspace", TFieldRequirementType.REQUIRED, 
+          new FieldValueMetaData(TType.STRING)));
+      put(COLUMN_PARENT, new FieldMetaData("column_parent", TFieldRequirementType.REQUIRED, 
+          new StructMetaData(TType.STRUCT, ColumnParent.class)));
+      put(PREDICATE, new FieldMetaData("predicate", TFieldRequirementType.REQUIRED, 
+          new StructMetaData(TType.STRUCT, SlicePredicate.class)));
+      put(START_KEY, new FieldMetaData("start_key", TFieldRequirementType.REQUIRED, 
+          new FieldValueMetaData(TType.STRING)));
+      put(FINISH_KEY, new FieldMetaData("finish_key", TFieldRequirementType.REQUIRED, 
+          new FieldValueMetaData(TType.STRING)));
+      put(ROW_COUNT, new FieldMetaData("row_count", TFieldRequirementType.REQUIRED, 
+          new FieldValueMetaData(TType.I32)));
+      put(CONSISTENCY_LEVEL, new FieldMetaData("consistency_level", TFieldRequirementType.REQUIRED, 
+          new FieldValueMetaData(TType.I32)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(get_range_slice_args.class, metaDataMap);
+    }
+
+    public get_range_slice_args() {
+      this.start_key = "";
+
+      this.finish_key = "";
+
+      this.row_count = 100;
+
+      this.consistency_level = 1;
+
+    }
+
+    public get_range_slice_args(
+      String keyspace,
+      ColumnParent column_parent,
+      SlicePredicate predicate,
+      String start_key,
+      String finish_key,
+      int row_count,
+      int consistency_level)
+    {
+      this();
+      this.keyspace = keyspace;
+      this.column_parent = column_parent;
+      this.predicate = predicate;
+      this.start_key = start_key;
+      this.finish_key = finish_key;
+      this.row_count = row_count;
+      setRow_countIsSet(true);
+      this.consistency_level = consistency_level;
+      setConsistency_levelIsSet(true);
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public get_range_slice_args(get_range_slice_args other) {
+      __isset_bit_vector.clear();
+      __isset_bit_vector.or(other.__isset_bit_vector);
+      if (other.isSetKeyspace()) {
+        this.keyspace = other.keyspace;
+      }
+      if (other.isSetColumn_parent()) {
+        this.column_parent = new ColumnParent(other.column_parent);
+      }
+      if (other.isSetPredicate()) {
+        this.predicate = new SlicePredicate(other.predicate);
+      }
+      if (other.isSetStart_key()) {
+        this.start_key = other.start_key;
+      }
+      if (other.isSetFinish_key()) {
+        this.finish_key = other.finish_key;
+      }
+      this.row_count = other.row_count;
+      this.consistency_level = other.consistency_level;
+    }
+
+    public get_range_slice_args deepCopy() {
+      return new get_range_slice_args(this);
+    }
+
+    @Deprecated
+    public get_range_slice_args clone() {
+      return new get_range_slice_args(this);
+    }
+
+    public String getKeyspace() {
+      return this.keyspace;
+    }
+
+    public get_range_slice_args setKeyspace(String keyspace) {
+      this.keyspace = keyspace;
+      return this;
+    }
+
+    public void unsetKeyspace() {
+      this.keyspace = null;
+    }
+
+    // Returns true if field keyspace is set (has been asigned a value) and false otherwise
+    public boolean isSetKeyspace() {
+      return this.keyspace != null;
+    }
+
+    public void setKeyspaceIsSet(boolean value) {
+      if (!value) {
+        this.keyspace = null;
+      }
+    }
+
+    public ColumnParent getColumn_parent() {
+      return this.column_parent;
+    }
+
+    public get_range_slice_args setColumn_parent(ColumnParent column_parent) {
+      this.column_parent = column_parent;
+      return this;
+    }
+
+    public void unsetColumn_parent() {
+      this.column_parent = null;
+    }
+
+    // Returns true if field column_parent is set (has been asigned a value) and false otherwise
+    public boolean isSetColumn_parent() {
+      return this.column_parent != null;
+    }
+
+    public void setColumn_parentIsSet(boolean value) {
+      if (!value) {
+        this.column_parent = null;
+      }
+    }
+
+    public SlicePredicate getPredicate() {
+      return this.predicate;
+    }
+
+    public get_range_slice_args setPredicate(SlicePredicate predicate) {
+      this.predicate = predicate;
+      return this;
+    }
+
+    public void unsetPredicate() {
+      this.predicate = null;
+    }
+
+    // Returns true if field predicate is set (has been asigned a value) and false otherwise
+    public boolean isSetPredicate() {
+      return this.predicate != null;
+    }
+
+    public void setPredicateIsSet(boolean value) {
+      if (!value) {
+        this.predicate = null;
+      }
+    }
+
+    public String getStart_key() {
+      return this.start_key;
+    }
+
+    public get_range_slice_args setStart_key(String start_key) {
+      this.start_key = start_key;
+      return this;
+    }
+
+    public void unsetStart_key() {
+      this.start_key = null;
+    }
+
+    // Returns true if field start_key is set (has been asigned a value) and false otherwise
+    public boolean isSetStart_key() {
+      return this.start_key != null;
+    }
+
+    public void setStart_keyIsSet(boolean value) {
+      if (!value) {
+        this.start_key = null;
+      }
+    }
+
+    public String getFinish_key() {
+      return this.finish_key;
+    }
+
+    public get_range_slice_args setFinish_key(String finish_key) {
+      this.finish_key = finish_key;
+      return this;
+    }
+
+    public void unsetFinish_key() {
+      this.finish_key = null;
+    }
+
+    // Returns true if field finish_key is set (has been asigned a value) and false otherwise
+    public boolean isSetFinish_key() {
+      return this.finish_key != null;
+    }
+
+    public void setFinish_keyIsSet(boolean value) {
+      if (!value) {
+        this.finish_key = null;
+      }
+    }
+
+    public int getRow_count() {
+      return this.row_count;
+    }
+
+    public get_range_slice_args setRow_count(int row_count) {
+      this.row_count = row_count;
+      setRow_countIsSet(true);
+      return this;
+    }
+
+    public void unsetRow_count() {
+      __isset_bit_vector.clear(__ROW_COUNT_ISSET_ID);
+    }
+
+    // Returns true if field row_count is set (has been asigned a value) and false otherwise
+    public boolean isSetRow_count() {
+      return __isset_bit_vector.get(__ROW_COUNT_ISSET_ID);
+    }
+
+    public void setRow_countIsSet(boolean value) {
+      __isset_bit_vector.set(__ROW_COUNT_ISSET_ID, value);
+    }
+
+    /**
+     * 
+     * @see ConsistencyLevel
+     */
+    public int getConsistency_level() {
+      return this.consistency_level;
+    }
+
+    /**
+     * 
+     * @see ConsistencyLevel
+     */
+    public get_range_slice_args setConsistency_level(int consistency_level) {
+      this.consistency_level = consistency_level;
+      setConsistency_levelIsSet(true);
+      return this;
+    }
+
+    public void unsetConsistency_level() {
+      __isset_bit_vector.clear(__CONSISTENCY_LEVEL_ISSET_ID);
+    }
+
+    // Returns true if field consistency_level is set (has been asigned a value) and false otherwise
+    public boolean isSetConsistency_level() {
+      return __isset_bit_vector.get(__CONSISTENCY_LEVEL_ISSET_ID);
+    }
+
+    public void setConsistency_levelIsSet(boolean value) {
+      __isset_bit_vector.set(__CONSISTENCY_LEVEL_ISSET_ID, value);
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      case KEYSPACE:
+        if (value == null) {
+          unsetKeyspace();
+        } else {
+          setKeyspace((String)value);
+        }
+        break;
+
+      case COLUMN_PARENT:
+        if (value == null) {
+          unsetColumn_parent();
+        } else {
+          setColumn_parent((ColumnParent)value);
+        }
+        break;
+
+      case PREDICATE:
+        if (value == null) {
+          unsetPredicate();
+        } else {
+          setPredicate((SlicePredicate)value);
+        }
+        break;
+
+      case START_KEY:
+        if (value == null) {
+          unsetStart_key();
+        } else {
+          setStart_key((String)value);
+        }
+        break;
+
+      case FINISH_KEY:
+        if (value == null) {
+          unsetFinish_key();
+        } else {
+          setFinish_key((String)value);
+        }
+        break;
+
+      case ROW_COUNT:
+        if (value == null) {
+          unsetRow_count();
+        } else {
+          setRow_count((Integer)value);
+        }
+        break;
+
+      case CONSISTENCY_LEVEL:
+        if (value == null) {
+          unsetConsistency_level();
+        } else {
+          setConsistency_level((Integer)value);
+        }
+        break;
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      case KEYSPACE:
+        return getKeyspace();
+
+      case COLUMN_PARENT:
+        return getColumn_parent();
+
+      case PREDICATE:
+        return getPredicate();
+
+      case START_KEY:
+        return getStart_key();
+
+      case FINISH_KEY:
+        return getFinish_key();
+
+      case ROW_COUNT:
+        return new Integer(getRow_count());
+
+      case CONSISTENCY_LEVEL:
+        return getConsistency_level();
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      case KEYSPACE:
+        return isSetKeyspace();
+      case COLUMN_PARENT:
+        return isSetColumn_parent();
+      case PREDICATE:
+        return isSetPredicate();
+      case START_KEY:
+        return isSetStart_key();
+      case FINISH_KEY:
+        return isSetFinish_key();
+      case ROW_COUNT:
+        return isSetRow_count();
+      case CONSISTENCY_LEVEL:
+        return isSetConsistency_level();
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof get_range_slice_args)
+        return this.equals((get_range_slice_args)that);
+      return false;
+    }
+
+    public boolean equals(get_range_slice_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_keyspace = true && this.isSetKeyspace();
+      boolean that_present_keyspace = true && that.isSetKeyspace();
+      if (this_present_keyspace || that_present_keyspace) {
+        if (!(this_present_keyspace && that_present_keyspace))
+          return false;
+        if (!this.keyspace.equals(that.keyspace))
+          return false;
+      }
+
+      boolean this_present_column_parent = true && this.isSetColumn_parent();
+      boolean that_present_column_parent = true && that.isSetColumn_parent();
+      if (this_present_column_parent || that_present_column_parent) {
+        if (!(this_present_column_parent && that_present_column_parent))
+          return false;
+        if (!this.column_parent.equals(that.column_parent))
+          return false;
+      }
+
+      boolean this_present_predicate = true && this.isSetPredicate();
+      boolean that_present_predicate = true && that.isSetPredicate();
+      if (this_present_predicate || that_present_predicate) {
+        if (!(this_present_predicate && that_present_predicate))
+          return false;
+        if (!this.predicate.equals(that.predicate))
+          return false;
+      }
+
+      boolean this_present_start_key = true && this.isSetStart_key();
+      boolean that_present_start_key = true && that.isSetStart_key();
+      if (this_present_start_key || that_present_start_key) {
+        if (!(this_present_start_key && that_present_start_key))
+          return false;
+        if (!this.start_key.equals(that.start_key))
+          return false;
+      }
+
+      boolean this_present_finish_key = true && this.isSetFinish_key();
+      boolean that_present_finish_key = true && that.isSetFinish_key();
+      if (this_present_finish_key || that_present_finish_key) {
+        if (!(this_present_finish_key && that_present_finish_key))
+          return false;
+        if (!this.finish_key.equals(that.finish_key))
+          return false;
+      }
+
+      boolean this_present_row_count = true;
+      boolean that_present_row_count = true;
+      if (this_present_row_count || that_present_row_count) {
+        if (!(this_present_row_count && that_present_row_count))
+          return false;
+        if (this.row_count != that.row_count)
+          return false;
+      }
+
+      boolean this_present_consistency_level = true;
+      boolean that_present_consistency_level = true;
+      if (this_present_consistency_level || that_present_consistency_level) {
+        if (!(this_present_consistency_level && that_present_consistency_level))
+          return false;
+        if (this.consistency_level != that.consistency_level)
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return 0;
+    }
+
+    public int compareTo(get_range_slice_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      get_range_slice_args typedOther = (get_range_slice_args)other;
+
+      lastComparison = Boolean.valueOf(isSetKeyspace()).compareTo(isSetKeyspace());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(keyspace, typedOther.keyspace);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetColumn_parent()).compareTo(isSetColumn_parent());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(column_parent, typedOther.column_parent);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetPredicate()).compareTo(isSetPredicate());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(predicate, typedOther.predicate);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetStart_key()).compareTo(isSetStart_key());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(start_key, typedOther.start_key);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetFinish_key()).compareTo(isSetFinish_key());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(finish_key, typedOther.finish_key);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetRow_count()).compareTo(isSetRow_count());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(row_count, typedOther.row_count);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetConsistency_level()).compareTo(isSetConsistency_level());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(consistency_level, typedOther.consistency_level);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case KEYSPACE:
+            if (field.type == TType.STRING) {
+              this.keyspace = iprot.readString();
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case COLUMN_PARENT:
+            if (field.type == TType.STRUCT) {
+              this.column_parent = new ColumnParent();
+              this.column_parent.read(iprot);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case PREDICATE:
+            if (field.type == TType.STRUCT) {
+              this.predicate = new SlicePredicate();
+              this.predicate.read(iprot);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case START_KEY:
+            if (field.type == TType.STRING) {
+              this.start_key = iprot.readString();
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case FINISH_KEY:
+            if (field.type == TType.STRING) {
+              this.finish_key = iprot.readString();
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case ROW_COUNT:
+            if (field.type == TType.I32) {
+              this.row_count = iprot.readI32();
+              setRow_countIsSet(true);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case CONSISTENCY_LEVEL:
+            if (field.type == TType.I32) {
+              this.consistency_level = iprot.readI32();
+              setConsistency_levelIsSet(true);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      if (!isSetRow_count()) {
+        throw new TProtocolException("Required field 'row_count' was not found in serialized data! Struct: " + toString());
+      }
+      if (!isSetConsistency_level()) {
+        throw new TProtocolException("Required field 'consistency_level' was not found in serialized data! Struct: " + toString());
+      }
+      validate();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      validate();
+
+      oprot.writeStructBegin(STRUCT_DESC);
+      if (this.keyspace != null) {
+        oprot.writeFieldBegin(KEYSPACE_FIELD_DESC);
+        oprot.writeString(this.keyspace);
+        oprot.writeFieldEnd();
+      }
+      if (this.column_parent != null) {
+        oprot.writeFieldBegin(COLUMN_PARENT_FIELD_DESC);
+        this.column_parent.write(oprot);
+        oprot.writeFieldEnd();
+      }
+      if (this.predicate != null) {
+        oprot.writeFieldBegin(PREDICATE_FIELD_DESC);
+        this.predicate.write(oprot);
+        oprot.writeFieldEnd();
+      }
+      if (this.start_key != null) {
+        oprot.writeFieldBegin(START_KEY_FIELD_DESC);
+        oprot.writeString(this.start_key);
+        oprot.writeFieldEnd();
+      }
+      if (this.finish_key != null) {
+        oprot.writeFieldBegin(FINISH_KEY_FIELD_DESC);
+        oprot.writeString(this.finish_key);
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldBegin(ROW_COUNT_FIELD_DESC);
+      oprot.writeI32(this.row_count);
+      oprot.writeFieldEnd();
+      oprot.writeFieldBegin(CONSISTENCY_LEVEL_FIELD_DESC);
+      oprot.writeI32(this.consistency_level);
+      oprot.writeFieldEnd();
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("get_range_slice_args(");
+      boolean first = true;
+
+      sb.append("keyspace:");
+      if (this.keyspace == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.keyspace);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("column_parent:");
+      if (this.column_parent == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.column_parent);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("predicate:");
+      if (this.predicate == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.predicate);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("start_key:");
+      if (this.start_key == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.start_key);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("finish_key:");
+      if (this.finish_key == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.finish_key);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("row_count:");
+      sb.append(this.row_count);
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("consistency_level:");
+      String consistency_level_name = ConsistencyLevel.VALUES_TO_NAMES.get(this.consistency_level);
+      if (consistency_level_name != null) {
+        sb.append(consistency_level_name);
+        sb.append(" (");
+      }
+      sb.append(this.consistency_level);
+      if (consistency_level_name != null) {
+        sb.append(")");
+      }
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws TException {
+      // check for required fields
+      if (keyspace == null) {
+        throw new TProtocolException("Required field 'keyspace' was not present! Struct: " + toString());
+      }
+      if (column_parent == null) {
+        throw new TProtocolException("Required field 'column_parent' was not present! Struct: " + toString());
+      }
+      if (predicate == null) {
+        throw new TProtocolException("Required field 'predicate' was not present! Struct: " + toString());
+      }
+      if (start_key == null) {
+        throw new TProtocolException("Required field 'start_key' was not present! Struct: " + toString());
+      }
+      if (finish_key == null) {
+        throw new TProtocolException("Required field 'finish_key' was not present! Struct: " + toString());
+      }
+      // alas, we cannot check 'row_count' because it's a primitive and you chose the non-beans generator.
+      // alas, we cannot check 'consistency_level' because it's a primitive and you chose the non-beans generator.
+      // check that fields of type enum have valid values
+      if (isSetConsistency_level() && !ConsistencyLevel.VALID_VALUES.contains(consistency_level)){
+        throw new TProtocolException("The field 'consistency_level' has been assigned the invalid value " + consistency_level);
+      }
+    }
+
+  }
+
+  public static class get_range_slice_result implements TBase, java.io.Serializable, Cloneable, Comparable<get_range_slice_result>   {
+    private static final TStruct STRUCT_DESC = new TStruct("get_range_slice_result");
+    private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
+    private static final TField IRE_FIELD_DESC = new TField("ire", TType.STRUCT, (short)1);
+    private static final TField UE_FIELD_DESC = new TField("ue", TType.STRUCT, (short)2);
+    private static final TField TE_FIELD_DESC = new TField("te", TType.STRUCT, (short)3);
+
+    public List<KeySlice> success;
+    public InvalidRequestException ire;
+    public UnavailableException ue;
+    public TimedOutException te;
+    public static final int SUCCESS = 0;
+    public static final int IRE = 1;
+    public static final int UE = 2;
+    public static final int TE = 3;
+
+    // isset id assignments
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+          new ListMetaData(TType.LIST, 
+              new StructMetaData(TType.STRUCT, KeySlice.class))));
+      put(IRE, new FieldMetaData("ire", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRUCT)));
+      put(UE, new FieldMetaData("ue", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRUCT)));
+      put(TE, new FieldMetaData("te", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRUCT)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(get_range_slice_result.class, metaDataMap);
+    }
+
+    public get_range_slice_result() {
+    }
+
+    public get_range_slice_result(
+      List<KeySlice> success,
+      InvalidRequestException ire,
+      UnavailableException ue,
+      TimedOutException te)
+    {
+      this();
+      this.success = success;
+      this.ire = ire;
+      this.ue = ue;
+      this.te = te;
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public get_range_slice_result(get_range_slice_result other) {
+      if (other.isSetSuccess()) {
+        List<KeySlice> __this__success = new ArrayList<KeySlice>();
+        for (KeySlice other_element : other.success) {
+          __this__success.add(new KeySlice(other_element));
+        }
+        this.success = __this__success;
+      }
+      if (other.isSetIre()) {
+        this.ire = new InvalidRequestException(other.ire);
+      }
+      if (other.isSetUe()) {
+        this.ue = new UnavailableException(other.ue);
+      }
+      if (other.isSetTe()) {
+        this.te = new TimedOutException(other.te);
+      }
+    }
+
+    public get_range_slice_result deepCopy() {
+      return new get_range_slice_result(this);
+    }
+
+    @Deprecated
+    public get_range_slice_result clone() {
+      return new get_range_slice_result(this);
+    }
+
+    public int getSuccessSize() {
+      return (this.success == null) ? 0 : this.success.size();
+    }
+
+    public java.util.Iterator<KeySlice> getSuccessIterator() {
+      return (this.success == null) ? null : this.success.iterator();
+    }
+
+    public void addToSuccess(KeySlice elem) {
+      if (this.success == null) {
+        this.success = new ArrayList<KeySlice>();
+      }
+      this.success.add(elem);
+    }
+
+    public List<KeySlice> getSuccess() {
+      return this.success;
+    }
+
+    public get_range_slice_result setSuccess(List<KeySlice> success) {
+      this.success = success;
+      return this;
+    }
+
+    public void unsetSuccess() {
+      this.success = null;
+    }
+
+    // Returns true if field success is set (has been asigned a value) and false otherwise
+    public boolean isSetSuccess() {
+      return this.success != null;
+    }
+
+    public void setSuccessIsSet(boolean value) {
+      if (!value) {
+        this.success = null;
+      }
+    }
+
+    public InvalidRequestException getIre() {
+      return this.ire;
+    }
+
+    public get_range_slice_result setIre(InvalidRequestException ire) {
+      this.ire = ire;
+      return this;
+    }
+
+    public void unsetIre() {
+      this.ire = null;
+    }
+
+    // Returns true if field ire is set (has been asigned a value) and false otherwise
+    public boolean isSetIre() {
+      return this.ire != null;
+    }
+
+    public void setIreIsSet(boolean value) {
+      if (!value) {
+        this.ire = null;
+      }
+    }
+
+    public UnavailableException getUe() {
+      return this.ue;
+    }
+
+    public get_range_slice_result setUe(UnavailableException ue) {
+      this.ue = ue;
+      return this;
+    }
+
+    public void unsetUe() {
+      this.ue = null;
+    }
+
+    // Returns true if field ue is set (has been asigned a value) and false otherwise
+    public boolean isSetUe() {
+      return this.ue != null;
+    }
+
+    public void setUeIsSet(boolean value) {
+      if (!value) {
+        this.ue = null;
+      }
+    }
+
+    public TimedOutException getTe() {
+      return this.te;
+    }
+
+    public get_range_slice_result setTe(TimedOutException te) {
+      this.te = te;
+      return this;
+    }
+
+    public void unsetTe() {
+      this.te = null;
+    }
+
+    // Returns true if field te is set (has been asigned a value) and false otherwise
+    public boolean isSetTe() {
+      return this.te != null;
+    }
+
+    public void setTeIsSet(boolean value) {
+      if (!value) {
+        this.te = null;
+      }
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      case SUCCESS:
+        if (value == null) {
+          unsetSuccess();
+        } else {
+          setSuccess((List<KeySlice>)value);
+        }
+        break;
+
+      case IRE:
+        if (value == null) {
+          unsetIre();
+        } else {
+          setIre((InvalidRequestException)value);
+        }
+        break;
+
+      case UE:
+        if (value == null) {
+          unsetUe();
+        } else {
+          setUe((UnavailableException)value);
+        }
+        break;
+
+      case TE:
+        if (value == null) {
+          unsetTe();
+        } else {
+          setTe((TimedOutException)value);
+        }
+        break;
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      case SUCCESS:
+        return getSuccess();
+
+      case IRE:
+        return getIre();
+
+      case UE:
+        return getUe();
+
+      case TE:
+        return getTe();
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      case SUCCESS:
+        return isSetSuccess();
+      case IRE:
+        return isSetIre();
+      case UE:
+        return isSetUe();
+      case TE:
+        return isSetTe();
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof get_range_slice_result)
+        return this.equals((get_range_slice_result)that);
+      return false;
+    }
+
+    public boolean equals(get_range_slice_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true && this.isSetSuccess();
+      boolean that_present_success = true && that.isSetSuccess();
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (!this.success.equals(that.success))
+          return false;
+      }
+
+      boolean this_present_ire = true && this.isSetIre();
+      boolean that_present_ire = true && that.isSetIre();
+      if (this_present_ire || that_present_ire) {
+        if (!(this_present_ire && that_present_ire))
+          return false;
+        if (!this.ire.equals(that.ire))
+          return false;
+      }
+
+      boolean this_present_ue = true && this.isSetUe();
+      boolean that_present_ue = true && that.isSetUe();
+      if (this_present_ue || that_present_ue) {
+        if (!(this_present_ue && that_present_ue))
+          return false;
+        if (!this.ue.equals(that.ue))
+          return false;
+      }
+
+      boolean this_present_te = true && this.isSetTe();
+      boolean that_present_te = true && that.isSetTe();
+      if (this_present_te || that_present_te) {
+        if (!(this_present_te && that_present_te))
+          return false;
+        if (!this.te.equals(that.te))
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return 0;
+    }
+
+    public int compareTo(get_range_slice_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      get_range_slice_result typedOther = (get_range_slice_result)other;
+
+      lastComparison = Boolean.valueOf(isSetSuccess()).compareTo(isSetSuccess());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(success, typedOther.success);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetIre()).compareTo(isSetIre());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(ire, typedOther.ire);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetUe()).compareTo(isSetUe());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(ue, typedOther.ue);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetTe()).compareTo(isSetTe());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(te, typedOther.te);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case SUCCESS:
+            if (field.type == TType.LIST) {
+              {
+                TList _list42 = iprot.readListBegin();
+                this.success = new ArrayList<KeySlice>(_list42.size);
+                for (int _i43 = 0; _i43 < _list42.size; ++_i43)
+                {
+                  KeySlice _elem44;
+                  _elem44 = new KeySlice();
+                  _elem44.read(iprot);
+                  this.success.add(_elem44);
+                }
+                iprot.readListEnd();
+              }
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case IRE:
+            if (field.type == TType.STRUCT) {
+              this.ire = new InvalidRequestException();
+              this.ire.read(iprot);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case UE:
+            if (field.type == TType.STRUCT) {
+              this.ue = new UnavailableException();
+              this.ue.read(iprot);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case TE:
+            if (field.type == TType.STRUCT) {
+              this.te = new TimedOutException();
+              this.te.read(iprot);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      oprot.writeStructBegin(STRUCT_DESC);
+
+      if (this.isSetSuccess()) {
+        oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
+        {
+          oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
+          for (KeySlice _iter45 : this.success)
+          {
+            _iter45.write(oprot);
+          }
+          oprot.writeListEnd();
+        }
+        oprot.writeFieldEnd();
+      } else if (this.isSetIre()) {
+        oprot.writeFieldBegin(IRE_FIELD_DESC);
+        this.ire.write(oprot);
+        oprot.writeFieldEnd();
+      } else if (this.isSetUe()) {
+        oprot.writeFieldBegin(UE_FIELD_DESC);
+        this.ue.write(oprot);
+        oprot.writeFieldEnd();
+      } else if (this.isSetTe()) {
+        oprot.writeFieldBegin(TE_FIELD_DESC);
+        this.te.write(oprot);
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("get_range_slice_result(");
+      boolean first = true;
+
+      sb.append("success:");
+      if (this.success == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.success);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("ire:");
+      if (this.ire == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.ire);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("ue:");
+      if (this.ue == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.ue);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("te:");
+      if (this.te == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.te);
       }
       first = false;
       sb.append(")");
@@ -7642,11 +9669,14 @@ public class Cassandra {
     private static final TStruct STRUCT_DESC = new TStruct("insert_result");
     private static final TField IRE_FIELD_DESC = new TField("ire", TType.STRUCT, (short)1);
     private static final TField UE_FIELD_DESC = new TField("ue", TType.STRUCT, (short)2);
+    private static final TField TE_FIELD_DESC = new TField("te", TType.STRUCT, (short)3);
 
     public InvalidRequestException ire;
     public UnavailableException ue;
+    public TimedOutException te;
     public static final int IRE = 1;
     public static final int UE = 2;
+    public static final int TE = 3;
 
     // isset id assignments
 
@@ -7654,6 +9684,8 @@ public class Cassandra {
       put(IRE, new FieldMetaData("ire", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
       put(UE, new FieldMetaData("ue", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRUCT)));
+      put(TE, new FieldMetaData("te", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -7666,11 +9698,13 @@ public class Cassandra {
 
     public insert_result(
       InvalidRequestException ire,
-      UnavailableException ue)
+      UnavailableException ue,
+      TimedOutException te)
     {
       this();
       this.ire = ire;
       this.ue = ue;
+      this.te = te;
     }
 
     /**
@@ -7682,6 +9716,9 @@ public class Cassandra {
       }
       if (other.isSetUe()) {
         this.ue = new UnavailableException(other.ue);
+      }
+      if (other.isSetTe()) {
+        this.te = new TimedOutException(other.te);
       }
     }
 
@@ -7742,6 +9779,30 @@ public class Cassandra {
       }
     }
 
+    public TimedOutException getTe() {
+      return this.te;
+    }
+
+    public insert_result setTe(TimedOutException te) {
+      this.te = te;
+      return this;
+    }
+
+    public void unsetTe() {
+      this.te = null;
+    }
+
+    // Returns true if field te is set (has been asigned a value) and false otherwise
+    public boolean isSetTe() {
+      return this.te != null;
+    }
+
+    public void setTeIsSet(boolean value) {
+      if (!value) {
+        this.te = null;
+      }
+    }
+
     public void setFieldValue(int fieldID, Object value) {
       switch (fieldID) {
       case IRE:
@@ -7760,6 +9821,14 @@ public class Cassandra {
         }
         break;
 
+      case TE:
+        if (value == null) {
+          unsetTe();
+        } else {
+          setTe((TimedOutException)value);
+        }
+        break;
+
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
@@ -7773,6 +9842,9 @@ public class Cassandra {
       case UE:
         return getUe();
 
+      case TE:
+        return getTe();
+
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
@@ -7785,6 +9857,8 @@ public class Cassandra {
         return isSetIre();
       case UE:
         return isSetUe();
+      case TE:
+        return isSetTe();
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
@@ -7821,6 +9895,15 @@ public class Cassandra {
           return false;
       }
 
+      boolean this_present_te = true && this.isSetTe();
+      boolean that_present_te = true && that.isSetTe();
+      if (this_present_te || that_present_te) {
+        if (!(this_present_te && that_present_te))
+          return false;
+        if (!this.te.equals(that.te))
+          return false;
+      }
+
       return true;
     }
 
@@ -7850,6 +9933,14 @@ public class Cassandra {
         return lastComparison;
       }
       lastComparison = TBaseHelper.compareTo(ue, typedOther.ue);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetTe()).compareTo(isSetTe());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(te, typedOther.te);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -7883,6 +9974,14 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
+          case TE:
+            if (field.type == TType.STRUCT) {
+              this.te = new TimedOutException();
+              this.te.read(iprot);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
           default:
             TProtocolUtil.skip(iprot, field.type);
             break;
@@ -7907,6 +10006,10 @@ public class Cassandra {
         oprot.writeFieldBegin(UE_FIELD_DESC);
         this.ue.write(oprot);
         oprot.writeFieldEnd();
+      } else if (this.isSetTe()) {
+        oprot.writeFieldBegin(TE_FIELD_DESC);
+        this.te.write(oprot);
+        oprot.writeFieldEnd();
       }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
@@ -7930,6 +10033,14 @@ public class Cassandra {
         sb.append("null");
       } else {
         sb.append(this.ue);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("te:");
+      if (this.te == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.te);
       }
       first = false;
       sb.append(")");
@@ -8092,6 +10203,17 @@ public class Cassandra {
       if (!value) {
         this.key = null;
       }
+    }
+
+    public int getCfmapSize() {
+      return (this.cfmap == null) ? 0 : this.cfmap.size();
+    }
+
+    public void putToCfmap(String key, List<ColumnOrSuperColumn> val) {
+      if (this.cfmap == null) {
+        this.cfmap = new HashMap<String,List<ColumnOrSuperColumn>>();
+      }
+      this.cfmap.put(key, val);
     }
 
     public Map<String,List<ColumnOrSuperColumn>> getCfmap() {
@@ -8308,26 +10430,26 @@ public class Cassandra {
           case CFMAP:
             if (field.type == TType.MAP) {
               {
-                TMap _map38 = iprot.readMapBegin();
-                this.cfmap = new HashMap<String,List<ColumnOrSuperColumn>>(2*_map38.size);
-                for (int _i39 = 0; _i39 < _map38.size; ++_i39)
+                TMap _map46 = iprot.readMapBegin();
+                this.cfmap = new HashMap<String,List<ColumnOrSuperColumn>>(2*_map46.size);
+                for (int _i47 = 0; _i47 < _map46.size; ++_i47)
                 {
-                  String _key40;
-                  List<ColumnOrSuperColumn> _val41;
-                  _key40 = iprot.readString();
+                  String _key48;
+                  List<ColumnOrSuperColumn> _val49;
+                  _key48 = iprot.readString();
                   {
-                    TList _list42 = iprot.readListBegin();
-                    _val41 = new ArrayList<ColumnOrSuperColumn>(_list42.size);
-                    for (int _i43 = 0; _i43 < _list42.size; ++_i43)
+                    TList _list50 = iprot.readListBegin();
+                    _val49 = new ArrayList<ColumnOrSuperColumn>(_list50.size);
+                    for (int _i51 = 0; _i51 < _list50.size; ++_i51)
                     {
-                      ColumnOrSuperColumn _elem44;
-                      _elem44 = new ColumnOrSuperColumn();
-                      _elem44.read(iprot);
-                      _val41.add(_elem44);
+                      ColumnOrSuperColumn _elem52;
+                      _elem52 = new ColumnOrSuperColumn();
+                      _elem52.read(iprot);
+                      _val49.add(_elem52);
                     }
                     iprot.readListEnd();
                   }
-                  this.cfmap.put(_key40, _val41);
+                  this.cfmap.put(_key48, _val49);
                 }
                 iprot.readMapEnd();
               }
@@ -8377,14 +10499,14 @@ public class Cassandra {
         oprot.writeFieldBegin(CFMAP_FIELD_DESC);
         {
           oprot.writeMapBegin(new TMap(TType.STRING, TType.LIST, this.cfmap.size()));
-          for (Map.Entry<String, List<ColumnOrSuperColumn>> _iter45 : this.cfmap.entrySet())
+          for (Map.Entry<String, List<ColumnOrSuperColumn>> _iter53 : this.cfmap.entrySet())
           {
-            oprot.writeString(_iter45.getKey());
+            oprot.writeString(_iter53.getKey());
             {
-              oprot.writeListBegin(new TList(TType.STRUCT, _iter45.getValue().size()));
-              for (ColumnOrSuperColumn _iter46 : _iter45.getValue())
+              oprot.writeListBegin(new TList(TType.STRUCT, _iter53.getValue().size()));
+              for (ColumnOrSuperColumn _iter54 : _iter53.getValue())
               {
-                _iter46.write(oprot);
+                _iter54.write(oprot);
               }
               oprot.writeListEnd();
             }
@@ -8468,11 +10590,14 @@ public class Cassandra {
     private static final TStruct STRUCT_DESC = new TStruct("batch_insert_result");
     private static final TField IRE_FIELD_DESC = new TField("ire", TType.STRUCT, (short)1);
     private static final TField UE_FIELD_DESC = new TField("ue", TType.STRUCT, (short)2);
+    private static final TField TE_FIELD_DESC = new TField("te", TType.STRUCT, (short)3);
 
     public InvalidRequestException ire;
     public UnavailableException ue;
+    public TimedOutException te;
     public static final int IRE = 1;
     public static final int UE = 2;
+    public static final int TE = 3;
 
     // isset id assignments
 
@@ -8480,6 +10605,8 @@ public class Cassandra {
       put(IRE, new FieldMetaData("ire", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
       put(UE, new FieldMetaData("ue", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRUCT)));
+      put(TE, new FieldMetaData("te", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -8492,11 +10619,13 @@ public class Cassandra {
 
     public batch_insert_result(
       InvalidRequestException ire,
-      UnavailableException ue)
+      UnavailableException ue,
+      TimedOutException te)
     {
       this();
       this.ire = ire;
       this.ue = ue;
+      this.te = te;
     }
 
     /**
@@ -8508,6 +10637,9 @@ public class Cassandra {
       }
       if (other.isSetUe()) {
         this.ue = new UnavailableException(other.ue);
+      }
+      if (other.isSetTe()) {
+        this.te = new TimedOutException(other.te);
       }
     }
 
@@ -8568,6 +10700,30 @@ public class Cassandra {
       }
     }
 
+    public TimedOutException getTe() {
+      return this.te;
+    }
+
+    public batch_insert_result setTe(TimedOutException te) {
+      this.te = te;
+      return this;
+    }
+
+    public void unsetTe() {
+      this.te = null;
+    }
+
+    // Returns true if field te is set (has been asigned a value) and false otherwise
+    public boolean isSetTe() {
+      return this.te != null;
+    }
+
+    public void setTeIsSet(boolean value) {
+      if (!value) {
+        this.te = null;
+      }
+    }
+
     public void setFieldValue(int fieldID, Object value) {
       switch (fieldID) {
       case IRE:
@@ -8586,6 +10742,14 @@ public class Cassandra {
         }
         break;
 
+      case TE:
+        if (value == null) {
+          unsetTe();
+        } else {
+          setTe((TimedOutException)value);
+        }
+        break;
+
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
@@ -8599,6 +10763,9 @@ public class Cassandra {
       case UE:
         return getUe();
 
+      case TE:
+        return getTe();
+
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
@@ -8611,6 +10778,8 @@ public class Cassandra {
         return isSetIre();
       case UE:
         return isSetUe();
+      case TE:
+        return isSetTe();
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
@@ -8647,6 +10816,15 @@ public class Cassandra {
           return false;
       }
 
+      boolean this_present_te = true && this.isSetTe();
+      boolean that_present_te = true && that.isSetTe();
+      if (this_present_te || that_present_te) {
+        if (!(this_present_te && that_present_te))
+          return false;
+        if (!this.te.equals(that.te))
+          return false;
+      }
+
       return true;
     }
 
@@ -8676,6 +10854,14 @@ public class Cassandra {
         return lastComparison;
       }
       lastComparison = TBaseHelper.compareTo(ue, typedOther.ue);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetTe()).compareTo(isSetTe());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(te, typedOther.te);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -8709,6 +10895,14 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
+          case TE:
+            if (field.type == TType.STRUCT) {
+              this.te = new TimedOutException();
+              this.te.read(iprot);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
           default:
             TProtocolUtil.skip(iprot, field.type);
             break;
@@ -8733,6 +10927,10 @@ public class Cassandra {
         oprot.writeFieldBegin(UE_FIELD_DESC);
         this.ue.write(oprot);
         oprot.writeFieldEnd();
+      } else if (this.isSetTe()) {
+        oprot.writeFieldBegin(TE_FIELD_DESC);
+        this.te.write(oprot);
+        oprot.writeFieldEnd();
       }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
@@ -8756,6 +10954,14 @@ public class Cassandra {
         sb.append("null");
       } else {
         sb.append(this.ue);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("te:");
+      if (this.te == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.te);
       }
       first = false;
       sb.append(")");
@@ -9360,11 +11566,14 @@ public class Cassandra {
     private static final TStruct STRUCT_DESC = new TStruct("remove_result");
     private static final TField IRE_FIELD_DESC = new TField("ire", TType.STRUCT, (short)1);
     private static final TField UE_FIELD_DESC = new TField("ue", TType.STRUCT, (short)2);
+    private static final TField TE_FIELD_DESC = new TField("te", TType.STRUCT, (short)3);
 
     public InvalidRequestException ire;
     public UnavailableException ue;
+    public TimedOutException te;
     public static final int IRE = 1;
     public static final int UE = 2;
+    public static final int TE = 3;
 
     // isset id assignments
 
@@ -9372,6 +11581,8 @@ public class Cassandra {
       put(IRE, new FieldMetaData("ire", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
       put(UE, new FieldMetaData("ue", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRUCT)));
+      put(TE, new FieldMetaData("te", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -9384,11 +11595,13 @@ public class Cassandra {
 
     public remove_result(
       InvalidRequestException ire,
-      UnavailableException ue)
+      UnavailableException ue,
+      TimedOutException te)
     {
       this();
       this.ire = ire;
       this.ue = ue;
+      this.te = te;
     }
 
     /**
@@ -9400,6 +11613,9 @@ public class Cassandra {
       }
       if (other.isSetUe()) {
         this.ue = new UnavailableException(other.ue);
+      }
+      if (other.isSetTe()) {
+        this.te = new TimedOutException(other.te);
       }
     }
 
@@ -9460,6 +11676,30 @@ public class Cassandra {
       }
     }
 
+    public TimedOutException getTe() {
+      return this.te;
+    }
+
+    public remove_result setTe(TimedOutException te) {
+      this.te = te;
+      return this;
+    }
+
+    public void unsetTe() {
+      this.te = null;
+    }
+
+    // Returns true if field te is set (has been asigned a value) and false otherwise
+    public boolean isSetTe() {
+      return this.te != null;
+    }
+
+    public void setTeIsSet(boolean value) {
+      if (!value) {
+        this.te = null;
+      }
+    }
+
     public void setFieldValue(int fieldID, Object value) {
       switch (fieldID) {
       case IRE:
@@ -9478,6 +11718,14 @@ public class Cassandra {
         }
         break;
 
+      case TE:
+        if (value == null) {
+          unsetTe();
+        } else {
+          setTe((TimedOutException)value);
+        }
+        break;
+
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
@@ -9491,6 +11739,9 @@ public class Cassandra {
       case UE:
         return getUe();
 
+      case TE:
+        return getTe();
+
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
@@ -9503,6 +11754,8 @@ public class Cassandra {
         return isSetIre();
       case UE:
         return isSetUe();
+      case TE:
+        return isSetTe();
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
@@ -9539,6 +11792,15 @@ public class Cassandra {
           return false;
       }
 
+      boolean this_present_te = true && this.isSetTe();
+      boolean that_present_te = true && that.isSetTe();
+      if (this_present_te || that_present_te) {
+        if (!(this_present_te && that_present_te))
+          return false;
+        if (!this.te.equals(that.te))
+          return false;
+      }
+
       return true;
     }
 
@@ -9568,6 +11830,14 @@ public class Cassandra {
         return lastComparison;
       }
       lastComparison = TBaseHelper.compareTo(ue, typedOther.ue);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetTe()).compareTo(isSetTe());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(te, typedOther.te);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -9601,6 +11871,14 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
+          case TE:
+            if (field.type == TType.STRUCT) {
+              this.te = new TimedOutException();
+              this.te.read(iprot);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
           default:
             TProtocolUtil.skip(iprot, field.type);
             break;
@@ -9625,6 +11903,10 @@ public class Cassandra {
         oprot.writeFieldBegin(UE_FIELD_DESC);
         this.ue.write(oprot);
         oprot.writeFieldEnd();
+      } else if (this.isSetTe()) {
+        oprot.writeFieldBegin(TE_FIELD_DESC);
+        this.te.write(oprot);
+        oprot.writeFieldEnd();
       }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
@@ -9648,6 +11930,14 @@ public class Cassandra {
         sb.append("null");
       } else {
         sb.append(this.ue);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("te:");
+      if (this.te == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.te);
       }
       first = false;
       sb.append(")");
@@ -10380,6 +12670,21 @@ public class Cassandra {
       return new get_string_list_property_result(this);
     }
 
+    public int getSuccessSize() {
+      return (this.success == null) ? 0 : this.success.size();
+    }
+
+    public java.util.Iterator<String> getSuccessIterator() {
+      return (this.success == null) ? null : this.success.iterator();
+    }
+
+    public void addToSuccess(String elem) {
+      if (this.success == null) {
+        this.success = new ArrayList<String>();
+      }
+      this.success.add(elem);
+    }
+
     public List<String> getSuccess() {
       return this.success;
     }
@@ -10502,13 +12807,13 @@ public class Cassandra {
           case SUCCESS:
             if (field.type == TType.LIST) {
               {
-                TList _list47 = iprot.readListBegin();
-                this.success = new ArrayList<String>(_list47.size);
-                for (int _i48 = 0; _i48 < _list47.size; ++_i48)
+                TList _list55 = iprot.readListBegin();
+                this.success = new ArrayList<String>(_list55.size);
+                for (int _i56 = 0; _i56 < _list55.size; ++_i56)
                 {
-                  String _elem49;
-                  _elem49 = iprot.readString();
-                  this.success.add(_elem49);
+                  String _elem57;
+                  _elem57 = iprot.readString();
+                  this.success.add(_elem57);
                 }
                 iprot.readListEnd();
               }
@@ -10536,9 +12841,9 @@ public class Cassandra {
         oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRING, this.success.size()));
-          for (String _iter50 : this.success)
+          for (String _iter58 : this.success)
           {
-            oprot.writeString(_iter50);
+            oprot.writeString(_iter58);
           }
           oprot.writeListEnd();
         }
@@ -10878,6 +13183,17 @@ public class Cassandra {
       return new describe_keyspace_result(this);
     }
 
+    public int getSuccessSize() {
+      return (this.success == null) ? 0 : this.success.size();
+    }
+
+    public void putToSuccess(String key, Map<String,String> val) {
+      if (this.success == null) {
+        this.success = new HashMap<String,Map<String,String>>();
+      }
+      this.success.put(key, val);
+    }
+
     public Map<String,Map<String,String>> getSuccess() {
       return this.success;
     }
@@ -11027,27 +13343,27 @@ public class Cassandra {
           case SUCCESS:
             if (field.type == TType.MAP) {
               {
-                TMap _map51 = iprot.readMapBegin();
-                this.success = new HashMap<String,Map<String,String>>(2*_map51.size);
-                for (int _i52 = 0; _i52 < _map51.size; ++_i52)
+                TMap _map59 = iprot.readMapBegin();
+                this.success = new HashMap<String,Map<String,String>>(2*_map59.size);
+                for (int _i60 = 0; _i60 < _map59.size; ++_i60)
                 {
-                  String _key53;
-                  Map<String,String> _val54;
-                  _key53 = iprot.readString();
+                  String _key61;
+                  Map<String,String> _val62;
+                  _key61 = iprot.readString();
                   {
-                    TMap _map55 = iprot.readMapBegin();
-                    _val54 = new HashMap<String,String>(2*_map55.size);
-                    for (int _i56 = 0; _i56 < _map55.size; ++_i56)
+                    TMap _map63 = iprot.readMapBegin();
+                    _val62 = new HashMap<String,String>(2*_map63.size);
+                    for (int _i64 = 0; _i64 < _map63.size; ++_i64)
                     {
-                      String _key57;
-                      String _val58;
-                      _key57 = iprot.readString();
-                      _val58 = iprot.readString();
-                      _val54.put(_key57, _val58);
+                      String _key65;
+                      String _val66;
+                      _key65 = iprot.readString();
+                      _val66 = iprot.readString();
+                      _val62.put(_key65, _val66);
                     }
                     iprot.readMapEnd();
                   }
-                  this.success.put(_key53, _val54);
+                  this.success.put(_key61, _val62);
                 }
                 iprot.readMapEnd();
               }
@@ -11083,15 +13399,15 @@ public class Cassandra {
         oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
         {
           oprot.writeMapBegin(new TMap(TType.STRING, TType.MAP, this.success.size()));
-          for (Map.Entry<String, Map<String,String>> _iter59 : this.success.entrySet())
+          for (Map.Entry<String, Map<String,String>> _iter67 : this.success.entrySet())
           {
-            oprot.writeString(_iter59.getKey());
+            oprot.writeString(_iter67.getKey());
             {
-              oprot.writeMapBegin(new TMap(TType.STRING, TType.STRING, _iter59.getValue().size()));
-              for (Map.Entry<String, String> _iter60 : _iter59.getValue().entrySet())
+              oprot.writeMapBegin(new TMap(TType.STRING, TType.STRING, _iter67.getValue().size()));
+              for (Map.Entry<String, String> _iter68 : _iter67.getValue().entrySet())
               {
-                oprot.writeString(_iter60.getKey());
-                oprot.writeString(_iter60.getValue());
+                oprot.writeString(_iter68.getKey());
+                oprot.writeString(_iter68.getValue());
               }
               oprot.writeMapEnd();
             }

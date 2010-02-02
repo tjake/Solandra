@@ -4,6 +4,27 @@
  * DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING
  */
 package org.apache.cassandra.service;
+/*
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ */
+
 
 import java.util.List;
 import java.util.ArrayList;
@@ -21,6 +42,16 @@ import org.apache.thrift.*;
 import org.apache.thrift.meta_data.*;
 import org.apache.thrift.protocol.*;
 
+/**
+ * Methods for fetching rows/records from Cassandra will return either a single instance of ColumnOrSuperColumn or a list
+ * of ColumnOrSuperColumns (get_slice()). If you're looking up a SuperColumn (or list of SuperColumns) then the resulting
+ * instances of ColumnOrSuperColumn will have the requested SuperColumn in the attribute super_column. For queries resulting
+ * in Columns, those values will be in the attribute column. This change was made between 0.3 and 0.4 to standardize on
+ * single query methods that may return either a SuperColumn or Column.
+ * 
+ * @param column. The Column returned by get() or get_slice().
+ * @param super_column. The SuperColumn returned by get() or get_slice().
+ */
 public class ColumnOrSuperColumn implements TBase, java.io.Serializable, Cloneable, Comparable<ColumnOrSuperColumn> {
   private static final TStruct STRUCT_DESC = new TStruct("ColumnOrSuperColumn");
   private static final TField COLUMN_FIELD_DESC = new TField("column", TType.STRUCT, (short)1);

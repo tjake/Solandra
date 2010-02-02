@@ -43,94 +43,94 @@ import org.apache.thrift.meta_data.*;
 import org.apache.thrift.protocol.*;
 
 /**
- * A named list of columns.
- * @param name. see Column.name.
- * @param columns. A collection of standard Columns.  The columns within a super column are defined in an adhoc manner.
- *                 Columns within a super column do not have to have matching structures (similarly named child columns).
+ * A KeySlice is key followed by the data it maps to. A collection of KeySlice is returned by the get_range_slice operation.
+ * 
+ * @param key. a row key
+ * @param columns. List of data represented by the key. Typically, the list is pared down to only the columns specified by
+ *                 a SlicePredicate.
  */
-public class SuperColumn implements TBase, java.io.Serializable, Cloneable, Comparable<SuperColumn> {
-  private static final TStruct STRUCT_DESC = new TStruct("SuperColumn");
-  private static final TField NAME_FIELD_DESC = new TField("name", TType.STRING, (short)1);
+public class KeySlice implements TBase, java.io.Serializable, Cloneable, Comparable<KeySlice> {
+  private static final TStruct STRUCT_DESC = new TStruct("KeySlice");
+  private static final TField KEY_FIELD_DESC = new TField("key", TType.STRING, (short)1);
   private static final TField COLUMNS_FIELD_DESC = new TField("columns", TType.LIST, (short)2);
 
-  public byte[] name;
-  public List<Column> columns;
-  public static final int NAME = 1;
+  public String key;
+  public List<ColumnOrSuperColumn> columns;
+  public static final int KEY = 1;
   public static final int COLUMNS = 2;
 
   // isset id assignments
 
   public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-    put(NAME, new FieldMetaData("name", TFieldRequirementType.REQUIRED, 
+    put(KEY, new FieldMetaData("key", TFieldRequirementType.REQUIRED, 
         new FieldValueMetaData(TType.STRING)));
     put(COLUMNS, new FieldMetaData("columns", TFieldRequirementType.REQUIRED, 
         new ListMetaData(TType.LIST, 
-            new StructMetaData(TType.STRUCT, Column.class))));
+            new StructMetaData(TType.STRUCT, ColumnOrSuperColumn.class))));
   }});
 
   static {
-    FieldMetaData.addStructMetaDataMap(SuperColumn.class, metaDataMap);
+    FieldMetaData.addStructMetaDataMap(KeySlice.class, metaDataMap);
   }
 
-  public SuperColumn() {
+  public KeySlice() {
   }
 
-  public SuperColumn(
-    byte[] name,
-    List<Column> columns)
+  public KeySlice(
+    String key,
+    List<ColumnOrSuperColumn> columns)
   {
     this();
-    this.name = name;
+    this.key = key;
     this.columns = columns;
   }
 
   /**
    * Performs a deep copy on <i>other</i>.
    */
-  public SuperColumn(SuperColumn other) {
-    if (other.isSetName()) {
-      this.name = new byte[other.name.length];
-      System.arraycopy(other.name, 0, name, 0, other.name.length);
+  public KeySlice(KeySlice other) {
+    if (other.isSetKey()) {
+      this.key = other.key;
     }
     if (other.isSetColumns()) {
-      List<Column> __this__columns = new ArrayList<Column>();
-      for (Column other_element : other.columns) {
-        __this__columns.add(new Column(other_element));
+      List<ColumnOrSuperColumn> __this__columns = new ArrayList<ColumnOrSuperColumn>();
+      for (ColumnOrSuperColumn other_element : other.columns) {
+        __this__columns.add(new ColumnOrSuperColumn(other_element));
       }
       this.columns = __this__columns;
     }
   }
 
-  public SuperColumn deepCopy() {
-    return new SuperColumn(this);
+  public KeySlice deepCopy() {
+    return new KeySlice(this);
   }
 
   @Deprecated
-  public SuperColumn clone() {
-    return new SuperColumn(this);
+  public KeySlice clone() {
+    return new KeySlice(this);
   }
 
-  public byte[] getName() {
-    return this.name;
+  public String getKey() {
+    return this.key;
   }
 
-  public SuperColumn setName(byte[] name) {
-    this.name = name;
+  public KeySlice setKey(String key) {
+    this.key = key;
     return this;
   }
 
-  public void unsetName() {
-    this.name = null;
+  public void unsetKey() {
+    this.key = null;
   }
 
-  // Returns true if field name is set (has been asigned a value) and false otherwise
-  public boolean isSetName() {
-    return this.name != null;
+  // Returns true if field key is set (has been asigned a value) and false otherwise
+  public boolean isSetKey() {
+    return this.key != null;
   }
 
-  public void setNameIsSet(boolean value) {
+  public void setKeyIsSet(boolean value) {
     if (!value) {
-      this.name = null;
+      this.key = null;
     }
   }
 
@@ -138,22 +138,22 @@ public class SuperColumn implements TBase, java.io.Serializable, Cloneable, Comp
     return (this.columns == null) ? 0 : this.columns.size();
   }
 
-  public java.util.Iterator<Column> getColumnsIterator() {
+  public java.util.Iterator<ColumnOrSuperColumn> getColumnsIterator() {
     return (this.columns == null) ? null : this.columns.iterator();
   }
 
-  public void addToColumns(Column elem) {
+  public void addToColumns(ColumnOrSuperColumn elem) {
     if (this.columns == null) {
-      this.columns = new ArrayList<Column>();
+      this.columns = new ArrayList<ColumnOrSuperColumn>();
     }
     this.columns.add(elem);
   }
 
-  public List<Column> getColumns() {
+  public List<ColumnOrSuperColumn> getColumns() {
     return this.columns;
   }
 
-  public SuperColumn setColumns(List<Column> columns) {
+  public KeySlice setColumns(List<ColumnOrSuperColumn> columns) {
     this.columns = columns;
     return this;
   }
@@ -175,11 +175,11 @@ public class SuperColumn implements TBase, java.io.Serializable, Cloneable, Comp
 
   public void setFieldValue(int fieldID, Object value) {
     switch (fieldID) {
-    case NAME:
+    case KEY:
       if (value == null) {
-        unsetName();
+        unsetKey();
       } else {
-        setName((byte[])value);
+        setKey((String)value);
       }
       break;
 
@@ -187,7 +187,7 @@ public class SuperColumn implements TBase, java.io.Serializable, Cloneable, Comp
       if (value == null) {
         unsetColumns();
       } else {
-        setColumns((List<Column>)value);
+        setColumns((List<ColumnOrSuperColumn>)value);
       }
       break;
 
@@ -198,8 +198,8 @@ public class SuperColumn implements TBase, java.io.Serializable, Cloneable, Comp
 
   public Object getFieldValue(int fieldID) {
     switch (fieldID) {
-    case NAME:
-      return getName();
+    case KEY:
+      return getKey();
 
     case COLUMNS:
       return getColumns();
@@ -212,8 +212,8 @@ public class SuperColumn implements TBase, java.io.Serializable, Cloneable, Comp
   // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
   public boolean isSet(int fieldID) {
     switch (fieldID) {
-    case NAME:
-      return isSetName();
+    case KEY:
+      return isSetKey();
     case COLUMNS:
       return isSetColumns();
     default:
@@ -225,21 +225,21 @@ public class SuperColumn implements TBase, java.io.Serializable, Cloneable, Comp
   public boolean equals(Object that) {
     if (that == null)
       return false;
-    if (that instanceof SuperColumn)
-      return this.equals((SuperColumn)that);
+    if (that instanceof KeySlice)
+      return this.equals((KeySlice)that);
     return false;
   }
 
-  public boolean equals(SuperColumn that) {
+  public boolean equals(KeySlice that) {
     if (that == null)
       return false;
 
-    boolean this_present_name = true && this.isSetName();
-    boolean that_present_name = true && that.isSetName();
-    if (this_present_name || that_present_name) {
-      if (!(this_present_name && that_present_name))
+    boolean this_present_key = true && this.isSetKey();
+    boolean that_present_key = true && that.isSetKey();
+    if (this_present_key || that_present_key) {
+      if (!(this_present_key && that_present_key))
         return false;
-      if (!java.util.Arrays.equals(this.name, that.name))
+      if (!this.key.equals(that.key))
         return false;
     }
 
@@ -260,19 +260,19 @@ public class SuperColumn implements TBase, java.io.Serializable, Cloneable, Comp
     return 0;
   }
 
-  public int compareTo(SuperColumn other) {
+  public int compareTo(KeySlice other) {
     if (!getClass().equals(other.getClass())) {
       return getClass().getName().compareTo(other.getClass().getName());
     }
 
     int lastComparison = 0;
-    SuperColumn typedOther = (SuperColumn)other;
+    KeySlice typedOther = (KeySlice)other;
 
-    lastComparison = Boolean.valueOf(isSetName()).compareTo(isSetName());
+    lastComparison = Boolean.valueOf(isSetKey()).compareTo(isSetKey());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    lastComparison = TBaseHelper.compareTo(name, typedOther.name);
+    lastComparison = TBaseHelper.compareTo(key, typedOther.key);
     if (lastComparison != 0) {
       return lastComparison;
     }
@@ -298,9 +298,9 @@ public class SuperColumn implements TBase, java.io.Serializable, Cloneable, Comp
       }
       switch (field.id)
       {
-        case NAME:
+        case KEY:
           if (field.type == TType.STRING) {
-            this.name = iprot.readBinary();
+            this.key = iprot.readString();
           } else { 
             TProtocolUtil.skip(iprot, field.type);
           }
@@ -308,14 +308,14 @@ public class SuperColumn implements TBase, java.io.Serializable, Cloneable, Comp
         case COLUMNS:
           if (field.type == TType.LIST) {
             {
-              TList _list0 = iprot.readListBegin();
-              this.columns = new ArrayList<Column>(_list0.size);
-              for (int _i1 = 0; _i1 < _list0.size; ++_i1)
+              TList _list8 = iprot.readListBegin();
+              this.columns = new ArrayList<ColumnOrSuperColumn>(_list8.size);
+              for (int _i9 = 0; _i9 < _list8.size; ++_i9)
               {
-                Column _elem2;
-                _elem2 = new Column();
-                _elem2.read(iprot);
-                this.columns.add(_elem2);
+                ColumnOrSuperColumn _elem10;
+                _elem10 = new ColumnOrSuperColumn();
+                _elem10.read(iprot);
+                this.columns.add(_elem10);
               }
               iprot.readListEnd();
             }
@@ -340,18 +340,18 @@ public class SuperColumn implements TBase, java.io.Serializable, Cloneable, Comp
     validate();
 
     oprot.writeStructBegin(STRUCT_DESC);
-    if (this.name != null) {
-      oprot.writeFieldBegin(NAME_FIELD_DESC);
-      oprot.writeBinary(this.name);
+    if (this.key != null) {
+      oprot.writeFieldBegin(KEY_FIELD_DESC);
+      oprot.writeString(this.key);
       oprot.writeFieldEnd();
     }
     if (this.columns != null) {
       oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
       {
         oprot.writeListBegin(new TList(TType.STRUCT, this.columns.size()));
-        for (Column _iter3 : this.columns)
+        for (ColumnOrSuperColumn _iter11 : this.columns)
         {
-          _iter3.write(oprot);
+          _iter11.write(oprot);
         }
         oprot.writeListEnd();
       }
@@ -363,19 +363,14 @@ public class SuperColumn implements TBase, java.io.Serializable, Cloneable, Comp
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder("SuperColumn(");
+    StringBuilder sb = new StringBuilder("KeySlice(");
     boolean first = true;
 
-    sb.append("name:");
-    if (this.name == null) {
+    sb.append("key:");
+    if (this.key == null) {
       sb.append("null");
     } else {
-        int __name_size = Math.min(this.name.length, 128);
-        for (int i = 0; i < __name_size; i++) {
-          if (i != 0) sb.append(" ");
-          sb.append(Integer.toHexString(this.name[i]).length() > 1 ? Integer.toHexString(this.name[i]).substring(Integer.toHexString(this.name[i]).length() - 2).toUpperCase() : "0" + Integer.toHexString(this.name[i]).toUpperCase());
-        }
-        if (this.name.length > 128) sb.append(" ...");
+      sb.append(this.key);
     }
     first = false;
     if (!first) sb.append(", ");
@@ -392,8 +387,8 @@ public class SuperColumn implements TBase, java.io.Serializable, Cloneable, Comp
 
   public void validate() throws TException {
     // check for required fields
-    if (name == null) {
-      throw new TProtocolException("Required field 'name' was not present! Struct: " + toString());
+    if (key == null) {
+      throw new TProtocolException("Required field 'key' was not present! Struct: " + toString());
     }
     if (columns == null) {
       throw new TProtocolException("Required field 'columns' was not present! Struct: " + toString());

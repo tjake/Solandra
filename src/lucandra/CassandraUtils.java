@@ -33,6 +33,7 @@ import org.apache.cassandra.service.Cassandra;
 import org.apache.cassandra.service.ColumnPath;
 import org.apache.cassandra.service.ConsistencyLevel;
 import org.apache.cassandra.service.InvalidRequestException;
+import org.apache.cassandra.service.TimedOutException;
 import org.apache.cassandra.service.UnavailableException;
 import org.apache.log4j.Logger;
 import org.apache.lucene.index.Term;
@@ -208,6 +209,8 @@ public class CassandraUtils {
             } catch (InvalidRequestException e) {
                 throw new RuntimeException(e);
             } catch (UnavailableException e) {
+                try_again = true;
+            } catch (TimedOutException e) {
                 try_again = true;
             }
         } while (try_again && attempts < 10);
