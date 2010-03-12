@@ -3,7 +3,7 @@
  *
  * DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING
  */
-package org.apache.cassandra.service;
+package org.apache.cassandra.thrift;
 /*
  * 
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -30,8 +30,10 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.EnumSet;
 import java.util.Collections;
 import java.util.BitSet;
 import java.util.Arrays;
@@ -58,8 +60,9 @@ import org.apache.thrift.protocol.*;
  *               be better served by iterating through slices by passing the last value of one call in as the 'start'
  *               of the next instead of increasing 'count' arbitrarily large.
  */
-public class SliceRange implements TBase, java.io.Serializable, Cloneable, Comparable<SliceRange> {
+public class SliceRange implements TBase<SliceRange._Fields>, java.io.Serializable, Cloneable, Comparable<SliceRange> {
   private static final TStruct STRUCT_DESC = new TStruct("SliceRange");
+
   private static final TField START_FIELD_DESC = new TField("start", TType.STRING, (short)1);
   private static final TField FINISH_FIELD_DESC = new TField("finish", TType.STRING, (short)2);
   private static final TField REVERSED_FIELD_DESC = new TField("reversed", TType.BOOL, (short)3);
@@ -69,24 +72,78 @@ public class SliceRange implements TBase, java.io.Serializable, Cloneable, Compa
   public byte[] finish;
   public boolean reversed;
   public int count;
-  public static final int START = 1;
-  public static final int FINISH = 2;
-  public static final int REVERSED = 3;
-  public static final int COUNT = 4;
+
+  /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+  public enum _Fields implements TFieldIdEnum {
+    START((short)1, "start"),
+    FINISH((short)2, "finish"),
+    REVERSED((short)3, "reversed"),
+    COUNT((short)4, "count");
+
+    private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+    private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+    static {
+      for (_Fields field : EnumSet.allOf(_Fields.class)) {
+        byId.put((int)field._thriftId, field);
+        byName.put(field.getFieldName(), field);
+      }
+    }
+
+    /**
+     * Find the _Fields constant that matches fieldId, or null if its not found.
+     */
+    public static _Fields findByThriftId(int fieldId) {
+      return byId.get(fieldId);
+    }
+
+    /**
+     * Find the _Fields constant that matches fieldId, throwing an exception
+     * if it is not found.
+     */
+    public static _Fields findByThriftIdOrThrow(int fieldId) {
+      _Fields fields = findByThriftId(fieldId);
+      if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+      return fields;
+    }
+
+    /**
+     * Find the _Fields constant that matches name, or null if its not found.
+     */
+    public static _Fields findByName(String name) {
+      return byName.get(name);
+    }
+
+    private final short _thriftId;
+    private final String _fieldName;
+
+    _Fields(short thriftId, String fieldName) {
+      _thriftId = thriftId;
+      _fieldName = fieldName;
+    }
+
+    public short getThriftFieldId() {
+      return _thriftId;
+    }
+
+    public String getFieldName() {
+      return _fieldName;
+    }
+  }
 
   // isset id assignments
   private static final int __REVERSED_ISSET_ID = 0;
   private static final int __COUNT_ISSET_ID = 1;
   private BitSet __isset_bit_vector = new BitSet(2);
 
-  public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-    put(START, new FieldMetaData("start", TFieldRequirementType.REQUIRED, 
+  public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+    put(_Fields.START, new FieldMetaData("start", TFieldRequirementType.REQUIRED, 
         new FieldValueMetaData(TType.STRING)));
-    put(FINISH, new FieldMetaData("finish", TFieldRequirementType.REQUIRED, 
+    put(_Fields.FINISH, new FieldMetaData("finish", TFieldRequirementType.REQUIRED, 
         new FieldValueMetaData(TType.STRING)));
-    put(REVERSED, new FieldMetaData("reversed", TFieldRequirementType.REQUIRED, 
+    put(_Fields.REVERSED, new FieldMetaData("reversed", TFieldRequirementType.REQUIRED, 
         new FieldValueMetaData(TType.BOOL)));
-    put(COUNT, new FieldMetaData("count", TFieldRequirementType.REQUIRED, 
+    put(_Fields.COUNT, new FieldMetaData("count", TFieldRequirementType.REQUIRED, 
         new FieldValueMetaData(TType.I32)));
   }});
 
@@ -156,7 +213,7 @@ public class SliceRange implements TBase, java.io.Serializable, Cloneable, Compa
     this.start = null;
   }
 
-  // Returns true if field start is set (has been asigned a value) and false otherwise
+  /** Returns true if field start is set (has been asigned a value) and false otherwise */
   public boolean isSetStart() {
     return this.start != null;
   }
@@ -180,7 +237,7 @@ public class SliceRange implements TBase, java.io.Serializable, Cloneable, Compa
     this.finish = null;
   }
 
-  // Returns true if field finish is set (has been asigned a value) and false otherwise
+  /** Returns true if field finish is set (has been asigned a value) and false otherwise */
   public boolean isSetFinish() {
     return this.finish != null;
   }
@@ -205,7 +262,7 @@ public class SliceRange implements TBase, java.io.Serializable, Cloneable, Compa
     __isset_bit_vector.clear(__REVERSED_ISSET_ID);
   }
 
-  // Returns true if field reversed is set (has been asigned a value) and false otherwise
+  /** Returns true if field reversed is set (has been asigned a value) and false otherwise */
   public boolean isSetReversed() {
     return __isset_bit_vector.get(__REVERSED_ISSET_ID);
   }
@@ -228,7 +285,7 @@ public class SliceRange implements TBase, java.io.Serializable, Cloneable, Compa
     __isset_bit_vector.clear(__COUNT_ISSET_ID);
   }
 
-  // Returns true if field count is set (has been asigned a value) and false otherwise
+  /** Returns true if field count is set (has been asigned a value) and false otherwise */
   public boolean isSetCount() {
     return __isset_bit_vector.get(__COUNT_ISSET_ID);
   }
@@ -237,8 +294,8 @@ public class SliceRange implements TBase, java.io.Serializable, Cloneable, Compa
     __isset_bit_vector.set(__COUNT_ISSET_ID, value);
   }
 
-  public void setFieldValue(int fieldID, Object value) {
-    switch (fieldID) {
+  public void setFieldValue(_Fields field, Object value) {
+    switch (field) {
     case START:
       if (value == null) {
         unsetStart();
@@ -271,13 +328,15 @@ public class SliceRange implements TBase, java.io.Serializable, Cloneable, Compa
       }
       break;
 
-    default:
-      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
   }
 
-  public Object getFieldValue(int fieldID) {
-    switch (fieldID) {
+  public void setFieldValue(int fieldID, Object value) {
+    setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+  }
+
+  public Object getFieldValue(_Fields field) {
+    switch (field) {
     case START:
       return getStart();
 
@@ -290,14 +349,17 @@ public class SliceRange implements TBase, java.io.Serializable, Cloneable, Compa
     case COUNT:
       return new Integer(getCount());
 
-    default:
-      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
+    throw new IllegalStateException();
   }
 
-  // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-  public boolean isSet(int fieldID) {
-    switch (fieldID) {
+  public Object getFieldValue(int fieldId) {
+    return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+  }
+
+  /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+  public boolean isSet(_Fields field) {
+    switch (field) {
     case START:
       return isSetStart();
     case FINISH:
@@ -306,9 +368,12 @@ public class SliceRange implements TBase, java.io.Serializable, Cloneable, Compa
       return isSetReversed();
     case COUNT:
       return isSetCount();
-    default:
-      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
+    throw new IllegalStateException();
+  }
+
+  public boolean isSet(int fieldID) {
+    return isSet(_Fields.findByThriftIdOrThrow(fieldID));
   }
 
   @Override
@@ -376,37 +441,41 @@ public class SliceRange implements TBase, java.io.Serializable, Cloneable, Compa
     int lastComparison = 0;
     SliceRange typedOther = (SliceRange)other;
 
-    lastComparison = Boolean.valueOf(isSetStart()).compareTo(isSetStart());
+    lastComparison = Boolean.valueOf(isSetStart()).compareTo(typedOther.isSetStart());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    lastComparison = TBaseHelper.compareTo(start, typedOther.start);
+    if (isSetStart()) {      lastComparison = TBaseHelper.compareTo(start, typedOther.start);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetFinish()).compareTo(typedOther.isSetFinish());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    lastComparison = Boolean.valueOf(isSetFinish()).compareTo(isSetFinish());
+    if (isSetFinish()) {      lastComparison = TBaseHelper.compareTo(finish, typedOther.finish);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetReversed()).compareTo(typedOther.isSetReversed());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    lastComparison = TBaseHelper.compareTo(finish, typedOther.finish);
+    if (isSetReversed()) {      lastComparison = TBaseHelper.compareTo(reversed, typedOther.reversed);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetCount()).compareTo(typedOther.isSetCount());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    lastComparison = Boolean.valueOf(isSetReversed()).compareTo(isSetReversed());
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    lastComparison = TBaseHelper.compareTo(reversed, typedOther.reversed);
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    lastComparison = Boolean.valueOf(isSetCount()).compareTo(isSetCount());
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    lastComparison = TBaseHelper.compareTo(count, typedOther.count);
-    if (lastComparison != 0) {
-      return lastComparison;
+    if (isSetCount()) {      lastComparison = TBaseHelper.compareTo(count, typedOther.count);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
     }
     return 0;
   }
@@ -420,23 +489,22 @@ public class SliceRange implements TBase, java.io.Serializable, Cloneable, Compa
       if (field.type == TType.STOP) { 
         break;
       }
-      switch (field.id)
-      {
-        case START:
+      switch (field.id) {
+        case 1: // START
           if (field.type == TType.STRING) {
             this.start = iprot.readBinary();
           } else { 
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case FINISH:
+        case 2: // FINISH
           if (field.type == TType.STRING) {
             this.finish = iprot.readBinary();
           } else { 
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case REVERSED:
+        case 3: // REVERSED
           if (field.type == TType.BOOL) {
             this.reversed = iprot.readBool();
             setReversedIsSet(true);
@@ -444,7 +512,7 @@ public class SliceRange implements TBase, java.io.Serializable, Cloneable, Compa
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case COUNT:
+        case 4: // COUNT
           if (field.type == TType.I32) {
             this.count = iprot.readI32();
             setCountIsSet(true);
@@ -454,12 +522,10 @@ public class SliceRange implements TBase, java.io.Serializable, Cloneable, Compa
           break;
         default:
           TProtocolUtil.skip(iprot, field.type);
-          break;
       }
       iprot.readFieldEnd();
     }
     iprot.readStructEnd();
-
 
     // check for required fields of primitive type, which can't be checked in the validate method
     if (!isSetReversed()) {
@@ -547,7 +613,6 @@ public class SliceRange implements TBase, java.io.Serializable, Cloneable, Compa
     }
     // alas, we cannot check 'reversed' because it's a primitive and you chose the non-beans generator.
     // alas, we cannot check 'count' because it's a primitive and you chose the non-beans generator.
-    // check that fields of type enum have valid values
   }
 
 }

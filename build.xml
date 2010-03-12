@@ -30,6 +30,9 @@
         <property name="build.classes" location="${build}/classes"/>
         <property name="build.test.classes" location="${build}/test-classes"/>
         <property name="lib"           location="lib" />
+        <property name="cassandra.host" location="127.0.0.1"/>
+        <property name="cassandra.port" location="9160"/>
+        <property name="cassandra.framed" location="false"/>
 
         <path id="lucandra.classpath">
           <pathelement location="${build.classes}"/>
@@ -75,9 +78,9 @@
             <batchtest todir="${build}/output">
               <fileset dir="${build.test.classes}" includes="**/*Test*" />
             </batchtest>
-            <jvmarg value="-Dcassandra.host=127.0.0.1"/>
-            <jvmarg value="-Dcassandra.port=9160"/>
-            <jvmarg value="-Dcassandra.framed=true"/>
+            <jvmarg value="-Dcassandra.host=${cassandra.host}"/>
+            <jvmarg value="-Dcassandra.port=${cassandra.port}"/>
+            <jvmarg value="-Dcassandra.framed=${cassandra.framed}"/>
           </junit>
           <fail if="testfailed" message="Some test(s) failed."/>
         </target>

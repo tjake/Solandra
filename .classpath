@@ -11,6 +11,6 @@
 	<classpathentry kind="lib" path="config"/>
 	<classpathentry kind="lib" path="lib/lucene-core-2.4.1.jar" sourcepath="/Users/jake/Downloads/lucene-2.4.1/src"/>
 	<classpathentry kind="lib" path="lib/lucene-analyzers-2.4.1.jar"/>
-	<classpathentry kind="lib" path="lib/libthrift-r820831.jar"/>
+	<classpathentry kind="lib" path="lib/libthrift-r917130.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

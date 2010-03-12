@@ -26,15 +26,24 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
-import org.apache.cassandra.service.Cassandra;
-import org.apache.cassandra.service.ColumnPath;
-import org.apache.cassandra.service.ConsistencyLevel;
-import org.apache.cassandra.service.InvalidRequestException;
-import org.apache.cassandra.service.TimedOutException;
-import org.apache.cassandra.service.UnavailableException;
+import org.apache.cassandra.thrift.Cassandra;
+import org.apache.cassandra.thrift.Column;
+import org.apache.cassandra.thrift.ColumnOrSuperColumn;
+import org.apache.cassandra.thrift.ConsistencyLevel;
+import org.apache.cassandra.thrift.Deletion;
+import org.apache.cassandra.thrift.InvalidRequestException;
+import org.apache.cassandra.thrift.Mutation;
+import org.apache.cassandra.thrift.SlicePredicate;
+import org.apache.cassandra.thrift.SliceRange;
+import org.apache.cassandra.thrift.TimedOutException;
+import org.apache.cassandra.thrift.UnavailableException;
 import org.apache.log4j.Logger;
 import org.apache.lucene.index.Term;
 import org.apache.thrift.TException;
@@ -192,7 +201,52 @@ public class CassandraUtils {
 
     }
 
-    public static void robustInsert(Cassandra.Client client, String key, ColumnPath columnPath, byte[] value) {
+    public static void addToMutationMap(Map<String,Map<String,List<Mutation>>> mutationMap, String columnFamily, byte[] column, String key, byte[] value){
+        
+        
+        
+        Map<String,List<Mutation>> cfMutation = mutationMap.get(key);
+        
+        if(cfMutation == null){
+            cfMutation = new HashMap<String,List<Mutation>>();
+            mutationMap.put(key, cfMutation);
+        }
+
+        
+        Mutation mutation = new Mutation();
+        
+        List<Mutation> mutationList = cfMutation.get(columnFamily);
+        if(mutationList == null) {
+            mutationList = new ArrayList<Mutation>();
+            cfMutation.put(columnFamily, mutationList);
+        }
+        
+        
+        if(value == null){ //remove
+            
+            Deletion d = new Deletion(System.currentTimeMillis());
+            
+            if(column != null){
+                d.setPredicate(new SlicePredicate().setColumn_names(Arrays.asList(new byte[][]{column})));
+            }else{
+                d.setPredicate(new SlicePredicate().setSlice_range(new SliceRange(new byte[]{}, new byte[]{},false,Integer.MAX_VALUE)));
+            }
+            
+            mutation.setDeletion(d);
+       
+        }else{ //insert
+                
+            ColumnOrSuperColumn cc = new ColumnOrSuperColumn();
+            cc.setColumn(new Column(column, value, System.currentTimeMillis()));                    
+
+            mutation.setColumn_or_supercolumn(cc);
+        }
+        
+        mutationList.add(mutation);
+        
+    }
+    
+    public static void robustBatchInsert(Cassandra.Client client, Map<String,Map<String,List<Mutation>>> mutationMap) {
 
         // Should use a circut breaker here
         boolean try_again = false;
@@ -202,7 +256,7 @@ public class CassandraUtils {
             try {
                 attempts = 0;
                 try_again = false;
-                client.insert(CassandraUtils.keySpace, key, columnPath, value, System.currentTimeMillis(), ConsistencyLevel.ONE);
+                client.batch_mutate(CassandraUtils.keySpace, mutationMap, ConsistencyLevel.ONE);
                 logger.debug("Inserted in " + (startTime - System.currentTimeMillis()) / 1000 + "ms");
             } catch (TException e) {
                 throw new RuntimeException(e);

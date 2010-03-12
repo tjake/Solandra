@@ -3,7 +3,7 @@
  *
  * DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING
  */
-package org.apache.cassandra.service;
+package org.apache.cassandra.thrift;
 /*
  * 
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -30,8 +30,10 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.EnumSet;
 import java.util.Collections;
 import java.util.BitSet;
 import java.util.Arrays;
@@ -52,22 +54,77 @@ import org.apache.thrift.protocol.*;
  * @param column. The Column returned by get() or get_slice().
  * @param super_column. The SuperColumn returned by get() or get_slice().
  */
-public class ColumnOrSuperColumn implements TBase, java.io.Serializable, Cloneable, Comparable<ColumnOrSuperColumn> {
+public class ColumnOrSuperColumn implements TBase<ColumnOrSuperColumn._Fields>, java.io.Serializable, Cloneable, Comparable<ColumnOrSuperColumn> {
   private static final TStruct STRUCT_DESC = new TStruct("ColumnOrSuperColumn");
+
   private static final TField COLUMN_FIELD_DESC = new TField("column", TType.STRUCT, (short)1);
   private static final TField SUPER_COLUMN_FIELD_DESC = new TField("super_column", TType.STRUCT, (short)2);
 
   public Column column;
   public SuperColumn super_column;
-  public static final int COLUMN = 1;
-  public static final int SUPER_COLUMN = 2;
+
+  /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+  public enum _Fields implements TFieldIdEnum {
+    COLUMN((short)1, "column"),
+    SUPER_COLUMN((short)2, "super_column");
+
+    private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+    private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+    static {
+      for (_Fields field : EnumSet.allOf(_Fields.class)) {
+        byId.put((int)field._thriftId, field);
+        byName.put(field.getFieldName(), field);
+      }
+    }
+
+    /**
+     * Find the _Fields constant that matches fieldId, or null if its not found.
+     */
+    public static _Fields findByThriftId(int fieldId) {
+      return byId.get(fieldId);
+    }
+
+    /**
+     * Find the _Fields constant that matches fieldId, throwing an exception
+     * if it is not found.
+     */
+    public static _Fields findByThriftIdOrThrow(int fieldId) {
+      _Fields fields = findByThriftId(fieldId);
+      if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+      return fields;
+    }
+
+    /**
+     * Find the _Fields constant that matches name, or null if its not found.
+     */
+    public static _Fields findByName(String name) {
+      return byName.get(name);
+    }
+
+    private final short _thriftId;
+    private final String _fieldName;
+
+    _Fields(short thriftId, String fieldName) {
+      _thriftId = thriftId;
+      _fieldName = fieldName;
+    }
+
+    public short getThriftFieldId() {
+      return _thriftId;
+    }
+
+    public String getFieldName() {
+      return _fieldName;
+    }
+  }
 
   // isset id assignments
 
-  public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-    put(COLUMN, new FieldMetaData("column", TFieldRequirementType.OPTIONAL, 
+  public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+    put(_Fields.COLUMN, new FieldMetaData("column", TFieldRequirementType.OPTIONAL, 
         new StructMetaData(TType.STRUCT, Column.class)));
-    put(SUPER_COLUMN, new FieldMetaData("super_column", TFieldRequirementType.OPTIONAL, 
+    put(_Fields.SUPER_COLUMN, new FieldMetaData("super_column", TFieldRequirementType.OPTIONAL, 
         new StructMetaData(TType.STRUCT, SuperColumn.class)));
   }});
 
@@ -76,15 +133,6 @@ public class ColumnOrSuperColumn implements TBase, java.io.Serializable, Cloneab
   }
 
   public ColumnOrSuperColumn() {
-  }
-
-  public ColumnOrSuperColumn(
-    Column column,
-    SuperColumn super_column)
-  {
-    this();
-    this.column = column;
-    this.super_column = super_column;
   }
 
   /**
@@ -121,7 +169,7 @@ public class ColumnOrSuperColumn implements TBase, java.io.Serializable, Cloneab
     this.column = null;
   }
 
-  // Returns true if field column is set (has been asigned a value) and false otherwise
+  /** Returns true if field column is set (has been asigned a value) and false otherwise */
   public boolean isSetColumn() {
     return this.column != null;
   }
@@ -145,7 +193,7 @@ public class ColumnOrSuperColumn implements TBase, java.io.Serializable, Cloneab
     this.super_column = null;
   }
 
-  // Returns true if field super_column is set (has been asigned a value) and false otherwise
+  /** Returns true if field super_column is set (has been asigned a value) and false otherwise */
   public boolean isSetSuper_column() {
     return this.super_column != null;
   }
@@ -156,8 +204,8 @@ public class ColumnOrSuperColumn implements TBase, java.io.Serializable, Cloneab
     }
   }
 
-  public void setFieldValue(int fieldID, Object value) {
-    switch (fieldID) {
+  public void setFieldValue(_Fields field, Object value) {
+    switch (field) {
     case COLUMN:
       if (value == null) {
         unsetColumn();
@@ -174,34 +222,42 @@ public class ColumnOrSuperColumn implements TBase, java.io.Serializable, Cloneab
       }
       break;
 
-    default:
-      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
   }
 
-  public Object getFieldValue(int fieldID) {
-    switch (fieldID) {
+  public void setFieldValue(int fieldID, Object value) {
+    setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+  }
+
+  public Object getFieldValue(_Fields field) {
+    switch (field) {
     case COLUMN:
       return getColumn();
 
     case SUPER_COLUMN:
       return getSuper_column();
 
-    default:
-      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
+    throw new IllegalStateException();
   }
 
-  // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-  public boolean isSet(int fieldID) {
-    switch (fieldID) {
+  public Object getFieldValue(int fieldId) {
+    return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+  }
+
+  /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+  public boolean isSet(_Fields field) {
+    switch (field) {
     case COLUMN:
       return isSetColumn();
     case SUPER_COLUMN:
       return isSetSuper_column();
-    default:
-      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
+    throw new IllegalStateException();
+  }
+
+  public boolean isSet(int fieldID) {
+    return isSet(_Fields.findByThriftIdOrThrow(fieldID));
   }
 
   @Override
@@ -251,21 +307,23 @@ public class ColumnOrSuperColumn implements TBase, java.io.Serializable, Cloneab
     int lastComparison = 0;
     ColumnOrSuperColumn typedOther = (ColumnOrSuperColumn)other;
 
-    lastComparison = Boolean.valueOf(isSetColumn()).compareTo(isSetColumn());
+    lastComparison = Boolean.valueOf(isSetColumn()).compareTo(typedOther.isSetColumn());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    lastComparison = TBaseHelper.compareTo(column, typedOther.column);
+    if (isSetColumn()) {      lastComparison = TBaseHelper.compareTo(column, typedOther.column);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetSuper_column()).compareTo(typedOther.isSetSuper_column());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    lastComparison = Boolean.valueOf(isSetSuper_column()).compareTo(isSetSuper_column());
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    lastComparison = TBaseHelper.compareTo(super_column, typedOther.super_column);
-    if (lastComparison != 0) {
-      return lastComparison;
+    if (isSetSuper_column()) {      lastComparison = TBaseHelper.compareTo(super_column, typedOther.super_column);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
     }
     return 0;
   }
@@ -279,9 +337,8 @@ public class ColumnOrSuperColumn implements TBase, java.io.Serializable, Cloneab
       if (field.type == TType.STOP) { 
         break;
       }
-      switch (field.id)
-      {
-        case COLUMN:
+      switch (field.id) {
+        case 1: // COLUMN
           if (field.type == TType.STRUCT) {
             this.column = new Column();
             this.column.read(iprot);
@@ -289,7 +346,7 @@ public class ColumnOrSuperColumn implements TBase, java.io.Serializable, Cloneab
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case SUPER_COLUMN:
+        case 2: // SUPER_COLUMN
           if (field.type == TType.STRUCT) {
             this.super_column = new SuperColumn();
             this.super_column.read(iprot);
@@ -299,12 +356,10 @@ public class ColumnOrSuperColumn implements TBase, java.io.Serializable, Cloneab
           break;
         default:
           TProtocolUtil.skip(iprot, field.type);
-          break;
       }
       iprot.readFieldEnd();
     }
     iprot.readStructEnd();
-
 
     // check for required fields of primitive type, which can't be checked in the validate method
     validate();
@@ -362,7 +417,6 @@ public class ColumnOrSuperColumn implements TBase, java.io.Serializable, Cloneab
 
   public void validate() throws TException {
     // check for required fields
-    // check that fields of type enum have valid values
   }
 
 }

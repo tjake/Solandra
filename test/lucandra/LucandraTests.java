@@ -23,8 +23,12 @@ import java.util.List;
 
 import junit.framework.TestCase;
 
-import org.apache.cassandra.service.Cassandra;
-import org.apache.cassandra.service.ConsistencyLevel;
+import org.apache.cassandra.thrift.Cassandra;
+import org.apache.cassandra.thrift.ColumnParent;
+import org.apache.cassandra.thrift.ConsistencyLevel;
+import org.apache.cassandra.thrift.KeySlice;
+import org.apache.cassandra.thrift.SlicePredicate;
+import org.apache.cassandra.thrift.SliceRange;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.cjk.CJKAnalyzer;
 import org.apache.lucene.document.Document;
@@ -74,9 +78,16 @@ public class LucandraTests extends TestCase {
             String start = indexName + CassandraUtils.delimeter;
             String finish = indexName + CassandraUtils.delimeter+CassandraUtils.delimeter;
 
-            List<String> keys = client.get_key_range(CassandraUtils.keySpace, CassandraUtils.termVecColumnFamily, start, finish, 1000,
-                    ConsistencyLevel.ONE);
-            assertEquals(5, keys.size());
+            ColumnParent columnParent = new ColumnParent(CassandraUtils.termVecColumnFamily);
+            SlicePredicate slicePredicate = new SlicePredicate();
+
+            // Get all columns
+            SliceRange sliceRange = new SliceRange(new byte[] {}, new byte[] {}, true, Integer.MAX_VALUE);
+            slicePredicate.setSlice_range(sliceRange);
+
+            List<KeySlice> columns  = client.get_range_slice(CassandraUtils.keySpace, columnParent, slicePredicate, start, finish, 5000, ConsistencyLevel.ONE);
+            
+            assertEquals(5, columns.size());
             assertEquals(2, indexWriter.docCount());
 
             // Index 10 documents to test order

@@ -3,7 +3,7 @@
  *
  * DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING
  */
-package org.apache.cassandra.service;
+package org.apache.cassandra.thrift;
 /*
  * 
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -30,8 +30,10 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.EnumSet;
 import java.util.Collections;
 import java.util.BitSet;
 import java.util.Arrays;
@@ -49,22 +51,77 @@ import org.apache.thrift.protocol.*;
  * @param columns. List of data represented by the key. Typically, the list is pared down to only the columns specified by
  *                 a SlicePredicate.
  */
-public class KeySlice implements TBase, java.io.Serializable, Cloneable, Comparable<KeySlice> {
+public class KeySlice implements TBase<KeySlice._Fields>, java.io.Serializable, Cloneable, Comparable<KeySlice> {
   private static final TStruct STRUCT_DESC = new TStruct("KeySlice");
+
   private static final TField KEY_FIELD_DESC = new TField("key", TType.STRING, (short)1);
   private static final TField COLUMNS_FIELD_DESC = new TField("columns", TType.LIST, (short)2);
 
   public String key;
   public List<ColumnOrSuperColumn> columns;
-  public static final int KEY = 1;
-  public static final int COLUMNS = 2;
+
+  /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+  public enum _Fields implements TFieldIdEnum {
+    KEY((short)1, "key"),
+    COLUMNS((short)2, "columns");
+
+    private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+    private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+    static {
+      for (_Fields field : EnumSet.allOf(_Fields.class)) {
+        byId.put((int)field._thriftId, field);
+        byName.put(field.getFieldName(), field);
+      }
+    }
+
+    /**
+     * Find the _Fields constant that matches fieldId, or null if its not found.
+     */
+    public static _Fields findByThriftId(int fieldId) {
+      return byId.get(fieldId);
+    }
+
+    /**
+     * Find the _Fields constant that matches fieldId, throwing an exception
+     * if it is not found.
+     */
+    public static _Fields findByThriftIdOrThrow(int fieldId) {
+      _Fields fields = findByThriftId(fieldId);
+      if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+      return fields;
+    }
+
+    /**
+     * Find the _Fields constant that matches name, or null if its not found.
+     */
+    public static _Fields findByName(String name) {
+      return byName.get(name);
+    }
+
+    private final short _thriftId;
+    private final String _fieldName;
+
+    _Fields(short thriftId, String fieldName) {
+      _thriftId = thriftId;
+      _fieldName = fieldName;
+    }
+
+    public short getThriftFieldId() {
+      return _thriftId;
+    }
+
+    public String getFieldName() {
+      return _fieldName;
+    }
+  }
 
   // isset id assignments
 
-  public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-    put(KEY, new FieldMetaData("key", TFieldRequirementType.REQUIRED, 
+  public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+    put(_Fields.KEY, new FieldMetaData("key", TFieldRequirementType.REQUIRED, 
         new FieldValueMetaData(TType.STRING)));
-    put(COLUMNS, new FieldMetaData("columns", TFieldRequirementType.REQUIRED, 
+    put(_Fields.COLUMNS, new FieldMetaData("columns", TFieldRequirementType.REQUIRED, 
         new ListMetaData(TType.LIST, 
             new StructMetaData(TType.STRUCT, ColumnOrSuperColumn.class))));
   }});
@@ -123,7 +180,7 @@ public class KeySlice implements TBase, java.io.Serializable, Cloneable, Compara
     this.key = null;
   }
 
-  // Returns true if field key is set (has been asigned a value) and false otherwise
+  /** Returns true if field key is set (has been asigned a value) and false otherwise */
   public boolean isSetKey() {
     return this.key != null;
   }
@@ -162,7 +219,7 @@ public class KeySlice implements TBase, java.io.Serializable, Cloneable, Compara
     this.columns = null;
   }
 
-  // Returns true if field columns is set (has been asigned a value) and false otherwise
+  /** Returns true if field columns is set (has been asigned a value) and false otherwise */
   public boolean isSetColumns() {
     return this.columns != null;
   }
@@ -173,8 +230,8 @@ public class KeySlice implements TBase, java.io.Serializable, Cloneable, Compara
     }
   }
 
-  public void setFieldValue(int fieldID, Object value) {
-    switch (fieldID) {
+  public void setFieldValue(_Fields field, Object value) {
+    switch (field) {
     case KEY:
       if (value == null) {
         unsetKey();
@@ -191,34 +248,42 @@ public class KeySlice implements TBase, java.io.Serializable, Cloneable, Compara
       }
       break;
 
-    default:
-      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
   }
 
-  public Object getFieldValue(int fieldID) {
-    switch (fieldID) {
+  public void setFieldValue(int fieldID, Object value) {
+    setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+  }
+
+  public Object getFieldValue(_Fields field) {
+    switch (field) {
     case KEY:
       return getKey();
 
     case COLUMNS:
       return getColumns();
 
-    default:
-      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
+    throw new IllegalStateException();
   }
 
-  // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-  public boolean isSet(int fieldID) {
-    switch (fieldID) {
+  public Object getFieldValue(int fieldId) {
+    return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+  }
+
+  /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+  public boolean isSet(_Fields field) {
+    switch (field) {
     case KEY:
       return isSetKey();
     case COLUMNS:
       return isSetColumns();
-    default:
-      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
+    throw new IllegalStateException();
+  }
+
+  public boolean isSet(int fieldID) {
+    return isSet(_Fields.findByThriftIdOrThrow(fieldID));
   }
 
   @Override
@@ -268,21 +333,23 @@ public class KeySlice implements TBase, java.io.Serializable, Cloneable, Compara
     int lastComparison = 0;
     KeySlice typedOther = (KeySlice)other;
 
-    lastComparison = Boolean.valueOf(isSetKey()).compareTo(isSetKey());
+    lastComparison = Boolean.valueOf(isSetKey()).compareTo(typedOther.isSetKey());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    lastComparison = TBaseHelper.compareTo(key, typedOther.key);
+    if (isSetKey()) {      lastComparison = TBaseHelper.compareTo(key, typedOther.key);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetColumns()).compareTo(typedOther.isSetColumns());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    lastComparison = Boolean.valueOf(isSetColumns()).compareTo(isSetColumns());
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    lastComparison = TBaseHelper.compareTo(columns, typedOther.columns);
-    if (lastComparison != 0) {
-      return lastComparison;
+    if (isSetColumns()) {      lastComparison = TBaseHelper.compareTo(columns, typedOther.columns);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
     }
     return 0;
   }
@@ -296,16 +363,15 @@ public class KeySlice implements TBase, java.io.Serializable, Cloneable, Compara
       if (field.type == TType.STOP) { 
         break;
       }
-      switch (field.id)
-      {
-        case KEY:
+      switch (field.id) {
+        case 1: // KEY
           if (field.type == TType.STRING) {
             this.key = iprot.readString();
           } else { 
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case COLUMNS:
+        case 2: // COLUMNS
           if (field.type == TType.LIST) {
             {
               TList _list8 = iprot.readListBegin();
@@ -325,12 +391,10 @@ public class KeySlice implements TBase, java.io.Serializable, Cloneable, Compara
           break;
         default:
           TProtocolUtil.skip(iprot, field.type);
-          break;
       }
       iprot.readFieldEnd();
     }
     iprot.readStructEnd();
-
 
     // check for required fields of primitive type, which can't be checked in the validate method
     validate();
@@ -393,7 +457,6 @@ public class KeySlice implements TBase, java.io.Serializable, Cloneable, Compara
     if (columns == null) {
       throw new TProtocolException("Required field 'columns' was not present! Struct: " + toString());
     }
-    // check that fields of type enum have valid values
   }
 
 }

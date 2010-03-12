@@ -20,10 +20,9 @@
 package lucandra;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 
-import org.apache.cassandra.service.ColumnOrSuperColumn;
+import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.log4j.Logger;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.TermDocs;

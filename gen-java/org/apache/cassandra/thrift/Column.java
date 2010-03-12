@@ -3,7 +3,7 @@
  *
  * DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING
  */
-package org.apache.cassandra.service;
+package org.apache.cassandra.thrift;
 /*
  * 
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -30,8 +30,10 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.EnumSet;
 import java.util.Collections;
 import java.util.BitSet;
 import java.util.Arrays;
@@ -49,8 +51,9 @@ import org.apache.thrift.protocol.*;
  * @param value. Some data
  * @param timestamp. Used to record when data was sent to be written.
  */
-public class Column implements TBase, java.io.Serializable, Cloneable, Comparable<Column> {
+public class Column implements TBase<Column._Fields>, java.io.Serializable, Cloneable, Comparable<Column> {
   private static final TStruct STRUCT_DESC = new TStruct("Column");
+
   private static final TField NAME_FIELD_DESC = new TField("name", TType.STRING, (short)1);
   private static final TField VALUE_FIELD_DESC = new TField("value", TType.STRING, (short)2);
   private static final TField TIMESTAMP_FIELD_DESC = new TField("timestamp", TType.I64, (short)3);
@@ -58,20 +61,74 @@ public class Column implements TBase, java.io.Serializable, Cloneable, Comparabl
   public byte[] name;
   public byte[] value;
   public long timestamp;
-  public static final int NAME = 1;
-  public static final int VALUE = 2;
-  public static final int TIMESTAMP = 3;
+
+  /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+  public enum _Fields implements TFieldIdEnum {
+    NAME((short)1, "name"),
+    VALUE((short)2, "value"),
+    TIMESTAMP((short)3, "timestamp");
+
+    private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+    private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+    static {
+      for (_Fields field : EnumSet.allOf(_Fields.class)) {
+        byId.put((int)field._thriftId, field);
+        byName.put(field.getFieldName(), field);
+      }
+    }
+
+    /**
+     * Find the _Fields constant that matches fieldId, or null if its not found.
+     */
+    public static _Fields findByThriftId(int fieldId) {
+      return byId.get(fieldId);
+    }
+
+    /**
+     * Find the _Fields constant that matches fieldId, throwing an exception
+     * if it is not found.
+     */
+    public static _Fields findByThriftIdOrThrow(int fieldId) {
+      _Fields fields = findByThriftId(fieldId);
+      if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+      return fields;
+    }
+
+    /**
+     * Find the _Fields constant that matches name, or null if its not found.
+     */
+    public static _Fields findByName(String name) {
+      return byName.get(name);
+    }
+
+    private final short _thriftId;
+    private final String _fieldName;
+
+    _Fields(short thriftId, String fieldName) {
+      _thriftId = thriftId;
+      _fieldName = fieldName;
+    }
+
+    public short getThriftFieldId() {
+      return _thriftId;
+    }
+
+    public String getFieldName() {
+      return _fieldName;
+    }
+  }
 
   // isset id assignments
   private static final int __TIMESTAMP_ISSET_ID = 0;
   private BitSet __isset_bit_vector = new BitSet(1);
 
-  public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-    put(NAME, new FieldMetaData("name", TFieldRequirementType.REQUIRED, 
+  public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+    put(_Fields.NAME, new FieldMetaData("name", TFieldRequirementType.REQUIRED, 
         new FieldValueMetaData(TType.STRING)));
-    put(VALUE, new FieldMetaData("value", TFieldRequirementType.REQUIRED, 
+    put(_Fields.VALUE, new FieldMetaData("value", TFieldRequirementType.REQUIRED, 
         new FieldValueMetaData(TType.STRING)));
-    put(TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.REQUIRED, 
+    put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.REQUIRED, 
         new FieldValueMetaData(TType.I64)));
   }});
 
@@ -133,7 +190,7 @@ public class Column implements TBase, java.io.Serializable, Cloneable, Comparabl
     this.name = null;
   }
 
-  // Returns true if field name is set (has been asigned a value) and false otherwise
+  /** Returns true if field name is set (has been asigned a value) and false otherwise */
   public boolean isSetName() {
     return this.name != null;
   }
@@ -157,7 +214,7 @@ public class Column implements TBase, java.io.Serializable, Cloneable, Comparabl
     this.value = null;
   }
 
-  // Returns true if field value is set (has been asigned a value) and false otherwise
+  /** Returns true if field value is set (has been asigned a value) and false otherwise */
   public boolean isSetValue() {
     return this.value != null;
   }
@@ -182,7 +239,7 @@ public class Column implements TBase, java.io.Serializable, Cloneable, Comparabl
     __isset_bit_vector.clear(__TIMESTAMP_ISSET_ID);
   }
 
-  // Returns true if field timestamp is set (has been asigned a value) and false otherwise
+  /** Returns true if field timestamp is set (has been asigned a value) and false otherwise */
   public boolean isSetTimestamp() {
     return __isset_bit_vector.get(__TIMESTAMP_ISSET_ID);
   }
@@ -191,8 +248,8 @@ public class Column implements TBase, java.io.Serializable, Cloneable, Comparabl
     __isset_bit_vector.set(__TIMESTAMP_ISSET_ID, value);
   }
 
-  public void setFieldValue(int fieldID, Object value) {
-    switch (fieldID) {
+  public void setFieldValue(_Fields field, Object value) {
+    switch (field) {
     case NAME:
       if (value == null) {
         unsetName();
@@ -217,13 +274,15 @@ public class Column implements TBase, java.io.Serializable, Cloneable, Comparabl
       }
       break;
 
-    default:
-      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
   }
 
-  public Object getFieldValue(int fieldID) {
-    switch (fieldID) {
+  public void setFieldValue(int fieldID, Object value) {
+    setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+  }
+
+  public Object getFieldValue(_Fields field) {
+    switch (field) {
     case NAME:
       return getName();
 
@@ -233,23 +292,29 @@ public class Column implements TBase, java.io.Serializable, Cloneable, Comparabl
     case TIMESTAMP:
       return new Long(getTimestamp());
 
-    default:
-      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
+    throw new IllegalStateException();
   }
 
-  // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-  public boolean isSet(int fieldID) {
-    switch (fieldID) {
+  public Object getFieldValue(int fieldId) {
+    return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+  }
+
+  /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+  public boolean isSet(_Fields field) {
+    switch (field) {
     case NAME:
       return isSetName();
     case VALUE:
       return isSetValue();
     case TIMESTAMP:
       return isSetTimestamp();
-    default:
-      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
+    throw new IllegalStateException();
+  }
+
+  public boolean isSet(int fieldID) {
+    return isSet(_Fields.findByThriftIdOrThrow(fieldID));
   }
 
   @Override
@@ -308,29 +373,32 @@ public class Column implements TBase, java.io.Serializable, Cloneable, Comparabl
     int lastComparison = 0;
     Column typedOther = (Column)other;
 
-    lastComparison = Boolean.valueOf(isSetName()).compareTo(isSetName());
+    lastComparison = Boolean.valueOf(isSetName()).compareTo(typedOther.isSetName());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    lastComparison = TBaseHelper.compareTo(name, typedOther.name);
+    if (isSetName()) {      lastComparison = TBaseHelper.compareTo(name, typedOther.name);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetValue()).compareTo(typedOther.isSetValue());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    lastComparison = Boolean.valueOf(isSetValue()).compareTo(isSetValue());
+    if (isSetValue()) {      lastComparison = TBaseHelper.compareTo(value, typedOther.value);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetTimestamp()).compareTo(typedOther.isSetTimestamp());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    lastComparison = TBaseHelper.compareTo(value, typedOther.value);
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    lastComparison = Boolean.valueOf(isSetTimestamp()).compareTo(isSetTimestamp());
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    lastComparison = TBaseHelper.compareTo(timestamp, typedOther.timestamp);
-    if (lastComparison != 0) {
-      return lastComparison;
+    if (isSetTimestamp()) {      lastComparison = TBaseHelper.compareTo(timestamp, typedOther.timestamp);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
     }
     return 0;
   }
@@ -344,23 +412,22 @@ public class Column implements TBase, java.io.Serializable, Cloneable, Comparabl
       if (field.type == TType.STOP) { 
         break;
       }
-      switch (field.id)
-      {
-        case NAME:
+      switch (field.id) {
+        case 1: // NAME
           if (field.type == TType.STRING) {
             this.name = iprot.readBinary();
           } else { 
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case VALUE:
+        case 2: // VALUE
           if (field.type == TType.STRING) {
             this.value = iprot.readBinary();
           } else { 
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case TIMESTAMP:
+        case 3: // TIMESTAMP
           if (field.type == TType.I64) {
             this.timestamp = iprot.readI64();
             setTimestampIsSet(true);
@@ -370,12 +437,10 @@ public class Column implements TBase, java.io.Serializable, Cloneable, Comparabl
           break;
         default:
           TProtocolUtil.skip(iprot, field.type);
-          break;
       }
       iprot.readFieldEnd();
     }
     iprot.readStructEnd();
-
 
     // check for required fields of primitive type, which can't be checked in the validate method
     if (!isSetTimestamp()) {
@@ -452,7 +517,6 @@ public class Column implements TBase, java.io.Serializable, Cloneable, Comparabl
       throw new TProtocolException("Required field 'value' was not present! Struct: " + toString());
     }
     // alas, we cannot check 'timestamp' because it's a primitive and you chose the non-beans generator.
-    // check that fields of type enum have valid values
   }
 
 }

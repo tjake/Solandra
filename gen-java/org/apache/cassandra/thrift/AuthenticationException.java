@@ -3,7 +3,7 @@
  *
  * DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING
  */
-package org.apache.cassandra.service;
+package org.apache.cassandra.thrift;
 /*
  * 
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -30,8 +30,10 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.EnumSet;
 import java.util.Collections;
 import java.util.BitSet;
 import java.util.Arrays;
@@ -43,31 +45,85 @@ import org.apache.thrift.meta_data.*;
 import org.apache.thrift.protocol.*;
 
 /**
- * Invalid request could mean keyspace or column family does not exist, required parameters are missing, or a parameter is malformed.
- * why contains an associated error message.
+ * invalid authentication request (user does not exist or credentials invalid)
  */
-public class InvalidRequestException extends Exception implements TBase, java.io.Serializable, Cloneable, Comparable<InvalidRequestException> {
-  private static final TStruct STRUCT_DESC = new TStruct("InvalidRequestException");
+public class AuthenticationException extends Exception implements TBase<AuthenticationException._Fields>, java.io.Serializable, Cloneable, Comparable<AuthenticationException> {
+  private static final TStruct STRUCT_DESC = new TStruct("AuthenticationException");
+
   private static final TField WHY_FIELD_DESC = new TField("why", TType.STRING, (short)1);
 
   public String why;
-  public static final int WHY = 1;
+
+  /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+  public enum _Fields implements TFieldIdEnum {
+    WHY((short)1, "why");
+
+    private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+    private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+    static {
+      for (_Fields field : EnumSet.allOf(_Fields.class)) {
+        byId.put((int)field._thriftId, field);
+        byName.put(field.getFieldName(), field);
+      }
+    }
+
+    /**
+     * Find the _Fields constant that matches fieldId, or null if its not found.
+     */
+    public static _Fields findByThriftId(int fieldId) {
+      return byId.get(fieldId);
+    }
+
+    /**
+     * Find the _Fields constant that matches fieldId, throwing an exception
+     * if it is not found.
+     */
+    public static _Fields findByThriftIdOrThrow(int fieldId) {
+      _Fields fields = findByThriftId(fieldId);
+      if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+      return fields;
+    }
+
+    /**
+     * Find the _Fields constant that matches name, or null if its not found.
+     */
+    public static _Fields findByName(String name) {
+      return byName.get(name);
+    }
+
+    private final short _thriftId;
+    private final String _fieldName;
+
+    _Fields(short thriftId, String fieldName) {
+      _thriftId = thriftId;
+      _fieldName = fieldName;
+    }
+
+    public short getThriftFieldId() {
+      return _thriftId;
+    }
+
+    public String getFieldName() {
+      return _fieldName;
+    }
+  }
 
   // isset id assignments
 
-  public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-    put(WHY, new FieldMetaData("why", TFieldRequirementType.REQUIRED, 
+  public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+    put(_Fields.WHY, new FieldMetaData("why", TFieldRequirementType.REQUIRED, 
         new FieldValueMetaData(TType.STRING)));
   }});
 
   static {
-    FieldMetaData.addStructMetaDataMap(InvalidRequestException.class, metaDataMap);
+    FieldMetaData.addStructMetaDataMap(AuthenticationException.class, metaDataMap);
   }
 
-  public InvalidRequestException() {
+  public AuthenticationException() {
   }
 
-  public InvalidRequestException(
+  public AuthenticationException(
     String why)
   {
     this();
@@ -77,26 +133,26 @@ public class InvalidRequestException extends Exception implements TBase, java.io
   /**
    * Performs a deep copy on <i>other</i>.
    */
-  public InvalidRequestException(InvalidRequestException other) {
+  public AuthenticationException(AuthenticationException other) {
     if (other.isSetWhy()) {
       this.why = other.why;
     }
   }
 
-  public InvalidRequestException deepCopy() {
-    return new InvalidRequestException(this);
+  public AuthenticationException deepCopy() {
+    return new AuthenticationException(this);
   }
 
   @Deprecated
-  public InvalidRequestException clone() {
-    return new InvalidRequestException(this);
+  public AuthenticationException clone() {
+    return new AuthenticationException(this);
   }
 
   public String getWhy() {
     return this.why;
   }
 
-  public InvalidRequestException setWhy(String why) {
+  public AuthenticationException setWhy(String why) {
     this.why = why;
     return this;
   }
@@ -105,7 +161,7 @@ public class InvalidRequestException extends Exception implements TBase, java.io
     this.why = null;
   }
 
-  // Returns true if field why is set (has been asigned a value) and false otherwise
+  /** Returns true if field why is set (has been asigned a value) and false otherwise */
   public boolean isSetWhy() {
     return this.why != null;
   }
@@ -116,8 +172,8 @@ public class InvalidRequestException extends Exception implements TBase, java.io
     }
   }
 
-  public void setFieldValue(int fieldID, Object value) {
-    switch (fieldID) {
+  public void setFieldValue(_Fields field, Object value) {
+    switch (field) {
     case WHY:
       if (value == null) {
         unsetWhy();
@@ -126,41 +182,49 @@ public class InvalidRequestException extends Exception implements TBase, java.io
       }
       break;
 
-    default:
-      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
   }
 
-  public Object getFieldValue(int fieldID) {
-    switch (fieldID) {
+  public void setFieldValue(int fieldID, Object value) {
+    setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+  }
+
+  public Object getFieldValue(_Fields field) {
+    switch (field) {
     case WHY:
       return getWhy();
 
-    default:
-      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
+    throw new IllegalStateException();
   }
 
-  // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-  public boolean isSet(int fieldID) {
-    switch (fieldID) {
+  public Object getFieldValue(int fieldId) {
+    return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+  }
+
+  /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+  public boolean isSet(_Fields field) {
+    switch (field) {
     case WHY:
       return isSetWhy();
-    default:
-      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
+    throw new IllegalStateException();
+  }
+
+  public boolean isSet(int fieldID) {
+    return isSet(_Fields.findByThriftIdOrThrow(fieldID));
   }
 
   @Override
   public boolean equals(Object that) {
     if (that == null)
       return false;
-    if (that instanceof InvalidRequestException)
-      return this.equals((InvalidRequestException)that);
+    if (that instanceof AuthenticationException)
+      return this.equals((AuthenticationException)that);
     return false;
   }
 
-  public boolean equals(InvalidRequestException that) {
+  public boolean equals(AuthenticationException that) {
     if (that == null)
       return false;
 
@@ -181,21 +245,22 @@ public class InvalidRequestException extends Exception implements TBase, java.io
     return 0;
   }
 
-  public int compareTo(InvalidRequestException other) {
+  public int compareTo(AuthenticationException other) {
     if (!getClass().equals(other.getClass())) {
       return getClass().getName().compareTo(other.getClass().getName());
     }
 
     int lastComparison = 0;
-    InvalidRequestException typedOther = (InvalidRequestException)other;
+    AuthenticationException typedOther = (AuthenticationException)other;
 
-    lastComparison = Boolean.valueOf(isSetWhy()).compareTo(isSetWhy());
+    lastComparison = Boolean.valueOf(isSetWhy()).compareTo(typedOther.isSetWhy());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    lastComparison = TBaseHelper.compareTo(why, typedOther.why);
-    if (lastComparison != 0) {
-      return lastComparison;
+    if (isSetWhy()) {      lastComparison = TBaseHelper.compareTo(why, typedOther.why);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
     }
     return 0;
   }
@@ -209,9 +274,8 @@ public class InvalidRequestException extends Exception implements TBase, java.io
       if (field.type == TType.STOP) { 
         break;
       }
-      switch (field.id)
-      {
-        case WHY:
+      switch (field.id) {
+        case 1: // WHY
           if (field.type == TType.STRING) {
             this.why = iprot.readString();
           } else { 
@@ -220,12 +284,10 @@ public class InvalidRequestException extends Exception implements TBase, java.io
           break;
         default:
           TProtocolUtil.skip(iprot, field.type);
-          break;
       }
       iprot.readFieldEnd();
     }
     iprot.readStructEnd();
-
 
     // check for required fields of primitive type, which can't be checked in the validate method
     validate();
@@ -246,7 +308,7 @@ public class InvalidRequestException extends Exception implements TBase, java.io
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder("InvalidRequestException(");
+    StringBuilder sb = new StringBuilder("AuthenticationException(");
     boolean first = true;
 
     sb.append("why:");
@@ -265,7 +327,6 @@ public class InvalidRequestException extends Exception implements TBase, java.io
     if (why == null) {
       throw new TProtocolException("Required field 'why' was not present! Struct: " + toString());
     }
-    // check that fields of type enum have valid values
   }
 
 }

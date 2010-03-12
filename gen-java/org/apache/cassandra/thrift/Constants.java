@@ -3,7 +3,7 @@
  *
  * DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING
  */
-package org.apache.cassandra.service;
+package org.apache.cassandra.thrift;
 /*
  * 
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -26,36 +26,22 @@ package org.apache.cassandra.service;
  */
 
 
-
-import java.util.Set;
-import java.util.HashSet;
-import java.util.Collections;
-import org.apache.thrift.IntRangeSet;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.EnumMap;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.EnumSet;
+import java.util.Collections;
+import java.util.BitSet;
+import java.util.Arrays;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class ConsistencyLevel {
-  public static final int ZERO = 0;
-  public static final int ONE = 1;
-  public static final int QUORUM = 2;
-  public static final int DCQUORUM = 3;
-  public static final int DCQUORUMSYNC = 4;
-  public static final int ALL = 5;
+public class Constants {
 
-  public static final IntRangeSet VALID_VALUES = new IntRangeSet(
-    ZERO, 
-    ONE, 
-    QUORUM, 
-    DCQUORUM, 
-    DCQUORUMSYNC, 
-    ALL );
+  public static final String VERSION = "2.1.0";
 
-  public static final Map<Integer, String> VALUES_TO_NAMES = new HashMap<Integer, String>() {{
-    put(ZERO, "ZERO");
-    put(ONE, "ONE");
-    put(QUORUM, "QUORUM");
-    put(DCQUORUM, "DCQUORUM");
-    put(DCQUORUMSYNC, "DCQUORUMSYNC");
-    put(ALL, "ALL");
-  }};
 }

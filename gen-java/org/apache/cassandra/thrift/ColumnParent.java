@@ -3,7 +3,7 @@
  *
  * DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING
  */
-package org.apache.cassandra.service;
+package org.apache.cassandra.thrift;
 /*
  * 
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -30,8 +30,10 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.EnumSet;
 import java.util.Collections;
 import java.util.BitSet;
 import java.util.Arrays;
@@ -43,61 +45,103 @@ import org.apache.thrift.meta_data.*;
 import org.apache.thrift.protocol.*;
 
 /**
- * The ColumnPath is the path to a single column in Cassandra. It might make sense to think of ColumnPath and
- * ColumnParent in terms of a directory structure.
+ * ColumnParent is used when selecting groups of columns from the same ColumnFamily. In directory structure terms, imagine
+ * ColumnParent as ColumnPath + '/../'.
  * 
- * ColumnPath is used to looking up a single column.
- * 
- * @param column_family. The name of the CF of the column being looked up.
- * @param super_column. The super column name.
- * @param column. The column name.
+ * See also <a href="cassandra.html#Struct_ColumnPath">ColumnPath</a>
  */
-public class ColumnPath implements TBase, java.io.Serializable, Cloneable, Comparable<ColumnPath> {
-  private static final TStruct STRUCT_DESC = new TStruct("ColumnPath");
+public class ColumnParent implements TBase<ColumnParent._Fields>, java.io.Serializable, Cloneable, Comparable<ColumnParent> {
+  private static final TStruct STRUCT_DESC = new TStruct("ColumnParent");
+
   private static final TField COLUMN_FAMILY_FIELD_DESC = new TField("column_family", TType.STRING, (short)3);
   private static final TField SUPER_COLUMN_FIELD_DESC = new TField("super_column", TType.STRING, (short)4);
-  private static final TField COLUMN_FIELD_DESC = new TField("column", TType.STRING, (short)5);
 
   public String column_family;
   public byte[] super_column;
-  public byte[] column;
-  public static final int COLUMN_FAMILY = 3;
-  public static final int SUPER_COLUMN = 4;
-  public static final int COLUMN = 5;
+
+  /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+  public enum _Fields implements TFieldIdEnum {
+    COLUMN_FAMILY((short)3, "column_family"),
+    SUPER_COLUMN((short)4, "super_column");
+
+    private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+    private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+    static {
+      for (_Fields field : EnumSet.allOf(_Fields.class)) {
+        byId.put((int)field._thriftId, field);
+        byName.put(field.getFieldName(), field);
+      }
+    }
+
+    /**
+     * Find the _Fields constant that matches fieldId, or null if its not found.
+     */
+    public static _Fields findByThriftId(int fieldId) {
+      return byId.get(fieldId);
+    }
+
+    /**
+     * Find the _Fields constant that matches fieldId, throwing an exception
+     * if it is not found.
+     */
+    public static _Fields findByThriftIdOrThrow(int fieldId) {
+      _Fields fields = findByThriftId(fieldId);
+      if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+      return fields;
+    }
+
+    /**
+     * Find the _Fields constant that matches name, or null if its not found.
+     */
+    public static _Fields findByName(String name) {
+      return byName.get(name);
+    }
+
+    private final short _thriftId;
+    private final String _fieldName;
+
+    _Fields(short thriftId, String fieldName) {
+      _thriftId = thriftId;
+      _fieldName = fieldName;
+    }
+
+    public short getThriftFieldId() {
+      return _thriftId;
+    }
+
+    public String getFieldName() {
+      return _fieldName;
+    }
+  }
 
   // isset id assignments
 
-  public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-    put(COLUMN_FAMILY, new FieldMetaData("column_family", TFieldRequirementType.REQUIRED, 
+  public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+    put(_Fields.COLUMN_FAMILY, new FieldMetaData("column_family", TFieldRequirementType.REQUIRED, 
         new FieldValueMetaData(TType.STRING)));
-    put(SUPER_COLUMN, new FieldMetaData("super_column", TFieldRequirementType.OPTIONAL, 
-        new FieldValueMetaData(TType.STRING)));
-    put(COLUMN, new FieldMetaData("column", TFieldRequirementType.OPTIONAL, 
+    put(_Fields.SUPER_COLUMN, new FieldMetaData("super_column", TFieldRequirementType.OPTIONAL, 
         new FieldValueMetaData(TType.STRING)));
   }});
 
   static {
-    FieldMetaData.addStructMetaDataMap(ColumnPath.class, metaDataMap);
+    FieldMetaData.addStructMetaDataMap(ColumnParent.class, metaDataMap);
   }
 
-  public ColumnPath() {
+  public ColumnParent() {
   }
 
-  public ColumnPath(
-    String column_family,
-    byte[] super_column,
-    byte[] column)
+  public ColumnParent(
+    String column_family)
   {
     this();
     this.column_family = column_family;
-    this.super_column = super_column;
-    this.column = column;
   }
 
   /**
    * Performs a deep copy on <i>other</i>.
    */
-  public ColumnPath(ColumnPath other) {
+  public ColumnParent(ColumnParent other) {
     if (other.isSetColumn_family()) {
       this.column_family = other.column_family;
     }
@@ -105,26 +149,22 @@ public class ColumnPath implements TBase, java.io.Serializable, Cloneable, Compa
       this.super_column = new byte[other.super_column.length];
       System.arraycopy(other.super_column, 0, super_column, 0, other.super_column.length);
     }
-    if (other.isSetColumn()) {
-      this.column = new byte[other.column.length];
-      System.arraycopy(other.column, 0, column, 0, other.column.length);
-    }
   }
 
-  public ColumnPath deepCopy() {
-    return new ColumnPath(this);
+  public ColumnParent deepCopy() {
+    return new ColumnParent(this);
   }
 
   @Deprecated
-  public ColumnPath clone() {
-    return new ColumnPath(this);
+  public ColumnParent clone() {
+    return new ColumnParent(this);
   }
 
   public String getColumn_family() {
     return this.column_family;
   }
 
-  public ColumnPath setColumn_family(String column_family) {
+  public ColumnParent setColumn_family(String column_family) {
     this.column_family = column_family;
     return this;
   }
@@ -133,7 +173,7 @@ public class ColumnPath implements TBase, java.io.Serializable, Cloneable, Compa
     this.column_family = null;
   }
 
-  // Returns true if field column_family is set (has been asigned a value) and false otherwise
+  /** Returns true if field column_family is set (has been asigned a value) and false otherwise */
   public boolean isSetColumn_family() {
     return this.column_family != null;
   }
@@ -148,7 +188,7 @@ public class ColumnPath implements TBase, java.io.Serializable, Cloneable, Compa
     return this.super_column;
   }
 
-  public ColumnPath setSuper_column(byte[] super_column) {
+  public ColumnParent setSuper_column(byte[] super_column) {
     this.super_column = super_column;
     return this;
   }
@@ -157,7 +197,7 @@ public class ColumnPath implements TBase, java.io.Serializable, Cloneable, Compa
     this.super_column = null;
   }
 
-  // Returns true if field super_column is set (has been asigned a value) and false otherwise
+  /** Returns true if field super_column is set (has been asigned a value) and false otherwise */
   public boolean isSetSuper_column() {
     return this.super_column != null;
   }
@@ -168,32 +208,8 @@ public class ColumnPath implements TBase, java.io.Serializable, Cloneable, Compa
     }
   }
 
-  public byte[] getColumn() {
-    return this.column;
-  }
-
-  public ColumnPath setColumn(byte[] column) {
-    this.column = column;
-    return this;
-  }
-
-  public void unsetColumn() {
-    this.column = null;
-  }
-
-  // Returns true if field column is set (has been asigned a value) and false otherwise
-  public boolean isSetColumn() {
-    return this.column != null;
-  }
-
-  public void setColumnIsSet(boolean value) {
-    if (!value) {
-      this.column = null;
-    }
-  }
-
-  public void setFieldValue(int fieldID, Object value) {
-    switch (fieldID) {
+  public void setFieldValue(_Fields field, Object value) {
+    switch (field) {
     case COLUMN_FAMILY:
       if (value == null) {
         unsetColumn_family();
@@ -210,59 +226,54 @@ public class ColumnPath implements TBase, java.io.Serializable, Cloneable, Compa
       }
       break;
 
-    case COLUMN:
-      if (value == null) {
-        unsetColumn();
-      } else {
-        setColumn((byte[])value);
-      }
-      break;
-
-    default:
-      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
   }
 
-  public Object getFieldValue(int fieldID) {
-    switch (fieldID) {
+  public void setFieldValue(int fieldID, Object value) {
+    setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+  }
+
+  public Object getFieldValue(_Fields field) {
+    switch (field) {
     case COLUMN_FAMILY:
       return getColumn_family();
 
     case SUPER_COLUMN:
       return getSuper_column();
 
-    case COLUMN:
-      return getColumn();
-
-    default:
-      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
+    throw new IllegalStateException();
   }
 
-  // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-  public boolean isSet(int fieldID) {
-    switch (fieldID) {
+  public Object getFieldValue(int fieldId) {
+    return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+  }
+
+  /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+  public boolean isSet(_Fields field) {
+    switch (field) {
     case COLUMN_FAMILY:
       return isSetColumn_family();
     case SUPER_COLUMN:
       return isSetSuper_column();
-    case COLUMN:
-      return isSetColumn();
-    default:
-      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
+    throw new IllegalStateException();
+  }
+
+  public boolean isSet(int fieldID) {
+    return isSet(_Fields.findByThriftIdOrThrow(fieldID));
   }
 
   @Override
   public boolean equals(Object that) {
     if (that == null)
       return false;
-    if (that instanceof ColumnPath)
-      return this.equals((ColumnPath)that);
+    if (that instanceof ColumnParent)
+      return this.equals((ColumnParent)that);
     return false;
   }
 
-  public boolean equals(ColumnPath that) {
+  public boolean equals(ColumnParent that) {
     if (that == null)
       return false;
 
@@ -284,15 +295,6 @@ public class ColumnPath implements TBase, java.io.Serializable, Cloneable, Compa
         return false;
     }
 
-    boolean this_present_column = true && this.isSetColumn();
-    boolean that_present_column = true && that.isSetColumn();
-    if (this_present_column || that_present_column) {
-      if (!(this_present_column && that_present_column))
-        return false;
-      if (!java.util.Arrays.equals(this.column, that.column))
-        return false;
-    }
-
     return true;
   }
 
@@ -301,37 +303,31 @@ public class ColumnPath implements TBase, java.io.Serializable, Cloneable, Compa
     return 0;
   }
 
-  public int compareTo(ColumnPath other) {
+  public int compareTo(ColumnParent other) {
     if (!getClass().equals(other.getClass())) {
       return getClass().getName().compareTo(other.getClass().getName());
     }
 
     int lastComparison = 0;
-    ColumnPath typedOther = (ColumnPath)other;
+    ColumnParent typedOther = (ColumnParent)other;
 
-    lastComparison = Boolean.valueOf(isSetColumn_family()).compareTo(isSetColumn_family());
+    lastComparison = Boolean.valueOf(isSetColumn_family()).compareTo(typedOther.isSetColumn_family());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    lastComparison = TBaseHelper.compareTo(column_family, typedOther.column_family);
+    if (isSetColumn_family()) {      lastComparison = TBaseHelper.compareTo(column_family, typedOther.column_family);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetSuper_column()).compareTo(typedOther.isSetSuper_column());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    lastComparison = Boolean.valueOf(isSetSuper_column()).compareTo(isSetSuper_column());
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    lastComparison = TBaseHelper.compareTo(super_column, typedOther.super_column);
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    lastComparison = Boolean.valueOf(isSetColumn()).compareTo(isSetColumn());
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    lastComparison = TBaseHelper.compareTo(column, typedOther.column);
-    if (lastComparison != 0) {
-      return lastComparison;
+    if (isSetSuper_column()) {      lastComparison = TBaseHelper.compareTo(super_column, typedOther.super_column);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
     }
     return 0;
   }
@@ -345,37 +341,27 @@ public class ColumnPath implements TBase, java.io.Serializable, Cloneable, Compa
       if (field.type == TType.STOP) { 
         break;
       }
-      switch (field.id)
-      {
-        case COLUMN_FAMILY:
+      switch (field.id) {
+        case 3: // COLUMN_FAMILY
           if (field.type == TType.STRING) {
             this.column_family = iprot.readString();
           } else { 
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case SUPER_COLUMN:
+        case 4: // SUPER_COLUMN
           if (field.type == TType.STRING) {
             this.super_column = iprot.readBinary();
           } else { 
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case COLUMN:
-          if (field.type == TType.STRING) {
-            this.column = iprot.readBinary();
-          } else { 
-            TProtocolUtil.skip(iprot, field.type);
-          }
-          break;
         default:
           TProtocolUtil.skip(iprot, field.type);
-          break;
       }
       iprot.readFieldEnd();
     }
     iprot.readStructEnd();
-
 
     // check for required fields of primitive type, which can't be checked in the validate method
     validate();
@@ -397,20 +383,13 @@ public class ColumnPath implements TBase, java.io.Serializable, Cloneable, Compa
         oprot.writeFieldEnd();
       }
     }
-    if (this.column != null) {
-      if (isSetColumn()) {
-        oprot.writeFieldBegin(COLUMN_FIELD_DESC);
-        oprot.writeBinary(this.column);
-        oprot.writeFieldEnd();
-      }
-    }
     oprot.writeFieldStop();
     oprot.writeStructEnd();
   }
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder("ColumnPath(");
+    StringBuilder sb = new StringBuilder("ColumnParent(");
     boolean first = true;
 
     sb.append("column_family:");
@@ -435,21 +414,6 @@ public class ColumnPath implements TBase, java.io.Serializable, Cloneable, Compa
       }
       first = false;
     }
-    if (isSetColumn()) {
-      if (!first) sb.append(", ");
-      sb.append("column:");
-      if (this.column == null) {
-        sb.append("null");
-      } else {
-          int __column_size = Math.min(this.column.length, 128);
-          for (int i = 0; i < __column_size; i++) {
-            if (i != 0) sb.append(" ");
-            sb.append(Integer.toHexString(this.column[i]).length() > 1 ? Integer.toHexString(this.column[i]).substring(Integer.toHexString(this.column[i]).length() - 2).toUpperCase() : "0" + Integer.toHexString(this.column[i]).toUpperCase());
-          }
-          if (this.column.length > 128) sb.append(" ...");
-      }
-      first = false;
-    }
     sb.append(")");
     return sb.toString();
   }
@@ -459,7 +423,6 @@ public class ColumnPath implements TBase, java.io.Serializable, Cloneable, Compa
     if (column_family == null) {
       throw new TProtocolException("Required field 'column_family' was not present! Struct: " + toString());
     }
-    // check that fields of type enum have valid values
   }
 
 }
