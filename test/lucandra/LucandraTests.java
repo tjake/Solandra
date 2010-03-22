@@ -85,7 +85,7 @@ public class LucandraTests extends TestCase {
             SliceRange sliceRange = new SliceRange(new byte[] {}, new byte[] {}, true, Integer.MAX_VALUE);
             slicePredicate.setSlice_range(sliceRange);
 
-            List<KeySlice> columns  = client.get_range_slice(CassandraUtils.keySpace, columnParent, slicePredicate, start, finish, 5000, ConsistencyLevel.ONE);
+            List<KeySlice> columns = client.get_range_slice(CassandraUtils.keySpace, columnParent, slicePredicate, start, finish, 5000, ConsistencyLevel.ONE);
             
             assertEquals(5, columns.size());
             assertEquals(2, indexWriter.docCount());
@@ -180,7 +180,7 @@ public class LucandraTests extends TestCase {
 
         Document d = indexReader.document(1);
 
-        String val = new String(d.getBinaryValue("key"), "UTF-8");
+        String val = d.get("key");
         assertTrue(val.equals("this is another example"));
 
         // check wildcard
@@ -204,7 +204,7 @@ public class LucandraTests extends TestCase {
 
         for (int i = 0; i < 10; i++) {
             Document d = indexReader.document(docs.scoreDocs[i].doc);
-            String dval = new String(d.getBinaryValue("date"));
+            String dval = d.get("date");
             assertEquals("test" + (i + 200), dval);
         }
 

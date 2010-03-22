@@ -38,6 +38,7 @@ import org.apache.log4j.Logger;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.FieldSelector;
+import org.apache.lucene.document.Field.Index;
 import org.apache.lucene.document.Field.Store;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.Term;
@@ -47,6 +48,7 @@ import org.apache.lucene.index.TermFreqVector;
 import org.apache.lucene.index.TermPositions;
 import org.apache.lucene.index.TermVectorMapper;
 import org.apache.lucene.search.DefaultSimilarity;
+import org.apache.lucene.store.Directory;
 
 public class IndexReader extends org.apache.lucene.index.IndexReader {
 
@@ -71,6 +73,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         super();
         this.indexName = name;
         this.client = client;
+        
 
         docCounter         = new AtomicInteger(0);
         docIdToDocIndex    = new HashMap<String,Integer>();
@@ -103,17 +106,17 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     @Override
     protected void doDelete(int arg0) throws CorruptIndexException, IOException {
-        throw new UnsupportedOperationException();
+       // throw new UnsupportedOperationException();
     }
 
     @Override
     protected void doSetNorm(int arg0, String arg1, byte arg2) throws CorruptIndexException, IOException {
-        throw new UnsupportedOperationException();
+       // throw new UnsupportedOperationException();
     }
 
     @Override
     protected void doUndeleteAll() throws CorruptIndexException, IOException {
-        throw new UnsupportedOperationException();
+        //throw new UnsupportedOperationException();
     }
 
     @Override
@@ -148,7 +151,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
         //get all columns
         SlicePredicate slicePredicate = new SlicePredicate();
-        slicePredicate.setSlice_range(new SliceRange(new byte[] {}, new byte[] {}, false, 100));
+        slicePredicate.setSlice_range(new SliceRange(new byte[] {}, CassandraUtils.delimeter.getBytes(), false, 100));
 
         long start = System.currentTimeMillis();
 
@@ -157,11 +160,34 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
             Document doc = new Document();
             for (ColumnOrSuperColumn col : cols) {
-                Field field = new Field(new String(col.column.name, "UTF-8"), col.column.value, Store.YES);
-
+                
+                Field  field = null;
+                String fieldName = new String(col.column.name); 
+                
+                byte[] value;
+                
+                if(col.column.value[col.column.value.length-1] != Byte.MAX_VALUE && col.column.value[col.column.value.length-1] != Byte.MIN_VALUE){
+                    value = col.column.value; //support backwards compatibility
+                    field = new Field(fieldName, new String(value), Store.YES, Index.ANALYZED);
+                    
+                }else if( col.column.value[col.column.value.length-1] == Byte.MAX_VALUE){
+                    value = new byte[col.column.value.length-1];
+                    System.arraycopy(col.column.value, 0, value, 0, col.column.value.length-1);
+                    
+                    field = new Field(fieldName, value, Store.YES);
+                }else if( col.column.value[col.column.value.length-1] == Byte.MIN_VALUE){
+                    value = new byte[col.column.value.length-1];
+                    System.arraycopy(col.column.value, 0, value, 0, col.column.value.length-1);
+                    
+                    field = new Field(fieldName, new String(value), Store.YES, Index.ANALYZED);
+                }
+                
+        
                 doc.add(field);
             }
 
+            
+            
             long end = System.currentTimeMillis();
 
             logger.debug("Document read took: " + (end - start) + "ms");
@@ -175,8 +201,8 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     }
 
     @Override
-    public Collection getFieldNames(FieldOption arg0) {
-        throw new UnsupportedOperationException();
+    public Collection getFieldNames(FieldOption fieldOption) {     
+       return Arrays.asList(new String[]{});
     }
 
     @Override
@@ -316,6 +342,17 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     
     public void addTermEnumCache(Term term, LucandraTermEnum termEnum){
         termEnumCache.put(term, termEnum);
+    }
+    
+    @Override
+    public Directory directory() {
+            return null;
+    }
+
+
+    @Override
+    public long getVersion() {
+            return 1;
     }
 
 }

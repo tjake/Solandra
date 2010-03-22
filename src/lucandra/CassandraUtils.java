@@ -60,10 +60,9 @@ public class CassandraUtils {
     public static final String termVecColumnFamily = "TermVectors";
     public static final String docColumnFamily     = "Documents";
     public static final String delimeter           = ""+new Character((char)255)+new Character((char)255);
-    public static final String documentIdField     = "__KEY__";
-    public static final String documentMetaField   = "__META__";
+    public static final String documentIdField     = delimeter+"KEY"+delimeter;
+    public static final String documentMetaField   = delimeter+"META"+delimeter;
     
-
     private static final Logger logger = Logger.getLogger(CassandraUtils.class);
 
     public static Cassandra.Client createConnection() throws TTransportException {
@@ -257,7 +256,9 @@ public class CassandraUtils {
                 attempts = 0;
                 try_again = false;
                 client.batch_mutate(CassandraUtils.keySpace, mutationMap, ConsistencyLevel.ONE);
-                logger.debug("Inserted in " + (startTime - System.currentTimeMillis()) / 1000 + "ms");
+                
+                //if(logger.isDebugEnabled())
+                //    logger.debug("Inserted in " + (startTime - System.currentTimeMillis()) / 1000 + "ms");
             } catch (TException e) {
                 throw new RuntimeException(e);
             } catch (InvalidRequestException e) {

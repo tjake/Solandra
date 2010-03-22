@@ -112,9 +112,8 @@ public class BookmarksDemo {
         for( ScoreDoc score: docs.scoreDocs ){
             Document doc = indexSearcher.doc(score.doc);         
             number++;
-            //this is wierd
-            String title =  new String(doc.getBinaryValue("title"),"UTF-8");
-            String url   =  new String(doc.getBinaryValue("url"),"UTF-8");
+            String title =  doc.get("title");
+            String url   =  doc.get("url");
             
             System.out.println(number+". "+title+"\n\t"+url);          
         }       

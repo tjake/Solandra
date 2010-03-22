@@ -28,12 +28,10 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.cassandra.thrift.Cassandra;
-import org.apache.cassandra.thrift.Column;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.ColumnPath;
 import org.apache.cassandra.thrift.ConsistencyLevel;
-import org.apache.cassandra.thrift.Deletion;
 import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.KeySlice;
 import org.apache.cassandra.thrift.Mutation;
@@ -50,7 +48,10 @@ import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.Term;
+import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
+import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.TopDocs;
 import org.apache.thrift.TException;
 
 public class IndexWriter {
@@ -58,10 +59,7 @@ public class IndexWriter {
     private final String indexName;
     private final Cassandra.Client client;
     private final ColumnPath docAllColumnPath;
-    private final ColumnPath metaColumnPath;
-    
-    
-   
+    private final ColumnPath metaColumnPath; 
 
     private static final Logger logger = Logger.getLogger(IndexWriter.class);
 
@@ -156,11 +154,16 @@ public class IndexWriter {
 
             // Stores each field as a column under this doc key
             if (field.isStored()) {
-
-                byte[] value = field.isBinary() ? field.getBinaryValue() : field.stringValue().getBytes();
-
-                String key = indexName+CassandraUtils.delimeter+docId;
                 
+                byte[] _value = field.isBinary() ? field.getBinaryValue() : field.stringValue().getBytes();         
+                
+                //first byte flags if binary or not
+                byte[] value = new byte[_value.length+1];
+                System.arraycopy(_value, 0, value, 0, _value.length);
+                
+                value[value.length-1] = (byte) (field.isBinary() ? Byte.MAX_VALUE : Byte.MIN_VALUE);
+                
+                String key = indexName+CassandraUtils.delimeter+docId;
                 
                 CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.docColumnFamily, field.name().getBytes(), key, value);
                             
@@ -179,58 +182,81 @@ public class IndexWriter {
     }
 
     public void deleteDocuments(Query query) throws CorruptIndexException, IOException {
-        throw new UnsupportedOperationException();
+        
+        IndexReader   reader   = new IndexReader(indexName,client);
+        IndexSearcher searcher = new IndexSearcher(reader);
+       
+        TopDocs results = searcher.search(query,1000);
+    
+        for(int i=0; i<results.totalHits; i++){
+            ScoreDoc doc = results.scoreDocs[i];
+            
+            
+            String docId = reader.getDocumentId(doc.doc);
+            
+        }
+        
     }
-
+    
     @SuppressWarnings("unchecked")
     public void deleteDocuments(Term term) throws CorruptIndexException, IOException {
         try {
-            
-            Map<String,Map<String,List<Mutation>>> mutationMap = new HashMap<String,Map<String,List<Mutation>>>();
-
-            
+                       
             ColumnParent cp = new ColumnParent(CassandraUtils.termVecColumnFamily);
             List<ColumnOrSuperColumn> docs = client.get_slice(CassandraUtils.keySpace, indexName+CassandraUtils.delimeter+CassandraUtils.createColumnName(term), cp, new SlicePredicate().setSlice_range(new SliceRange(new byte[]{}, new byte[]{},true,Integer.MAX_VALUE)), ConsistencyLevel.ONE);
                 
             //delete by documentId
             for(ColumnOrSuperColumn docInfo : docs){
-            
-                ColumnOrSuperColumn column = client.get(CassandraUtils.keySpace, indexName+CassandraUtils.delimeter+new String(docInfo.column.name), metaColumnPath, ConsistencyLevel.ONE);
-            
-                List<String> terms = (List<String>) CassandraUtils.fromBytes(column.column.value);
-            
-                for(String termStr : terms){
-                    
-                    String key = indexName+CassandraUtils.delimeter+termStr;
-                    
-                    CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.termVecColumnFamily, docInfo.column.name, key, null);                                        
-                }
-            
-                CassandraUtils.robustBatchInsert(client, mutationMap);
-                
-                //finally delete ourselves
-                String selfKey = indexName+CassandraUtils.delimeter+new String(docInfo.column.name);
-                
-                
-                //FIXME: batch mutation didnt support slice predicates in deletions
-                client.remove(CassandraUtils.keySpace, selfKey, docAllColumnPath, System.currentTimeMillis(), ConsistencyLevel.ONE);
+                deleteLucandraDocument(docInfo.column.name);
             }
-            
-           
-            
+                              
         } catch (InvalidRequestException e) {
             throw new RuntimeException(e);
-        } catch (NotFoundException e) {
-            return;
         } catch (UnavailableException e) {
             throw new RuntimeException(e);
         } catch (TException e) {
             throw new RuntimeException(e);
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
         } catch (TimedOutException e) {
             throw new RuntimeException(e);
+        } catch (NotFoundException e) {
+            throw new RuntimeException(e);
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
         }  
+    }
+    
+    private void deleteLucandraDocument(byte[] docId) throws InvalidRequestException, NotFoundException, UnavailableException, TimedOutException, TException, IOException, ClassNotFoundException{
+        Map<String,Map<String,List<Mutation>>> mutationMap = new HashMap<String,Map<String,List<Mutation>>>();
+
+        ColumnOrSuperColumn column = client.get(CassandraUtils.keySpace, indexName+CassandraUtils.delimeter+new String(docId), metaColumnPath, ConsistencyLevel.ONE);
+        
+        List<String> terms = (List<String>) CassandraUtils.fromBytes(column.column.value);
+    
+        for(String termStr : terms){
+            
+            String key = indexName+CassandraUtils.delimeter+termStr;
+            
+            CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.termVecColumnFamily, docId, key, null);                                        
+        }
+    
+        CassandraUtils.robustBatchInsert(client, mutationMap);
+        
+        //finally delete ourselves
+        String selfKey = indexName+CassandraUtils.delimeter+new String(docId);
+        
+        
+        //FIXME: once cassandra batch mutation supports slice predicates in deletions
+        client.remove(CassandraUtils.keySpace, selfKey, docAllColumnPath, System.currentTimeMillis(), ConsistencyLevel.ONE);
+
+        
+    }
+    
+    
+    public void updateDocument(Term updateTerm, Document doc, Analyzer analyzer) throws CorruptIndexException, IOException{   
+        
+        deleteDocuments(updateTerm);
+        addDocument(doc, analyzer);
+        
     }
 
     public int docCount() {
