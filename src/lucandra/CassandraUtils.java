@@ -25,7 +25,10 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.UnsupportedEncodingException;
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -294,4 +297,32 @@ public class CassandraUtils {
         oos.close();
         return baos.toByteArray();
     }
+    
+    public static String hashKey(String key) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            
+            //Please fixme: this is so hard to read 
+            //should have separte hashing functions for terms and docs
+            //terms look like: indexname/field/term
+            //docs look like: indexname/docid
+            int indexPoint = key.indexOf(delimeter);
+            int breakPoint = key.lastIndexOf(delimeter);
+                       
+            if(breakPoint == -1)
+                throw new IllegalStateException("key does not contain delimiter");
+            
+                      
+            String salt = key.substring(0,breakPoint);
+            
+            md.update(salt.getBytes());
+            
+            return new BigInteger(1, md.digest()).toString(16).toUpperCase()+key.substring(indexPoint);
+            
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+        
+    }
+    
 }

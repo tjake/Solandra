@@ -156,7 +156,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         long start = System.currentTimeMillis();
 
         try {
-            List<ColumnOrSuperColumn> cols = client.get_slice(CassandraUtils.keySpace, key, columnParent, slicePredicate, ConsistencyLevel.ONE);
+            List<ColumnOrSuperColumn> cols = client.get_slice(CassandraUtils.keySpace, CassandraUtils.hashKey(key), columnParent, slicePredicate, ConsistencyLevel.ONE);
 
             Document doc = new Document();
             for (ColumnOrSuperColumn col : cols) {

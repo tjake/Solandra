@@ -136,7 +136,7 @@ public class IndexWriter {
                     // families for a key into memory
                     String key = indexName + CassandraUtils.delimeter + term.getKey();
                     
-                    CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.termVecColumnFamily, docId.getBytes(), key, CassandraUtils.intVectorToByteArray(term.getValue()));
+                    CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.termVecColumnFamily, docId.getBytes(), CassandraUtils.hashKey(key), CassandraUtils.intVectorToByteArray(term.getValue()));
                     
                 }
             }
@@ -148,7 +148,7 @@ public class IndexWriter {
                 
                 String key = indexName + CassandraUtils.delimeter + term;
 
-                CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.termVecColumnFamily, docId.getBytes(), key, CassandraUtils.intVectorToByteArray(Arrays.asList(new Integer[] { 0 })));
+                CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.termVecColumnFamily, docId.getBytes(), CassandraUtils.hashKey(key), CassandraUtils.intVectorToByteArray(Arrays.asList(new Integer[] { 0 })));
                
             }
 
@@ -165,7 +165,7 @@ public class IndexWriter {
                 
                 String key = indexName+CassandraUtils.delimeter+docId;
                 
-                CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.docColumnFamily, field.name().getBytes(), key, value);
+                CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.docColumnFamily, field.name().getBytes(), CassandraUtils.hashKey(key), value);
                             
             }
         }
@@ -173,7 +173,7 @@ public class IndexWriter {
         //Finally, Store meta-data so we can delete this document
         String key = indexName+CassandraUtils.delimeter+docId;
         
-        CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.docColumnFamily, CassandraUtils.documentMetaField.getBytes(), key, CassandraUtils.toBytes(allIndexedTerms));
+        CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.docColumnFamily, CassandraUtils.documentMetaField.getBytes(), CassandraUtils.hashKey(key), CassandraUtils.toBytes(allIndexedTerms));
         
        
         
@@ -203,7 +203,9 @@ public class IndexWriter {
         try {
                        
             ColumnParent cp = new ColumnParent(CassandraUtils.termVecColumnFamily);
-            List<ColumnOrSuperColumn> docs = client.get_slice(CassandraUtils.keySpace, indexName+CassandraUtils.delimeter+CassandraUtils.createColumnName(term), cp, new SlicePredicate().setSlice_range(new SliceRange(new byte[]{}, new byte[]{},true,Integer.MAX_VALUE)), ConsistencyLevel.ONE);
+            String key = indexName+CassandraUtils.delimeter+CassandraUtils.createColumnName(term);
+            
+            List<ColumnOrSuperColumn> docs = client.get_slice(CassandraUtils.keySpace, CassandraUtils.hashKey(key), cp, new SlicePredicate().setSlice_range(new SliceRange(new byte[]{}, new byte[]{},true,Integer.MAX_VALUE)), ConsistencyLevel.ONE);
                 
             //delete by documentId
             for(ColumnOrSuperColumn docInfo : docs){
@@ -228,15 +230,17 @@ public class IndexWriter {
     private void deleteLucandraDocument(byte[] docId) throws InvalidRequestException, NotFoundException, UnavailableException, TimedOutException, TException, IOException, ClassNotFoundException{
         Map<String,Map<String,List<Mutation>>> mutationMap = new HashMap<String,Map<String,List<Mutation>>>();
 
-        ColumnOrSuperColumn column = client.get(CassandraUtils.keySpace, indexName+CassandraUtils.delimeter+new String(docId), metaColumnPath, ConsistencyLevel.ONE);
+        String key =  indexName+CassandraUtils.delimeter+new String(docId);
+        
+        ColumnOrSuperColumn column = client.get(CassandraUtils.keySpace, CassandraUtils.hashKey(key), metaColumnPath, ConsistencyLevel.ONE);
         
         List<String> terms = (List<String>) CassandraUtils.fromBytes(column.column.value);
     
         for(String termStr : terms){
             
-            String key = indexName+CassandraUtils.delimeter+termStr;
+            key = indexName+CassandraUtils.delimeter+termStr;
             
-            CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.termVecColumnFamily, docId, key, null);                                        
+            CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.termVecColumnFamily, docId, CassandraUtils.hashKey(key), null);                                        
         }
     
         CassandraUtils.robustBatchInsert(client, mutationMap);
@@ -246,7 +250,7 @@ public class IndexWriter {
         
         
         //FIXME: once cassandra batch mutation supports slice predicates in deletions
-        client.remove(CassandraUtils.keySpace, selfKey, docAllColumnPath, System.currentTimeMillis(), ConsistencyLevel.ONE);
+        client.remove(CassandraUtils.keySpace, CassandraUtils.hashKey(selfKey), docAllColumnPath, System.currentTimeMillis(), ConsistencyLevel.ONE);
 
         
     }
@@ -262,8 +266,8 @@ public class IndexWriter {
     public int docCount() {
 
         try{
-            String start = indexName + CassandraUtils.delimeter;
-            String finish = indexName + CassandraUtils.delimeter+CassandraUtils.delimeter;
+            String start = CassandraUtils.hashKey(indexName + CassandraUtils.delimeter);
+            String finish = start+CassandraUtils.delimeter;
 
             ColumnParent columnParent = new ColumnParent(CassandraUtils.docColumnFamily);
             SlicePredicate slicePredicate = new SlicePredicate();

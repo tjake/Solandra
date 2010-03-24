@@ -135,11 +135,23 @@ public class LucandraTermEnum extends TermEnum {
     private void loadTerms(Term skipTo) {
 
         // chose starting term
-        String startTerm = indexName + CassandraUtils.delimeter + CassandraUtils.createColumnName(skipTo);
+        String startTerm = CassandraUtils.hashKey(
+                    indexName + CassandraUtils.delimeter + CassandraUtils.createColumnName(skipTo)
+                );
+                
         // this is where we stop;
-        String endTerm = indexName + CassandraUtils.delimeter + skipTo.field().substring(0, skipTo.field().length() - 1)
-                + new Character((char) (skipTo.field().toCharArray()[skipTo.field().length() - 1] + 1)); // ;
-
+        String endTerm = null;
+        try {
+            endTerm = CassandraUtils.hashKey(
+                        indexName + CassandraUtils.delimeter + CassandraUtils.createColumnName(skipTo.field(), new String(new byte[]{(byte)255,(byte)255,(byte)255,(byte)255,(byte)255,(byte)255,(byte)255,(byte)255},"UTF-8")) 
+                        //skipTo.field().substring(0, skipTo.field().length() - 1)
+                        //+ new Character((char) (skipTo.field().toCharArray()[skipTo.field().length() - 1] + 1))
+                    );
+        } catch (UnsupportedEncodingException e1) {
+            // TODO Auto-generated catch block
+            e1.printStackTrace();
+        }
+        
         if ((!skipTo.equals(initTerm) || termPosition == 0) && termCache != null) {
             termDocFreqBuffer = termCache.subMap(skipTo, termCache.lastKey());
         } else {
@@ -167,7 +179,9 @@ public class LucandraTermEnum extends TermEnum {
         // otherwise we grab all the rest of the keys
         if (initTerm != null) {
             count = maxChunkSize;
-            startTerm = indexName + CassandraUtils.delimeter + CassandraUtils.createColumnName(initTerm);
+            startTerm = CassandraUtils.hashKey(
+                        indexName + CassandraUtils.delimeter + CassandraUtils.createColumnName(initTerm)
+                    );
         }
 
         long start = System.currentTimeMillis();

@@ -75,8 +75,8 @@ public class LucandraTests extends TestCase {
             indexWriter.addDocument(doc2, analyzer);           
             
             
-            String start = indexName + CassandraUtils.delimeter;
-            String finish = indexName + CassandraUtils.delimeter+CassandraUtils.delimeter;
+            String start = CassandraUtils.hashKey(indexName + CassandraUtils.delimeter + "key" + CassandraUtils.delimeter);
+            String finish = start+CassandraUtils.delimeter;
 
             ColumnParent columnParent = new ColumnParent(CassandraUtils.termVecColumnFamily);
             SlicePredicate slicePredicate = new SlicePredicate();
