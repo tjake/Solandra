@@ -65,6 +65,9 @@ public class CassandraUtils {
     public static final String delimeter           = ""+new Character((char)255)+new Character((char)255);
     public static final String documentIdField     = delimeter+"KEY"+delimeter;
     public static final String documentMetaField   = delimeter+"META"+delimeter;
+    public static final String hashChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    public static final BigInteger CHAR_MASK = new BigInteger("65535");
+
     
     private static final Logger logger = Logger.getLogger(CassandraUtils.class);
 
@@ -300,7 +303,7 @@ public class CassandraUtils {
     
     public static String hashKey(String key) {
         try {
-            MessageDigest md = MessageDigest.getInstance("MD5");
+            MessageDigest md = MessageDigest.getInstance("SHA");
             
             //Please fixme: this is so hard to read 
             //should have separte hashing functions for terms and docs
@@ -317,12 +320,26 @@ public class CassandraUtils {
             
             md.update(salt.getBytes());
             
-            return new BigInteger(1, md.digest()).toString(16).toUpperCase()+key.substring(indexPoint);
+            return stringForBig( new BigInteger(1,md.digest()),8)+key.substring(indexPoint);
             
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException(e);
         }
         
+    }
+    
+    //based on cassandra source
+    private static String stringForBig(BigInteger big, int sigchars)
+    {
+        char[] chars = new char[sigchars];
+             
+        for (int i = 0; i < sigchars; i++)
+        {
+            int maskpos = 16 * (sigchars - (i + 1));
+            // apply bitmask and get char value
+            chars[i] = hashChars.charAt(big.and(CHAR_MASK.shiftLeft(maskpos)).shiftRight(maskpos).intValue() % hashChars.length());
+        }
+        return new String(chars);
     }
     
 }
