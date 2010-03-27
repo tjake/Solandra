@@ -67,7 +67,7 @@ public class LucandraTermEnum extends TermEnum {
     private Term initTerm;
     private int chunkCount = 0;
 
-    private final Cassandra.Client client;
+    private final Cassandra.Iface client;
     private final Term finalTerm = new Term("" + new Character((char) 255), "" + new Character((char) 255));
 
     private static final Logger logger = Logger.getLogger(LucandraTermEnum.class);

@@ -23,16 +23,15 @@
         <description>Lucandra</description>
 
         <property name="src"           location="src" />
-        <property name="gen"           location="gen-java" />
         <property name="test"          location="test" />
         <property name="config"        location="config" />
         <property name="build"         location="build" />
         <property name="build.classes" location="${build}/classes"/>
         <property name="build.test.classes" location="${build}/test-classes"/>
         <property name="lib"           location="lib" />
-        <property name="cassandra.host" location="127.0.0.1"/>
-        <property name="cassandra.port" location="9160"/>
-        <property name="cassandra.framed" location="false"/>
+        <property name="cassandra.host" value="127.0.0.1"/>
+        <property name="cassandra.port" value="9160"/>
+        <property name="cassandra.framed" value="false"/>
 
         <path id="lucandra.classpath">
           <pathelement location="${build.classes}"/>
@@ -53,7 +52,6 @@
 
         <target name="compile" depends="init">
           <javac debug="true" destdir="${build.classes}">
-            <src path="${gen}"/>
             <src path="${src}"/>
             <classpath refid="lucandra.classpath"/>
           </javac>

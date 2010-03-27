@@ -187,7 +187,7 @@
    ~ the ring. You must change this if you are running multiple nodes!
   -->
   <Seeds>
-      <Seed>127.0.0.1</Seed>
+      <Seed>192.168.1.102</Seed>
   </Seeds>
 
 
@@ -210,7 +210,7 @@
    ~ (hostname, name resolution, etc), and the Right Thing is to use the
    ~ address associated with the hostname (it might not be).
   -->
-  <ListenAddress></ListenAddress>
+  <ListenAddress>127.0.0.1</ListenAddress>
   <!-- internal communications port -->
   <StoragePort>7000</StoragePort>
 

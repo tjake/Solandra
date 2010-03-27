@@ -44,7 +44,7 @@ public class LucandraTests extends TestCase {
 
     private static final String indexName = String.valueOf(System.nanoTime());
     private static final Analyzer analyzer = new CJKAnalyzer();
-    private static Cassandra.Client client;
+    private static Cassandra.Iface client;
     static {
         try {
             client = CassandraUtils.createConnection();

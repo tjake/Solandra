@@ -59,7 +59,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     }
     
     private final String indexName;
-    private final Cassandra.Client client;
+    private final Cassandra.Iface client;
     private final Map<String,Integer> docIdToDocIndex;
     private final Map<Integer,String> docIndexToDocId;
     private final AtomicInteger docCounter;
@@ -69,7 +69,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     private static final Logger logger = Logger.getLogger(IndexReader.class);
 
-    public IndexReader(String name, Cassandra.Client client) {
+    public IndexReader(String name, Cassandra.Iface client) {
         super();
         this.indexName = name;
         this.client = client;
@@ -332,7 +332,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         return indexName;
     }
 
-    public Cassandra.Client getClient() {
+    public Cassandra.Iface getClient() {
         return client;
     }
     

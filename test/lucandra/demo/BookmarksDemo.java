@@ -48,7 +48,7 @@ import org.apache.thrift.transport.TTransportException;
 public class BookmarksDemo {
 
     // Connect to casssssssssandra
-    private static Cassandra.Client client;
+    private static Cassandra.Iface client;
     static {
         try {
             client = CassandraUtils.createConnection();

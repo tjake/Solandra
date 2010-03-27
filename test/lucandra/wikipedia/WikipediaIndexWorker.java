@@ -52,7 +52,7 @@ public class WikipediaIndexWorker implements Callable<Boolean>{
         if(article.text != null)
             d.add(new Field("text", new String(article.text),Store.YES, Index.ANALYZED));
         
-        d.add(new Field("url",article.url, Store.YES, Index.NOT_ANALYZED));
+        d.add(new Field("url",article.url,Store.YES, Index.NOT_ANALYZED));
         
         indexWriter.addDocument(d, analyzer);
         

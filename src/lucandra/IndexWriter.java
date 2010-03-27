@@ -57,13 +57,13 @@ import org.apache.thrift.TException;
 public class IndexWriter {
 
     private final String indexName;
-    private final Cassandra.Client client;
+    private final Cassandra.Iface client;
     private final ColumnPath docAllColumnPath;
     private final ColumnPath metaColumnPath; 
 
     private static final Logger logger = Logger.getLogger(IndexWriter.class);
 
-    public IndexWriter(String indexName, Cassandra.Client client) {
+    public IndexWriter(String indexName, Cassandra.Iface client) {
 
         this.indexName = indexName;
         this.client = client;

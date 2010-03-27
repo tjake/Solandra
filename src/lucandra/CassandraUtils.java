@@ -36,7 +36,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.thrift.Cassandra;
+import org.apache.cassandra.thrift.CassandraServer;
 import org.apache.cassandra.thrift.Column;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.cassandra.thrift.ConsistencyLevel;
@@ -71,26 +73,48 @@ public class CassandraUtils {
     
     private static final Logger logger = Logger.getLogger(CassandraUtils.class);
 
-    public static Cassandra.Client createConnection() throws TTransportException {
+    public static Cassandra.Iface createFatConnection() throws IOException {
+             
+        StorageService.instance.initClient();
         
+        //Wait for gossip
+        try
+        {
+            logger.info("Waiting 10s for gossip to complete...");
+            Thread.sleep(10000L);
+        }
+        catch (Exception ex)
+        {
+        }
         
+        return new CassandraServer();      
+    }
+    
+    
+    public static Cassandra.Iface createConnection() throws TTransportException {
+
+
         if(System.getProperty("cassandra.host") == null || System.getProperty("cassandra.port") == null) {
            logger.warn("cassandra.host or cassandra.port is not defined, using default");
         }
-        
-        //connect to cassandra
-        TSocket socket = new TSocket(
-                System.getProperty("cassandra.host","localhost"), 
-                Integer.valueOf(System.getProperty("cassandra.port","9160")));
-        
-        
+
+
+        return createConnection( System.getProperty("cassandra.host","localhost"),
+                                 Integer.valueOf(System.getProperty("cassandra.port","9160")),
+                                 Boolean.valueOf(System.getProperty("cassandra.framed", "false")) );
+    }
+    
+    public static Cassandra.Client createConnection(String host, Integer port, boolean framed) throws TTransportException {
+
+        //connect to cassandra                                                                                                                              
+        TSocket socket = new TSocket(host, port);
         TTransport trans;
-        
-        if(Boolean.valueOf(System.getProperty("cassandra.framed", "false")))
+
+        if(framed)
             trans = new TFramedTransport(socket);
         else
             trans = socket;
-        
+
         trans.open();
         TProtocol protocol = new TBinaryProtocol(trans);
 
@@ -251,7 +275,7 @@ public class CassandraUtils {
         
     }
     
-    public static void robustBatchInsert(Cassandra.Client client, Map<String,Map<String,List<Mutation>>> mutationMap) {
+    public static void robustBatchInsert(Cassandra.Iface client, Map<String,Map<String,List<Mutation>>> mutationMap) {
 
         // Should use a circut breaker here
         boolean try_again = false;
@@ -259,7 +283,7 @@ public class CassandraUtils {
         long startTime = System.currentTimeMillis();
         do {
             try {
-                attempts = 0;
+                attempts++;
                 try_again = false;
                 client.batch_mutate(CassandraUtils.keySpace, mutationMap, ConsistencyLevel.ONE);
                 
