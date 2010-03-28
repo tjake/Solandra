@@ -1,9 +1,13 @@
 package lucandra.wikipedia;
 
+import java.util.List;
+import java.util.Random;
 import java.util.concurrent.Callable;
 
 import lucandra.CassandraUtils;
 
+import org.apache.cassandra.thrift.Cassandra;
+import org.apache.cassandra.thrift.TokenRange;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.SimpleAnalyzer;
 import org.apache.lucene.document.Document;
@@ -18,14 +22,26 @@ public class WikipediaIndexWorker implements Callable<Integer>{
     //each worker thread has a connection to cassandra
     private static ThreadLocal<lucandra.IndexWriter> clientPool = new ThreadLocal<lucandra.IndexWriter>();
     
+    private static List<TokenRange> ring;
+    static{
+        try{
+            Cassandra.Iface client = CassandraUtils.createConnection();            
+            ring = client.describe_ring(CassandraUtils.keySpace);
+        }catch( Exception e){
+            throw new RuntimeException(e);
+        }
+        
+        System.err.print(ring);
+    }
+    
+    
     //this is shared by all workers
     private static Analyzer   analyzer = new SimpleAnalyzer();
     
     //this is the article to index
     private Article   article;  
     
-    public WikipediaIndexWorker(Article article){
-       
+    public WikipediaIndexWorker(Article article){      
         this.article = article;
     }
     
@@ -34,7 +50,11 @@ public class WikipediaIndexWorker implements Callable<Integer>{
         
        
         if(indexWriter == null){
-            indexWriter = new lucandra.IndexWriter("wikipedia",CassandraUtils.createConnection());
+            
+            Random r = new Random();
+            List<String> endpoints = ring.get(r.nextInt(ring.size())).endpoints;
+            
+            indexWriter = new lucandra.IndexWriter("wikipedia",CassandraUtils.createConnection(endpoints.get(r.nextInt(endpoints.size())),9160,false));
             clientPool.set(indexWriter);
         }
         
