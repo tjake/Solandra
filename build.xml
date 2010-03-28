@@ -23,6 +23,7 @@
         <description>Lucandra</description>
 
         <property name="src"           location="src" />
+        <property name="thrift"        location="thrift" />
         <property name="test"          location="test" />
         <property name="config"        location="config" />
         <property name="build"         location="build" />
@@ -52,6 +53,7 @@
 
         <target name="compile" depends="init">
           <javac debug="true" destdir="${build.classes}">
+            <src path="${thrift}"/>
             <src path="${src}"/>
             <classpath refid="lucandra.classpath"/>
           </javac>
