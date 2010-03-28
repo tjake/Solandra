@@ -60,18 +60,24 @@ public class IndexWriter {
     private final Cassandra.Iface client;
     private final ColumnPath docAllColumnPath;
     private final ColumnPath metaColumnPath; 
-
+    private boolean autoCommit;
+    private Map<String,Map<String,List<Mutation>>> mutationMap;
+    
     private static final Logger logger = Logger.getLogger(IndexWriter.class);
 
     public IndexWriter(String indexName, Cassandra.Iface client) {
 
         this.indexName = indexName;
         this.client = client;
+        autoCommit  = true;
 
         docAllColumnPath = new ColumnPath(CassandraUtils.docColumnFamily);
         
         metaColumnPath = new ColumnPath(CassandraUtils.docColumnFamily);
         metaColumnPath.setColumn(CassandraUtils.documentMetaField.getBytes());
+        
+         mutationMap = new HashMap<String,Map<String,List<Mutation>>>();
+
         
     }
 
@@ -89,7 +95,6 @@ public class IndexWriter {
             docId = Long.toHexString(System.nanoTime());
         
        
-        Map<String,Map<String,List<Mutation>>> mutationMap = new HashMap<String,Map<String,List<Mutation>>>();
          
         
         int position = 0;
@@ -177,8 +182,8 @@ public class IndexWriter {
         
        
         
-        //commit!
-        CassandraUtils.robustBatchInsert(client, mutationMap);    
+        if(autoCommit)
+            CassandraUtils.robustBatchInsert(client, mutationMap);    
     }
 
     public void deleteDocuments(Query query) throws CorruptIndexException, IOException {
@@ -228,7 +233,6 @@ public class IndexWriter {
     }
     
     private void deleteLucandraDocument(byte[] docId) throws InvalidRequestException, NotFoundException, UnavailableException, TimedOutException, TException, IOException, ClassNotFoundException{
-        Map<String,Map<String,List<Mutation>>> mutationMap = new HashMap<String,Map<String,List<Mutation>>>();
 
         String key =  indexName+CassandraUtils.delimeter+new String(docId);
         
@@ -243,7 +247,9 @@ public class IndexWriter {
             CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.termVecColumnFamily, docId, CassandraUtils.hashKey(key), null);                                        
         }
     
-        CassandraUtils.robustBatchInsert(client, mutationMap);
+        
+        if(autoCommit)
+            CassandraUtils.robustBatchInsert(client, mutationMap);
         
         //finally delete ourselves
         String selfKey = indexName+CassandraUtils.delimeter+new String(docId);
@@ -284,6 +290,19 @@ public class IndexWriter {
             throw new RuntimeException(e);
         }
        
+    }
+
+    public boolean isAutoCommit() {
+        return autoCommit;
+    }
+
+    public void setAutoCommit(boolean autoCommit) {
+        this.autoCommit = autoCommit;
+    }
+    
+    public void commit(){
+        if(!autoCommit)
+            CassandraUtils.robustBatchInsert(client, mutationMap);
     }
 
 }

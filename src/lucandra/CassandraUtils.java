@@ -287,6 +287,7 @@ public class CassandraUtils {
                 try_again = false;
                 client.batch_mutate(CassandraUtils.keySpace, mutationMap, ConsistencyLevel.ONE);
                 
+                mutationMap.clear();
                 //if(logger.isDebugEnabled())
                 //    logger.debug("Inserted in " + (startTime - System.currentTimeMillis()) / 1000 + "ms");
             } catch (TException e) {
