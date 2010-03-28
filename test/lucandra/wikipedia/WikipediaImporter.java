@@ -16,18 +16,20 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class WikipediaImporter {
     
     private ExecutorService threadPool;
-    private Queue<Future<Boolean>> resultSet;
+    private Queue<Future<Integer>> resultSet;
     private int pageCount;
+    private long lastTime;
     
     
     public WikipediaImporter() {
         threadPool = Executors.newFixedThreadPool(16);
-        resultSet  = new LinkedBlockingQueue<Future<Boolean>>();
+        resultSet  = new LinkedBlockingQueue<Future<Integer>>();
         pageCount = 0;
+        lastTime = System.currentTimeMillis();
     }
     
     private static void usage(){
-        System.err.println("WikipediaImporter file.xml.bz2");
+        System.err.println("WikipediaImporter file.xml");
         System.exit(0);
     }
     
@@ -53,13 +55,13 @@ public class WikipediaImporter {
             
             if(line.contains("</doc>")){
                
-               if(pageCount++ % 1000 == 0){
-                    System.err.println("Loaded "+pageCount);
+               if(++pageCount % 1000 == 0){
                     
-                    Future<Boolean> result;
+                    Future<Integer> result;
+                    int size = 0;
                     while( (result = resultSet.poll()) != null){
                         try {
-                            result.get();
+                            size += result.get();
                         } catch (InterruptedException e) {
                             // TODO Auto-generated catch block
                             e.printStackTrace();
@@ -68,6 +70,10 @@ public class WikipediaImporter {
                             e.printStackTrace();
                         }
                     }
+                    
+                    long now = System.currentTimeMillis();
+                    System.err.println("Loaded ("+pageCount+") "+size/1000+"Kb, in "+(now-lastTime)/1000);
+                    lastTime = now;
                     
                }
                
@@ -128,7 +134,7 @@ public class WikipediaImporter {
     
     public void indexPage(Article page){
         
-       Future<Boolean> result = threadPool.submit(new WikipediaIndexWorker(page));     
+       Future<Integer> result = threadPool.submit(new WikipediaIndexWorker(page));     
        resultSet.add(result); 
        
     }
@@ -137,10 +143,11 @@ public class WikipediaImporter {
         
         
         try {
-            
         
-            new WikipediaImporter().readFile(args[0]);
-           
+            if(args.length > 0)
+                new WikipediaImporter().readFile(args[0]);
+            else
+                WikipediaImporter.usage();
            
             
         } catch (FileNotFoundException e) {

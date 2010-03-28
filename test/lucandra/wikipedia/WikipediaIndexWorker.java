@@ -13,7 +13,7 @@ import org.apache.lucene.document.Field.Store;
 import org.apache.thrift.transport.TTransportException;
 
 
-public class WikipediaIndexWorker implements Callable<Boolean>{
+public class WikipediaIndexWorker implements Callable<Integer>{
 
     //each worker thread has a connection to cassandra
     private static ThreadLocal<lucandra.IndexWriter> clientPool = new ThreadLocal<lucandra.IndexWriter>();
@@ -41,7 +41,7 @@ public class WikipediaIndexWorker implements Callable<Boolean>{
         return indexWriter;      
     }
     
-    public Boolean call() throws Exception {
+    public Integer call() throws Exception {
         
         lucandra.IndexWriter indexWriter = getIndexWriter();
         
@@ -56,7 +56,7 @@ public class WikipediaIndexWorker implements Callable<Boolean>{
         
         indexWriter.addDocument(d, analyzer);
         
-        return true;
+        return article.getSize();
     }
 
 }
