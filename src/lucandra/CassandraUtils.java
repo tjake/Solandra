@@ -36,9 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.thrift.Cassandra;
-import org.apache.cassandra.thrift.CassandraServer;
 import org.apache.cassandra.thrift.Column;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.cassandra.thrift.ConsistencyLevel;
@@ -73,7 +71,9 @@ public class CassandraUtils {
     
     private static final Logger logger = Logger.getLogger(CassandraUtils.class);
 
-    public static Cassandra.Iface createFatConnection() throws IOException {
+    /*This can be used to communicate without thrift transport, just POJOs
+     * 
+     * public static Cassandra.Iface createFatConnection() throws IOException {
              
         StorageService.instance.initClient();
         
@@ -88,7 +88,7 @@ public class CassandraUtils {
         }
         
         return new CassandraServer();      
-    }
+    }*/
     
     
     public static Cassandra.Iface createConnection() throws TTransportException {

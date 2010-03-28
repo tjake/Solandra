@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="src" path="thrift"/>
 	<classpathentry kind="src" path="test"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/3"/>
@@ -10,24 +11,7 @@
 	<classpathentry kind="lib" path="lib/lucene-core-2.4.1.jar" sourcepath="/Users/jake/Downloads/lucene-2.4.1/src"/>
 	<classpathentry kind="lib" path="lib/lucene-analyzers-2.4.1.jar"/>
 	<classpathentry kind="lib" path="lib/libthrift-r917130.jar"/>
-	<classpathentry kind="lib" path="lib/lucene-wikipedia-2.4.1.jar"/>
-	<classpathentry kind="lib" path="lib/antlr-3.1.3.jar"/>
-	<classpathentry kind="lib" path="lib/apache-cassandra-0.6.0-beta3.jar"/>
-	<classpathentry kind="lib" path="lib/avro-1.2.0-dev.jar"/>
-	<classpathentry kind="lib" path="lib/bzip2.jar"/>
-	<classpathentry kind="lib" path="lib/clhm-production.jar"/>
-	<classpathentry kind="lib" path="lib/commons-cli-1.1.jar"/>
-	<classpathentry kind="lib" path="lib/commons-codec-1.2.jar"/>
-	<classpathentry kind="lib" path="lib/commons-collections-3.2.1.jar"/>
-	<classpathentry kind="lib" path="lib/commons-lang-2.4.jar"/>
-	<classpathentry kind="lib" path="lib/google-collections-1.0.jar"/>
-	<classpathentry kind="lib" path="lib/hadoop-core-0.20.1.jar"/>
-	<classpathentry kind="lib" path="lib/high-scale-lib.jar"/>
-	<classpathentry kind="lib" path="lib/jackson-core-asl-1.4.0.jar"/>
-	<classpathentry kind="lib" path="lib/jackson-mapper-asl-1.4.0.jar"/>
-	<classpathentry kind="lib" path="lib/jline-0.9.94.jar"/>
-	<classpathentry kind="lib" path="lib/json-simple-1.1.jar"/>
 	<classpathentry kind="lib" path="lib/junit-4.6.jar"/>
-	<classpathentry kind="lib" path="lib/log4j-1.2.14.jar"/>
+	<classpathentry kind="lib" path="lib/log4j-1.2.15.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
