@@ -12,20 +12,28 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 public class WikipediaImporter {
     
     private ExecutorService threadPool;
     private Queue<Future<Integer>> resultSet;
     private int pageCount;
+    private int loadCount;
+    private long size;
+    private long startTime;
     private long lastTime;
     
     
     public WikipediaImporter() {
-        threadPool = Executors.newFixedThreadPool(16);
+        threadPool = Executors.newFixedThreadPool(64);
         resultSet  = new LinkedBlockingQueue<Future<Integer>>();
         pageCount = 0;
-        lastTime = System.currentTimeMillis();
+	loadCount = 0;
+	size      = 0;
+
+        startTime = System.currentTimeMillis();
+        lastTime  = System.currentTimeMillis();
     }
     
     private static void usage(){
@@ -55,13 +63,18 @@ public class WikipediaImporter {
             
             if(line.contains("</doc>")){
                
-               if(++pageCount % 1000 == 0){
-                    
-                    Future<Integer> result;
-                    int size = 0;
+		if(++pageCount % 1000 == 0){
+		    Future<Integer> result;
+
                     while( (result = resultSet.poll()) != null){
                         try {
                             size += result.get();
+			    loadCount++;
+			    long now = System.currentTimeMillis();
+			    if((now-lastTime)/1000.0 > 1){
+				System.err.println("Loaded ("+loadCount+") "+size/1000.0+"Kb, in "+(now-startTime)/1000.0+", avg "+(loadCount/((now-startTime)/1000))+" docs/sec");
+				lastTime = now;
+			    }			    
                         } catch (InterruptedException e) {
                             // TODO Auto-generated catch block
                             e.printStackTrace();
@@ -70,11 +83,7 @@ public class WikipediaImporter {
                             e.printStackTrace();
                         }
                     }
-                    
-                    long now = System.currentTimeMillis();
-                    System.err.println("Loaded ("+pageCount+") "+size/1000+"Kb, in "+(now-lastTime)/1000);
-                    lastTime = now;
-                    
+         
                }
                
                indexPage(page);  //index each page           
@@ -130,6 +139,36 @@ public class WikipediaImporter {
                 continue;
             }
         }
+
+
+	threadPool.shutdown();
+	try{
+	    threadPool.awaitTermination(90, TimeUnit.SECONDS);
+	}catch(InterruptedException ex){
+	    
+	}
+
+	Future<Integer> result;
+	int size = 0;
+	while( (result = resultSet.poll()) != null){
+	    try {
+		size += result.get();
+		
+	    } catch (InterruptedException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	    } catch (ExecutionException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	    }
+	}
+
+	long now = System.currentTimeMillis();	
+	System.err.println("Loaded ("+pageCount+") "+size/1000+"Kb, in "+(now-lastTime)/1000.0);
+	
+	
+	System.err.println("done");
+
     }
     
     public void indexPage(Article page){

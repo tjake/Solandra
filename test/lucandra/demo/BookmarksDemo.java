@@ -96,7 +96,7 @@ public class BookmarksDemo {
         Document doc = new Document();
         doc.add(new Field("url", url, Store.YES, Index.NO));
         doc.add(new Field("title", title, Store.YES, Index.ANALYZED));
-        doc.add(new Field("tags", title, Store.NO, Index.ANALYZED));
+        doc.add(new Field("tags", tags, Store.NO, Index.ANALYZED));
 
         indexWriter.addDocument(doc, analyzer);
     }

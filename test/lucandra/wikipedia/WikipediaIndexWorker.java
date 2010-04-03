@@ -21,6 +21,7 @@ public class WikipediaIndexWorker implements Callable<Integer>{
 
     //each worker thread has a connection to cassandra
     private static ThreadLocal<lucandra.IndexWriter> clientPool = new ThreadLocal<lucandra.IndexWriter>();
+    private static ThreadLocal<Integer> batchCount = new ThreadLocal<Integer>();
     
     private static List<TokenRange> ring;
     static{
@@ -31,7 +32,7 @@ public class WikipediaIndexWorker implements Callable<Integer>{
             throw new RuntimeException(e);
         }
         
-        System.err.print(ring);
+        //System.err.print(ring);
     }
     
     
@@ -53,9 +54,16 @@ public class WikipediaIndexWorker implements Callable<Integer>{
             
             Random r = new Random();
             List<String> endpoints = ring.get(r.nextInt(ring.size())).endpoints;
-            
-            indexWriter = new lucandra.IndexWriter("wikipedia",CassandraUtils.createConnection(endpoints.get(r.nextInt(endpoints.size())),9160,false));
+	    String endpoint = endpoints.get(r.nextInt(endpoints.size()));
+
+            indexWriter = new lucandra.IndexWriter("wikipedia",CassandraUtils.createConnection(endpoint,9160,false));
             clientPool.set(indexWriter);
+
+	    indexWriter.setAutoCommit(false);
+
+
+	    batchCount.set(0);
+
         }
         
         return indexWriter;      
@@ -75,7 +83,16 @@ public class WikipediaIndexWorker implements Callable<Integer>{
         d.add(new Field("url",article.url,Store.YES, Index.NOT_ANALYZED));
         
         indexWriter.addDocument(d, analyzer);
-        
+
+
+	Integer c = batchCount.get();
+	if((c+1) % 100 == 0){
+	    indexWriter.commit();
+	}
+
+	batchCount.set(c+1);
+
+
         return article.getSize();
     }
 
