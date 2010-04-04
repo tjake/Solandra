@@ -13,5 +13,7 @@
 	<classpathentry kind="lib" path="lib/libthrift-r917130.jar"/>
 	<classpathentry kind="lib" path="lib/junit-4.6.jar"/>
 	<classpathentry kind="lib" path="lib/log4j-1.2.15.jar"/>
+	<classpathentry kind="lib" path="lib/apache-solr-core-1.4.0.jar" sourcepath="/Users/jake/apache-solr-1.4.0/src/java"/>
+	<classpathentry kind="lib" path="lib/apache-solr-solrj-1.4.0.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

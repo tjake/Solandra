@@ -66,9 +66,8 @@ The IndexReader caches terms aggressively during search and tries to avoid lots 
 
 What Works
 ==========
-* Real-Time index updates
-* No optimize() required
-* Indexing 
+* Real-Time indexing (documents become available immediately)
+* No optimizing 
 * Search
 * Sort
 * Delete
@@ -77,5 +76,4 @@ What Works
 What's Missing (for now)
 ==============
 * No normalizations are stored (no scoring)
-* Document fields are always stored as binary
 * You can't walk the documents with index reader
