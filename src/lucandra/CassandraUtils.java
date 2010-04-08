@@ -188,7 +188,7 @@ public class CassandraUtils {
         int idx = 0;
 
         for (int i = 0; i < b.length; i += 4) {
-            intArray[idx] = (b[i] << 24) + ((b[i + 1] & 0xFF) << 16) + ((b[i + 2] & 0xFF) << 8) + (b[i + 3] & 0xFF);
+            intArray[idx++] = (b[i] << 24) + ((b[i + 1] & 0xFF) << 16) + ((b[i + 2] & 0xFF) << 8) + (b[i + 3] & 0xFF);
         }
 
         return intArray;

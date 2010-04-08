@@ -64,7 +64,7 @@ public class LucandraTests extends TestCase {
         try {
 
             Document doc1 = new Document();
-            Field f = new Field("key", "this is an example value foobar", Field.Store.YES, Field.Index.ANALYZED);
+            Field f = new Field("key", "this is an example value foobar foobar", Field.Store.YES, Field.Index.ANALYZED);
             doc1.add(f);
 
             indexWriter.addDocument(doc1, analyzer);
@@ -152,6 +152,9 @@ public class LucandraTests extends TestCase {
         Document doc = searcher.doc(docs.scoreDocs[0].doc);
 
         assertNotNull(doc.getField("key"));
+        
+        
+        
     }
 
     public void testMissingQuery() throws Exception {
@@ -231,7 +234,7 @@ public class LucandraTests extends TestCase {
         QueryParser qp = new QueryParser("key", analyzer);
 
         // check exact
-        Query q = qp.parse("+key:\"example value\"");
+        Query q = qp.parse("+key:\"foobar foobar\"");
         TopDocs docs = searcher.search(q, 10);
         assertEquals(1, docs.totalHits);
 
