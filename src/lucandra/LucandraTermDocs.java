@@ -28,6 +28,7 @@ import org.apache.lucene.index.Term;
 import org.apache.lucene.index.TermDocs;
 import org.apache.lucene.index.TermEnum;
 import org.apache.lucene.index.TermPositions;
+import org.apache.solr.request.*;
 
 public class LucandraTermDocs implements TermDocs, TermPositions {
 
@@ -81,7 +82,7 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
             docs[i] = doc();
             freqs[i] = freq();
         }
-      
+
         return i;
     }
 
@@ -99,14 +100,14 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
             }
         } else {
             termEnum = tmp;
-            if(termEnum.skipTo(term)){
+            if (termEnum.skipTo(term)) {
 
                 if (termEnum.term().equals(term)) {
                     termDocs = termEnum.getTermDocFreq();
                 } else {
                     termDocs = null;
                 }
-            }else{
+            } else {
                 termDocs = null;
             }
         }
@@ -117,13 +118,15 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
     public void seek(TermEnum termEnum) throws IOException {
         if (termEnum instanceof LucandraTermEnum) {
             this.termEnum = (LucandraTermEnum) termEnum;
-            termDocs = this.termEnum.getTermDocFreq();
-            docPosition = -1;
         } else {
-            throw new RuntimeException("TermEnum is not compatable with Lucandra");
+            this.termEnum = (LucandraTermEnum) indexReader.terms(termEnum.term());
         }
+    
+        termDocs = this.termEnum.getTermDocFreq();
+        docPosition = -1;
     }
 
+    //this should be used to find a already loaded doc
     public boolean skipTo(int target) throws IOException {
         do {
             if (!next())

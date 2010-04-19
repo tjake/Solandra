@@ -59,7 +59,6 @@ public class IndexWriter {
     private final String indexName;
     private final Cassandra.Iface client;
     private final ColumnPath docAllColumnPath;
-    private final ColumnPath metaColumnPath; 
     private boolean autoCommit;
     private Map<String,Map<String,List<Mutation>>> mutationMap;
     
@@ -70,15 +69,9 @@ public class IndexWriter {
         this.indexName = indexName;
         this.client = client;
         autoCommit  = true;
-
         docAllColumnPath = new ColumnPath(CassandraUtils.docColumnFamily);
         
-        metaColumnPath = new ColumnPath(CassandraUtils.docColumnFamily);
-        metaColumnPath.setColumn(CassandraUtils.documentMetaField.getBytes());
-        
-         mutationMap = new HashMap<String,Map<String,List<Mutation>>>();
-
-        
+        mutationMap = new HashMap<String,Map<String,List<Mutation>>>();
     }
 
     @SuppressWarnings("unchecked")
@@ -236,7 +229,7 @@ public class IndexWriter {
 
         String key =  indexName+CassandraUtils.delimeter+new String(docId);
         
-        ColumnOrSuperColumn column = client.get(CassandraUtils.keySpace, CassandraUtils.hashKey(key), metaColumnPath, ConsistencyLevel.ONE);
+        ColumnOrSuperColumn column = client.get(CassandraUtils.keySpace, CassandraUtils.hashKey(key), CassandraUtils.metaColumnPath, ConsistencyLevel.ONE);
         
         List<String> terms = (List<String>) CassandraUtils.fromBytes(column.column.value);
     

@@ -50,6 +50,8 @@ import org.apache.lucene.index.TermVectorMapper;
 import org.apache.lucene.search.DefaultSimilarity;
 import org.apache.lucene.store.Directory;
 
+import com.sun.servicetag.UnauthorizedAccessException;
+
 public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     private final static int numDocs = 1000000;
@@ -149,7 +151,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         columnParent.setColumn_family(CassandraUtils.docColumnFamily);
         
 
-        //get all columns
+        //get all columns ( this skips meta info )
         SlicePredicate slicePredicate = new SlicePredicate();
         slicePredicate.setSlice_range(new SliceRange(new byte[] {}, CassandraUtils.delimeter.getBytes(), false, 100));
 
@@ -206,27 +208,35 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     }
 
     @Override
-    public TermFreqVector getTermFreqVector(int arg0, String arg1) throws IOException {
-        // TODO Auto-generated method stub
-        return null;
+    public TermFreqVector getTermFreqVector(int docNum, String field) throws IOException {
+       
+        String docId = docIndexToDocId.get(docNum);
+       
+        TermFreqVector termVector = new lucandra.TermFreqVector(indexName,field,docId, client);
+       
+        return termVector;
     }
 
     @Override
     public void getTermFreqVector(int arg0, TermVectorMapper arg1) throws IOException {
         // TODO Auto-generated method stub
+        throw new RuntimeException();
+
 
     }
 
     @Override
     public void getTermFreqVector(int arg0, String arg1, TermVectorMapper arg2) throws IOException {
-        // TODO Auto-generated method stub
+        
+        throw new UnauthorizedAccessException();
 
     }
 
     @Override
     public TermFreqVector[] getTermFreqVectors(int arg0) throws IOException {
         // TODO Auto-generated method stub
-        return null;
+        throw new RuntimeException();
+        //return null;
     }
 
     @Override

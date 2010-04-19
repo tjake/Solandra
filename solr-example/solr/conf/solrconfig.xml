@@ -85,7 +85,7 @@
        may cause replication to not work correctly. See SOLR-1366 for details.
   -->
   <indexReaderFactory name="IndexReaderFactory" class="solandra.SolandraIndexReaderFactory">
-     <str name="indexName">example</str>
+     <str name="indexName">wikipedia</str>
      <str name="cassandraHost">localhost</str>
      <int name="cassandraPort">9160</int>
      <bool name="cassandraFramed">false</bool>
@@ -115,11 +115,11 @@
          requests matching documents 10 through 19, and queryWindowSize is 50,
          then documents 0 through 49 will be collected and cached.  Any further
          requests in that range can be satisfied via the cache.  -->
-    <queryResultWindowSize>20</queryResultWindowSize>
+    <queryResultWindowSize>0</queryResultWindowSize>
 
     <!-- Maximum number of documents to cache for any entry in the
          queryResultCache. -->
-    <queryResultMaxDocsCached>200</queryResultMaxDocsCached>
+    <queryResultMaxDocsCached>0</queryResultMaxDocsCached>
 
     <!-- a newSearcher event is fired whenever a new searcher is being prepared
       and there is a current searcher handling requests (aka registered).
@@ -171,9 +171,9 @@
          use the never304="true" option and do not specify a value for
          <cacheControl>
     -->
-    <!-- <httpCaching never304="true"> -->
-    <httpCaching lastModifiedFrom="openTime"
-                 etagSeed="Solr">
+    <httpCaching never304="true">
+    <!--<httpCaching lastModifiedFrom="openTime"
+                 etagSeed="Solr"> -->
        <!-- lastModFrom="openTime" is the default, the Last-Modified value
             (and validation against If-Modified-Since requests) will all be
             relative to when the current Searcher was opened.

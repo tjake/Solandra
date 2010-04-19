@@ -64,7 +64,8 @@ public class LucandraTermEnum extends TermEnum {
     private final int maxInitSize = 2;
     private final int maxChunkSize = 64;
     private int actualInitSize = -1;
-    private Term initTerm;
+    private Term initTerm = null;
+    private Term chunkBoundryTerm;
     private int chunkCount = 0;
 
     private final Cassandra.Iface client;
@@ -101,10 +102,9 @@ public class LucandraTermEnum extends TermEnum {
     }
 
     @Override
-    public boolean next() throws IOException {
-
+    public boolean next() throws IOException {      
         termPosition++;
-
+        
         boolean hasNext = termPosition < termBuffer.length;
 
         if (hasNext && termBuffer[termPosition].equals(finalTerm)) {
@@ -116,11 +116,14 @@ public class LucandraTermEnum extends TermEnum {
 
             // if we've already done init try grabbing more
             if ((chunkCount == 1 && actualInitSize == maxInitSize) || (chunkCount > 1 && actualInitSize == maxChunkSize)) {
-                loadTerms(initTerm);
+                loadTerms(chunkBoundryTerm);
                 hasNext = termBuffer.length > 0;
             } else if ((chunkCount == 1 && actualInitSize < maxInitSize) || (chunkCount > 1 && actualInitSize < maxChunkSize)) {
-                hasNext = false;
+                hasNext = false;            
+                
+                loadTerms(initTerm); //start over at top (for facets)   
             }
+            
             termPosition = 0;
         }
 
@@ -134,6 +137,9 @@ public class LucandraTermEnum extends TermEnum {
 
     private void loadTerms(Term skipTo) {
 
+        if(initTerm == null)
+            initTerm = skipTo;
+        
         // chose starting term
         String startTerm = CassandraUtils.hashKey(
                     indexName + CassandraUtils.delimeter + CassandraUtils.createColumnName(skipTo)
@@ -144,17 +150,15 @@ public class LucandraTermEnum extends TermEnum {
         try {
             endTerm = CassandraUtils.hashKey(
                         indexName + CassandraUtils.delimeter + CassandraUtils.createColumnName(skipTo.field(), new String(new byte[]{(byte)255,(byte)255,(byte)255,(byte)255,(byte)255,(byte)255,(byte)255,(byte)255},"UTF-8")) 
-                        //skipTo.field().substring(0, skipTo.field().length() - 1)
-                        //+ new Character((char) (skipTo.field().toCharArray()[skipTo.field().length() - 1] + 1))
-                    );
+                       );
         } catch (UnsupportedEncodingException e1) {
             // TODO Auto-generated catch block
             e1.printStackTrace();
         }
         
-        if ((!skipTo.equals(initTerm) || termPosition == 0) && termCache != null) {
+        if ((!skipTo.equals(chunkBoundryTerm) || termPosition == 0) && termCache != null) {
             termDocFreqBuffer = termCache.subMap(skipTo, termCache.lastKey());
-        } else {
+        } else {          
             termDocFreqBuffer = null;
         }
 
@@ -166,7 +170,15 @@ public class LucandraTermEnum extends TermEnum {
             logger.debug("Found " + startTerm + " in cache");
             return;
         } else if (chunkCount > 1 && actualInitSize < maxChunkSize) {
-            termBuffer = new Term[] {};
+            
+            //include last term
+            if(skipTo.equals(chunkBoundryTerm) && termCache.containsKey(skipTo)){
+                termBuffer = new Term[] {skipTo};
+                termDocFreqBuffer = termCache.subMap(skipTo, termCache.lastKey());
+            }else{
+                termBuffer = new Term[] {};
+            }
+            
             termPosition = 0;
             return; // done!
         }
@@ -177,10 +189,10 @@ public class LucandraTermEnum extends TermEnum {
         int count = maxInitSize;
 
         // otherwise we grab all the rest of the keys
-        if (initTerm != null) {
+        if (chunkBoundryTerm != null) {
             count = maxChunkSize;
             startTerm = CassandraUtils.hashKey(
-                        indexName + CassandraUtils.delimeter + CassandraUtils.createColumnName(initTerm)
+                        indexName + CassandraUtils.delimeter + CassandraUtils.createColumnName(chunkBoundryTerm)
                     );
         }
 
@@ -217,13 +229,8 @@ public class LucandraTermEnum extends TermEnum {
 
                 // term keys look like wikipedia/body/wiki
                 String termStr = entry.getKey().substring(entry.getKey().indexOf(CassandraUtils.delimeter) + CassandraUtils.delimeter.length());
-                Term term;
-                try {
-                    term = CassandraUtils.parseTerm(termStr.getBytes("UTF-8"));
-                } catch (UnsupportedEncodingException e) {
-                    throw new RuntimeException(e);
-                }
-
+                Term term = CassandraUtils.parseTerm(termStr);
+                
                 logger.debug(termStr + " has " + entry.getColumns().size());
                 
                 //check for tombstone keys
@@ -232,7 +239,7 @@ public class LucandraTermEnum extends TermEnum {
             }
 
             if(!termDocFreqBuffer.isEmpty())
-                initTerm = termDocFreqBuffer.lastKey();
+                chunkBoundryTerm = termDocFreqBuffer.lastKey();
         }
 
         // add a final key (excluded in submap below)

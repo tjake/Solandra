@@ -39,6 +39,7 @@ import java.util.UUID;
 import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.Column;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
+import org.apache.cassandra.thrift.ColumnPath;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.Deletion;
 import org.apache.cassandra.thrift.InvalidRequestException;
@@ -65,6 +66,9 @@ public class CassandraUtils {
     public static final String delimeter           = ""+new Character((char)255)+new Character((char)255);
     public static final String documentIdField     = delimeter+"KEY"+delimeter;
     public static final String documentMetaField   = delimeter+"META"+delimeter;
+    public static final ColumnPath metaColumnPath = new ColumnPath(CassandraUtils.docColumnFamily).setColumn(documentMetaField.getBytes());
+
+
     public static final String hashChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     public static final BigInteger CHAR_MASK = new BigInteger("65535");
 
@@ -129,19 +133,16 @@ public class CassandraUtils {
         return field + delimeter + text;
     }
 
-    public static Term parseTerm(byte[] termStr) {
+    public static Term parseTerm(String termStr) {
         String[] parts = null;
 
               
-        try {
-            parts = new String(termStr,"UTF-8").split(delimeter);
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
-       
+      
+        parts = termStr.split(delimeter);
+        
 
         if (parts == null || parts.length != 2) {
-            throw new RuntimeException("invalid term format: " + parts[0]);
+            throw new RuntimeException("invalid term format: " + termStr);
         }
 
         return new Term(parts[0].intern(), parts[1]);

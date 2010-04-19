@@ -1,0 +1,122 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+ "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+  <title>Wikassandra</title>
+  <style type="text/css" media="screen">
+  </style>
+  <!--<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js"></script> -->
+  <script type="text/javascript" src="jquery-1.2.3.min.js"></script>
+  <script type="text/javascript" src="luceneQueryValidator.js"></script>
+</head>
+<body>
+
+<script type="text/javascript" charset="utf-8">//<![CDATA[
+jQuery(function($) {
+
+    $("#query").bind("change", startsearch)
+    $("#search").bind("click", startsearch)
+    $("#more").bind("click", listsearch)
+
+    offset = 0
+    limit  = 10
+    lastterms = ''
+
+    function startsearch(){
+
+        offset    = 0
+        lastterms = ''
+        $("#resultbox").html('')
+        listsearch();
+    }
+
+    function listsearch(){
+        var terms = $("#query").val()
+
+
+        if(!doCheckLuceneQueryValue(terms)){
+             return false;
+        }
+
+        if(terms == lastterms){
+             offset += limit
+        }else{
+             offset = 0
+             lastterms = terms
+        }
+
+        $.ajax({
+            type: "GET"
+            ,
+            data: {
+                q: terms,
+                wt: 'json',
+                start: offset,
+                rows: limit,
+                hl: 'true',
+                "hl.fl": 'text'
+            }
+            ,
+            dataType: "json"
+            ,
+            url: "http://localhost:8983/solr/select"
+            ,
+            cache: false
+            ,
+            beforeSend: function() {
+                $('#overlay').fadeIn()
+            }
+            ,
+            success: function(json) {
+
+                $('#overlay').fadeOut()
+
+                for (var i = 0; i < json.response.docs.length; i++)
+                {
+                    var $div = $(".template").clone().removeClass("template")
+
+                    $("#resultbox").append($div)
+
+                    var html = ''
+                    html += '<a href="'+json.response.docs[i].url+'">'+json.response.docs[i].title+'</a>';
+                    html += '<div class="text">'+json.response.docs[i].text+'</div><br/><br/>';
+
+                    $div.html(html)
+                    $div.fadeIn()
+                }
+
+                $("#took").html((offset + json.response.docs.length) + " of " + json.response.numFound + " took " + json.responseHeader.QTime +"ms")
+
+                if (offset + json.response.docs.length < json.response.numFound)
+                   $("#more").show()
+                else
+                   $("#more").hide()
+
+            }
+            ,
+            error: function() {
+                //remove overlay
+                $('#overlay').fadeOut()
+                alert('fail')
+            }
+        });
+    }
+});
+//]]> </script>
+
+<div id="main">
+  <h1>Wikassandra</h1>
+  <input type="text" rows="80" name="query" id="query" />
+  <input type="button" value="search" name="search" id="search" />
+  <div id="overlay" style="display:hidden"></div>
+  <div id="resultbox"></div>
+
+
+  <div class="result template" style="display:none;"></div>
+  <div id="took"></div>
+  <a id="more" href="javascript:;" style="display:none">more</a>
+</div>
+
+</body>
+</html>
