@@ -17,7 +17,9 @@
 -->
 <schema name="wikipedia" version="1.1">
  <types>
-  <fieldType name="string" class="solr.StrField"/>
+  <fieldType name="string" class="solr.StrField">
+    <analyzer class="org.apache.lucene.analysis.standard.StandardAnalyzer"/>
+  </fieldType>
  </types>
  <fields>
     <field name="url" type="string" indexed="false" stored="true"/>

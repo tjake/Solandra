@@ -221,6 +221,10 @@
        <str name="version">2.1</str>
         -->
      </lst>
+     <arr name="last-components">
+      <str>reopenComponent</str>
+     </arr>
+
   </requestHandler>
 
 
@@ -351,6 +355,10 @@
       <str>myLastComponentName</str>
     </arr>
   -->
+
+
+  <searchComponent name="reopenComponent" class="solandra.SolandraReopenComponent"/>
+
 
    <!-- The spell check component can return a list of alternative spelling
   suggestions.  -->

@@ -78,9 +78,12 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
                 
                 termPositions[i] =  value == null ? new int[]{} : CassandraUtils.byteArrayToIntArray(value);
                 freqVec[i] = termPositions[i].length;
-                termOffsets[i] = new TermVectorOffsetInfo[freqVec[i]];
+                termOffsets[i] =  TermVectorOffsetInfo.EMPTY_OFFSET_INFO;/*new TermVectorOffsetInfo[freqVec[i]];
                 for(int j=0; j<freqVec[i]; j++)
-                    termOffsets[i][j] = new TermVectorOffsetInfo(termPositions[i][j], termPositions[i][j]+terms[i].length());
+                    termOffsets[i][j] = new TermVectorOffsetInfo(termPositions[i][j]-1 , termPositions[i][j]+terms[i].length());
+                 */
+            
+                i++;
             }
             
             

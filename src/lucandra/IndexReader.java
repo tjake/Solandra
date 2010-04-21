@@ -86,24 +86,31 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     
   
     @Override
-    public IndexReader reopen(){
+    public synchronized IndexReader reopen() throws CorruptIndexException, IOException {
+//    public IndexReader reopen(){
         
-        docCounter.set(0);
-        docIdToDocIndex.clear();
-        docIndexToDocId.clear();
-        termEnumCache.clear();
+        clearCache();
         
         return this;
     }
     
+    public void clearCache(){
+        docCounter.set(0);
+        docIdToDocIndex.clear();
+        docIndexToDocId.clear();
+        termEnumCache.clear();
+    }
+    
+   
+    
     @Override
     protected void doClose() throws IOException {
-        
+        clearCache();
     } 
     
     @Override
     protected void doCommit() throws IOException {
-      
+       clearCache();
     }
 
     @Override
@@ -118,7 +125,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     @Override
     protected void doUndeleteAll() throws CorruptIndexException, IOException {
-        //throw new UnsupportedOperationException();
+       
     }
 
     @Override
@@ -356,7 +363,8 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     
     @Override
     public Directory directory() {
-            return null;
+        clearCache();
+        return null;
     }
 
 
