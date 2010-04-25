@@ -85,10 +85,7 @@ public class IndexWriter {
         String docId = doc.get(CassandraUtils.documentIdField);
  
         if(docId == null)
-            docId = Long.toHexString(System.nanoTime());
-        
-       
-         
+            docId = Long.toHexString((long) (System.nanoTime()+(Math.random()*System.nanoTime()))); 
         
         int position = 0;
 
