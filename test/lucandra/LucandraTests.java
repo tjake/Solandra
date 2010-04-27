@@ -38,12 +38,14 @@ import org.apache.lucene.queryParser.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Sort;
+import org.apache.lucene.search.SortField;
 import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.util.Version;
 
 public class LucandraTests extends TestCase {
 
     private static final String indexName = String.valueOf(System.nanoTime());
-    private static final Analyzer analyzer = new CJKAnalyzer();
+    private static final Analyzer analyzer = new CJKAnalyzer(Version.LUCENE_30);
     private static Cassandra.Iface client;
     static {
         try {
@@ -97,7 +99,7 @@ public class LucandraTests extends TestCase {
                 doc.add(new Field("date", "test" + i, Field.Store.YES, Field.Index.NOT_ANALYZED));
                 indexWriter.addDocument(doc, analyzer);
             }
-            
+
             //Unicode doc
             Document d3 = new Document();          
             d3.add(new Field("key", new String("\u5639\u563b"), Field.Store.YES, Field.Index.ANALYZED));
@@ -107,12 +109,12 @@ public class LucandraTests extends TestCase {
             fail(e.toString());
         }
     }
-    
+
     public void testUnicode() throws Exception {
         IndexReader indexReader = new IndexReader(indexName, client);
         IndexSearcher searcher = new IndexSearcher(indexReader);
 
-        QueryParser qp = new QueryParser("key", analyzer);
+        QueryParser qp = new QueryParser(Version.LUCENE_30, "key", analyzer);
         Query q = qp.parse("+key:\u5639\u563b");
 
         TopDocs docs = searcher.search(q, 10);
@@ -129,7 +131,7 @@ public class LucandraTests extends TestCase {
         IndexReader indexReader = new IndexReader(indexName, client);
         IndexSearcher searcher = new IndexSearcher(indexReader);
 
-        QueryParser qp = new QueryParser("key", analyzer);
+        QueryParser qp = new QueryParser(Version.LUCENE_30, "key", analyzer);
         Query q = qp.parse("+key:\u5639\u563b");
 
         TopDocs docs = searcher.search(q, 10);
@@ -142,7 +144,7 @@ public class LucandraTests extends TestCase {
         IndexReader indexReader = new IndexReader(indexName, client);
         IndexSearcher searcher = new IndexSearcher(indexReader);
 
-        QueryParser qp = new QueryParser("key", analyzer);
+        QueryParser qp = new QueryParser(Version.LUCENE_30, "key", analyzer);
         Query q = qp.parse("+key:another");
 
         TopDocs docs = searcher.search(q, 10);
@@ -161,7 +163,7 @@ public class LucandraTests extends TestCase {
 
         IndexReader indexReader = new IndexReader(indexName, client);
         IndexSearcher searcher = new IndexSearcher(indexReader);
-        QueryParser qp = new QueryParser("key", analyzer);
+        QueryParser qp = new QueryParser(Version.LUCENE_30, "key", analyzer);
 
         // check something that doesn't exist
         Query q = qp.parse("+key:bogus");
@@ -173,7 +175,7 @@ public class LucandraTests extends TestCase {
     public void testWildcardQuery() throws Exception {
         IndexReader indexReader = new IndexReader(indexName, client);
         IndexSearcher searcher = new IndexSearcher(indexReader);
-        QueryParser qp = new QueryParser("key", analyzer);
+        QueryParser qp = new QueryParser(Version.LUCENE_30, "key", analyzer);
 
         // check wildcard
         Query q = qp.parse("+key:anoth*");
@@ -198,10 +200,10 @@ public class LucandraTests extends TestCase {
 
         IndexReader indexReader = new IndexReader(indexName, client);
         IndexSearcher searcher = new IndexSearcher(indexReader);
-        QueryParser qp = new QueryParser("key", analyzer);
+        QueryParser qp = new QueryParser(Version.LUCENE_30, "key", analyzer);
 
         // check sort
-        Sort sort = new Sort("date");
+        Sort sort = new Sort(new SortField("date", SortField.STRING));
         Query q = qp.parse("+key:sort");
         TopDocs docs = searcher.search(q, null, 10, sort);
 
@@ -217,7 +219,7 @@ public class LucandraTests extends TestCase {
 
         IndexReader indexReader = new IndexReader(indexName, client);
         IndexSearcher searcher = new IndexSearcher(indexReader);
-        QueryParser qp = new QueryParser("key", analyzer);
+        QueryParser qp = new QueryParser(Version.LUCENE_30, "key", analyzer);
 
         // check range queries
 
@@ -231,7 +233,7 @@ public class LucandraTests extends TestCase {
 
         IndexReader indexReader = new IndexReader(indexName, client);
         IndexSearcher searcher = new IndexSearcher(indexReader);
-        QueryParser qp = new QueryParser("key", analyzer);
+        QueryParser qp = new QueryParser(Version.LUCENE_30, "key", analyzer);
 
         // check exact
         Query q = qp.parse("+key:\"foobar foobar\"");
