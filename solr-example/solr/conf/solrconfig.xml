@@ -106,7 +106,7 @@
       not load all stored fields, especially if the skipped fields are large
       compressed text fields.
     -->
-    <enableLazyFieldLoading>true</enableLazyFieldLoading>
+    <enableLazyFieldLoading>false</enableLazyFieldLoading>
 
 
    <!-- An optimization for use with the queryResultCache.  When a search
@@ -213,17 +213,22 @@
   -->
   <requestHandler name="standard" class="solr.SearchHandler" default="true">
     <!-- default values for query parameters -->
-     <lst name="defaults">
-       <str name="echoParams">explicit</str>
-       <!--
-       <int name="rows">10</int>
-       <str name="fl">*</str>
-       <str name="version">2.1</str>
-        -->
+     
+     <arr name="components">
+      <str>query</str>
+      <str>reopenComponent</str>
+      <str>facet</str>
+      <str>mlt</str>
+      <str>highlight</str>
+      <str>stats</str>
+      <str>debug</str>
+     </arr>
+     <!--  <lst name="defaults">
+       
      </lst>
      <arr name="last-components">
       <str>reopenComponent</str>
-     </arr>
+     </arr> -->
 
   </requestHandler>
 

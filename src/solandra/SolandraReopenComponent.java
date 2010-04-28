@@ -20,9 +20,18 @@
 package solandra;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
+import org.apache.lucene.document.FieldSelector;
 import org.apache.solr.handler.component.ResponseBuilder;
 import org.apache.solr.handler.component.SearchComponent;
+import org.apache.solr.highlight.SolrHighlighter;
+import org.apache.solr.schema.SchemaField;
+import org.apache.solr.search.DocIterator;
+import org.apache.solr.search.DocList;
     
 public class SolandraReopenComponent extends SearchComponent {
 
@@ -54,7 +63,43 @@ public class SolandraReopenComponent extends SearchComponent {
 
     public void process(ResponseBuilder rb) throws IOException {
         
+        DocList list = rb.getResults().docList;
+    
+        DocIterator it = list.iterator();
        
+        
+        List<Integer> docIds = new ArrayList<Integer>(list.size());
+        while(it.hasNext())
+            docIds.add(it.next());
+              
+        
+        if(docIds.size() > 0){
+            
+            Set<String> fieldFilter = null;
+            Set<String> returnFields = rb.rsp.getReturnFields();
+            if(returnFields != null) {
+              // copy return fields list
+              fieldFilter = new HashSet<String>(returnFields);
+              // add highlight fields
+              SolrHighlighter highligher = rb.req.getCore().getHighlighter();
+              if(highligher.isHighlightingEnabled(rb.req.getParams())) {
+                for(String field: highligher.getHighlightFields(rb.getQuery(), rb.req, null)) 
+                  fieldFilter.add(field);        
+              }
+              // fetch unique key if one exists.
+              SchemaField keyField = rb.req.getSearcher().getSchema().getUniqueKeyField();
+              if(null != keyField)
+                  fieldFilter.add(keyField.getName());  
+            }
+            
+            
+            FieldSelector selector = new SolandraFieldSelector(docIds,fieldFilter);
+        
+            rb.req.getSearcher().getReader().document(docIds.get(0), selector);
+      
+        
+        
+        }  
     }
 
 }
