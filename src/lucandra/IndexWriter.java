@@ -42,11 +42,13 @@ import org.apache.cassandra.thrift.TimedOutException;
 import org.apache.cassandra.thrift.UnavailableException;
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.Token;
 import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
+import org.apache.lucene.analysis.tokenattributes.TermAttribute;
 import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
+import org.apache.lucene.document.Fieldable;
 import org.apache.lucene.index.CorruptIndexException;
+import org.apache.lucene.index.FieldInvertState;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
@@ -77,7 +79,6 @@ public class IndexWriter {
     @SuppressWarnings("unchecked")
     public void addDocument(Document doc, Analyzer analyzer) throws CorruptIndexException, IOException {
 
-        Token token = new Token();
         List<String> allIndexedTerms = new ArrayList<String>();
         
         
@@ -89,7 +90,7 @@ public class IndexWriter {
         
         int position = 0;
 
-        for (Field field : (List<Field>) doc.getFields()) {
+        for (Fieldable field : (List<Fieldable>) doc.getFields()) {
 
             // Indexed field
             if (field.isIndexed() && field.isTokenized()) {
@@ -108,20 +109,26 @@ public class IndexWriter {
                 }
 
                 // Build the termPositions vector for all terms
-                while (tokens.next(token) != null) {
-                    String term = CassandraUtils.createColumnName(field.name(), token.term());
-                    allIndexedTerms.add(term);
-                    
-                    List<Integer> pvec = termPositions.get(term);
+	          
+                tokens.reset(); // reset the TokenStream to the first token
+                // set up token attributes we are working on
+                PositionIncrementAttribute posIncrAttribute = tokens.addAttribute(PositionIncrementAttribute.class);
+                TermAttribute termAttribute = tokens.addAttribute(TermAttribute.class);
 
-                    if (pvec == null) {
-                        pvec = new ArrayList<Integer>();
-                        termPositions.put(term, pvec);
-                    }
+                while (tokens.incrementToken()) {
+                	String term = CassandraUtils.createColumnName(field.name(),
+                			termAttribute.term());
+                	allIndexedTerms.add(term);
 
-                    position += (token.getPositionIncrement() - 1);
-                    pvec.add(++position);
+                	List<Integer> pvec = termPositions.get(term);
 
+                	if (pvec == null) {
+                		pvec = new ArrayList<Integer>();
+                		termPositions.put(term, pvec);
+                	}
+
+                	position += (posIncrAttribute.getPositionIncrement() - 1);
+                	pvec.add(++position);
                 }
 
                 for (Map.Entry<String, List<Integer>> term : termPositions.entrySet()) {

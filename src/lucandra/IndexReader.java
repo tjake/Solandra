@@ -109,8 +109,8 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     }
 
     @Override
-    protected void doCommit() throws IOException {
-        clearCache();
+    protected void doCommit(Map<String, String> commitUserData) throws IOException {
+       clearCache();
     }
 
     @Override
@@ -357,14 +357,13 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     public TermEnum terms(Term term) throws IOException {
 
         LucandraTermEnum termEnum = termEnumCache.get(term);
-
-        if (termEnum == null) {
-
+        
+        if(termEnum == null)
             termEnum = new LucandraTermEnum(this);
-            if (!termEnum.skipTo(term))
-                termEnum = null;
-
-        }
+        
+        if( !termEnum.skipTo(term) ) //if found in the cache then reset, otherwise init.
+            termEnum = null;
+        
 
         return termEnum;
     }

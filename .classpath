@@ -8,12 +8,12 @@
 	<classpathentry kind="lib" path="lib/slf4j-api-1.5.8.jar"/>
 	<classpathentry kind="lib" path="lib/slf4j-log4j12-1.5.8.jar"/>
 	<classpathentry kind="lib" path="config"/>
-	<classpathentry kind="lib" path="lib/lucene-core-2.4.1.jar" sourcepath="/Users/jake/Downloads/lucene-2.4.1/src"/>
-	<classpathentry kind="lib" path="lib/lucene-analyzers-2.4.1.jar"/>
 	<classpathentry kind="lib" path="lib/libthrift-r917130.jar"/>
 	<classpathentry kind="lib" path="lib/junit-4.6.jar"/>
 	<classpathentry kind="lib" path="lib/log4j-1.2.15.jar"/>
 	<classpathentry kind="lib" path="lib/apache-solr-core-1.4.0.jar" sourcepath="/Users/jake/apache-solr-1.4.0/src/java"/>
 	<classpathentry kind="lib" path="lib/apache-solr-solrj-1.4.0.jar"/>
+	<classpathentry kind="lib" path="lib/lucene-analyzers-3.0.1.jar"/>
+	<classpathentry kind="lib" path="lib/lucene-core-3.0.1.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -35,6 +35,7 @@ import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.Field.Index;
 import org.apache.lucene.document.Field.Store;
+import org.apache.lucene.util.Version;
 import org.apache.thrift.transport.TTransportException;
 
 public class WikipediaIndexWorker implements Callable<Integer> {
@@ -70,7 +71,7 @@ public class WikipediaIndexWorker implements Callable<Integer> {
     }
     
     // this is shared by all workers
-    private static Analyzer analyzer = new StandardAnalyzer();
+    private static Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_30);
 
     // this is the article to index
     private Article article;

@@ -80,7 +80,6 @@ public class LucandraTermEnum extends TermEnum {
         this.termPosition = 0;
     }
 
-    @Override
     public boolean skipTo(Term term) throws IOException {
 
         if (term == null)

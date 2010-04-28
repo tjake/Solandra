@@ -20,6 +20,7 @@
 package lucandra.wikipedia;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -35,7 +36,9 @@ import org.apache.lucene.document.Field.Store;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriter.MaxFieldLength;
+import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.store.LockObtainFailedException;
+import org.apache.lucene.util.Version;
 
 public class LuceneOnlyWikipediaImporter {
 
@@ -50,9 +53,9 @@ public class LuceneOnlyWikipediaImporter {
         pageCount = 0;
         size = 0;
 
-        analyzer = new StandardAnalyzer();
+        analyzer = new StandardAnalyzer(Version.LUCENE_30);
         try {
-            indexWriter = new IndexWriter("/tmp/wikassandra", analyzer, true, MaxFieldLength.UNLIMITED);
+            indexWriter = new IndexWriter(FSDirectory.open(new File("/tmp/wikassandra")), analyzer, true, MaxFieldLength.UNLIMITED);
         } catch (CorruptIndexException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();

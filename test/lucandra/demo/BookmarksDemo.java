@@ -40,6 +40,7 @@ import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.util.Version;
 import org.apache.thrift.transport.TTransportException;
 
 /**
@@ -61,7 +62,7 @@ public class BookmarksDemo {
     private static IndexWriter indexWriter = new IndexWriter("bookmarks", client);
     private static IndexReader indexReader = new IndexReader("bookmarks", client);
     private static IndexSearcher indexSearcher = new IndexSearcher(indexReader);
-    private static Analyzer analyzer = new StandardAnalyzer();
+    private static Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_30);
 
     public static void usage() {
         System.out.println("Usage: BookmarkDemo [-index file.tsv] [-search query]");
@@ -102,7 +103,7 @@ public class BookmarksDemo {
     }
 
     public static void search(String query) throws IOException, org.apache.lucene.queryParser.ParseException {
-        QueryParser qp = new QueryParser("title", analyzer);
+        QueryParser qp = new QueryParser(Version.LUCENE_30, "title", analyzer);
         Query q = qp.parse(query);
 
         TopDocs docs = indexSearcher.search(q, 10);
