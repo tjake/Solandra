@@ -195,7 +195,21 @@ public class IndexWriter {
             
             
             String docId = reader.getDocumentId(doc.doc);
-            
+            try {
+                deleteLucandraDocument(docId.getBytes());
+            } catch (InvalidRequestException e) {
+                throw new RuntimeException(e);
+            } catch (NotFoundException e) {
+                throw new RuntimeException(e);
+            } catch (UnavailableException e) {
+                throw new RuntimeException(e);
+            } catch (TimedOutException e) {
+                throw new RuntimeException(e);
+            } catch (TException e) {
+                throw new RuntimeException(e);
+            } catch (ClassNotFoundException e) {
+                throw new RuntimeException(e);       
+            }
         }
         
     }
