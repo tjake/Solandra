@@ -18,12 +18,11 @@
 <schema name="wikipedia" version="1.1">
  <types>
   <fieldType name="string" class="solr.StrField"/>
-  <fieldType name="lucandrastring" class="solandra.LucandraStringField"/>
  </types>
  <fields>
-    <field name="url" type="lucandrastring" indexed="false" stored="true"/>
-    <field name="title" type="lucandrastring" indexed="true" stored="true"/>
-    <field name="text" type="lucandrastring" indexed="true" stored="true"/>
+    <field name="url" type="string" indexed="false" stored="true"/>
+    <field name="title" type="string" indexed="true" stored="true"/>
+    <field name="text" type="string" indexed="true" stored="true"/>
  </fields>
 
 <defaultSearchField>title</defaultSearchField>
