@@ -62,7 +62,7 @@ public class LucandraTermEnum extends TermEnum {
 
     // number of sequential terms to read initially
     private final int maxInitSize = 2;
-    private final int maxChunkSize = 64;
+    private final int maxChunkSize = 1024;
     private int actualInitSize = -1;
     private Term initTerm = null;
     private Term chunkBoundryTerm;
@@ -101,7 +101,12 @@ public class LucandraTermEnum extends TermEnum {
     }
 
     @Override
-    public boolean next() throws IOException {      
+    public boolean next() throws IOException {    
+        
+        if(termBuffer == null){
+            skipTo(new Term(""));
+        }
+        
         termPosition++;
         
         boolean hasNext = termPosition < termBuffer.length;

@@ -16,10 +16,10 @@
  limitations under the License.
 -->
 
-<!--  
+<!--
  This is the Solr schema file. This file should be named "schema.xml" and
  should be in the conf directory under the solr home
- (i.e. ./solr/conf/schema.xml by default) 
+ (i.e. ./solr/conf/schema.xml by default)
  or located where the classloader for the Solr webapp can find it.
 
  This example schema is the recommended starting point for users.
@@ -51,7 +51,7 @@
        version="1.2" is Solr's version number for the schema syntax and semantics.  It should
        not normally be changed by applications.
        1.0: multiValued attribute did not exist, all fields are multiValued by nature
-       1.1: multiValued attribute introduced, false by default 
+       1.1: multiValued attribute introduced, false by default
        1.2: omitTermFreqAndPositions attribute introduced, true by default except for text fields.
      -->
 
@@ -64,7 +64,7 @@
        org.apache.solr.analysis package.
     -->
 
-    <!-- The StrField type is not analyzed, but indexed/stored verbatim.  
+    <!-- The StrField type is not analyzed, but indexed/stored verbatim.
        - StrField and TextField support an optional compressThreshold which
        limits compression (if enabled in the derived fields) to values which
        exceed a certain size (in characters).
@@ -78,7 +78,7 @@
 
     <!-- The optional sortMissingLast and sortMissingFirst attributes are
          currently supported on types that are sorted internally as strings.
-	       This includes "string","boolean","sint","slong","sfloat","sdouble","pdate"
+               This includes "string","boolean","sint","slong","sfloat","sdouble","pdate"
        - If sortMissingLast="true", then a sort on this field will cause documents
          without the field to come after documents with the field,
          regardless of the requested sort order (asc or desc).
@@ -88,7 +88,7 @@
        - If sortMissingLast="false" and sortMissingFirst="false" (the default),
          then default lucene sorting will be used which places docs without the
          field first in an ascending sort and last in a descending sort.
-    -->    
+    -->
 
     <!--
       Default numeric field types. For faster range queries, consider the tint/tfloat/tlong/tdouble types.
@@ -115,7 +115,7 @@
 
     <!-- The format for this date field is of the form 1995-12-31T23:59:59Z, and
          is a more restricted form of the canonical representation of dateTime
-         http://www.w3.org/TR/xmlschema-2/#dateTime    
+         http://www.w3.org/TR/xmlschema-2/#dateTime
          The trailing "Z" designates UTC time and is mandatory.
          Optional fractional seconds are allowed: 1995-12-31T23:59:59.999Z
          All other components are mandatory.
@@ -130,7 +130,7 @@
                NOW/DAY+6MONTHS+3DAYS
                   ... 6 months and 3 days in the future from the start of
                       the current day
-                      
+
          Consult the DateField javadocs for more information.
 
          Note: For faster range queries, consider the tdate type
@@ -175,11 +175,11 @@
 
     <!-- The "RandomSortField" is not used to store or search any
          data.  You can declare fields of this type it in your schema
-         to generate pseudo-random orderings of your docs for sorting 
-         purposes.  The ordering is generated based on the field name 
+         to generate pseudo-random orderings of your docs for sorting
+         purposes.  The ordering is generated based on the field name
          and the version of the index, As long as the index version
          remains unchanged, and the same field name is reused,
-         the ordering of the docs will be consistent.  
+         the ordering of the docs will be consistent.
          If you want different psuedo-random orderings of documents,
          for the same version of the index, use a dynamicField and
          change the name
@@ -291,8 +291,8 @@
 
 
     <!-- A general unstemmed text field that indexes tokens normally and also
-         reversed (via ReversedWildcardFilterFactory), to enable more efficient 
-	 leading wildcard queries. -->
+         reversed (via ReversedWildcardFilterFactory), to enable more efficient
+         leading wildcard queries. -->
     <fieldType name="text_rev" class="solr.TextField" positionIncrementGap="100">
       <analyzer type="index">
         <tokenizer class="solr.WhitespaceTokenizerFactory"/>
@@ -343,13 +343,13 @@
         <filter class="solr.TrimFilterFactory" />
         <!-- The PatternReplaceFilter gives you the flexibility to use
              Java Regular expression to replace any sequence of characters
-             matching a pattern with an arbitrary replacement string, 
+             matching a pattern with an arbitrary replacement string,
              which may include back references to portions of the original
              string matched by the pattern.
-             
+
              See the Java Regular Expression documentation for more
              information on pattern and replacement string syntax.
-             
+
              http://java.sun.com/j2se/1.5.0/docs/api/java/util/regex/package-summary.html
           -->
         <filter class="solr.PatternReplaceFilterFactory"
@@ -357,7 +357,7 @@
         />
       </analyzer>
     </fieldType>
-    
+
     <fieldtype name="phonetic" stored="false" indexed="true" class="solr.TextField" >
       <analyzer>
         <tokenizer class="solr.StandardTokenizerFactory"/>
@@ -371,12 +371,12 @@
         <!--
         The DelimitedPayloadTokenFilter can put payloads on tokens... for example,
         a token of "foo|1.4"  would be indexed as "foo" with a payload of 1.4f
-        Attributes of the DelimitedPayloadTokenFilterFactory : 
+        Attributes of the DelimitedPayloadTokenFilterFactory :
          "delimiter" - a one character delimiter. Default is | (pipe)
-	 "encoder" - how to encode the following value into a playload
-	    float -> org.apache.lucene.analysis.payloads.FloatEncoder,
-	    integer -> o.a.l.a.p.IntegerEncoder
-	    identity -> o.a.l.a.p.IdentityEncoder
+         "encoder" - how to encode the following value into a playload
+            float -> org.apache.lucene.analysis.payloads.FloatEncoder,
+            integer -> o.a.l.a.p.IntegerEncoder
+            identity -> o.a.l.a.p.IdentityEncoder
             Fully Qualified class name implementing PayloadEncoder, Encoder must have a no arg constructor.
          -->
         <filter class="solr.DelimitedPayloadTokenFilterFactory" encoder="float"/>
@@ -393,8 +393,8 @@
 
 
     <!-- since fields of this type are by default not stored or indexed,
-         any data added to them will be ignored outright.  --> 
-    <fieldtype name="ignored" stored="false" indexed="false" multiValued="true" class="solr.StrField" /> 
+         any data added to them will be ignored outright.  -->
+    <fieldtype name="ignored" stored="false" indexed="false" multiValued="true" class="solr.StrField" />
 
  </types>
 
@@ -402,7 +402,7 @@
  <fields>
    <!-- Valid attributes for fields:
      name: mandatory - the name for the field
-     type: mandatory - the name of a previously defined type from the 
+     type: mandatory - the name of a previously defined type from the
        <types> section
      indexed: true if this field should be indexed (searchable or sortable)
      stored: true if this field should be retrievable
@@ -418,15 +418,15 @@
        given field.
        When using MoreLikeThis, fields used for similarity should be
        stored for best performance.
-     termPositions: Store position information with the term vector.  
+     termPositions: Store position information with the term vector.
        This will increase storage costs.
-     termOffsets: Store offset information with the term vector. This 
+     termOffsets: Store offset information with the term vector. This
        will increase storage costs.
      default: a value that should be used if no value is specified
        when adding a document.
    -->
 
-   <field name="id" type="string" indexed="true" stored="true" required="true" /> 
+   <field name="id" type="string" indexed="true" stored="true" required="true" />
    <field name="sku" type="textTight" indexed="true" stored="true" omitNorms="true"/>
    <field name="name" type="textgen" indexed="true" stored="true"/>
    <field name="alphaNameSort" type="alphaOnlySort" indexed="true" stored="false"/>
@@ -436,8 +436,8 @@
    <field name="includes" type="text" indexed="true" stored="true" termVectors="true" termPositions="true" termOffsets="true" />
 
    <field name="weight" type="float" indexed="true" stored="true"/>
-   <field name="price"  type="float" indexed="true" stored="true"/>
-   <field name="popularity" type="int" indexed="true" stored="true" />
+   <field name="price"  type="sfloat" indexed="true" stored="true"/>
+   <field name="popularity" type="sint" indexed="true" stored="true" />
    <field name="inStock" type="boolean" indexed="true" stored="true" />
 
 
@@ -478,7 +478,7 @@
    <!--
    <field name="timestamp" type="date" indexed="true" stored="true" default="NOW" multiValued="false"/>
      -->
-   
+
 
    <!-- Dynamic field definitions.  If a field name is not found, dynamicFields
         will be used if the name matches any of the patterns.
@@ -510,15 +510,15 @@
 
    <dynamicField name="random_*" type="random" />
 
-   <!-- uncomment the following to ignore any fields that don't already match an existing 
-        field name or dynamic field, rather than reporting them as an error. 
-        alternately, change the type="ignored" to some other type e.g. "text" if you want 
-        unknown fields indexed and/or stored by default --> 
+   <!-- uncomment the following to ignore any fields that don't already match an existing
+        field name or dynamic field, rather than reporting them as an error.
+        alternately, change the type="ignored" to some other type e.g. "text" if you want
+        unknown fields indexed and/or stored by default -->
    <!--dynamicField name="*" type="ignored" multiValued="true" /-->
-   
+
  </fields>
 
- <!-- Field to use to determine and enforce document uniqueness. 
+ <!-- Field to use to determine and enforce document uniqueness.
       Unless this field is marked with required="false", it will be a required field
    -->
  <uniqueKey>id</uniqueKey>
@@ -539,17 +539,17 @@
    <copyField source="features" dest="text"/>
    <copyField source="includes" dest="text"/>
    <copyField source="manu" dest="manu_exact"/>
-	
-   <!-- Above, multiple source fields are copied to the [text] field. 
-	  Another way to map multiple source fields to the same 
-	  destination field is to use the dynamic field syntax. 
-	  copyField also supports a maxChars to copy setting.  -->
-	   
+
+   <!-- Above, multiple source fields are copied to the [text] field.
+          Another way to map multiple source fields to the same
+          destination field is to use the dynamic field syntax.
+          copyField also supports a maxChars to copy setting.  -->
+
    <!-- <copyField source="*_t" dest="text" maxChars="3000"/> -->
 
    <!-- copy name to alphaNameSort, a field designed for sorting by name -->
    <!-- <copyField source="name" dest="alphaNameSort"/> -->
- 
+
 
  <!-- Similarity is the scoring routine for each document vs. a query.
       A custom similarity may be specified here, but the default is fine
