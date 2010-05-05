@@ -1,11 +1,13 @@
 Lucandra - A Cassandra Backend for Lucene/Solr
-  
+
 By Jake Luciani - http://twitter.com/tjake
 ==============================================
 
 Lucandra provides a Lucene IndexReader and IndexWriter that interfaces with Cassandra.
 Solr is also supported.
 
+
+*Mailing List* - http://groups.google.com/group/lucandra-user
 
 Before you get started you should read this article:
      http://blog.sematext.com/2010/02/09/lucandra-a-cassandra-based-lucene-backend/
@@ -88,7 +90,7 @@ The IndexReader caches terms aggressively during search and tries to avoid lots 
 What Works
 ==========
 * Real-Time indexing (documents become available immediately)
-* No optimizing 
+* No optimizing
 * Search
 * Sort
 * Delete
