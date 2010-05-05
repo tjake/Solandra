@@ -69,7 +69,7 @@ public class LucandraTermEnum extends TermEnum {
     private int chunkCount = 0;
 
     private final Cassandra.Iface client;
-    private final Term finalTerm = new Term("" + new Character((char) 255), "" + new Character((char) 255));
+    private final Term finalTerm = new Term(CassandraUtils.delimeter, CassandraUtils.finalToken);
 
     private static final Logger logger = Logger.getLogger(LucandraTermEnum.class);
 
@@ -145,15 +145,11 @@ public class LucandraTermEnum extends TermEnum {
                 );
                 
         // this is where we stop;
-        String endTerm = null;
-        try {
-            endTerm = CassandraUtils.hashKey(
-                        indexName + CassandraUtils.delimeter + CassandraUtils.createColumnName(skipTo.field(), new String(new byte[]{(byte)255,(byte)255,(byte)255,(byte)255,(byte)255,(byte)255,(byte)255,(byte)255},"UTF-8")) 
-                       );
-        } catch (UnsupportedEncodingException e1) {
-            // TODO Auto-generated catch block
-            e1.printStackTrace();
-        }
+        String endTerm = CassandraUtils.hashKey(
+						indexName + CassandraUtils.delimeter + 
+						CassandraUtils.createColumnName(skipTo.field(), CassandraUtils.finalToken)
+						);
+
         
         if ((!skipTo.equals(chunkBoundryTerm) || termPosition == 0) && termCache != null) {
             termDocFreqBuffer = termCache.subMap(skipTo, termCache.lastKey());

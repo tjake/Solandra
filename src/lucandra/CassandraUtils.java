@@ -63,7 +63,10 @@ public class CassandraUtils {
     public static final String keySpace            = "Lucandra";
     public static final String termVecColumnFamily = "TermVectors";
     public static final String docColumnFamily     = "Documents";
-    public static final String delimeter           = ""+new Character((char)255)+new Character((char)255);
+    public static final byte   delimeterBytes[]    = new byte[]{(byte)255,(byte)255,(byte)255,(byte)255};
+    public static final String delimeter           = new String(delimeterBytes);
+    public static final String finalToken          = new String("\ufffe\ufffe");
+
     public static final String documentIdField     = delimeter+"KEY"+delimeter;
     public static final String documentMetaField   = delimeter+"META"+delimeter;
     public static final ColumnPath metaColumnPath = new ColumnPath(CassandraUtils.docColumnFamily).setColumn(documentMetaField.getBytes());
@@ -130,22 +133,21 @@ public class CassandraUtils {
     }
 
     public static String createColumnName(String field, String text) {
-        return field + delimeter + text;
+
+	return field + delimeter + text;
+
     }
 
     public static Term parseTerm(String termStr) {
-        String[] parts = null;
-
-              
-      
-        parts = termStr.split(delimeter);
+             
+	int index = termStr.indexOf(delimeter);
         
-
-        if (parts == null || parts.length != 2) {
-            throw new RuntimeException("invalid term format: " + termStr);
+       
+        if (index < 0){
+            throw new RuntimeException("invalid term format: "+index+" " + termStr);
         }
 
-        return new Term(parts[0].intern(), parts[1]);
+        return new Term(termStr.substring(0,index), termStr.substring(index+delimeter.length()));
     }
 
     public static final byte[] intToByteArray(int value) {

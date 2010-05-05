@@ -200,7 +200,8 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
         // get all columns ( this skips meta info )
         SlicePredicate slicePredicate = new SlicePredicate();
-        slicePredicate.setSlice_range(new SliceRange(new byte[] {}, CassandraUtils.delimeter.getBytes(), false, 100));
+        slicePredicate.setSlice_range(new SliceRange(new byte[] {}, CassandraUtils.delimeterBytes, false, 100));
+
 
         long start = System.currentTimeMillis();
 
