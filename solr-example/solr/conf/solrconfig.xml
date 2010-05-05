@@ -65,7 +65,7 @@
 
   <!-- the Solandra high-performance update handler -->
   <updateHandler class="solandra.SolandraIndexWriter">
-    <str name="cassandraHost">10.176.7.162</str>
+     <str name="cassandraHost">127.0.0.1</str>
      <int name="cassandraPort">9160</int>
      <bool name="cassandraFramed">false</bool>
   </updateHandler>
@@ -85,7 +85,7 @@
   -->
   <indexReaderFactory name="IndexReaderFactory" class="solandra.SolandraIndexReaderFactory">
      <str name="indexName">wikipedia</str>
-     <str name="cassandraHost">10.176.7.162</str>
+     <str name="cassandraHost">127.0.0.1</str>
      <int name="cassandraPort">9160</int>
      <bool name="cassandraFramed">false</bool>
   </indexReaderFactory >
