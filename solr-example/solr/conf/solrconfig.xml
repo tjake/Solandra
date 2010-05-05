@@ -84,7 +84,7 @@
        may cause replication to not work correctly. See SOLR-1366 for details.
   -->
   <indexReaderFactory name="IndexReaderFactory" class="solandra.SolandraIndexReaderFactory">
-     <str name="indexName">wikipedia</str>
+     <str name="indexName">example</str>
      <str name="cassandraHost">127.0.0.1</str>
      <int name="cassandraPort">9160</int>
      <bool name="cassandraFramed">false</bool>

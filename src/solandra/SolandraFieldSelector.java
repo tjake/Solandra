@@ -9,9 +9,9 @@ import org.apache.lucene.document.FieldSelectorResult;
 public class SolandraFieldSelector implements FieldSelector {
 
     List<Integer> otherDocsToCache;
-    Set<String> fieldNames;
+    List<byte[]> fieldNames;
     
-    public SolandraFieldSelector(List<Integer> otherDocsToCache, Set<String> fieldNames){
+    public SolandraFieldSelector(List<Integer> otherDocsToCache, List<byte[]> fieldNames){
         this.otherDocsToCache = otherDocsToCache;
         this.fieldNames = fieldNames;
     }
@@ -20,7 +20,7 @@ public class SolandraFieldSelector implements FieldSelector {
         return otherDocsToCache;
     }
     
-    public Set<String> getFieldNames(){
+    public List<byte[]> getFieldNames(){
         return fieldNames;
     }
     

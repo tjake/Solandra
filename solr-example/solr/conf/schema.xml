@@ -436,7 +436,7 @@
    <field name="includes" type="text" indexed="true" stored="true" termVectors="true" termPositions="true" termOffsets="true" />
 
    <field name="weight" type="float" indexed="true" stored="true"/>
-   <field name="price"  type="sfloat" indexed="true" stored="true"/>
+   <field name="price"  type="float" indexed="true" stored="true"/>
    <field name="popularity" type="sint" indexed="true" stored="true" />
    <field name="inStock" type="boolean" indexed="true" stored="true" />
 

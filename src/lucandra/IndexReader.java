@@ -186,13 +186,15 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
         keyMap.put(docNum, CassandraUtils.hashKey(indexName + CassandraUtils.delimeter + docId));
 
-        // Special field selector used to carry list of other docIds to cache in
-        // Parallel for Solr Performance
         
+        List<byte[]> fieldNames = null;
+        
+        // Special field selector used to carry list of other docIds to cache in
+        // Parallel for Solr Performance  
         if (selector != null && selector instanceof SolandraFieldSelector) {
 
             List<Integer> otherDocIds = ((SolandraFieldSelector) selector).getOtherDocsToCache();
-            Set<String> fieldNames = ((SolandraFieldSelector) selector).getFieldNames();
+            fieldNames = ((SolandraFieldSelector) selector).getFieldNames();
             
             logger.debug("Going to bulk load "+otherDocIds.size()+" documents");
             
@@ -209,18 +211,23 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
                     continue;
 
                 keyMap.put(otherDocNum, CassandraUtils.hashKey(indexName + CassandraUtils.delimeter + docKey));
-            }
-
+            }           
         }
-
+        
         ColumnParent columnParent = new ColumnParent();
         columnParent.setColumn_family(CassandraUtils.docColumnFamily);
 
-        // get all columns ( this skips meta info )
         SlicePredicate slicePredicate = new SlicePredicate();
-        slicePredicate.setSlice_range(new SliceRange(new byte[] {}, CassandraUtils.delimeterBytes, false, 100));
+        
+        if (fieldNames == null || fieldNames.size() == 0) {
+            // get all columns ( except this skips meta info )
+            slicePredicate.setSlice_range(new SliceRange(new byte[] {}, CassandraUtils.delimeterBytes, false, 100));
+        } else {
+            
+            slicePredicate.setColumn_names(fieldNames);
+        }
 
-
+       
         long start = System.currentTimeMillis();
 
         try {

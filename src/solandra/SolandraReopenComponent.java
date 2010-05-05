@@ -21,10 +21,10 @@ package solandra;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.log4j.Logger;
 import org.apache.lucene.document.FieldSelector;
 import org.apache.solr.handler.component.ResponseBuilder;
 import org.apache.solr.handler.component.SearchComponent;
@@ -35,6 +35,7 @@ import org.apache.solr.search.DocList;
     
 public class SolandraReopenComponent extends SearchComponent {
 
+    private static final Logger logger = Logger.getLogger(SolandraReopenComponent.class);
     
     public String getDescription() {
        return "Reopens Lucandra readers";
@@ -66,32 +67,42 @@ public class SolandraReopenComponent extends SearchComponent {
         DocList list = rb.getResults().docList;
     
         DocIterator it = list.iterator();
-       
-        
+           
         List<Integer> docIds = new ArrayList<Integer>(list.size());
         while(it.hasNext())
             docIds.add(it.next());
               
+        logger.debug("Fetching "+docIds.size()+" Docs");    
+
         
         if(docIds.size() > 0){
             
-            Set<String> fieldFilter = null;
+            List<byte[]> fieldFilter = null;
             Set<String> returnFields = rb.rsp.getReturnFields();
             if(returnFields != null) {
+              
               // copy return fields list
-              fieldFilter = new HashSet<String>(returnFields);
+              fieldFilter = new ArrayList<byte[]>(returnFields.size());
+              for(String field : returnFields){
+                  fieldFilter.add(field.getBytes());
+              }
+              
+              
               // add highlight fields
               SolrHighlighter highligher = rb.req.getCore().getHighlighter();
               if(highligher.isHighlightingEnabled(rb.req.getParams())) {
                 for(String field: highligher.getHighlightFields(rb.getQuery(), rb.req, null)) 
-                  fieldFilter.add(field);        
+                  if(!returnFields.contains(field))
+                      fieldFilter.add(field.getBytes());        
               }
               // fetch unique key if one exists.
               SchemaField keyField = rb.req.getSearcher().getSchema().getUniqueKeyField();
               if(null != keyField)
-                  fieldFilter.add(keyField.getName());  
+                  if(!returnFields.contains(keyField))
+                      fieldFilter.add(keyField.getName().getBytes());  
             }
             
+    
             
             FieldSelector selector = new SolandraFieldSelector(docIds,fieldFilter);
         
