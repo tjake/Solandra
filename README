@@ -6,11 +6,16 @@ By Jake Luciani - http://twitter.com/tjake
 Lucandra provides a Lucene IndexReader and IndexWriter that interfaces with Cassandra.
 Solr is also supported.
 
+Support
+=======
+Mailing List:
+     http://groups.google.com/group/lucandra-user
 
-*Mailing List* - http://groups.google.com/group/lucandra-user
-
-Before you get started you should read this article:
+Useful articles:
      http://blog.sematext.com/2010/02/09/lucandra-a-cassandra-based-lucene-backend/
+
+Slides:
+     http://www.slideshare.net/otisg/lucandra
 
 You can see Lucandra in action here:
      http://sparse.ly
