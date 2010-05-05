@@ -129,13 +129,17 @@ public class CassandraUtils {
     }
 
     public static String createColumnName(Term term) {
+        
         return createColumnName(term.field(), term.text());
     }
 
     public static String createColumnName(String field, String text) {
-
-	return field + delimeter + text;
-
+        
+        //case of all terms 
+        if(field.equals("") || text == null)
+            return delimeter;
+        
+        return field + delimeter + text;
     }
 
     public static Term parseTerm(String termStr) {

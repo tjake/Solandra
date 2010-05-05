@@ -19,6 +19,7 @@
  */
 package lucandra;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
@@ -36,20 +37,26 @@ import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.SlicePredicate;
 import org.apache.cassandra.thrift.SliceRange;
 import org.apache.log4j.Logger;
+import org.apache.lucene.analysis.SimpleAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.FieldSelector;
 import org.apache.lucene.document.Field.Index;
 import org.apache.lucene.document.Field.Store;
 import org.apache.lucene.index.CorruptIndexException;
+import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.TermDocs;
 import org.apache.lucene.index.TermEnum;
 import org.apache.lucene.index.TermFreqVector;
 import org.apache.lucene.index.TermPositions;
 import org.apache.lucene.index.TermVectorMapper;
+import org.apache.lucene.index.IndexWriter.MaxFieldLength;
 import org.apache.lucene.search.DefaultSimilarity;
 import org.apache.lucene.store.Directory;
+import org.apache.lucene.store.FSDirectory;
+import org.apache.lucene.store.LockObtainFailedException;
+import org.apache.lucene.store.RAMDirectory;
 
 import solandra.SolandraFieldSelector;
 
@@ -59,8 +66,19 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     private final static int numDocs = 1000000;
     private final static byte[] norms = new byte[numDocs];
+    private final static Directory mockDirectory = new RAMDirectory();
     static {
         Arrays.fill(norms, DefaultSimilarity.encodeNorm(1.0f));
+           
+        try {
+            new IndexWriter(mockDirectory, new SimpleAnalyzer(), true, MaxFieldLength.LIMITED);
+        } catch (CorruptIndexException e) {
+           throw new RuntimeException(e);
+        } catch (LockObtainFailedException e) {
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private final String indexName;
@@ -416,12 +434,23 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     @Override
     public Directory directory() {
         clearCache();
-        return null;
+        
+        return mockDirectory;
     }
 
     @Override
     public long getVersion() {
         return 1;
+    }
+
+    @Override
+    public boolean isOptimized() {
+       return true;
+    }
+    
+    @Override
+    public boolean isCurrent() {
+       return true;
     }
 
 }

@@ -65,7 +65,7 @@
 
   <!-- the Solandra high-performance update handler -->
   <updateHandler class="solandra.SolandraIndexWriter">
-    <str name="cassandraHost">localhost</str>
+    <str name="cassandraHost">10.176.7.162</str>
      <int name="cassandraPort">9160</int>
      <bool name="cassandraFramed">false</bool>
   </updateHandler>
@@ -84,8 +84,8 @@
        may cause replication to not work correctly. See SOLR-1366 for details.
   -->
   <indexReaderFactory name="IndexReaderFactory" class="solandra.SolandraIndexReaderFactory">
-     <str name="indexName">example</str>
-     <str name="cassandraHost">localhost</str>
+     <str name="indexName">wikipedia</str>
+     <str name="cassandraHost">10.176.7.162</str>
      <int name="cassandraPort">9160</int>
      <bool name="cassandraFramed">false</bool>
   </indexReaderFactory >
