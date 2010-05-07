@@ -19,8 +19,8 @@
  */
 package lucandra;
 
+import java.io.IOException;
 import java.util.List;
-
 import junit.framework.TestCase;
 
 import org.apache.cassandra.thrift.Cassandra;
@@ -30,9 +30,11 @@ import org.apache.cassandra.thrift.KeySlice;
 import org.apache.cassandra.thrift.SlicePredicate;
 import org.apache.cassandra.thrift.SliceRange;
 import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.cjk.CJKAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
+import org.apache.lucene.document.Field.TermVector;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queryParser.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
@@ -40,12 +42,22 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Sort;
 import org.apache.lucene.search.SortField;
 import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.search.highlight.QueryScorer;
+import org.apache.lucene.search.highlight.SimpleFragmenter;
+import org.apache.lucene.search.highlight.SimpleHTMLFormatter;
+import org.apache.lucene.search.highlight.Highlighter;
+import org.apache.lucene.search.highlight.TokenSources;
 import org.apache.lucene.util.Version;
+
 
 public class LucandraTests extends TestCase {
 
     private static final String indexName = String.valueOf(System.nanoTime());
     private static final Analyzer analyzer = new CJKAnalyzer(Version.LUCENE_30);
+    private static final String text = "this is an example value foobar foobar";
+    private static final String highlightedText = "this is an example value <B>foobar</B> <B>foobar</B>";
+
+    
     private static Cassandra.Iface client;
     static {
         try {
@@ -66,7 +78,7 @@ public class LucandraTests extends TestCase {
         try {
 
             Document doc1 = new Document();
-            Field f = new Field("key", "this is an example value foobar foobar", Field.Store.YES, Field.Index.ANALYZED);
+            Field f = new Field("key", text, Field.Store.YES, Field.Index.ANALYZED, TermVector.WITH_POSITIONS_OFFSETS);
             doc1.add(f);
 
             indexWriter.addDocument(doc1, analyzer);
@@ -153,10 +165,7 @@ public class LucandraTests extends TestCase {
 
         Document doc = searcher.doc(docs.scoreDocs[0].doc);
 
-        assertNotNull(doc.getField("key"));
-        
-        
-        
+        assertNotNull(doc.getField("key"));        
     }
 
     public void testMissingQuery() throws Exception {
@@ -241,5 +250,30 @@ public class LucandraTests extends TestCase {
         assertEquals(1, docs.totalHits);
 
     }
+    
+    public void testHighlight() throws Exception {
 
+        //This tests the TermPositionVector classes
+        
+        IndexReader indexReader = new IndexReader(indexName, client);
+        IndexSearcher searcher = new IndexSearcher(indexReader);
+        QueryParser qp = new QueryParser(Version.LUCENE_30, "key", analyzer);
+
+        // check exact
+        Query q = qp.parse("+key:\"foobar foobar\"");
+        TopDocs docs = searcher.search(q, 10);
+        assertEquals(1, docs.totalHits);
+        
+        SimpleHTMLFormatter formatter = new SimpleHTMLFormatter();                                                                                                       
+        QueryScorer scorer = new QueryScorer(q, "key", text);                                                                                              
+        Highlighter highlighter = new Highlighter(formatter, scorer);                                                                                                    
+        highlighter.setTextFragmenter(new SimpleFragmenter(Integer.MAX_VALUE));                                                                                          
+                                
+        TokenStream tvStream = TokenSources.getTokenStream(indexReader, docs.scoreDocs[0].doc, "key");
+        
+        String rv = highlighter.getBestFragment(tvStream, text);
+        
+        assertNotNull(rv);
+        assertEquals(rv,highlightedText);
+    }
 }

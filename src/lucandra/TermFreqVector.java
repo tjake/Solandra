@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.cassandra.thrift.Cassandra;
+import org.apache.cassandra.thrift.Column;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.cassandra.thrift.ColumnPath;
 import org.apache.cassandra.thrift.ConsistencyLevel;
@@ -49,7 +50,6 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
                 if (!t.field().equals(field))
                     continue;
              
-
                 // add to multiget params
                 keys.add(CassandraUtils.hashKey(
                         indexName+CassandraUtils.delimeter+termStr
@@ -58,31 +58,53 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
 
             
             //Fetch all term vectors in this field
-            Map<String, ColumnOrSuperColumn> termVec = client.multiget(CassandraUtils.keySpace, keys, new ColumnPath(CassandraUtils.termVecColumnFamily).setColumn(docId.getBytes()), ConsistencyLevel.ONE);
+            Map<String, ColumnOrSuperColumn> allTermInfo = client.multiget(CassandraUtils.keySpace, keys, new ColumnPath(CassandraUtils.termVecColumnFamily).setSuper_column(docId.getBytes()), ConsistencyLevel.ONE);
             
-            terms    = new String[termVec.size()];
-            freqVec  = new int[termVec.size()];
-            termPositions = new int[termVec.size()][];
-            termOffsets  = new TermVectorOffsetInfo[termVec.size()][];
+            terms         = new String[allTermInfo.size()];
+            freqVec       = new int[allTermInfo.size()];
+            termPositions = new int[allTermInfo.size()][];
+            termOffsets   = new TermVectorOffsetInfo[allTermInfo.size()][];
             
             int i  = 0;
             
-            for(Map.Entry<String, ColumnOrSuperColumn> e : termVec.entrySet()){
+            for(Map.Entry<String, ColumnOrSuperColumn> e : allTermInfo.entrySet()){
                 String termStr = e.getKey().substring(e.getKey().indexOf(CassandraUtils.delimeter) + CassandraUtils.delimeter.length());
                 
                 Term t = CassandraUtils.parseTerm(termStr);
             
                 terms[i] = t.text();
-                  
-                byte[] value = e.getValue().column.value; 
-                
-                termPositions[i] =  value == null ? new int[]{} : CassandraUtils.byteArrayToIntArray(value);
-                freqVec[i] = termPositions[i].length;
-                termOffsets[i] =  TermVectorOffsetInfo.EMPTY_OFFSET_INFO;/*new TermVectorOffsetInfo[freqVec[i]];
-                for(int j=0; j<freqVec[i]; j++)
-                    termOffsets[i][j] = new TermVectorOffsetInfo(termPositions[i][j]-1 , termPositions[i][j]+terms[i].length());
-                 */
             
+                //Find the offsets and positions
+                Column positionVector = null;
+                Column offsetVector   = null;
+                
+                List<Column> columns  = e.getValue().getSuper_column().getColumns();
+                for(Column c : columns){
+                    
+                    if(Arrays.equals(c.getName(), CassandraUtils.positionVectorKey.getBytes()))
+                        positionVector = c;
+                    
+                    if(Arrays.equals(c.getName(), CassandraUtils.offsetVectorKey.getBytes()))
+                        offsetVector   = c;
+                    
+                }
+            
+                
+                termPositions[i] = positionVector == null ? new int[]{} : CassandraUtils.byteArrayToIntArray(positionVector.value);
+                freqVec[i]       = termPositions[i].length;
+                
+                if(offsetVector == null){
+                    termOffsets[i] = TermVectorOffsetInfo.EMPTY_OFFSET_INFO;
+                }else{
+                    
+                    int[] offsets  = CassandraUtils.byteArrayToIntArray(offsetVector.getValue());
+                    
+                    termOffsets[i] = new TermVectorOffsetInfo[freqVec[i]];
+                    for(int j=0,k=0; j<offsets.length; j+=2,k++){
+                        termOffsets[i][k] = new TermVectorOffsetInfo(offsets[j] , offsets[j+1]);
+                    }
+                }
+        
                 i++;
             }
             

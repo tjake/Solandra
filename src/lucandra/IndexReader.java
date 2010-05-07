@@ -19,7 +19,6 @@
  */
 package lucandra;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
@@ -27,7 +26,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.cassandra.thrift.Cassandra;
@@ -54,7 +52,6 @@ import org.apache.lucene.index.TermVectorMapper;
 import org.apache.lucene.index.IndexWriter.MaxFieldLength;
 import org.apache.lucene.search.DefaultSimilarity;
 import org.apache.lucene.store.Directory;
-import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.store.LockObtainFailedException;
 import org.apache.lucene.store.RAMDirectory;
 
@@ -308,23 +305,19 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     @Override
     public void getTermFreqVector(int arg0, TermVectorMapper arg1) throws IOException {
-        // TODO Auto-generated method stub
         throw new RuntimeException();
-
     }
 
     @Override
     public void getTermFreqVector(int arg0, String arg1, TermVectorMapper arg2) throws IOException {
 
-        throw new UnauthorizedAccessException();
+        throw new RuntimeException();
 
     }
 
     @Override
     public TermFreqVector[] getTermFreqVectors(int arg0) throws IOException {
-        // TODO Auto-generated method stub
         throw new RuntimeException();
-        // return null;
     }
 
     @Override

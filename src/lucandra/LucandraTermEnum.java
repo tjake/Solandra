@@ -20,7 +20,6 @@
 package lucandra;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -200,13 +199,14 @@ public class LucandraTermEnum extends TermEnum {
 
         termDocFreqBuffer = new TreeMap<Term, List<ColumnOrSuperColumn>>();
 
-        ColumnParent columnParent = new ColumnParent(CassandraUtils.termVecColumnFamily);
+        ColumnParent columnParent = new ColumnParent(CassandraUtils.termVecColumnFamily);        
         SlicePredicate slicePredicate = new SlicePredicate();
+       
 
         // Get all columns
         SliceRange sliceRange = new SliceRange(new byte[] {}, new byte[] {}, true, Integer.MAX_VALUE);
         slicePredicate.setSlice_range(sliceRange);
-
+        
         List<KeySlice> columns;
         try {
             columns = client.get_range_slice(CassandraUtils.keySpace, columnParent, slicePredicate, startTerm, endTerm, count, ConsistencyLevel.ONE);
@@ -285,7 +285,7 @@ public class LucandraTermEnum extends TermEnum {
         Map<Integer, ColumnOrSuperColumn> termDocMap = new HashMap<Integer, ColumnOrSuperColumn>();
 
         for (ColumnOrSuperColumn col : termDocs) {
-            int docId = indexReader.addDocument(col.getColumn().getName());
+            int docId = indexReader.addDocument(col.getSuper_column().getName());
             termDocMap.put(docId, col);
             docIds[idx++] = docId;
         }

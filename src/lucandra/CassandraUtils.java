@@ -24,7 +24,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
@@ -46,6 +45,7 @@ import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.Mutation;
 import org.apache.cassandra.thrift.SlicePredicate;
 import org.apache.cassandra.thrift.SliceRange;
+import org.apache.cassandra.thrift.SuperColumn;
 import org.apache.cassandra.thrift.TimedOutException;
 import org.apache.cassandra.thrift.UnavailableException;
 import org.apache.log4j.Logger;
@@ -61,8 +61,11 @@ import org.apache.thrift.transport.TTransportException;
 public class CassandraUtils {
 
     public static final String keySpace            = "Lucandra";
-    public static final String termVecColumnFamily = "TermVectors";
+    public static final String termVecColumnFamily = "TermInfo";
     public static final String docColumnFamily     = "Documents";
+    public static final String positionVectorKey   = "Position";
+    public static final String offsetVectorKey     = "Offsets";
+    public static final List<Integer> emptyArray   = Arrays.asList( new Integer[]{0} );
     public static final byte   delimeterBytes[]    = new byte[]{(byte)255,(byte)255,(byte)255,(byte)255};
     public static final String delimeter           = new String(delimeterBytes);
     public static final String finalToken          = new String("\ufffe\ufffe");
@@ -237,7 +240,7 @@ public class CassandraUtils {
 
     }
 
-    public static void addToMutationMap(Map<String,Map<String,List<Mutation>>> mutationMap, String columnFamily, byte[] column, String key, byte[] value){
+    public static void addToMutationMap(Map<String,Map<String,List<Mutation>>> mutationMap, String columnFamily, byte[] column, String key, byte[] value, Map<String,List<Integer>> superColumns){
         
         
         
@@ -258,7 +261,7 @@ public class CassandraUtils {
         }
         
         
-        if(value == null){ //remove
+        if(value == null && superColumns == null){ //remove
             
             Deletion d = new Deletion(System.currentTimeMillis());
             
@@ -273,13 +276,31 @@ public class CassandraUtils {
         }else{ //insert
                 
             ColumnOrSuperColumn cc = new ColumnOrSuperColumn();
-            cc.setColumn(new Column(column, value, System.currentTimeMillis()));                    
-
+            
+            if(superColumns == null){
+            
+                cc.setColumn(new Column(column, value, System.currentTimeMillis()));                    
+            
+            } else {
+                
+                SuperColumn sc = new SuperColumn();
+                List<Column> columns = new ArrayList<Column>();
+                
+                sc.setName(column);
+                sc.setColumns(columns);
+                
+                for(Map.Entry<String, List<Integer>> e : superColumns.entrySet()){
+                    columns.add(new Column(e.getKey().getBytes(), intVectorToByteArray(e.getValue()), System.currentTimeMillis()));
+                }
+                                        
+                cc.setSuper_column(sc);      
+            }
+            
             mutation.setColumn_or_supercolumn(cc);
         }
         
-        mutationList.add(mutation);
         
+        mutationList.add(mutation);       
     }
     
     public static void robustBatchInsert(Cassandra.Iface client, Map<String,Map<String,List<Mutation>>> mutationMap) {

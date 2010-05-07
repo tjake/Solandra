@@ -22,7 +22,6 @@ package lucandra;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,12 +42,12 @@ import org.apache.cassandra.thrift.UnavailableException;
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
 import org.apache.lucene.analysis.tokenattributes.TermAttribute;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Fieldable;
 import org.apache.lucene.index.CorruptIndexException;
-import org.apache.lucene.index.FieldInvertState;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
@@ -101,8 +100,9 @@ public class IndexWriter {
                     tokens = analyzer.tokenStream(field.name(), new StringReader(field.stringValue()));
                 }
 
-                // collect term frequencies per doc
-                Map<String, List<Integer>> termPositions = new HashMap<String, List<Integer>>();
+                // collect term information per field
+                Map<String, Map<String,List<Integer>>> allTermInformation = new HashMap<String, Map<String,List<Integer>>>();
+                
                 int lastOffset = 0;
                 if (position > 0) {
                     position += analyzer.getPositionIncrementGap(field.name());
@@ -111,35 +111,63 @@ public class IndexWriter {
                 // Build the termPositions vector for all terms
 	          
                 tokens.reset(); // reset the TokenStream to the first token
+                
                 // set up token attributes we are working on
-                PositionIncrementAttribute posIncrAttribute = tokens.addAttribute(PositionIncrementAttribute.class);
-                TermAttribute termAttribute = tokens.addAttribute(TermAttribute.class);
+                OffsetAttribute             offsetAttribute  = tokens.addAttribute(OffsetAttribute.class);
+                PositionIncrementAttribute  posIncrAttribute = tokens.addAttribute(PositionIncrementAttribute.class);
+                TermAttribute               termAttribute    = tokens.addAttribute(TermAttribute.class);
 
                 while (tokens.incrementToken()) {
-                	String term = CassandraUtils.createColumnName(field.name(),
-                			termAttribute.term());
+                	String term = CassandraUtils.createColumnName(field.name(),termAttribute.term());
+                	
                 	allIndexedTerms.add(term);
 
-                	List<Integer> pvec = termPositions.get(term);
+                	//fetch all collected information for this term
+                	Map<String,List<Integer>> termInfo = allTermInformation.get(term);
 
-                	if (pvec == null) {
-                		pvec = new ArrayList<Integer>();
-                		termPositions.put(term, pvec);
+                	if (termInfo == null) {
+                		termInfo = new HashMap<String,List<Integer>>();
+                		allTermInformation.put(term, termInfo);
                 	}
 
-                	position += (posIncrAttribute.getPositionIncrement() - 1);
-                	pvec.add(++position);
+                	//position vector
+                	if(true){//field.isStorePositionWithTermVector()){
+                	    position += (posIncrAttribute.getPositionIncrement() - 1);
+                	    
+                	    List<Integer> positionVector = termInfo.get(CassandraUtils.positionVectorKey);
+                	    
+                	    if(positionVector == null){
+                	        positionVector = new ArrayList<Integer>();
+                	        termInfo.put(CassandraUtils.positionVectorKey, positionVector);
+                	    }
+                	    
+                        positionVector.add(++position);
+                	}
+                	
+                	if(field.isStoreOffsetWithTermVector()){
+
+                	    List<Integer> offsetVector = termInfo.get(CassandraUtils.offsetVectorKey);
+                	    if(offsetVector == null){
+                	        offsetVector = new ArrayList<Integer>();
+                	        termInfo.put(CassandraUtils.offsetVectorKey, offsetVector);
+                	    }
+                	    
+                	    offsetVector.add( lastOffset + offsetAttribute.startOffset());
+                        offsetVector.add( lastOffset + offsetAttribute.endOffset());
+                        
+                	}
+                	
+                	
                 }
 
-                for (Map.Entry<String, List<Integer>> term : termPositions.entrySet()) {
+                for (Map.Entry<String, Map<String,List<Integer>>> term : allTermInformation.entrySet()) {
 
                     // Terms are stored within a unique key combination
                     // This is required since cassandra loads all column
                     // families for a key into memory
                     String key = indexName + CassandraUtils.delimeter + term.getKey();
                     
-                    CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.termVecColumnFamily, docId.getBytes(), CassandraUtils.hashKey(key), CassandraUtils.intVectorToByteArray(term.getValue()));
-                    
+                    CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.termVecColumnFamily, docId.getBytes(), CassandraUtils.hashKey(key), null,term.getValue());                    
                 }
             }
 
@@ -150,7 +178,10 @@ public class IndexWriter {
                 
                 String key = indexName + CassandraUtils.delimeter + term;
 
-                CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.termVecColumnFamily, docId.getBytes(), CassandraUtils.hashKey(key), CassandraUtils.intVectorToByteArray(Arrays.asList(new Integer[] { 0 })));
+                Map<String,List<Integer>> termMap = new HashMap<String,List<Integer>>();
+                termMap.put(CassandraUtils.positionVectorKey, CassandraUtils.emptyArray);
+                
+                CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.termVecColumnFamily, docId.getBytes(), CassandraUtils.hashKey(key), null,termMap);
                
             }
 
@@ -167,7 +198,7 @@ public class IndexWriter {
                 
                 String key = indexName+CassandraUtils.delimeter+docId;
                 
-                CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.docColumnFamily, field.name().getBytes(), CassandraUtils.hashKey(key), value);
+                CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.docColumnFamily, field.name().getBytes(), CassandraUtils.hashKey(key), value, null);
                             
             }
         }
@@ -175,7 +206,7 @@ public class IndexWriter {
         //Finally, Store meta-data so we can delete this document
         String key = indexName+CassandraUtils.delimeter+docId;
         
-        CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.docColumnFamily, CassandraUtils.documentMetaField.getBytes(), CassandraUtils.hashKey(key), CassandraUtils.toBytes(allIndexedTerms));
+        CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.docColumnFamily, CassandraUtils.documentMetaField.getBytes(), CassandraUtils.hashKey(key), CassandraUtils.toBytes(allIndexedTerms), null);
         
        
         
@@ -225,7 +256,7 @@ public class IndexWriter {
                 
             //delete by documentId
             for(ColumnOrSuperColumn docInfo : docs){
-                deleteLucandraDocument(docInfo.column.name);
+                deleteLucandraDocument(docInfo.getSuper_column().getName());
             }
                               
         } catch (InvalidRequestException e) {
@@ -255,7 +286,7 @@ public class IndexWriter {
             
             key = indexName+CassandraUtils.delimeter+termStr;
             
-            CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.termVecColumnFamily, docId, CassandraUtils.hashKey(key), null);                                        
+            CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.termVecColumnFamily, docId, CassandraUtils.hashKey(key), null, null);                                        
         }
     
         

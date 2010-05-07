@@ -20,15 +20,16 @@
 package lucandra;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 
+import org.apache.cassandra.thrift.Column;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.log4j.Logger;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.TermDocs;
 import org.apache.lucene.index.TermEnum;
 import org.apache.lucene.index.TermPositions;
-import org.apache.solr.request.*;
 
 public class LucandraTermDocs implements TermDocs, TermPositions {
 
@@ -54,14 +55,28 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         if (docPosition < 0)
             docPosition = 0;
 
-        int docid = indexReader.addDocument(termDocs.get(docPosition).column.getName());
+        int docid = indexReader.addDocument(termDocs.get(docPosition).getSuper_column().getName());
 
         return docid;
     }
 
     public int freq() {
 
-        termPositionArray = CassandraUtils.byteArrayToIntArray(termDocs.get(docPosition).column.getValue());
+        //Find the positionVector
+        List<Column> columns  = termDocs.get(docPosition).getSuper_column().getColumns();
+        Column positionVector = null;
+        
+        for(Column c : columns){
+            if(Arrays.equals(CassandraUtils.positionVectorKey.getBytes(), c.getName())){
+                positionVector = c;
+            }
+        }
+        
+        if(positionVector == null){
+            throw new RuntimeException("positionVector missing from supercolumn");
+        }
+        
+        termPositionArray = CassandraUtils.byteArrayToIntArray(positionVector.getValue());
         termPosition = 0;
 
         return termPositionArray.length;
