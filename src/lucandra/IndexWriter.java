@@ -95,7 +95,7 @@ public class IndexWriter {
         for (Fieldable field : (List<Fieldable>) doc.getFields()) {
 
             // Indexed field
-            if (field.isIndexed() && field.isTokenized()) {
+            if (field.isIndexed()) {
 
                 TokenStream tokens = field.tokenStreamValue();
 
@@ -116,8 +116,17 @@ public class IndexWriter {
                 tokens.reset(); // reset the TokenStream to the first token
                 
                 // set up token attributes we are working on
-                OffsetAttribute             offsetAttribute  = (OffsetAttribute) tokens.addAttribute(OffsetAttribute.class);
-                PositionIncrementAttribute  posIncrAttribute = (PositionIncrementAttribute) tokens.addAttribute(PositionIncrementAttribute.class);
+                
+                //offsets
+                OffsetAttribute             offsetAttribute  = null;
+                if(field.isStoreOffsetWithTermVector())
+                    offsetAttribute = (OffsetAttribute) tokens.addAttribute(OffsetAttribute.class);
+                
+                //positions
+                PositionIncrementAttribute  posIncrAttribute = null;
+                if(field.isStorePositionWithTermVector())
+                    posIncrAttribute = (PositionIncrementAttribute) tokens.addAttribute(PositionIncrementAttribute.class);
+                
                 TermAttribute               termAttribute    = (TermAttribute) tokens.addAttribute(TermAttribute.class);
 
                 while (tokens.incrementToken()) {
@@ -133,8 +142,23 @@ public class IndexWriter {
                 		allTermInformation.put(term, termInfo);
                 	}
 
+                	//term frequency
+                	{
+                	   List<Integer> termFrequency = termInfo.get(CassandraUtils.termFrequencyKey);
+                	               	
+                	   if(termFrequency == null){
+                	       termFrequency = new ArrayList<Integer>();
+                	       termFrequency.add(0);
+                	       termInfo.put(CassandraUtils.termFrequencyKey, termFrequency);
+                	   }
+                	
+                	   //increment
+                	   termFrequency.set(0, termFrequency.get(0)+1);                	   
+                	}
+                	
+                	               	
                 	//position vector
-                	if(true){//field.isStorePositionWithTermVector()){
+                	if(field.isStorePositionWithTermVector()){
                 	    position += (posIncrAttribute.getPositionIncrement() - 1);
                 	    
                 	    List<Integer> positionVector = termInfo.get(CassandraUtils.positionVectorKey);

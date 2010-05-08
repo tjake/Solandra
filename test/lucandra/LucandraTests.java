@@ -19,8 +19,8 @@
  */
 package lucandra;
 
-import java.io.IOException;
 import java.util.List;
+
 import junit.framework.TestCase;
 
 import org.apache.cassandra.thrift.Cassandra;
@@ -42,10 +42,10 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Sort;
 import org.apache.lucene.search.SortField;
 import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.search.highlight.Highlighter;
 import org.apache.lucene.search.highlight.QueryScorer;
 import org.apache.lucene.search.highlight.SimpleFragmenter;
 import org.apache.lucene.search.highlight.SimpleHTMLFormatter;
-import org.apache.lucene.search.highlight.Highlighter;
 import org.apache.lucene.search.highlight.TokenSources;
 import org.apache.lucene.util.Version;
 
@@ -69,9 +69,6 @@ public class LucandraTests extends TestCase {
 
     private static final IndexWriter indexWriter = new IndexWriter(indexName, client);
 
-    public void testUnicodeSplit(){
-        
-    }
     
     public void testWriter() {
 

@@ -63,8 +63,11 @@ public class CassandraUtils {
     public static final String keySpace            = "Lucandra";
     public static final String termVecColumnFamily = "TermInfo";
     public static final String docColumnFamily     = "Documents";
+    
     public static final String positionVectorKey   = "Position";
     public static final String offsetVectorKey     = "Offsets";
+    public static final String termFrequencyKey    = "Frequencies";
+    
     public static final List<Integer> emptyArray   = Arrays.asList( new Integer[]{0} );
     public static final byte   delimeterBytes[]    = new byte[]{(byte)255,(byte)255,(byte)255,(byte)255};
     public static final String delimeter           = new String(delimeterBytes);

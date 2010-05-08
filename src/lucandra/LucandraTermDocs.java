@@ -62,24 +62,31 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
 
     public int freq() {
 
-        //Find the positionVector
+        //Find the termFrequency
         List<Column> columns  = termDocs.get(docPosition).getSuper_column().getColumns();
+        Column termFrequency = null;
         Column positionVector = null;
         
         for(Column c : columns){
+            if(Arrays.equals(CassandraUtils.termFrequencyKey.getBytes(), c.getName())){
+                termFrequency = c;
+            }
+            
             if(Arrays.equals(CassandraUtils.positionVectorKey.getBytes(), c.getName())){
                 positionVector = c;
             }
         }
         
-        if(positionVector == null){
-            throw new RuntimeException("positionVector missing from supercolumn");
+        if(termFrequency == null){
+            throw new RuntimeException("termFrequency is missing from supercolumn");
         }
         
-        termPositionArray = CassandraUtils.byteArrayToIntArray(positionVector.getValue());
-        termPosition = 0;
+        
+        Integer freq      = CassandraUtils.byteArrayToInt(termFrequency.getValue());
+        termPositionArray =  positionVector == null ? null : CassandraUtils.byteArrayToIntArray(positionVector.getValue());
+        termPosition      = 0;
 
-        return termPositionArray.length;
+        return freq;
     }
 
     public boolean next() throws IOException {

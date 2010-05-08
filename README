@@ -94,7 +94,7 @@ The IndexReader caches terms aggressively during search and tries to avoid lots 
 
 What Works
 ==========
-* Real-Time indexing (documents become available immediately)
+* Real-Time indexing (documents become available almost immediately)
 * No optimizing
 * Search
 * Sort
