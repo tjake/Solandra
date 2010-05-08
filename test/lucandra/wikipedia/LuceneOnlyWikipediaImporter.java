@@ -53,7 +53,7 @@ public class LuceneOnlyWikipediaImporter {
         pageCount = 0;
         size = 0;
 
-        analyzer = new StandardAnalyzer(Version.LUCENE_30);
+        analyzer = new StandardAnalyzer(Version.LUCENE_CURRENT);
         try {
             indexWriter = new IndexWriter(FSDirectory.open(new File("/tmp/wikassandra")), analyzer, true, MaxFieldLength.UNLIMITED);
         } catch (CorruptIndexException e) {

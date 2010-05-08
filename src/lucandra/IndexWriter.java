@@ -52,6 +52,7 @@ import org.apache.lucene.index.Term;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.Similarity;
 import org.apache.lucene.search.TopDocs;
 import org.apache.thrift.TException;
 
@@ -62,6 +63,8 @@ public class IndexWriter {
     private final ColumnPath docAllColumnPath;
     private boolean autoCommit;
     private Map<String,Map<String,List<Mutation>>> mutationMap;
+    
+    private Similarity similarity = Similarity.getDefault(); // how to normalize;     
     
     private static final Logger logger = Logger.getLogger(IndexWriter.class);
 
@@ -113,9 +116,9 @@ public class IndexWriter {
                 tokens.reset(); // reset the TokenStream to the first token
                 
                 // set up token attributes we are working on
-                OffsetAttribute             offsetAttribute  = tokens.addAttribute(OffsetAttribute.class);
-                PositionIncrementAttribute  posIncrAttribute = tokens.addAttribute(PositionIncrementAttribute.class);
-                TermAttribute               termAttribute    = tokens.addAttribute(TermAttribute.class);
+                OffsetAttribute             offsetAttribute  = (OffsetAttribute) tokens.addAttribute(OffsetAttribute.class);
+                PositionIncrementAttribute  posIncrAttribute = (PositionIncrementAttribute) tokens.addAttribute(PositionIncrementAttribute.class);
+                TermAttribute               termAttribute    = (TermAttribute) tokens.addAttribute(TermAttribute.class);
 
                 while (tokens.incrementToken()) {
                 	String term = CassandraUtils.createColumnName(field.name(),termAttribute.term());
@@ -144,6 +147,7 @@ public class IndexWriter {
                         positionVector.add(++position);
                 	}
                 	
+                	//term offsets
                 	if(field.isStoreOffsetWithTermVector()){
 
                 	    List<Integer> offsetVector = termInfo.get(CassandraUtils.offsetVectorKey);
@@ -155,16 +159,14 @@ public class IndexWriter {
                 	    offsetVector.add( lastOffset + offsetAttribute.startOffset());
                         offsetVector.add( lastOffset + offsetAttribute.endOffset());
                         
-                	}
-                	
-                	
+                	}              	                	
                 }
 
                 for (Map.Entry<String, Map<String,List<Integer>>> term : allTermInformation.entrySet()) {
 
                     // Terms are stored within a unique key combination
-                    // This is required since cassandra loads all column
-                    // families for a key into memory
+                    // This is required since cassandra loads all columns
+                    // in a key/column family into memory
                     String key = indexName + CassandraUtils.delimeter + term.getKey();
                     
                     CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.termVecColumnFamily, docId.getBytes(), CassandraUtils.hashKey(key), null,term.getValue());                    

@@ -124,7 +124,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     }
 
     @Override
-    protected void doCommit(Map<String, String> commitUserData) throws IOException {
+    protected void doCommit() throws IOException {
        clearCache();
     }
 

@@ -71,7 +71,7 @@ public class WikipediaIndexWorker implements Callable<Integer> {
     }
     
     // this is shared by all workers
-    private static Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_30);
+    private static Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_CURRENT);
 
     // this is the article to index
     private Article article;
