@@ -103,6 +103,5 @@ What Works
 
 What's Missing (for now)
 ==============
-* No normalizations are stored (no scoring)
 * You can't walk the documents with index reader
 * Faceting isn't yet supported
