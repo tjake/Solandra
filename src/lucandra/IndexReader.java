@@ -61,7 +61,7 @@ import solandra.SolandraFieldSelector;
 
 public class IndexReader extends org.apache.lucene.index.IndexReader {
 
-    private final static int numDocs = 100000000;
+    private final static int numDocs = 1000000;
     private Map<String,byte[]> fieldNorms = new HashMap<String, byte[]>();
     private final static Directory mockDirectory = new RAMDirectory();
     static {
