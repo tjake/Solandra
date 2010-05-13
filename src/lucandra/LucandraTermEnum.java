@@ -65,6 +65,7 @@ public class LucandraTermEnum extends TermEnum {
     private int actualInitSize = -1;
     private Term initTerm = null;
     private Term chunkBoundryTerm;
+    private String currentField = null;
     private int chunkCount = 0;
 
     private final Cassandra.Iface client;
@@ -85,6 +86,8 @@ public class LucandraTermEnum extends TermEnum {
             return false;
 
         loadTerms(term);
+        
+        currentField = term.field();
 
         return termBuffer.length == 0 ? false : true;
     }
@@ -285,7 +288,7 @@ public class LucandraTermEnum extends TermEnum {
         Map<Integer, ColumnOrSuperColumn> termDocMap = new HashMap<Integer, ColumnOrSuperColumn>();
 
         for (ColumnOrSuperColumn col : termDocs) {
-            int docId = indexReader.addDocument(col.getSuper_column().getName());
+            int docId = indexReader.addDocument(col.getSuper_column(), currentField);
             termDocMap.put(docId, col);
             docIds[idx++] = docId;
         }

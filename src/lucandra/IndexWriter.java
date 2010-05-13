@@ -104,7 +104,7 @@ public class IndexWriter {
                 }
 
                 // collect term information per field
-                Map<String, Map<String,List<Integer>>> allTermInformation = new HashMap<String, Map<String,List<Integer>>>();
+                Map<String, Map<String,List<Number>>> allTermInformation = new HashMap<String, Map<String,List<Number>>>();
                 
                 int lastOffset = 0;
                 if (position > 0) {
@@ -129,31 +129,36 @@ public class IndexWriter {
                 
                 TermAttribute               termAttribute    = (TermAttribute) tokens.addAttribute(TermAttribute.class);
 
+                //store normalizations of field per term per document rather than per field.
+                //this adds more to write but less to read on other side
+                Integer tokensInField = new Integer(0);
+                
                 while (tokens.incrementToken()) {
-                	String term = CassandraUtils.createColumnName(field.name(),termAttribute.term());
+                    tokensInField++;
+                    String term = CassandraUtils.createColumnName(field.name(),termAttribute.term());
                 	
                 	allIndexedTerms.add(term);
 
                 	//fetch all collected information for this term
-                	Map<String,List<Integer>> termInfo = allTermInformation.get(term);
+                	Map<String,List<Number>> termInfo = allTermInformation.get(term);
 
                 	if (termInfo == null) {
-                		termInfo = new HashMap<String,List<Integer>>();
+                		termInfo = new HashMap<String,List<Number>>();
                 		allTermInformation.put(term, termInfo);
                 	}
 
                 	//term frequency
                 	{
-                	   List<Integer> termFrequency = termInfo.get(CassandraUtils.termFrequencyKey);
+                	   List<Number> termFrequency = termInfo.get(CassandraUtils.termFrequencyKey);
                 	               	
                 	   if(termFrequency == null){
-                	       termFrequency = new ArrayList<Integer>();
-                	       termFrequency.add(0);
+                	       termFrequency = new ArrayList<Number>();
+                	       termFrequency.add(new Integer(0));
                 	       termInfo.put(CassandraUtils.termFrequencyKey, termFrequency);
                 	   }
                 	
                 	   //increment
-                	   termFrequency.set(0, termFrequency.get(0)+1);                	   
+                	   termFrequency.set(0, termFrequency.get(0).intValue()+1);                	   
                 	}
                 	
                 	               	
@@ -161,10 +166,10 @@ public class IndexWriter {
                 	if(field.isStorePositionWithTermVector()){
                 	    position += (posIncrAttribute.getPositionIncrement() - 1);
                 	    
-                	    List<Integer> positionVector = termInfo.get(CassandraUtils.positionVectorKey);
+                	    List<Number> positionVector = termInfo.get(CassandraUtils.positionVectorKey);
                 	    
                 	    if(positionVector == null){
-                	        positionVector = new ArrayList<Integer>();
+                	        positionVector = new ArrayList<Number>();
                 	        termInfo.put(CassandraUtils.positionVectorKey, positionVector);
                 	    }
                 	    
@@ -174,9 +179,9 @@ public class IndexWriter {
                 	//term offsets
                 	if(field.isStoreOffsetWithTermVector()){
 
-                	    List<Integer> offsetVector = termInfo.get(CassandraUtils.offsetVectorKey);
+                	    List<Number> offsetVector = termInfo.get(CassandraUtils.offsetVectorKey);
                 	    if(offsetVector == null){
-                	        offsetVector = new ArrayList<Integer>();
+                	        offsetVector = new ArrayList<Number>();
                 	        termInfo.put(CassandraUtils.offsetVectorKey, offsetVector);
                 	    }
                 	    
@@ -186,12 +191,27 @@ public class IndexWriter {
                 	}              	                	
                 }
 
-                for (Map.Entry<String, Map<String,List<Integer>>> term : allTermInformation.entrySet()) {
+                List<Number> bnorm = null;
+                if(!field.getOmitNorms()){
+                    bnorm = new ArrayList<Number>();
+                    float norm = doc.getBoost();
+                    norm *= field.getBoost();
+                    norm *= similarity.lengthNorm(field.name(), tokensInField);
+                    bnorm.add(Similarity.encodeNorm(norm));
+                }
+                
+                for (Map.Entry<String, Map<String,List<Number>>> term : allTermInformation.entrySet()) {
 
                     // Terms are stored within a unique key combination
                     // This is required since cassandra loads all columns
                     // in a key/column family into memory
                     String key = indexName + CassandraUtils.delimeter + term.getKey();
+                    
+                    //Mix in the norm for this field alongside each term
+                    //more writes but faster on read side.
+                    if(!field.getOmitNorms()){
+                        term.getValue().put(CassandraUtils.normsKey, bnorm );
+                    }
                     
                     CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.termVecColumnFamily, docId.getBytes(), CassandraUtils.hashKey(key), null,term.getValue());                    
                 }
@@ -204,7 +224,7 @@ public class IndexWriter {
                 
                 String key = indexName + CassandraUtils.delimeter + term;
 
-                Map<String,List<Integer>> termMap = new HashMap<String,List<Integer>>();
+                Map<String,List<Number>> termMap = new HashMap<String,List<Number>>();
                 termMap.put(CassandraUtils.positionVectorKey, CassandraUtils.emptyArray);
                 
                 CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.termVecColumnFamily, docId.getBytes(), CassandraUtils.hashKey(key), null,termMap);

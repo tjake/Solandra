@@ -67,15 +67,17 @@ public class CassandraUtils {
     public static final String positionVectorKey   = "Position";
     public static final String offsetVectorKey     = "Offsets";
     public static final String termFrequencyKey    = "Frequencies";
+    public static final String normsKey            = "Norms";
     
-    public static final List<Integer> emptyArray   = Arrays.asList( new Integer[]{0} );
+    public static final byte[] emptyByteArray      = new byte[]{}; 
+    public static final List<Number> emptyArray   = Arrays.asList( new Number[]{0} );
     public static final byte   delimeterBytes[]    = new byte[]{(byte)255,(byte)255,(byte)255,(byte)255};
     public static final String delimeter           = new String(delimeterBytes);
     public static final String finalToken          = new String("\ufffe\ufffe");
 
     public static final String documentIdField     = delimeter+"KEY"+delimeter;
     public static final String documentMetaField   = delimeter+"META"+delimeter;
-    public static final ColumnPath metaColumnPath = new ColumnPath(CassandraUtils.docColumnFamily).setColumn(documentMetaField.getBytes());
+    public static final ColumnPath metaColumnPath  = new ColumnPath(CassandraUtils.docColumnFamily).setColumn(documentMetaField.getBytes());
 
 
     public static final String hashChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -168,11 +170,18 @@ public class CassandraUtils {
         return (b[0] << 24) + ((b[1] & 0xFF) << 16) + ((b[2] & 0xFF) << 8) + (b[3] & 0xFF);
     }
 
-    public static final byte[] intVectorToByteArray(List<Integer> intVector) {
+    public static final byte[] intVectorToByteArray(List<Number> intVector) {
+        
+        if(intVector.size() == 0)
+            return emptyByteArray;
+        
+        if(intVector.get(0) instanceof Byte)
+            return new byte[]{intVector.get(0).byteValue()};
+        
         ByteBuffer buffer = ByteBuffer.allocate(4 * intVector.size());
 
-        for (int i : intVector) {
-            buffer.putInt(i);
+        for (Number i : intVector) {
+            buffer.putInt(i.intValue());
         }
 
         return buffer.array();
@@ -243,7 +252,7 @@ public class CassandraUtils {
 
     }
 
-    public static void addToMutationMap(Map<String,Map<String,List<Mutation>>> mutationMap, String columnFamily, byte[] column, String key, byte[] value, Map<String,List<Integer>> superColumns){
+    public static void addToMutationMap(Map<String,Map<String,List<Mutation>>> mutationMap, String columnFamily, byte[] column, String key, byte[] value, Map<String,List<Number>> superColumns){
         
         
         
@@ -292,7 +301,8 @@ public class CassandraUtils {
                 sc.setName(column);
                 sc.setColumns(columns);
                 
-                for(Map.Entry<String, List<Integer>> e : superColumns.entrySet()){
+                for(Map.Entry<String, List<Number>> e : superColumns.entrySet()){        
+                    
                     columns.add(new Column(e.getKey().getBytes(), intVectorToByteArray(e.getValue()), System.currentTimeMillis()));
                 }
                                         

@@ -164,6 +164,26 @@ public class LucandraTests extends TestCase {
 
         assertNotNull(doc.getField("key"));        
     }
+    
+    public void testScore() throws Exception {
+        
+        IndexReader indexReader = new IndexReader(indexName, client);
+        IndexSearcher searcher = new IndexSearcher(indexReader);
+
+        QueryParser qp = new QueryParser(Version.LUCENE_CURRENT, "key", analyzer);
+        Query q = qp.parse("+key:example");
+
+        TopDocs docs = searcher.search(q, 10);
+
+        assertEquals(2, docs.totalHits);
+
+        Document doc = searcher.doc(docs.scoreDocs[0].doc);
+
+        String fld = doc.getField("key").stringValue();
+        //Highest scoring doc should be the one with higher boost
+        assertEquals(fld,"this is another example");      
+        
+    }
 
     public void testMissingQuery() throws Exception {
 

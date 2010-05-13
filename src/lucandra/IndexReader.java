@@ -29,11 +29,13 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.cassandra.thrift.Cassandra;
+import org.apache.cassandra.thrift.Column;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.SlicePredicate;
 import org.apache.cassandra.thrift.SliceRange;
+import org.apache.cassandra.thrift.SuperColumn;
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.SimpleAnalyzer;
 import org.apache.lucene.document.Document;
@@ -50,22 +52,20 @@ import org.apache.lucene.index.TermFreqVector;
 import org.apache.lucene.index.TermPositions;
 import org.apache.lucene.index.TermVectorMapper;
 import org.apache.lucene.index.IndexWriter.MaxFieldLength;
-import org.apache.lucene.search.DefaultSimilarity;
+import org.apache.lucene.search.Similarity;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.LockObtainFailedException;
 import org.apache.lucene.store.RAMDirectory;
 
 import solandra.SolandraFieldSelector;
 
-import com.sun.servicetag.UnauthorizedAccessException;
-
 public class IndexReader extends org.apache.lucene.index.IndexReader {
 
-    private final static int numDocs = 1000000;
-    private final static byte[] norms = new byte[numDocs];
+    private final static int numDocs = 100000;
+    private Map<String,byte[]> fieldNorms = new HashMap<String, byte[]>();
     private final static Directory mockDirectory = new RAMDirectory();
     static {
-        Arrays.fill(norms, DefaultSimilarity.encodeNorm(1.0f));
+        //Arrays.fill(norms, DefaultSimilarity.encodeNorm(1.0f));
            
         try {
             new IndexWriter(mockDirectory, new SimpleAnalyzer(), true, MaxFieldLength.LIMITED);
@@ -130,12 +130,12 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     @Override
     protected void doDelete(int arg0) throws CorruptIndexException, IOException {
-        // throw new UnsupportedOperationException();
+
     }
 
     @Override
     protected void doSetNorm(int arg0, String arg1, byte arg2) throws CorruptIndexException, IOException {
-        // throw new UnsupportedOperationException();
+
     }
 
     @Override
@@ -247,6 +247,12 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
                     Field field = null;
                     String fieldName = new String(col.column.name);
 
+                    //Incase __META__ slips through
+                    if(fieldName.equals(CassandraUtils.metaColumnPath)){
+                        logger.debug("Filtering out __META__ key");
+                        continue;
+                    }
+                    
                     byte[] value;
 
                     if (col.column.value[col.column.value.length - 1] != Byte.MAX_VALUE && col.column.value[col.column.value.length - 1] != Byte.MIN_VALUE) {
@@ -341,14 +347,16 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     }
 
     @Override
-    public byte[] norms(String term) throws IOException {
-        return norms;
+    public byte[] norms(String field) throws IOException {
+        return  fieldNorms.get(field);
     }
 
     @Override
     public void norms(String arg0, byte[] arg1, int arg2) throws IOException {
         // TODO Auto-generated method stub
 
+        throw new RuntimeException();
+        
     }
 
     @Override
@@ -387,11 +395,11 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         return termEnum;
     }
 
-    public int addDocument(byte[] docId) {
+    public int addDocument(SuperColumn docInfo, String field) {
 
         String id;
         try {
-            id = new String(docId, "UTF-8");
+            id = new String(docInfo.name, "UTF-8");
         } catch (UnsupportedEncodingException e) {
             throw new IllegalStateException("Cant make docId a string");
         }
@@ -406,11 +414,49 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
             docIdToDocIndex.put(id, idx);
             docIndexToDocId.put(idx, id);
+            
+            Byte norm = null;
+            for(Column c : docInfo.columns){
+                if(Arrays.equals(c.name, CassandraUtils.normsKey.getBytes())){
+                    if(c.value.length != 1)
+                        throw new IllegalStateException("Norm for field "+field+" must be a single byte");
+                    
+                    norm = c.value[0];
+                }                 
+            }
+            
+            if(norm == null)
+                norm = Similarity.encodeNorm(1.0f);
+            
+            byte[] norms = fieldNorms.get(field);
+            
+            if(norms == null)
+                norms = new byte[1];
+            
+            byte[] _norms = new byte[norms.length+1];
+            System.arraycopy(norms, 0, _norms, 0, norms.length);
+            
+            //last value is not used so we write to the -1
+            _norms[norms.length] = norm;
+            
+            fieldNorms.put(field, _norms);
+            
         }
 
         return idx;
     }
-
+    
+    public int getDocumentNumber(byte[] docId){
+        String id;
+        try {
+            id = new String(docId, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            throw new IllegalStateException("Cant make docId a string");
+        }
+        
+        return docIdToDocIndex.get(id);
+    }
+    
     public String getDocumentId(int docNum) {
         return docIndexToDocId.get(docNum);
     }
