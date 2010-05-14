@@ -247,7 +247,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
                     String fieldName = new String(col.column.name);
 
                     //Incase __META__ slips through
-                    if(fieldName.equals(CassandraUtils.metaColumnPath)){
+                    if(Arrays.equals(col.column.name,CassandraUtils.documentMetaField.getBytes())){
                         logger.debug("Filtering out __META__ key");
                         continue;
                     }
