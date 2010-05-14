@@ -268,7 +268,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
                         value = new byte[col.column.value.length - 1];
                         System.arraycopy(col.column.value, 0, value, 0, col.column.value.length - 1);
 
-                        field = new Field(fieldName, new String(value), Store.YES, Index.ANALYZED);
+                        field = new Field(fieldName, new String(value,"UTF-8"), Store.YES, Index.ANALYZED);
                     }
 
                     cacheDoc.add(field);

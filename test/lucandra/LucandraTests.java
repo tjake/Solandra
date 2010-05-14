@@ -19,6 +19,7 @@
  */
 package lucandra;
 
+import java.nio.charset.Charset;
 import java.util.List;
 
 import junit.framework.TestCase;
@@ -49,7 +50,6 @@ import org.apache.lucene.search.highlight.SimpleHTMLFormatter;
 import org.apache.lucene.search.highlight.TokenSources;
 import org.apache.lucene.util.Version;
 
-
 public class LucandraTests extends TestCase {
 
     private static final String indexName = String.valueOf(System.nanoTime());
@@ -57,7 +57,6 @@ public class LucandraTests extends TestCase {
     private static final String text = "this is an example value foobar foobar";
     private static final String highlightedText = "this is an example value <B>foobar</B> <B>foobar</B>";
 
-    
     private static Cassandra.Iface client;
     static {
         try {
@@ -69,54 +68,48 @@ public class LucandraTests extends TestCase {
 
     private static final IndexWriter indexWriter = new IndexWriter(indexName, client);
 
-    
-    public void testWriter() {
+    public void testWriter() throws Exception {
 
-        try {
+        Document doc1 = new Document();
+        Field f = new Field("key", text, Field.Store.YES, Field.Index.ANALYZED, TermVector.WITH_POSITIONS_OFFSETS);
+        doc1.add(f);
 
-            Document doc1 = new Document();
-            Field f = new Field("key", text, Field.Store.YES, Field.Index.ANALYZED, TermVector.WITH_POSITIONS_OFFSETS);
-            doc1.add(f);
+        indexWriter.addDocument(doc1, analyzer);
 
-            indexWriter.addDocument(doc1, analyzer);
+        Document doc2 = new Document();
+        Field f2 = new Field("key", "this is another example", Field.Store.YES, Field.Index.ANALYZED);
+        doc2.add(f2);
+        indexWriter.addDocument(doc2, analyzer);
 
-            Document doc2 = new Document();
-            Field f2 = new Field("key", "this is another example", Field.Store.YES, Field.Index.ANALYZED);
-            doc2.add(f2);
-            indexWriter.addDocument(doc2, analyzer);           
-            
-            
-            String start = CassandraUtils.hashKey(indexName + CassandraUtils.delimeter + "key" + CassandraUtils.delimeter);
-            String finish = start+CassandraUtils.delimeter;
+        String start = CassandraUtils.hashKey(indexName + CassandraUtils.delimeter + "key" + CassandraUtils.delimeter);
+        String finish = start + CassandraUtils.delimeter;
 
-            ColumnParent columnParent = new ColumnParent(CassandraUtils.termVecColumnFamily);
-            SlicePredicate slicePredicate = new SlicePredicate();
+        ColumnParent columnParent = new ColumnParent(CassandraUtils.termVecColumnFamily);
+        SlicePredicate slicePredicate = new SlicePredicate();
 
-            // Get all columns
-            SliceRange sliceRange = new SliceRange(new byte[] {}, new byte[] {}, true, Integer.MAX_VALUE);
-            slicePredicate.setSlice_range(sliceRange);
+        // Get all columns
+        SliceRange sliceRange = new SliceRange(new byte[] {}, new byte[] {}, true, Integer.MAX_VALUE);
+        slicePredicate.setSlice_range(sliceRange);
 
-            List<KeySlice> columns = client.get_range_slice(CassandraUtils.keySpace, columnParent, slicePredicate, start, finish, 5000, ConsistencyLevel.ONE);
-            
-            assertEquals(5, columns.size());
-            assertEquals(2, indexWriter.docCount());
+        List<KeySlice> columns = client.get_range_slice(CassandraUtils.keySpace, columnParent, slicePredicate, start, finish, 5000, ConsistencyLevel.ONE);
 
-            // Index 10 documents to test order
-            for (int i = 300; i >= 200; i--) {
-                Document doc = new Document();
-                doc.add(new Field("key", "sort this", Field.Store.YES, Field.Index.ANALYZED));
-                doc.add(new Field("date", "test" + i, Field.Store.YES, Field.Index.NOT_ANALYZED));
-                indexWriter.addDocument(doc, analyzer);
-            }
+        assertEquals(5, columns.size());
+        assertEquals(2, indexWriter.docCount());
 
-            //Unicode doc
-            Document d3 = new Document();          
-            d3.add(new Field("key", new String("\u5639\u563b"), Field.Store.YES, Field.Index.ANALYZED));
-            indexWriter.addDocument(d3, analyzer);
-        } catch (Exception e) {
-            e.printStackTrace();
-            fail(e.toString());
+        // Index 10 documents to test order
+        for (int i = 300; i >= 200; i--) {
+            Document doc = new Document();
+            doc.add(new Field("key", "sort this", Field.Store.YES, Field.Index.ANALYZED));
+            doc.add(new Field("date", "test" + i, Field.Store.YES, Field.Index.NOT_ANALYZED));
+            indexWriter.addDocument(doc, analyzer);
         }
+
+        // Unicode doc
+        Document d3 = new Document();
+        d3.add(new Field("key", new String("\u5639\u563b"), Field.Store.YES, Field.Index.ANALYZED));
+        d3.add(new Field("key", new String("samefield"), Field.Store.YES, Field.Index.ANALYZED));
+        indexWriter.addDocument(d3, analyzer);
+
     }
 
     public void testUnicode() throws Exception {
@@ -134,9 +127,28 @@ public class LucandraTests extends TestCase {
 
         assertNotNull(doc.getField("key"));
     }
-    
+
+    public void testMultiValuedFields() throws Exception {
+
+        IndexReader indexReader = new IndexReader(indexName, client);
+        IndexSearcher searcher = new IndexSearcher(indexReader);
+
+        QueryParser qp = new QueryParser(Version.LUCENE_CURRENT, "key", analyzer);
+        Query q = qp.parse("+key:samefield");
+
+        TopDocs docs = searcher.search(q, 10);
+
+        assertEquals(1, docs.totalHits);
+
+        Document doc = searcher.doc(docs.scoreDocs[0].doc);
+
+        String field = doc.getField("key").stringValue();
+        String cmp   = "\u5639\u563b samefield";
+        assertEquals(field,cmp);
+    }
+
     public void testDelete() throws Exception {
-        indexWriter.deleteDocuments(new Term("key",new String("\u5639\u563b")));
+        indexWriter.deleteDocuments(new Term("key", new String("\u5639\u563b")));
         IndexReader indexReader = new IndexReader(indexName, client);
         IndexSearcher searcher = new IndexSearcher(indexReader);
 
@@ -162,11 +174,11 @@ public class LucandraTests extends TestCase {
 
         Document doc = searcher.doc(docs.scoreDocs[0].doc);
 
-        assertNotNull(doc.getField("key"));        
+        assertNotNull(doc.getField("key"));
     }
-    
+
     public void testScore() throws Exception {
-        
+
         IndexReader indexReader = new IndexReader(indexName, client);
         IndexSearcher searcher = new IndexSearcher(indexReader);
 
@@ -180,9 +192,9 @@ public class LucandraTests extends TestCase {
         Document doc = searcher.doc(docs.scoreDocs[0].doc);
 
         String fld = doc.getField("key").stringValue();
-        //Highest scoring doc should be the one with higher boost
-        assertEquals(fld,"this is another example");      
-        
+        // Highest scoring doc should be the one with higher boost
+        assertEquals(fld, "this is another example");
+
     }
 
     public void testMissingQuery() throws Exception {
@@ -267,11 +279,11 @@ public class LucandraTests extends TestCase {
         assertEquals(1, docs.totalHits);
 
     }
-    
+
     public void testHighlight() throws Exception {
 
-        //This tests the TermPositionVector classes
-        
+        // This tests the TermPositionVector classes
+
         IndexReader indexReader = new IndexReader(indexName, client);
         IndexSearcher searcher = new IndexSearcher(indexReader);
         QueryParser qp = new QueryParser(Version.LUCENE_CURRENT, "key", analyzer);
@@ -280,17 +292,17 @@ public class LucandraTests extends TestCase {
         Query q = qp.parse("+key:\"foobar foobar\"");
         TopDocs docs = searcher.search(q, 10);
         assertEquals(1, docs.totalHits);
-        
-        SimpleHTMLFormatter formatter = new SimpleHTMLFormatter();                                                                                                       
-        QueryScorer scorer = new QueryScorer(q, "key", text);                                                                                              
-        Highlighter highlighter = new Highlighter(formatter, scorer);                                                                                                    
-        highlighter.setTextFragmenter(new SimpleFragmenter(Integer.MAX_VALUE));                                                                                          
-                                
+
+        SimpleHTMLFormatter formatter = new SimpleHTMLFormatter();
+        QueryScorer scorer = new QueryScorer(q, "key", text);
+        Highlighter highlighter = new Highlighter(formatter, scorer);
+        highlighter.setTextFragmenter(new SimpleFragmenter(Integer.MAX_VALUE));
+
         TokenStream tvStream = TokenSources.getTokenStream(indexReader, docs.scoreDocs[0].doc, "key");
-        
+
         String rv = highlighter.getBestFragment(tvStream, text);
-        
+
         assertNotNull(rv);
-        assertEquals(rv,highlightedText);
+        assertEquals(rv, highlightedText);
     }
 }

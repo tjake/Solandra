@@ -91,7 +91,7 @@ public class IndexWriter {
             docId = Long.toHexString((long) (System.nanoTime()+(Math.random()*System.nanoTime()))); 
         
         int position = 0;
-
+     
         for (Fieldable field : (List<Fieldable>) doc.getFields()) {
 
             // Indexed field
@@ -234,7 +234,7 @@ public class IndexWriter {
             // Stores each field as a column under this doc key
             if (field.isStored()) {
                 
-                byte[] _value = field.isBinary() ? field.getBinaryValue() : field.stringValue().getBytes();         
+                byte[] _value = field.isBinary() ? field.getBinaryValue() : field.stringValue().getBytes("UTF-8");         
                 
                 //first byte flags if binary or not
                 byte[] value = new byte[_value.length+1];

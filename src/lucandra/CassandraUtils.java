@@ -291,6 +291,24 @@ public class CassandraUtils {
             
             if(superColumns == null){
             
+                //check for multi valued fields
+                for(Mutation m : mutationList){
+                    if(Arrays.equals(m.getColumn_or_supercolumn().getColumn().getName(),column)){
+                        byte[] currentValue = m.getColumn_or_supercolumn().getColumn().getValue();
+                        
+                        byte[] newValue = new byte[currentValue.length + value.length];
+                        System.arraycopy(currentValue, 0, newValue, 0, currentValue.length-1);
+                        newValue[currentValue.length-1] = ' ';
+                        System.arraycopy(value, 0, newValue, currentValue.length, value.length);
+                        
+                        m.getColumn_or_supercolumn().getColumn().setValue(newValue);
+                    
+                        //done
+                        return;
+                    }
+                }
+                
+                
                 cc.setColumn(new Column(column, value, System.currentTimeMillis()));                    
             
             } else {
