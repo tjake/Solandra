@@ -97,10 +97,10 @@
       -->
 
       <ColumnFamily CompareWith="BytesType" Name="Documents"   KeysCached="10%" />
-      <ColumnFamily ColumnType="Super" CompareWith="BytesType" CompareSubcolumnsWith="BytesType" 
+      <ColumnFamily ColumnType="Super" CompareWith="BytesType" CompareSubcolumnsWith="BytesType"
                     Name="TermInfo" KeysCached="10%" />
-      <ColumnFamily CompareWith="BytesType" Name="Norms" KeysCached="10%" />
-      
+
+
       <!--
        ~ Strategy: Setting this to the class that implements
        ~ IReplicaPlacementStrategy will change the way the node picker works.
