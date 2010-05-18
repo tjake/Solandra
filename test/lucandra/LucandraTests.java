@@ -82,8 +82,8 @@ public class LucandraTests extends TestCase {
         indexWriter.addDocument(doc2, analyzer);
 
         String start = CassandraUtils.hashKey(indexName + CassandraUtils.delimeter + "key" + CassandraUtils.delimeter);
-        String finish = start + CassandraUtils.delimeter;
-
+        String finish = "";
+        
         ColumnParent columnParent = new ColumnParent(CassandraUtils.termVecColumnFamily);
         SlicePredicate slicePredicate = new SlicePredicate();
 
@@ -93,8 +93,15 @@ public class LucandraTests extends TestCase {
 
         List<KeySlice> columns = client.get_range_slice(CassandraUtils.keySpace, columnParent, slicePredicate, start, finish, 5000, ConsistencyLevel.ONE);
 
-        assertEquals(5, columns.size());
-        assertEquals(2, indexWriter.docCount());
+        int matchingColumns = 0;
+        for(KeySlice ks : columns){
+            String termStr = ks.getKey().substring(ks.getKey().indexOf(CassandraUtils.delimeter) + CassandraUtils.delimeter.length());
+            Term term = CassandraUtils.parseTerm(termStr);
+            
+            if(term.field().equals("key") && ks.getKey().equals(CassandraUtils.hashKey(indexName+CassandraUtils.delimeter+term.field()+CassandraUtils.delimeter+term.text())))
+                matchingColumns++;
+              
+        }
 
         // Index 10 documents to test order
         for (int i = 300; i >= 200; i--) {
@@ -110,6 +117,11 @@ public class LucandraTests extends TestCase {
         d3.add(new Field("key", new String("samefield"), Field.Store.YES, Field.Index.ANALYZED));
         indexWriter.addDocument(d3, analyzer);
 
+        
+        //
+        assertEquals(5, matchingColumns);
+        assertEquals(104, indexWriter.docCount());
+        
     }
 
     public void testUnicode() throws Exception {

@@ -151,12 +151,15 @@ public class LucandraTermEnum extends TermEnum {
                     indexName + CassandraUtils.delimeter + CassandraUtils.createColumnName(skipTo)
                 );
                 
-        // this is where we stop;
-        String endTerm = CassandraUtils.hashKey(
-						indexName + CassandraUtils.delimeter + 
-						CassandraUtils.createColumnName(skipTo.field(), CassandraUtils.finalToken)
-						);
-
+        // ending term. the initial query we don't care since
+        // we only pull 2 terms, also we don't
+        String endTerm = "";
+      
+        //The boundary condition for this search. currently the field.
+        String boundryTerm = CassandraUtils.hashKey(
+                indexName + CassandraUtils.delimeter + 
+                CassandraUtils.createColumnName(skipTo.field(), CassandraUtils.finalToken)
+                );
         
         if ((!skipTo.equals(chunkBoundryTerm) || termPosition == 0) && termCache != null) {
             termDocFreqBuffer = termCache.subMap(skipTo, termCache.lastKey());
@@ -196,6 +199,11 @@ public class LucandraTermEnum extends TermEnum {
             startTerm = CassandraUtils.hashKey(
                         indexName + CassandraUtils.delimeter + CassandraUtils.createColumnName(chunkBoundryTerm)
                     );
+            
+            
+            //After first pass use the boundary term, since we know on pass 2 we are using the OPP
+            endTerm = boundryTerm;
+            
         }
 
         long start = System.currentTimeMillis();
@@ -234,15 +242,22 @@ public class LucandraTermEnum extends TermEnum {
                 String termStr = entry.getKey().substring(entry.getKey().indexOf(CassandraUtils.delimeter) + CassandraUtils.delimeter.length());
                 Term term = CassandraUtils.parseTerm(termStr);
                 
+                
+                    
+                
                 logger.debug(termStr + " has " + entry.getColumns().size());
                 
-                //check for tombstone keys
-                if(entry.getColumns().size() > 0)
+                //check for tombstone keys or incorrect keys (from RP)
+                if(entry.getColumns().size() > 0 && term.field().equals(skipTo.field()) &&
+                        //from this index
+                        entry.getKey().equals(CassandraUtils.hashKey(indexName+CassandraUtils.delimeter+term.field()+CassandraUtils.delimeter+term.text())))
+                    
                     termDocFreqBuffer.put(term, entry.getColumns());
             }
 
-            if(!termDocFreqBuffer.isEmpty())
+            if(!termDocFreqBuffer.isEmpty()){
                 chunkBoundryTerm = termDocFreqBuffer.lastKey();
+            }
         }
 
         // add a final key (excluded in submap below)

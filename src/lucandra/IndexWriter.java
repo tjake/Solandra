@@ -133,7 +133,7 @@ public class IndexWriter {
                 //this adds more to write but less to read on other side
                 Integer tokensInField = new Integer(0);
                 
-                while (tokens.incrementToken()) {
+                while (tokens.incrementToken()  ) {
                     tokensInField++;
                     String term = CassandraUtils.createColumnName(field.name(),termAttribute.term());
                 	
