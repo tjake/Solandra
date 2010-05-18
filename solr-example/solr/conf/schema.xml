@@ -437,7 +437,7 @@
 
    <field name="weight" type="float" indexed="true" stored="true"/>
    <field name="price"  type="float" indexed="true" stored="true"/>
-   <field name="popularity" type="sint" indexed="true" stored="true" />
+   <field name="popularity" type="int" indexed="true" stored="true" />
    <field name="inStock" type="boolean" indexed="true" stored="true" />
 
 
