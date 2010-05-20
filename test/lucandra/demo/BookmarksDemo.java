@@ -95,7 +95,7 @@ public class BookmarksDemo {
     public static void addBookmark(String url, String title, String tags) throws IOException {
 
         Document doc = new Document();
-        doc.add(new Field("url", url, Store.YES, Index.NO));
+        doc.add(new Field("url", url, Store.YES, Index.NOT_ANALYZED));
         doc.add(new Field("title", title, Store.YES, Index.ANALYZED));
         doc.add(new Field("tags", tags, Store.NO, Index.ANALYZED));
 

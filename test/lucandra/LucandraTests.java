@@ -19,7 +19,6 @@
  */
 package lucandra;
 
-import java.nio.charset.Charset;
 import java.util.List;
 
 import junit.framework.TestCase;
@@ -42,6 +41,7 @@ import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Sort;
 import org.apache.lucene.search.SortField;
+import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.search.highlight.Highlighter;
 import org.apache.lucene.search.highlight.QueryScorer;
@@ -115,6 +115,7 @@ public class LucandraTests extends TestCase {
         Document d3 = new Document();
         d3.add(new Field("key", new String("\u5639\u563b"), Field.Store.YES, Field.Index.ANALYZED));
         d3.add(new Field("key", new String("samefield"), Field.Store.YES, Field.Index.ANALYZED));
+        d3.add(new Field("url", "http://www.google.com", Field.Store.YES, Field.Index.NOT_ANALYZED));
         indexWriter.addDocument(d3, analyzer);
 
         
@@ -159,6 +160,18 @@ public class LucandraTests extends TestCase {
         assertEquals(field,cmp);
     }
 
+    public void testKeywordField() throws Exception {
+        IndexReader indexReader = new IndexReader(indexName, client);
+        IndexSearcher searcher = new IndexSearcher(indexReader);
+
+        
+        TermQuery tq = new TermQuery(new Term("url", "http://www.google.com"));
+        TopDocs topDocs = searcher.search(tq, 10);
+        
+        assertEquals(topDocs.totalHits,1);
+        
+    }
+    
     public void testDelete() throws Exception {
         indexWriter.deleteDocuments(new Term("key", new String("\u5639\u563b")));
         IndexReader indexReader = new IndexReader(indexName, client);

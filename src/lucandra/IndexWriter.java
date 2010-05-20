@@ -225,6 +225,7 @@ public class IndexWriter {
                 String key = indexName + CassandraUtils.delimeter + term;
 
                 Map<String,List<Number>> termMap = new HashMap<String,List<Number>>();
+                termMap.put(CassandraUtils.termFrequencyKey, CassandraUtils.emptyArray);
                 termMap.put(CassandraUtils.positionVectorKey, CassandraUtils.emptyArray);
                 
                 CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.termVecColumnFamily, docId.getBytes(), CassandraUtils.hashKey(key), null,termMap);
