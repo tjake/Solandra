@@ -148,6 +148,16 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         docPosition = -1;
     }
 
+    public List<ColumnOrSuperColumn> filteredSeek(Term term, List<String> docNums){
+      
+        termEnum.loadFilteredTerms(term, docNums);
+       
+        termDocs = termEnum.getTermDocFreq();
+
+        docPosition = -1;
+        return termDocs;
+    }
+    
     //this should be used to find a already loaded doc
     public boolean skipTo(int target) throws IOException {
         do {

@@ -30,8 +30,8 @@ import org.apache.cassandra.thrift.KeySlice;
 import org.apache.cassandra.thrift.SlicePredicate;
 import org.apache.cassandra.thrift.SliceRange;
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.SimpleAnalyzer;
 import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.cjk.CJKAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.Field.TermVector;
@@ -53,7 +53,7 @@ import org.apache.lucene.util.Version;
 public class LucandraTests extends TestCase {
 
     private static final String indexName = String.valueOf(System.nanoTime());
-    private static final Analyzer analyzer = new SimpleAnalyzer();
+    private static final Analyzer analyzer = new CJKAnalyzer(Version.LUCENE_CURRENT);
     private static final String text = "this is an example value foobar foobar";
     private static final String highlightedText = "this is an example value <B>foobar</B> <B>foobar</B>";
 
@@ -120,7 +120,7 @@ public class LucandraTests extends TestCase {
 
         
         //
-        assertEquals(7, matchingColumns);
+        assertEquals(5, matchingColumns);
         assertEquals(104, indexWriter.docCount());
         
     }
@@ -334,5 +334,56 @@ public class LucandraTests extends TestCase {
 
         assertNotNull(rv);
         assertEquals(rv, highlightedText);
+    }
+    
+    public void testLucandraFilter() throws Exception {
+        IndexReader indexReader = new IndexReader(indexName, client);
+        IndexSearcher searcher = new IndexSearcher(indexReader);
+
+        try {
+            for (int i = 0; i < 10; i++) {
+                Document doc1 = new Document();
+                doc1.add(new Field("aKey", "aKey"+i, Field.Store.YES, Field.Index.ANALYZED, TermVector.WITH_POSITIONS_OFFSETS));
+                doc1.add(new Field("category", "category1", Field.Store.YES, Field.Index.ANALYZED, TermVector.WITH_POSITIONS_OFFSETS));
+                indexWriter.addDocument(doc1, analyzer);
+            }
+
+            
+            QueryParser qp = new QueryParser(Version.LUCENE_CURRENT, "aKey", analyzer);
+            Query q = qp.parse("aKey1");
+            LucandraFilter filter =  new LucandraFilter();
+            filter.addTerm(new Term("category", "category1"));
+            TopDocs docs = searcher.search(q,filter, 10);
+            assertEquals(1, docs.totalHits);
+
+            indexReader.reopen();
+            
+            q = qp.parse("aKey1 OR aKey2");
+
+            docs = searcher.search(q,filter, 10);
+            assertEquals(2, docs.totalHits);
+
+            indexReader.reopen();
+
+            
+            q = qp.parse("[aKey0 TO aKey5]");
+
+            docs = searcher.search(q,filter, 10);
+            assertEquals(6, docs.totalHits);
+
+            indexReader.reopen();
+
+            
+            filter =  new LucandraFilter();
+            filter.addTerm(new Term("category", "category0"));
+
+            docs = searcher.search(q,filter, 10);
+            assertEquals(0, docs.totalHits);
+
+        } catch (Exception e) {
+             e.printStackTrace();
+              fail(e.toString());
+        }
+
     }
 }

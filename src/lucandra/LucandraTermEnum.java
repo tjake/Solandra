@@ -20,6 +20,7 @@
 package lucandra;
 
 import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -161,6 +162,7 @@ public class LucandraTermEnum extends TermEnum {
                 CassandraUtils.createColumnName(skipTo.field(), CassandraUtils.finalToken)
                 );
         
+        
         if ((!skipTo.equals(chunkBoundryTerm) || termPosition == 0) && termCache != null) {
             termDocFreqBuffer = termCache.subMap(skipTo, termCache.lastKey());
         } else {          
@@ -288,6 +290,52 @@ public class LucandraTermEnum extends TermEnum {
 
     }
 
+    void loadFilteredTerms(Term term, List<String> docNums)  {
+        long start = System.currentTimeMillis();
+        ColumnParent parent = new ColumnParent();
+        parent.setColumn_family(CassandraUtils.termVecColumnFamily);
+
+        String key = CassandraUtils.hashKey(
+                indexName + CassandraUtils.delimeter + CassandraUtils.createColumnName(term)
+            );
+
+        SlicePredicate slicePredicate = new SlicePredicate();
+
+        
+        for (String docNum : docNums) {
+            slicePredicate.addToColumn_names(docNum.getBytes());
+        }
+
+        
+
+        List<ColumnOrSuperColumn> columsList = null;
+        try {
+            columsList = client.get_slice(CassandraUtils.keySpace, key, parent, slicePredicate, ConsistencyLevel.ONE);
+        } catch (InvalidRequestException e) {
+            throw new RuntimeException(e);
+        } catch (UnavailableException e) {
+            throw new RuntimeException(e);
+        } catch (TimedOutException e) {
+            throw new RuntimeException(e);
+        } catch (TException e) {
+            throw new RuntimeException(e);
+        }catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        termBuffer = new Term[0];
+
+        if (columsList != null  && columsList.size()>0){
+            termBuffer = new Term[1];
+            termBuffer[0] = term;
+            termDocFreqBuffer = new TreeMap<Term, List<ColumnOrSuperColumn>>();
+            termDocFreqBuffer.put(term, columsList);
+        }
+        long end = System.currentTimeMillis();
+        logger.debug("loadFilterdTerms: " + term + "(" + termBuffer.length + ") took " + (end - start) + "ms");
+
+    }
+    
     public final List<ColumnOrSuperColumn> getTermDocFreq() {
         if (termBuffer.length == 0)
             return null;

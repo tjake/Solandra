@@ -498,4 +498,8 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
        return true;
     }
 
+    public Map<Integer, String> getDocIndexToDocId() {
+        return docIndexToDocId;
+    }
+    
 }
