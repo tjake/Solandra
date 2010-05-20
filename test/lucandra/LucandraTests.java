@@ -30,8 +30,8 @@ import org.apache.cassandra.thrift.KeySlice;
 import org.apache.cassandra.thrift.SlicePredicate;
 import org.apache.cassandra.thrift.SliceRange;
 import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.SimpleAnalyzer;
 import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.cjk.CJKAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.Field.TermVector;
@@ -53,7 +53,7 @@ import org.apache.lucene.util.Version;
 public class LucandraTests extends TestCase {
 
     private static final String indexName = String.valueOf(System.nanoTime());
-    private static final Analyzer analyzer = new CJKAnalyzer(Version.LUCENE_CURRENT);
+    private static final Analyzer analyzer = new SimpleAnalyzer();
     private static final String text = "this is an example value foobar foobar";
     private static final String highlightedText = "this is an example value <B>foobar</B> <B>foobar</B>";
 
@@ -120,7 +120,7 @@ public class LucandraTests extends TestCase {
 
         
         //
-        assertEquals(5, matchingColumns);
+        assertEquals(7, matchingColumns);
         assertEquals(104, indexWriter.docCount());
         
     }
@@ -303,6 +303,11 @@ public class LucandraTests extends TestCase {
         TopDocs docs = searcher.search(q, 10);
         assertEquals(1, docs.totalHits);
 
+        
+         q = qp.parse("+key:\"is an\"");
+         docs = searcher.search(q, 10);
+        assertEquals(1, docs.totalHits);
+        
     }
 
     public void testHighlight() throws Exception {

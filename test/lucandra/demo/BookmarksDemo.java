@@ -30,7 +30,7 @@ import lucandra.IndexWriter;
 
 import org.apache.cassandra.thrift.Cassandra;
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.analysis.SimpleAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.Field.Index;
@@ -62,7 +62,7 @@ public class BookmarksDemo {
     private static IndexWriter indexWriter = new IndexWriter("bookmarks", client);
     private static IndexReader indexReader = new IndexReader("bookmarks", client);
     private static IndexSearcher indexSearcher = new IndexSearcher(indexReader);
-    private static Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_CURRENT);
+    private static Analyzer analyzer = new SimpleAnalyzer();
 
     public static void usage() {
         System.out.println("Usage: BookmarkDemo [-index file.tsv] [-search query]");
