@@ -20,7 +20,6 @@
 package lucandra;
 
 import java.io.IOException;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -239,13 +238,10 @@ public class LucandraTermEnum extends TermEnum {
 
         if (actualInitSize > 0) {
             for (KeySlice entry : columns) {
-
+   
                 // term keys look like wikipedia/body/wiki
                 String termStr = entry.getKey().substring(entry.getKey().indexOf(CassandraUtils.delimeter) + CassandraUtils.delimeter.length());
-                Term term = CassandraUtils.parseTerm(termStr);
-                
-                
-                    
+                Term term = CassandraUtils.parseTerm(termStr);                 
                 
                 logger.debug(termStr + " has " + entry.getColumns().size());
                 

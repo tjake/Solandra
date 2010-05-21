@@ -213,7 +213,7 @@ public class IndexWriter {
                         term.getValue().put(CassandraUtils.normsKey, bnorm );
                     }
                     
-                    CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.termVecColumnFamily, docId.getBytes(), CassandraUtils.hashKey(key), null,term.getValue());                    
+                    CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.termVecColumnFamily, docId.getBytes("UTF-8"), CassandraUtils.hashKey(key), null,term.getValue());                    
                 }
             }
 
@@ -228,7 +228,7 @@ public class IndexWriter {
                 termMap.put(CassandraUtils.termFrequencyKey, CassandraUtils.emptyArray);
                 termMap.put(CassandraUtils.positionVectorKey, CassandraUtils.emptyArray);
                 
-                CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.termVecColumnFamily, docId.getBytes(), CassandraUtils.hashKey(key), null,termMap);
+                CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.termVecColumnFamily, docId.getBytes("UTF-8"), CassandraUtils.hashKey(key), null,termMap);
                
             }
 
@@ -245,7 +245,7 @@ public class IndexWriter {
                 
                 String key = indexName+CassandraUtils.delimeter+docId;
                 
-                CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.docColumnFamily, field.name().getBytes(), CassandraUtils.hashKey(key), value, null);
+                CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.docColumnFamily, field.name().getBytes("UTF-8"), CassandraUtils.hashKey(key), value, null);
                             
             }
         }
@@ -253,7 +253,7 @@ public class IndexWriter {
         //Finally, Store meta-data so we can delete this document
         String key = indexName+CassandraUtils.delimeter+docId;
         
-        CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.docColumnFamily, CassandraUtils.documentMetaField.getBytes(), CassandraUtils.hashKey(key), CassandraUtils.toBytes(allIndexedTerms), null);
+        CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.docColumnFamily, CassandraUtils.documentMetaField.getBytes("UTF-8"), CassandraUtils.hashKey(key), CassandraUtils.toBytes(allIndexedTerms), null);
         
        
         
@@ -274,7 +274,7 @@ public class IndexWriter {
             
             String docId = reader.getDocumentId(doc.doc);
             try {
-                deleteLucandraDocument(docId.getBytes());
+                deleteLucandraDocument(docId.getBytes("UTF-8"));
             } catch (InvalidRequestException e) {
                 throw new RuntimeException(e);
             } catch (NotFoundException e) {

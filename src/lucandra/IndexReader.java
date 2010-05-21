@@ -217,7 +217,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         
         if (fieldNames == null || fieldNames.size() == 0) {
             // get all columns ( except this skips meta info )
-            slicePredicate.setSlice_range(new SliceRange(new byte[] {}, CassandraUtils.delimeterBytes, false, 100));
+            slicePredicate.setSlice_range(new SliceRange(new byte[] {}, CassandraUtils.finalToken.getBytes("UTF-8"), false, 100));
         } else {
             
             slicePredicate.setColumn_names(fieldNames);

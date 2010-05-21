@@ -24,6 +24,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
@@ -71,14 +72,19 @@ public class CassandraUtils {
     
     public static final byte[] emptyByteArray      = new byte[]{}; 
     public static final List<Number> emptyArray   = Arrays.asList( new Number[]{0} );
-    public static final byte   delimeterBytes[]    = new byte[]{(byte)255,(byte)255,(byte)255,(byte)255};
-    public static final String delimeter           = new String(delimeterBytes);
+    public static final String delimeter           = new String("\uffff");
     public static final String finalToken          = new String("\ufffe\ufffe");
 
     public static final String documentIdField     = delimeter+"KEY"+delimeter;
     public static final String documentMetaField   = delimeter+"META"+delimeter;
-    public static final ColumnPath metaColumnPath  = new ColumnPath(CassandraUtils.docColumnFamily).setColumn(documentMetaField.getBytes());
-
+    public static final ColumnPath metaColumnPath;
+    static{
+        try {
+            metaColumnPath = new ColumnPath(CassandraUtils.docColumnFamily).setColumn(documentMetaField.getBytes("UTF-8"));
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException("UTF-8 not supported by this JVM");
+        }
+    }
 
     public static final String hashChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     public static final BigInteger CHAR_MASK = new BigInteger("65535");
@@ -321,7 +327,11 @@ public class CassandraUtils {
                 
                 for(Map.Entry<String, List<Number>> e : superColumns.entrySet()){        
                     
-                    columns.add(new Column(e.getKey().getBytes(), intVectorToByteArray(e.getValue()), System.currentTimeMillis()));
+                    try {
+                        columns.add(new Column(e.getKey().getBytes("UTF-8"), intVectorToByteArray(e.getValue()), System.currentTimeMillis()));
+                    } catch (UnsupportedEncodingException e1) {
+                        throw new RuntimeException("UTF-8 not supported by this JVM");
+                    }
                 }
                                         
                 cc.setSuper_column(sc);      
@@ -402,7 +412,11 @@ public class CassandraUtils {
                       
             String salt = key.substring(0,breakPoint);
             
-            md.update(salt.getBytes());
+            try {
+                md.update(salt.getBytes("UTF-8"));
+            } catch (UnsupportedEncodingException e) {
+                throw new RuntimeException("UTF-8 not supported by this JVM");
+            }
             
             return stringForBig( new BigInteger(1,md.digest()),8)+key.substring(indexPoint);
             
