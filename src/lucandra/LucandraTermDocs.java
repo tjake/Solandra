@@ -181,6 +181,10 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
     }
 
     public int nextPosition() throws IOException {
+        
+        if(termPositionArray == null)
+            return -1;
+        
         int pos = termPositionArray[termPosition];
         termPosition++;
 

@@ -303,6 +303,9 @@ public class LucandraTests extends TestCase {
         TopDocs docs = searcher.search(q, 10);
         assertEquals(1, docs.totalHits);
 
+        q = qp.parse("+key:\"not in index\"");
+        docs = searcher.search(q, 10);
+        assertEquals(0, docs.totalHits);
         
          q = qp.parse("+key:\"is an\"");
          docs = searcher.search(q, 10);
@@ -310,6 +313,32 @@ public class LucandraTests extends TestCase {
         
     }
 
+    public void testSimpleAnalyzerWriteRead() throws Exception {
+        
+        Document doc = new Document();
+        Field f = new Field("title", text, Field.Store.YES, Field.Index.ANALYZED);
+        doc.add(f);
+        indexWriter.addDocument(doc, analyzer);
+        
+        IndexReader indexReader = new IndexReader(indexName, client);
+        IndexSearcher searcher = new IndexSearcher(indexReader);
+        QueryParser qp = new QueryParser(Version.LUCENE_CURRENT, "title", analyzer);
+        
+        Query q = qp.parse("foobar");
+        TopDocs docs = searcher.search(q, 10);
+        assertEquals(1, docs.totalHits);
+        
+        q = qp.parse("\"not in index\"");
+        docs = searcher.search(q, 10);
+        assertEquals(0, docs.totalHits);
+        
+        indexReader.reopen();
+        
+        q = qp.parse("\"foobar foobar\"");
+        docs = searcher.search(q, 10);
+        assertEquals(0, docs.totalHits);
+    }
+    
     public void testHighlight() throws Exception {
 
         // This tests the TermPositionVector classes
