@@ -120,9 +120,15 @@ public class CassandraUtils {
         }
 
 
-        return createConnection( System.getProperty("cassandra.host","localhost"),
+        return createRobustConnection( System.getProperty("cassandra.host","localhost"),
                                  Integer.valueOf(System.getProperty("cassandra.port","9160")),
                                  Boolean.valueOf(System.getProperty("cassandra.framed", "false")) );
+    }
+    
+    
+    public static Cassandra.Iface createRobustConnection(String host, Integer port, boolean framed) {
+        
+        return CassandraProxyClient.newInstance(host, port, framed);
     }
     
     public static Cassandra.Client createConnection(String host, Integer port, boolean framed) throws TTransportException {

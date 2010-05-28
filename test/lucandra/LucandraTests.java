@@ -62,6 +62,7 @@ public class LucandraTests extends TestCase {
         try {
             client = CassandraUtils.createConnection();
         } catch (Exception e) {
+            e.printStackTrace();
             fail(e.getLocalizedMessage());
         }
     }
