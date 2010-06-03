@@ -26,6 +26,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.StringTokenizer;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.cassandra.thrift.Cassandra;
@@ -255,23 +256,35 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
                     byte[] value;
 
                     if (col.column.value[col.column.value.length - 1] != Byte.MAX_VALUE && col.column.value[col.column.value.length - 1] != Byte.MIN_VALUE) {
-                        value = col.column.value; // support backwards
-                        // compatibility
-                        field = new Field(fieldName, new String(value), Store.YES, Index.ANALYZED);
-
-                    } else if (col.column.value[col.column.value.length - 1] == Byte.MAX_VALUE) {
+                        throw new CorruptIndexException("Lucandra field is not properly encoded: "+docId+"("+fieldName+")");
+                   
+                    } else if (col.column.value[col.column.value.length - 1] == Byte.MAX_VALUE) { //Binary
                         value = new byte[col.column.value.length - 1];
                         System.arraycopy(col.column.value, 0, value, 0, col.column.value.length - 1);
 
                         field = new Field(fieldName, value, Store.YES);
-                    } else if (col.column.value[col.column.value.length - 1] == Byte.MIN_VALUE) {
+                        cacheDoc.add(field);
+                    } else if (col.column.value[col.column.value.length - 1] == Byte.MIN_VALUE) { //String
                         value = new byte[col.column.value.length - 1];
                         System.arraycopy(col.column.value, 0, value, 0, col.column.value.length - 1);
-
-                        field = new Field(fieldName, new String(value,"UTF-8"), Store.YES, Index.ANALYZED);
+                        
+                        //Check for multi-fields
+                        String fieldString = new String(value,"UTF-8");
+                        
+                        if(fieldString.indexOf(CassandraUtils.delimeter) >= 0 ){
+                            StringTokenizer tok = new StringTokenizer(fieldString,CassandraUtils.delimeter); 
+                            while(tok.hasMoreTokens()) {
+                                field = new Field(fieldName, tok.nextToken(), Store.YES, Index.ANALYZED);
+                                cacheDoc.add(field);
+                            }
+                        }else{
+                        
+                            field = new Field(fieldName, fieldString, Store.YES, Index.ANALYZED);
+                            cacheDoc.add(field);
+                        }
                     }
 
-                    cacheDoc.add(field);
+                    
                 }
                 
                 //Mark the required doc

@@ -71,15 +71,18 @@ public class CassandraUtils {
     public static final String normsKey            = "Norms";
     
     public static final byte[] emptyByteArray      = new byte[]{}; 
-    public static final List<Number> emptyArray   = Arrays.asList( new Number[]{0} );
+    public static final List<Number> emptyArray    = Arrays.asList( new Number[]{0} );
     public static final String delimeter           = new String("\uffff");
+    public static final byte[] delimeterBytes;
+    
     public static final String finalToken          = new String("\ufffe\ufffe");
-
+    
     public static final String documentIdField     = delimeter+"KEY"+delimeter;
     public static final String documentMetaField   = delimeter+"META"+delimeter;
     public static final ColumnPath metaColumnPath;
     static{
         try {
+            delimeterBytes = delimeter.getBytes("UTF-8");
             metaColumnPath = new ColumnPath(CassandraUtils.docColumnFamily).setColumn(documentMetaField.getBytes("UTF-8"));
         } catch (UnsupportedEncodingException e) {
             throw new RuntimeException("UTF-8 not supported by this JVM");
@@ -308,10 +311,10 @@ public class CassandraUtils {
                     if(Arrays.equals(m.getColumn_or_supercolumn().getColumn().getName(),column)){
                         byte[] currentValue = m.getColumn_or_supercolumn().getColumn().getValue();
                         
-                        byte[] newValue = new byte[currentValue.length + value.length];
+                        byte[] newValue = new byte[currentValue.length + delimeterBytes.length + value.length - 1 ];
                         System.arraycopy(currentValue, 0, newValue, 0, currentValue.length-1);
-                        newValue[currentValue.length-1] = ' ';
-                        System.arraycopy(value, 0, newValue, currentValue.length, value.length);
+                        System.arraycopy(delimeterBytes, 0, newValue, currentValue.length-1, delimeterBytes.length);
+                        System.arraycopy(value, 0, newValue, currentValue.length+delimeterBytes.length-1, value.length);
                         
                         m.getColumn_or_supercolumn().getColumn().setValue(newValue);
                     

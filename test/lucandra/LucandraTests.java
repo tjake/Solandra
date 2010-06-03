@@ -19,6 +19,7 @@
  */
 package lucandra;
 
+import java.util.Arrays;
 import java.util.List;
 
 import junit.framework.TestCase;
@@ -156,9 +157,15 @@ public class LucandraTests extends TestCase {
 
         Document doc = searcher.doc(docs.scoreDocs[0].doc);
 
-        String field = doc.getField("key").stringValue();
-        String cmp   = "\u5639\u563b samefield";
-        assertEquals(field,cmp);
+        Field[] fields = doc.getFields("key");
+        String[] tests = new String[]{"\u5639\u563b","samefield"};
+        
+        assertEquals(2,fields.length);
+        
+        for(int i=0; i<fields.length; i++){          
+            assertEquals(tests[i],fields[i].stringValue());
+        }        
+               
     }
 
     public void testKeywordField() throws Exception {
