@@ -31,8 +31,6 @@ import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 import org.apache.thrift.transport.TTransportException;
 
-import sun.security.action.GetBooleanAction;
-
 /**
  * This wraps the underlying Cassandra thrift client and attempts to handle disconnect errors.
  * 
