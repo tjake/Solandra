@@ -72,11 +72,18 @@ public class SolandraIndexReaderFactory extends IndexReaderFactory {
         
         Cassandra.Iface client;
        
-        try{
-            client = CassandraUtils.createConnection(cassandraHost,cassandraPort,cassandraFramed);       
-        }catch(TTransportException e){
-            throw new IOException(e.getLocalizedMessage());
-        }
+       
+        /*try {
+            client = CassandraUtils.createConnection(cassandraHost,cassandraPort,cassandraFramed);
+        } catch (TTransportException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+            throw new IOException();
+        }  */
+        
+        client = CassandraUtils.createRobustConnection(cassandraHost,cassandraPort,cassandraFramed,true);
+
+        
                 
         return new IndexReader(indexName, client);        
     }

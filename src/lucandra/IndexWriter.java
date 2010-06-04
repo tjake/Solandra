@@ -62,7 +62,7 @@ public class IndexWriter {
     private final Cassandra.Iface client;
     private final ColumnPath docAllColumnPath;
     private boolean autoCommit;
-    private Map<String,Map<String,List<Mutation>>> mutationMap;
+    private static final ThreadLocal<Map<String,Map<String,List<Mutation>>>> mutationMap = new ThreadLocal<Map<String,Map<String,List<Mutation>>>>();
     
     private Similarity similarity = Similarity.getDefault(); // how to normalize;     
     
@@ -74,8 +74,7 @@ public class IndexWriter {
         this.client = client;
         autoCommit  = true;
         docAllColumnPath = new ColumnPath(CassandraUtils.docColumnFamily);
-        
-        mutationMap = new HashMap<String,Map<String,List<Mutation>>>();
+            
     }
 
     @SuppressWarnings("unchecked")
@@ -213,7 +212,7 @@ public class IndexWriter {
                         term.getValue().put(CassandraUtils.normsKey, bnorm );
                     }
                     
-                    CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.termVecColumnFamily, docId.getBytes("UTF-8"), CassandraUtils.hashKey(key), null,term.getValue());                    
+                    CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.termVecColumnFamily, docId.getBytes("UTF-8"), CassandraUtils.hashKey(key), null,term.getValue());                    
                 }
             }
 
@@ -228,7 +227,7 @@ public class IndexWriter {
                 termMap.put(CassandraUtils.termFrequencyKey, CassandraUtils.emptyArray);
                 termMap.put(CassandraUtils.positionVectorKey, CassandraUtils.emptyArray);
                 
-                CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.termVecColumnFamily, docId.getBytes("UTF-8"), CassandraUtils.hashKey(key), null,termMap);
+                CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.termVecColumnFamily, docId.getBytes("UTF-8"), CassandraUtils.hashKey(key), null,termMap);
                
             }
 
@@ -245,7 +244,7 @@ public class IndexWriter {
                 
                 String key = indexName+CassandraUtils.delimeter+docId;
                 
-                CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.docColumnFamily, field.name().getBytes("UTF-8"), CassandraUtils.hashKey(key), value, null);
+                CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.docColumnFamily, field.name().getBytes("UTF-8"), CassandraUtils.hashKey(key), value, null);
                             
             }
         }
@@ -253,12 +252,12 @@ public class IndexWriter {
         //Finally, Store meta-data so we can delete this document
         String key = indexName+CassandraUtils.delimeter+docId;
         
-        CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.docColumnFamily, CassandraUtils.documentMetaField.getBytes("UTF-8"), CassandraUtils.hashKey(key), CassandraUtils.toBytes(allIndexedTerms), null);
+        CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.docColumnFamily, CassandraUtils.documentMetaField.getBytes("UTF-8"), CassandraUtils.hashKey(key), CassandraUtils.toBytes(allIndexedTerms), null);
         
        
         
         if(autoCommit)
-            CassandraUtils.robustBatchInsert(client, mutationMap);    
+            CassandraUtils.robustBatchInsert(client, getMutationMap());    
     }
 
     public void deleteDocuments(Query query) throws CorruptIndexException, IOException {
@@ -333,12 +332,12 @@ public class IndexWriter {
             
             key = indexName+CassandraUtils.delimeter+termStr;
             
-            CassandraUtils.addToMutationMap(mutationMap, CassandraUtils.termVecColumnFamily, docId, CassandraUtils.hashKey(key), null, null);                                        
+            CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.termVecColumnFamily, docId, CassandraUtils.hashKey(key), null, null);                                        
         }
     
         
         if(autoCommit)
-            CassandraUtils.robustBatchInsert(client, mutationMap);
+            CassandraUtils.robustBatchInsert(client, getMutationMap());
         
         //finally delete ourselves
         String selfKey = indexName+CassandraUtils.delimeter+new String(docId);
@@ -391,7 +390,19 @@ public class IndexWriter {
     
     public void commit(){
         if(!autoCommit)
-            CassandraUtils.robustBatchInsert(client, mutationMap);
+            CassandraUtils.robustBatchInsert(client, getMutationMap());
+    }
+    
+    private Map<String,Map<String,List<Mutation>>> getMutationMap() {
+        
+        Map<String,Map<String,List<Mutation>>> map = mutationMap.get();
+        
+        if(map == null){
+            map = new HashMap<String,Map<String,List<Mutation>>>();
+            mutationMap.set(map);
+        }
+
+        return map;
     }
 
 }

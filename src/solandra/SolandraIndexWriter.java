@@ -90,7 +90,7 @@ public class SolandraIndexWriter extends UpdateHandler {
         
         try {
             writer = new lucandra.IndexWriter(core.getSchema().getSchemaName(), 
-                    CassandraUtils.createConnection(cassandraHost,cassandraPort,cassandraFramed));
+                    CassandraUtils.createRobustConnection(cassandraHost,cassandraPort,cassandraFramed,true));
 
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -269,6 +269,7 @@ public class SolandraIndexWriter extends UpdateHandler {
     }
 
     
+    @SuppressWarnings("unchecked")
     public NamedList getStatistics() {
         NamedList lst = new SimpleOrderedMap();
 
