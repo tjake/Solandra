@@ -58,25 +58,28 @@ with rank info and other attributes being a part of it. If you have keys as the 
 then you can have a per-user index stored in this form. This is how the per user index
  for term search is laid out for Inbox search at Facebook."
 
-Initially we implemented Lucene support with supercolumn as described but we ran into
-a major scaling issue when we tried to index all of wikipedia.
+Initially we implemented Lucene support with supercolumn as described but ran into
+a scaling issue when we tried to index all of wikipedia.
 Turns out Cassandra keeps the supercolumn in memory for a given key.
-Also all columns for a key are tied to one cassandra node so we don't gain much scalability this way.
 
-Thankfully Cassandra recently added support for distributed ordered keys that
+Thankfully Cassandra added support for distributed ordered keys that
 allows us to use keys to store index terms without supercolumns.
 
 Implementation Notes
 ======================
 
-The Lucandra Cassandra config looks like this.
+The Lucandra Cassandra config looks like this. 
 
-<Keyspaces>
-  <Keyspace Name="Lucandra">
-      <ColumnFamily CompareWith="BytesType" Name="TermVectors"/>
-      <ColumnFamily CompareWith="BytesType" Name="Documents"/>
-  </Keyspace>
-</Keyspaces>
+<Keyspace Name="Lucandra">
+    <ColumnFamily Name="TermInfo"
+        CompareWith="BytesType"
+        ColumnType="Super"
+        CompareSubcolumnsWith="BytesType"
+        KeysCached="10%" />
+    <ColumnFamily Name="Documents"
+        CompareWith="BytesType"
+        KeysCached="10%" />
+</Keyspace>
 
 * To get the most out of Lucandra you should use a OrderedPreservingParitioner.
 However if you really want to use the RandomPartitioner you can but you'll loose
