@@ -61,7 +61,7 @@ import org.apache.thrift.transport.TTransportException;
 
 public class CassandraUtils {
 
-    public static final String keySpace            = "Lucandra";
+    public static final String keySpace            = System.getProperty("lucandra.keyspace", "Lucandra");
     public static final String termVecColumnFamily = "TermInfo";
     public static final String docColumnFamily     = "Documents";
     
@@ -79,6 +79,9 @@ public class CassandraUtils {
     
     public static final String documentIdField     = delimeter+"KEY"+delimeter;
     public static final String documentMetaField   = delimeter+"META"+delimeter;
+    
+    public static final boolean indexHashingEnabled = Boolean.valueOf(System.getProperty("index.hashing","true"));
+    
     public static final ColumnPath metaColumnPath;
     static{
         try {
@@ -97,7 +100,8 @@ public class CassandraUtils {
 
     /*This can be used to communicate without thrift transport, just POJOs
      * 
-     * public static Cassandra.Iface createFatConnection() throws IOException {
+     *
+    public static Cassandra.Iface createFatConnection() throws IOException {
              
         StorageService.instance.initClient();
         
@@ -406,6 +410,10 @@ public class CassandraUtils {
     }
     
     public static String hashKey(String key) {
+        
+        if(!indexHashingEnabled)
+            return key;
+        
         try {
             MessageDigest md = MessageDigest.getInstance("SHA");
             
