@@ -77,7 +77,7 @@ public class CassandraUtils {
     
     public static final String finalToken          = new String("\ufffe\ufffe");
     
-    public static final String documentIdField     = delimeter+"KEY"+delimeter;
+    public static final String documentIdField     = System.getProperty("lucandra.id.field",delimeter+"KEY"+delimeter);
     public static final String documentMetaField   = delimeter+"META"+delimeter;
     
     public static final boolean indexHashingEnabled = Boolean.valueOf(System.getProperty("index.hashing","true"));
