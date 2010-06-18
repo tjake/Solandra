@@ -36,6 +36,7 @@ import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.Field.Index;
 import org.apache.lucene.document.Field.Store;
+import org.apache.lucene.document.Field.TermVector;
 import org.apache.lucene.util.Version;
 import org.apache.thrift.transport.TTransportException;
 
@@ -107,10 +108,10 @@ public class WikipediaIndexWorker implements Callable<Integer> {
 
         Document d = new Document();
 
-        d.add(new Field("title", article.title, Store.YES, Index.ANALYZED));
+        d.add(new Field("title", article.title, Store.YES, Index.ANALYZED,TermVector.WITH_POSITIONS));
 
         if (article.text != null)
-            d.add(new Field("text", new String(article.text), Store.YES, Index.ANALYZED));
+            d.add(new Field("text", new String(article.text,"UTF-8"), Store.YES, Index.ANALYZED,TermVector.WITH_POSITIONS_OFFSETS));
 
         d.add(new Field("url", article.url, Store.YES, Index.NOT_ANALYZED));
 
