@@ -61,7 +61,7 @@ public class BookmarksDemo {
     }
 
     private static IndexWriter indexWriter = new IndexWriter("bookmarks", client, ConsistencyLevel.ONE);
-    private static IndexReader indexReader = new IndexReader("bookmarks", client, ConsistencyLevel.ONE);
+    private static IndexReader indexReader = new IndexReader("bookmarks", client);
     private static IndexSearcher indexSearcher = new IndexSearcher(indexReader);
     private static Analyzer analyzer = new SimpleAnalyzer();
 

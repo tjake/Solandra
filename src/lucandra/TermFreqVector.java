@@ -28,7 +28,7 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
     private TermVectorOffsetInfo[][] termOffsets;
 
     @SuppressWarnings("unchecked")
-	public TermFreqVector(String indexName, String field, String docId, Cassandra.Iface client, ConsistencyLevel consistencyLevel) {
+	public TermFreqVector(String indexName, String field, String docId, Cassandra.Iface client) {
         this.field = field;
         
         String key = indexName + CassandraUtils.delimeter + docId;
@@ -57,7 +57,7 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
 
             
             //Fetch all term vectors in this field
-            Map<String, ColumnOrSuperColumn> allTermInfo = client.multiget(CassandraUtils.keySpace, keys, new ColumnPath(CassandraUtils.termVecColumnFamily).setSuper_column(docId.getBytes()), consistencyLevel);
+            Map<String, ColumnOrSuperColumn> allTermInfo = client.multiget(CassandraUtils.keySpace, keys, new ColumnPath(CassandraUtils.termVecColumnFamily).setSuper_column(docId.getBytes()), ConsistencyLevel.ONE);
             
             terms         = new String[allTermInfo.size()];
             freqVec       = new int[allTermInfo.size()];

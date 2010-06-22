@@ -259,12 +259,12 @@ public class IndexWriter {
        
         
         if(autoCommit)
-            CassandraUtils.robustBatchInsert(client, getMutationMap(), consistencyLevel);    
+            CassandraUtils.robustBatchInsert(client, getMutationMap());    
     }
 
     public void deleteDocuments(Query query) throws CorruptIndexException, IOException {
         
-        IndexReader   reader   = new IndexReader(indexName,client, consistencyLevel);
+        IndexReader   reader   = new IndexReader(indexName,client);
         IndexSearcher searcher = new IndexSearcher(reader);
        
         TopDocs results = searcher.search(query,1000);
@@ -339,7 +339,7 @@ public class IndexWriter {
     
         
         if(autoCommit)
-            CassandraUtils.robustBatchInsert(client, getMutationMap(), consistencyLevel);
+            CassandraUtils.robustBatchInsert(client, getMutationMap());
         
         //finally delete ourselves
         String selfKey = indexName+CassandraUtils.delimeter+new String(docId);
@@ -392,7 +392,7 @@ public class IndexWriter {
     
     public void commit(){
         if(!autoCommit)
-            CassandraUtils.robustBatchInsert(client, getMutationMap(), consistencyLevel);
+            CassandraUtils.robustBatchInsert(client, getMutationMap());
     }
     
     private Map<String,Map<String,List<Mutation>>> getMutationMap() {

@@ -25,7 +25,6 @@ import lucandra.CassandraUtils;
 import lucandra.IndexReader;
 
 import org.apache.cassandra.thrift.Cassandra;
-import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.lucene.store.Directory;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.SolrException.ErrorCode;
@@ -86,7 +85,7 @@ public class SolandraIndexReaderFactory extends IndexReaderFactory {
 
         
                 
-        return new IndexReader(indexName, client, ConsistencyLevel.ONE);        
+        return new IndexReader(indexName, client);        
     }
 
 }

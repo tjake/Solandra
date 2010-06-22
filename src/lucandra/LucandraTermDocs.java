@@ -25,7 +25,6 @@ import java.util.List;
 
 import org.apache.cassandra.thrift.Column;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
-import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.TermDocs;
 import org.apache.lucene.index.TermEnum;
@@ -40,9 +39,9 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
     private int[] termPositionArray;
     private int termPosition;
    
-    public LucandraTermDocs(IndexReader indexReader, ConsistencyLevel consistencyLevel) {
+    public LucandraTermDocs(IndexReader indexReader) {
         this.indexReader = indexReader;
-        termEnum = new LucandraTermEnum(indexReader, consistencyLevel);
+        termEnum = new LucandraTermEnum(indexReader);
     }
 
     public void close() throws IOException {

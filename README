@@ -28,15 +28,8 @@ Lucandra includes a delicious like bookmarks demo to get you started. to build r
 
 1. Setup Cassandra 0.6 with storage-conf.xml in config
 
-With Ant
-
 2. ant lucandra.jar
 3. ant test -Dcassandra.host=127.0.0.1 -Dcassandra.port=9160 -Dcassandra.framed=false
-
-With Maven deploy to repository with all dependencies
-
-2. mvn package
-3. mvn deploy -DrepositoryId=foo -Durl=<your repository url> 
 
 #edit run-demo with appropriate settings (delicious clone)
 4. run_demo.sh -index bookmarks.tsv

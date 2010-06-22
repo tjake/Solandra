@@ -49,6 +49,7 @@ import org.apache.cassandra.thrift.SliceRange;
 import org.apache.cassandra.thrift.SuperColumn;
 import org.apache.cassandra.thrift.TimedOutException;
 import org.apache.cassandra.thrift.UnavailableException;
+import org.apache.log4j.Logger;
 import org.apache.lucene.index.Term;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
@@ -57,8 +58,6 @@ import org.apache.thrift.transport.TFramedTransport;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class CassandraUtils {
 
@@ -97,7 +96,7 @@ public class CassandraUtils {
     public static final BigInteger CHAR_MASK = new BigInteger("65535");
 
     
-    private static final Logger logger = LoggerFactory.getLogger(CassandraUtils.class);
+    private static final Logger logger = Logger.getLogger(CassandraUtils.class);
 
     /*This can be used to communicate without thrift transport, just POJOs
      * 
@@ -126,15 +125,12 @@ public class CassandraUtils {
         if(System.getProperty("cassandra.host") == null || System.getProperty("cassandra.port") == null) {
            logger.warn("cassandra.host or cassandra.port is not defined, using default");
         }
-        
-        String host = System.getProperty("cassandra.host","localhost");
-        int port = Integer.valueOf(System.getProperty("cassandra.port","9160"));
-        boolean framed = Boolean.valueOf(System.getProperty("cassandra.framed", "false"));
-        
-        logger.debug("Creating connecton to host '{}' on port '{}' with thrift framed '{}'", new Object[]{host, port, framed});
 
 
-        return createRobustConnection( host, port, framed, true);
+        return createRobustConnection( System.getProperty("cassandra.host","localhost"),
+                                 Integer.valueOf(System.getProperty("cassandra.port","9160")),
+                                 Boolean.valueOf(System.getProperty("cassandra.framed", "false")),
+                                 true);
     }
     
     
@@ -362,16 +358,17 @@ public class CassandraUtils {
         mutationList.add(mutation);       
     }
     
-    public static void robustBatchInsert(Cassandra.Iface client, Map<String,Map<String,List<Mutation>>> mutationMap, ConsistencyLevel consistency) {
+    public static void robustBatchInsert(Cassandra.Iface client, Map<String,Map<String,List<Mutation>>> mutationMap) {
 
         // Should use a circut breaker here
         boolean try_again = false;
         int attempts = 0;
-         do {
+        long startTime = System.currentTimeMillis();
+        do {
             try {
                 attempts++;
                 try_again = false;
-                client.batch_mutate(CassandraUtils.keySpace, mutationMap, consistency);
+                client.batch_mutate(CassandraUtils.keySpace, mutationMap, ConsistencyLevel.ONE);
                 
                 mutationMap.clear();
                 //if(logger.isDebugEnabled())

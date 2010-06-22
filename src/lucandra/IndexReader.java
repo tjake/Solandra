@@ -80,7 +80,6 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     private final String indexName;
     private final Cassandra.Iface client;
-    private final ConsistencyLevel consistencyLevel;
     
     private final ThreadLocal<Map<String, Integer>> docIdToDocIndex = new ThreadLocal<Map<String, Integer>>();
     private final ThreadLocal<Map<Integer, String>> docIndexToDocId = new ThreadLocal<Map<Integer, String>>();
@@ -91,11 +90,10 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     
     private static final Logger logger = Logger.getLogger(IndexReader.class);
 
-    public IndexReader(String name, Cassandra.Iface client, ConsistencyLevel consistencyLevel) {
+    public IndexReader(String name, Cassandra.Iface client) {
         super();
         this.indexName = name;
         this.client = client; 
-        this.consistencyLevel = consistencyLevel;
     }
 
     public synchronized IndexReader reopen() throws CorruptIndexException, IOException {
@@ -147,7 +145,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
             long start = System.currentTimeMillis();
 
-            termEnum = new LucandraTermEnum(this, consistencyLevel);
+            termEnum = new LucandraTermEnum(this);
             termEnum.skipTo(term);
 
             long end = System.currentTimeMillis();
@@ -225,7 +223,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
         try {
             Map<String, List<ColumnOrSuperColumn>> docMap = client.multiget_slice(CassandraUtils.keySpace, Arrays.asList(keyMap.values().toArray(
-                    new String[] {})), columnParent, slicePredicate, consistencyLevel);
+                    new String[] {})), columnParent, slicePredicate, ConsistencyLevel.ONE);
 
             for (Map.Entry<Integer, String> key : keyMap.entrySet()) {
 
@@ -313,7 +311,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
         String docId = getDocIndexToDocId().get(docNum);
 
-        TermFreqVector termVector = new lucandra.TermFreqVector(indexName, field, docId, client, consistencyLevel);
+        TermFreqVector termVector = new lucandra.TermFreqVector(indexName, field, docId, client);
 
         return termVector;
     }
@@ -375,17 +373,17 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     @Override
     public TermDocs termDocs() throws IOException {
-        return new LucandraTermDocs(this, consistencyLevel);
+        return new LucandraTermDocs(this);
     }
 
     @Override
     public TermPositions termPositions() throws IOException {
-        return new LucandraTermDocs(this, consistencyLevel);
+        return new LucandraTermDocs(this);
     }
 
     @Override
     public TermEnum terms() throws IOException {
-        return new LucandraTermEnum(this, consistencyLevel);
+        return new LucandraTermEnum(this);
     }
 
     @Override
@@ -394,7 +392,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         LucandraTermEnum termEnum = getTermEnumCache().get(term);
         
         if(termEnum == null)
-            termEnum = new LucandraTermEnum(this, consistencyLevel);
+            termEnum = new LucandraTermEnum(this);
         
         if( !termEnum.skipTo(term) ) //if found in the cache then reset, otherwise init.
             termEnum = null;
