@@ -300,7 +300,8 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     }
 
-    @Override
+    @SuppressWarnings("unchecked")
+	@Override
     public Collection getFieldNames(FieldOption fieldOption) {
         return Arrays.asList(new String[] {});
     }

@@ -25,7 +25,6 @@ import java.util.List;
 
 import org.apache.cassandra.thrift.Column;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
-import org.apache.log4j.Logger;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.TermDocs;
 import org.apache.lucene.index.TermEnum;
@@ -39,8 +38,7 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
     private int docPosition;
     private int[] termPositionArray;
     private int termPosition;
-    private static final Logger logger = Logger.getLogger(LucandraTermDocs.class);
-
+   
     public LucandraTermDocs(IndexReader indexReader) {
         this.indexReader = indexReader;
         termEnum = new LucandraTermEnum(indexReader);

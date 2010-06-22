@@ -68,7 +68,7 @@ public class LucandraTests extends TestCase {
         }
     }
 
-    private static final IndexWriter indexWriter = new IndexWriter(indexName, client);
+    private static final IndexWriter indexWriter = new IndexWriter(indexName, client, ConsistencyLevel.ONE);
 
     public void testWriter() throws Exception {
 
