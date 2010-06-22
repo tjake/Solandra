@@ -133,8 +133,8 @@
 
 
 	<scm>
-		<connection>git://github.com/tnine/Lucandra.git</connection>
-		<developerConnection>https://tnine@github.com/tnine/Lucandra.git</developerConnection>
+		<connection>scm:git:http://github.com/tnine/Lucandra.git</connection>
+		<developerConnection>scm:git:https://tnine@github.com/tnine/Lucandra.git</developerConnection>
 		<url>http://github.com/tnine/Lucandra</url>
 	</scm>
 	<build>
