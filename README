@@ -38,6 +38,11 @@ Maven
 2. mvn package
 3. mvn deploy -DrepositoryId=<your repo> -Durl=<your repository repo>
 
+if you perform a release from your own fork, you will need to do so with the following arguments.  Note the need to pass the system properties to the forked release jvm
+
+mvn release:prepare release:perform -Darguments="-DrepositoryId=<your repo> -Durl=<your repository repo>"
+
+
 #edit run-demo with appropriate settings (delicious clone)
 4. run_demo.sh -index bookmarks.tsv
 5. run_demo.sh -search title:linu*
