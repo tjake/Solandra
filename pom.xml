@@ -1,0 +1,284 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<parent>
+		<artifactId>settings</artifactId>
+		<groupId>com.spidertracks.standards</groupId>
+		<version>1.0.4</version>
+	</parent>
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>lucandra</groupId>
+	<artifactId>lucandra</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+
+	<dependencies>
+
+		<!--  thrift dependencies -->
+		<dependency>
+			<groupId>libthrift</groupId>
+			<artifactId>libthrift</artifactId>
+			<version>917130</version>
+		</dependency>
+
+		<!--  our lucene depencies -->
+
+		<dependency>
+			<groupId>org.apache.lucene</groupId>
+			<artifactId>lucene-core</artifactId>
+			<version>${lucene.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.lucene</groupId>
+			<artifactId>lucene-highlighter</artifactId>
+			<version>${lucene.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.lucene</groupId>
+			<artifactId>lucene-memory</artifactId>
+			<version>${lucene.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.lucene</groupId>
+			<artifactId>lucene-misc</artifactId>
+			<version>${lucene.version}</version>
+		</dependency>
+
+
+		<dependency>
+			<groupId>org.apache.lucene</groupId>
+			<artifactId>lucene-queries</artifactId>
+			<version>${lucene.version}</version>
+		</dependency>
+
+
+		<dependency>
+			<groupId>org.apache.lucene</groupId>
+			<artifactId>lucene-snowball</artifactId>
+			<version>${lucene.version}</version>
+		</dependency>
+
+
+		<dependency>
+			<groupId>org.apache.lucene</groupId>
+			<artifactId>lucene-spellchecker</artifactId>
+			<version>${lucene.version}</version>
+		</dependency>
+
+
+		<dependency>
+			<groupId>org.apache.solr</groupId>
+			<artifactId>solr-core</artifactId>
+			<version>${solr.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.solr</groupId>
+			<artifactId>solr-commons-csv</artifactId>
+			<version>${solr.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.solr</groupId>
+			<artifactId>solr-solrj</artifactId>
+			<version>${solr.version}</version>
+		</dependency>
+
+
+		<!--  test depencencies -->
+
+
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.8.1</version>
+			<scope>test</scope>
+		</dependency>
+
+
+
+		<dependency>
+			<groupId>commons-lang</groupId>
+			<artifactId>commons-lang</artifactId>
+			<version>2.4</version>
+			<type>jar</type>
+			<scope>test</scope>
+		</dependency>
+
+		<!--  we still use hector for testing -->
+
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-log4j12</artifactId>
+			<version>${slf4j.version}</version>
+			<type>jar</type>
+			<scope>compile</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-simple</artifactId>
+			<version>${slf4j.version}</version>
+			<type>jar</type>
+			<scope>compile</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>${slf4j.version}</version>
+			<type>jar</type>
+			<scope>compile</scope>
+		</dependency>
+	</dependencies>
+
+
+	<scm>
+		<connection>git://github.com/tnine/Lucandra.git</connection>
+		<developerConnection>https://tnine@github.com/tnine/Lucandra.git</developerConnection>
+		<url>http://github.com/tnine/Lucandra</url>
+	</scm>
+	<build>
+		<sourceDirectory>${basedir}/src</sourceDirectory>
+		<resources>
+			<resource>
+				<directory>${basedir}/src</directory>
+				<excludes>
+					<exclude>**/*.java</exclude>
+				</excludes>
+			</resource>
+		</resources>
+
+		<testSourceDirectory>${basedir}/test</testSourceDirectory>
+		<testResources>
+			<testResource>
+				<directory>${basedir}/test</directory>
+				<excludes>
+					<exclude>**/*.java</exclude>
+				</excludes>
+			</testResource>
+		</testResources>
+
+
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<executions>
+					<execution>
+						<goals>
+							<goal>test-jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>attach-sources</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>1.6</source>
+					<target>1.6</target>
+
+				</configuration>
+			</plugin>
+
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<includes>
+						<include>**/LucandraTests.java</include>
+					</includes>
+					<systemPropertyVariables>
+						<cassandra.host>127.0.0.1</cassandra.host>
+						<cassandra.port>60916</cassandra.port>
+						<cassandra.framed>false</cassandra.framed>
+					</systemPropertyVariables>
+				</configuration>
+			</plugin>
+
+			<!--  add our second thrift source directory -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>build-helper-maven-plugin</artifactId>
+				<version>1.5</version>
+				<executions>
+					<execution>
+						<id>add-thrift-sources</id>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>add-source</goal>
+						</goals>
+						<configuration>
+							<sources>
+								<source>${basedir}/thrift</source>
+							</sources>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+
+			<!--  install the thrift libraries -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-install-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>install libthrift</id>
+						<phase>initialize</phase>
+						<goals>
+							<goal>install-file</goal>
+						</goals>
+						<configuration>
+							<packaging>jar</packaging>
+							<groupId>libthrift</groupId>
+							<artifactId>libthrift</artifactId>
+							<version>917130</version>
+							<file>${basedir}/lib/libthrift-r917130.jar</file>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<!--  deploy the thrift binarie -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-deploy-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>deploy libthrift</id>
+						<phase>deploy</phase>
+						<goals>
+							<goal>deploy-file</goal>
+						</goals>
+						<configuration>
+							<packaging>jar</packaging>
+							<groupId>libthrift</groupId>
+							<artifactId>libthrift</artifactId>
+							<version>917130</version>
+							<file>${basedir}/lib/libthrift-r917130.jar</file>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+
+		</plugins>
+	</build>
+	<properties>
+		<lucene.version>2.9.1</lucene.version>
+		<solr.version>1.4.0</solr.version>
+		<slf4j.version>1.5.8</slf4j.version>
+	</properties>
+</project>

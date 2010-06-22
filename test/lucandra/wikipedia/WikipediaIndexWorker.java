@@ -28,6 +28,7 @@ import lucandra.CassandraUtils;
 import lucandra.IndexWriter;
 
 import org.apache.cassandra.thrift.Cassandra;
+import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.TokenRange;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
@@ -90,7 +91,7 @@ public class WikipediaIndexWorker implements Callable<Integer> {
             List<String> endpoints = ring.get(r.nextInt(ring.size())).endpoints;
             String endpoint = endpoints.get(r.nextInt(endpoints.size()));
 
-            indexWriter = new lucandra.IndexWriter("wikipedia", CassandraUtils.createRobustConnection(endpoint, 9160, false, false));
+            indexWriter = new lucandra.IndexWriter("wikipedia", CassandraUtils.createRobustConnection(endpoint, 9160, false, false), ConsistencyLevel.ONE);
             clientPool.set(indexWriter);
 
             indexWriter.setAutoCommit(false);

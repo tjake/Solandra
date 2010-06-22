@@ -22,16 +22,15 @@ import org.apache.thrift.TException;
 public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, org.apache.lucene.index.TermPositionVector {
 
     private String field;
-    private String docId;
     private String[] terms;
     private int[] freqVec;
     private int[][] termPositions;
     private TermVectorOffsetInfo[][] termOffsets;
 
-    public TermFreqVector(String indexName, String field, String docId, Cassandra.Iface client) {
+    @SuppressWarnings("unchecked")
+	public TermFreqVector(String indexName, String field, String docId, Cassandra.Iface client, ConsistencyLevel consistencyLevel) {
         this.field = field;
-        this.docId = docId;
-
+        
         String key = indexName + CassandraUtils.delimeter + docId;
 
         // Get all terms
@@ -58,7 +57,7 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
 
             
             //Fetch all term vectors in this field
-            Map<String, ColumnOrSuperColumn> allTermInfo = client.multiget(CassandraUtils.keySpace, keys, new ColumnPath(CassandraUtils.termVecColumnFamily).setSuper_column(docId.getBytes()), ConsistencyLevel.ONE);
+            Map<String, ColumnOrSuperColumn> allTermInfo = client.multiget(CassandraUtils.keySpace, keys, new ColumnPath(CassandraUtils.termVecColumnFamily).setSuper_column(docId.getBytes()), consistencyLevel);
             
             terms         = new String[allTermInfo.size()];
             freqVec       = new int[allTermInfo.size()];

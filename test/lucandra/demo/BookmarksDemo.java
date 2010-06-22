@@ -29,6 +29,7 @@ import lucandra.IndexReader;
 import lucandra.IndexWriter;
 
 import org.apache.cassandra.thrift.Cassandra;
+import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.SimpleAnalyzer;
 import org.apache.lucene.document.Document;
@@ -59,8 +60,8 @@ public class BookmarksDemo {
         }
     }
 
-    private static IndexWriter indexWriter = new IndexWriter("bookmarks", client);
-    private static IndexReader indexReader = new IndexReader("bookmarks", client);
+    private static IndexWriter indexWriter = new IndexWriter("bookmarks", client, ConsistencyLevel.ONE);
+    private static IndexReader indexReader = new IndexReader("bookmarks", client, ConsistencyLevel.ONE);
     private static IndexSearcher indexSearcher = new IndexSearcher(indexReader);
     private static Analyzer analyzer = new SimpleAnalyzer();
 

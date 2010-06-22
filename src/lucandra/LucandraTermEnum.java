@@ -69,12 +69,14 @@ public class LucandraTermEnum extends TermEnum {
     private int chunkCount = 0;
 
     private final Cassandra.Iface client;
+    private final ConsistencyLevel consistencyLevel;
     private final Term finalTerm = new Term(CassandraUtils.delimeter, CassandraUtils.finalToken);
 
     private static final Logger logger = Logger.getLogger(LucandraTermEnum.class);
 
-    public LucandraTermEnum(IndexReader indexReader) {
+    public LucandraTermEnum(IndexReader indexReader, ConsistencyLevel consistencyLevel) {
         this.indexReader = indexReader;
+        this.consistencyLevel = consistencyLevel;
         this.indexName = indexReader.getIndexName();
         this.client = indexReader.getClient();
         this.termPosition = 0;
@@ -221,7 +223,7 @@ public class LucandraTermEnum extends TermEnum {
         
         List<KeySlice> columns;
         try {
-            columns = client.get_range_slice(CassandraUtils.keySpace, columnParent, slicePredicate, startTerm, endTerm, count, ConsistencyLevel.ONE);
+            columns = client.get_range_slice(CassandraUtils.keySpace, columnParent, slicePredicate, startTerm, endTerm, count, consistencyLevel);
         } catch (InvalidRequestException e) {
             throw new RuntimeException(e);
         } catch (TException e) {

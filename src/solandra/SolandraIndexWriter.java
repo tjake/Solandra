@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import lucandra.CassandraUtils;
 
+import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
@@ -90,7 +91,7 @@ public class SolandraIndexWriter extends UpdateHandler {
         
         try {
             writer = new lucandra.IndexWriter(core.getSchema().getSchemaName(), 
-                    CassandraUtils.createRobustConnection(cassandraHost,cassandraPort,cassandraFramed,true));
+                    CassandraUtils.createRobustConnection(cassandraHost,cassandraPort,cassandraFramed,true), ConsistencyLevel.ONE);
 
         } catch (Exception e) {
             throw new RuntimeException(e);
