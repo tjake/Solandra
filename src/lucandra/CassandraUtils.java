@@ -363,8 +363,7 @@ public class CassandraUtils {
         // Should use a circut breaker here
         boolean try_again = false;
         int attempts = 0;
-        long startTime = System.currentTimeMillis();
-        do {
+         do {
             try {
                 attempts++;
                 try_again = false;

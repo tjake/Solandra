@@ -62,6 +62,7 @@ public class IndexWriter {
     private final ColumnPath docAllColumnPath;
     private boolean autoCommit;
     
+    private final long timestamp;
     private ConsistencyLevel consistencyLevel;
     
     private static final ThreadLocal<Map<String,Map<String,List<Mutation>>>> mutationMap = new ThreadLocal<Map<String,Map<String,List<Mutation>>>>();
@@ -73,6 +74,7 @@ public class IndexWriter {
         this.indexName = indexName;
         this.client = client;
         this.consistencyLevel = consistencyLevel;
+        this.timestamp = System.currentTimeMillis();
         autoCommit  = true;
         docAllColumnPath = new ColumnPath(CassandraUtils.docColumnFamily);
         
@@ -346,7 +348,7 @@ public class IndexWriter {
         
         
         //FIXME: once cassandra batch mutation supports slice predicates in deletions
-        client.remove(CassandraUtils.keySpace, CassandraUtils.hashKey(selfKey), docAllColumnPath, System.currentTimeMillis(), consistencyLevel);
+        client.remove(CassandraUtils.keySpace, CassandraUtils.hashKey(selfKey), docAllColumnPath, timestamp, consistencyLevel);
 
         
     }
