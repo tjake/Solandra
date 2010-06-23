@@ -54,6 +54,8 @@ import org.junit.Test;
  */
 public class NumericRangeTests {
 
+	private static final int LONG_PRECISION = 6;
+	
 	private Cassandra.Iface connection;
 	private Document first;
 	private Document second;
@@ -74,7 +76,7 @@ public class NumericRangeTests {
 		first = new Document();
 		first.add(new Field("Id", "first", Store.YES, Index.NOT_ANALYZED));
 
-		NumericField numeric = new NumericField("long", Integer.MAX_VALUE,
+		NumericField numeric = new NumericField("long", LONG_PRECISION,
 				Store.YES, true);
 		numeric.setLongValue(low);
 		first.add(numeric);
@@ -82,14 +84,14 @@ public class NumericRangeTests {
 		second = new Document();
 		second.add(new Field("Id", "second", Store.YES, Index.NOT_ANALYZED));
 
-		numeric = new NumericField("long", Integer.MAX_VALUE, Store.YES, true);
+		numeric = new NumericField("long", LONG_PRECISION, Store.YES, true);
 		numeric.setLongValue(mid);
 		second.add(numeric);
 
 		third = new Document();
 		third.add(new Field("Id", "third", Store.YES, Index.NOT_ANALYZED));
 
-		numeric = new NumericField("long", Integer.MAX_VALUE, Store.YES, true);
+		numeric = new NumericField("long", LONG_PRECISION, Store.YES, true);
 		numeric.setLongValue(high);
 		third.add(numeric);
 		
@@ -122,7 +124,7 @@ public class NumericRangeTests {
 
 
 		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
-				Integer.MAX_VALUE, mid, null, true, true);
+				LONG_PRECISION, mid, null, true, true);
 
 		IndexReader reader = new IndexReader("longvals", connection);
 
@@ -151,7 +153,7 @@ public class NumericRangeTests {
 		// now we'll query from the middle inclusive
 
 		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
-				Integer.MAX_VALUE, mid, null, false, true);
+				LONG_PRECISION, mid, null, false, true);
 
 		IndexReader reader = new IndexReader("longvals", connection);
 
@@ -178,7 +180,7 @@ public class NumericRangeTests {
 		// now we'll query from the middle inclusive
 
 		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
-				Integer.MAX_VALUE, null, mid, true, false);
+				LONG_PRECISION, null, mid, true, false);
 
 		IndexReader reader = new IndexReader("longvals", connection);
 
@@ -205,7 +207,7 @@ public class NumericRangeTests {
 		// now we'll query from the middle inclusive
 
 		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
-				Integer.MAX_VALUE, (long) 0, null, true, true);
+				LONG_PRECISION, (long) 0, null, true, true);
 
 		IndexReader reader = new IndexReader("longvals", connection);
 
