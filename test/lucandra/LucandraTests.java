@@ -181,14 +181,24 @@ public class LucandraTests extends TestCase {
     }
     
     public void testDelete() throws Exception {
-        indexWriter.deleteDocuments(new Term("key", new String("\u5639\u563b")));
-        IndexReader indexReader = new IndexReader(indexName, client);
+    	
+    	IndexReader indexReader = new IndexReader(indexName, client);
         IndexSearcher searcher = new IndexSearcher(indexReader);
-
+        
         QueryParser qp = new QueryParser(Version.LUCENE_CURRENT, "key", analyzer);
         Query q = qp.parse("+key:\u5639\u563b");
-
+        
         TopDocs docs = searcher.search(q, 10);
+
+        //ensure the document exists before it's deleted
+        assertEquals(1, docs.totalHits);
+        
+        indexWriter.deleteDocuments(new Term("key", new String("\u5639\u563b")));
+        
+
+        indexReader = new IndexReader(indexName, client);
+        searcher = new IndexSearcher(indexReader);
+        docs = searcher.search(q, 10);
 
         assertEquals(0, docs.totalHits);
     }
