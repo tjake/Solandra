@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.Calendar;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -64,7 +65,7 @@ public class NumericRangeTests {
 	@Before
 	public void setup() throws TTransportException, CorruptIndexException, IOException {
 
-		low = Long.valueOf("1277266160637");
+		low = 1277266160637l;
 		mid = low + 1000;
 		high = low + 1000;
 
