@@ -23,7 +23,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.Calendar;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -58,46 +57,54 @@ public class NumericRangeTests {
 	private Document first;
 	private Document second;
 	private Document third;
-	private long midpoint;
+	long low;
+	long mid;
+	long high;
 
 	@Before
-	public void setup() throws TTransportException {
-		
-		Calendar cal = Calendar.getInstance();
-		
-		connection = CassandraUtils.createConnection();
+	public void setup() throws TTransportException, CorruptIndexException, IOException {
 
-		
+		low = Long.valueOf("1277266160637");
+		mid = low + 1000;
+		high = low + 1000;
+
+		connection = CassandraUtils.createConnection();
 
 		first = new Document();
 		first.add(new Field("Id", "first", Store.YES, Index.NOT_ANALYZED));
 
 		NumericField numeric = new NumericField("long", Integer.MAX_VALUE,
 				Store.YES, true);
-		numeric.setLongValue(cal.getTimeInMillis());
+		numeric.setLongValue(low);
 		first.add(numeric);
-		
-		cal.add(Calendar.MINUTE, 2);
-		
 
 		second = new Document();
 		second.add(new Field("Id", "second", Store.YES, Index.NOT_ANALYZED));
-	
-		midpoint = cal.getTimeInMillis();
 
 		numeric = new NumericField("long", Integer.MAX_VALUE, Store.YES, true);
-		numeric.setLongValue(midpoint);
+		numeric.setLongValue(mid);
 		second.add(numeric);
 
-		cal.add(Calendar.MINUTE, 2);
-		
 		third = new Document();
 		third.add(new Field("Id", "third", Store.YES, Index.NOT_ANALYZED));
 
-		
 		numeric = new NumericField("long", Integer.MAX_VALUE, Store.YES, true);
-		numeric.setLongValue(cal.getTimeInMillis());
+		numeric.setLongValue(high);
 		third.add(numeric);
+		
+		IndexWriter writer = new IndexWriter("longvals", connection,
+				ConsistencyLevel.ONE);
+		writer.setAutoCommit(false);
+
+		SimpleAnalyzer analyzer = new SimpleAnalyzer();
+
+		writer.addDocument(first, analyzer);
+		writer.addDocument(second, analyzer);
+		writer.addDocument(third, analyzer);
+
+		writer.commit();
+
+		
 	}
 
 	@After
@@ -112,22 +119,9 @@ public class NumericRangeTests {
 	@Test
 	public void testLongRangeInclusive() throws Exception {
 
-		IndexWriter writer = new IndexWriter("longvals", connection,
-				ConsistencyLevel.ONE);
-		writer.setAutoCommit(false);
-
-		SimpleAnalyzer analyzer = new SimpleAnalyzer();
-
-		writer.addDocument(first, analyzer);
-		writer.addDocument(second, analyzer);
-		writer.addDocument(third, analyzer);
-
-		writer.commit();
-
-		// now we'll query from the middle inclusive
 
 		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
-				Integer.MAX_VALUE, midpoint, null, true, true);
+				Integer.MAX_VALUE, mid, null, true, true);
 
 		IndexReader reader = new IndexReader("longvals", connection);
 
@@ -153,22 +147,10 @@ public class NumericRangeTests {
 	@Test
 	public void testLongRangeExclusive() throws Exception {
 
-		IndexWriter writer = new IndexWriter("longvals", connection,
-				ConsistencyLevel.ONE);
-		writer.setAutoCommit(false);
-
-		SimpleAnalyzer analyzer = new SimpleAnalyzer();
-
-		writer.addDocument(first, analyzer);
-		writer.addDocument(second, analyzer);
-		writer.addDocument(third, analyzer);
-
-		writer.commit();
-
 		// now we'll query from the middle inclusive
 
 		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
-				Integer.MAX_VALUE, midpoint, null, false, true);
+				Integer.MAX_VALUE, mid, null, false, true);
 
 		IndexReader reader = new IndexReader("longvals", connection);
 
@@ -188,26 +170,41 @@ public class NumericRangeTests {
 		assertTrue(results.contains("third"));
 
 	}
-
+	
 	@Test
-	public void testLongRangeAll() throws Exception {
-
-		IndexWriter writer = new IndexWriter("longvals", connection,
-				ConsistencyLevel.ONE);
-		writer.setAutoCommit(false);
-
-		SimpleAnalyzer analyzer = new SimpleAnalyzer();
-
-		writer.addDocument(first, analyzer);
-		writer.addDocument(second, analyzer);
-		writer.addDocument(third, analyzer);
-
-		writer.commit();
+	public void testLongRangeLessExclusive() throws Exception {
 
 		// now we'll query from the middle inclusive
 
 		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
-				Integer.MAX_VALUE, (long)0, null, true, true);
+				Integer.MAX_VALUE, null, mid, true, false);
+
+		IndexReader reader = new IndexReader("longvals", connection);
+
+		IndexSearcher searcher = new IndexSearcher(reader);
+
+		TopDocs docs = searcher.search(query, 1000);
+
+		assertEquals(1, docs.totalHits);
+
+		Set<String> results = new HashSet<String>();
+
+		for (ScoreDoc doc : docs.scoreDocs) {
+			Document returned = searcher.doc(doc.doc);
+			results.add(returned.get("Id"));
+		}
+
+		assertTrue(results.contains("one"));
+
+	}
+
+	@Test
+	public void testLongRangeAll() throws Exception {
+
+		// now we'll query from the middle inclusive
+
+		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
+				Integer.MAX_VALUE, (long) 0, null, true, true);
 
 		IndexReader reader = new IndexReader("longvals", connection);
 
