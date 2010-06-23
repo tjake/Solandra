@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.Calendar;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -61,30 +62,41 @@ public class NumericRangeTests {
 
 	@Before
 	public void setup() throws TTransportException {
+		
+		Calendar cal = Calendar.getInstance();
+		
 		connection = CassandraUtils.createConnection();
 
-		midpoint = 1001;
+		
 
 		first = new Document();
 		first.add(new Field("Id", "first", Store.YES, Index.NOT_ANALYZED));
 
 		NumericField numeric = new NumericField("long", Integer.MAX_VALUE,
 				Store.YES, true);
-		numeric.setLongValue(1000);
+		numeric.setLongValue(cal.getTimeInMillis());
 		first.add(numeric);
+		
+		cal.add(Calendar.MINUTE, 2);
+		
 
 		second = new Document();
 		second.add(new Field("Id", "second", Store.YES, Index.NOT_ANALYZED));
+	
+		midpoint = cal.getTimeInMillis();
 
 		numeric = new NumericField("long", Integer.MAX_VALUE, Store.YES, true);
 		numeric.setLongValue(midpoint);
 		second.add(numeric);
 
+		cal.add(Calendar.MINUTE, 2);
+		
 		third = new Document();
 		third.add(new Field("Id", "third", Store.YES, Index.NOT_ANALYZED));
 
+		
 		numeric = new NumericField("long", Integer.MAX_VALUE, Store.YES, true);
-		numeric.setLongValue(1002);
+		numeric.setLongValue(cal.getTimeInMillis());
 		third.add(numeric);
 	}
 
