@@ -88,12 +88,15 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     private final ThreadLocal<Map<Term, LucandraTermEnum>> termEnumCache = new ThreadLocal<Map<Term, LucandraTermEnum>>();
     private final ThreadLocal<Map<String,byte[]>> fieldNorms = new ThreadLocal<Map<String, byte[]>>();
     
+    private final ConsistencyLevel consistencyLevel;
+    
     private static final Logger logger = Logger.getLogger(IndexReader.class);
 
-    public IndexReader(String name, Cassandra.Iface client) {
+    public IndexReader(String name, Cassandra.Iface client, ConsistencyLevel consistencyLevel) {
         super();
         this.indexName = name;
-        this.client = client; 
+        this.client = client;
+        this.consistencyLevel = consistencyLevel;
     }
 
     public synchronized IndexReader reopen() throws CorruptIndexException, IOException {
@@ -223,7 +226,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
         try {
             Map<String, List<ColumnOrSuperColumn>> docMap = client.multiget_slice(CassandraUtils.keySpace, Arrays.asList(keyMap.values().toArray(
-                    new String[] {})), columnParent, slicePredicate, ConsistencyLevel.ONE);
+                    new String[] {})), columnParent, slicePredicate, consistencyLevel);
 
             for (Map.Entry<Integer, String> key : keyMap.entrySet()) {
 
@@ -570,5 +573,12 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         
         return c;
     }
+
+	/**
+	 * @return the consistencyLevel
+	 */
+	public ConsistencyLevel getConsistencyLevel() {
+		return consistencyLevel;
+	}
     
 }

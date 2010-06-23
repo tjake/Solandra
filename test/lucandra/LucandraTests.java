@@ -19,7 +19,6 @@
  */
 package lucandra;
 
-import java.util.Arrays;
 import java.util.List;
 
 import junit.framework.TestCase;
@@ -128,7 +127,7 @@ public class LucandraTests extends TestCase {
     }
 
     public void testUnicode() throws Exception {
-        IndexReader indexReader = new IndexReader(indexName, client);
+        IndexReader indexReader = new IndexReader(indexName, client, ConsistencyLevel.ONE);
         IndexSearcher searcher = new IndexSearcher(indexReader);
 
         QueryParser qp = new QueryParser(Version.LUCENE_CURRENT, "key", analyzer);
@@ -145,7 +144,7 @@ public class LucandraTests extends TestCase {
 
     public void testMultiValuedFields() throws Exception {
 
-        IndexReader indexReader = new IndexReader(indexName, client);
+        IndexReader indexReader = new IndexReader(indexName, client, ConsistencyLevel.ONE);
         IndexSearcher searcher = new IndexSearcher(indexReader);
 
         QueryParser qp = new QueryParser(Version.LUCENE_CURRENT, "key", analyzer);
@@ -169,7 +168,7 @@ public class LucandraTests extends TestCase {
     }
 
     public void testKeywordField() throws Exception {
-        IndexReader indexReader = new IndexReader(indexName, client);
+        IndexReader indexReader = new IndexReader(indexName, client, ConsistencyLevel.ONE);
         IndexSearcher searcher = new IndexSearcher(indexReader);
 
         
@@ -182,7 +181,7 @@ public class LucandraTests extends TestCase {
     
     public void testDelete() throws Exception {
     	
-    	IndexReader indexReader = new IndexReader(indexName, client);
+    	IndexReader indexReader = new IndexReader(indexName, client, ConsistencyLevel.ONE);
         IndexSearcher searcher = new IndexSearcher(indexReader);
         
         QueryParser qp = new QueryParser(Version.LUCENE_CURRENT, "key", analyzer);
@@ -196,7 +195,7 @@ public class LucandraTests extends TestCase {
         indexWriter.deleteDocuments(new Term("key", new String("\u5639\u563b")));
         
 
-        indexReader = new IndexReader(indexName, client);
+        indexReader = new IndexReader(indexName, client, ConsistencyLevel.ONE);
         searcher = new IndexSearcher(indexReader);
         docs = searcher.search(q, 10);
 
@@ -205,7 +204,7 @@ public class LucandraTests extends TestCase {
 
     public void testSearch() throws Exception {
 
-        IndexReader indexReader = new IndexReader(indexName, client);
+        IndexReader indexReader = new IndexReader(indexName, client, ConsistencyLevel.ONE);
         IndexSearcher searcher = new IndexSearcher(indexReader);
 
         QueryParser qp = new QueryParser(Version.LUCENE_CURRENT, "key", analyzer);
@@ -222,7 +221,7 @@ public class LucandraTests extends TestCase {
 
     public void testScore() throws Exception {
 
-        IndexReader indexReader = new IndexReader(indexName, client);
+        IndexReader indexReader = new IndexReader(indexName, client, ConsistencyLevel.ONE);
         IndexSearcher searcher = new IndexSearcher(indexReader);
 
         QueryParser qp = new QueryParser(Version.LUCENE_CURRENT, "key", analyzer);
@@ -242,7 +241,7 @@ public class LucandraTests extends TestCase {
 
     public void testMissingQuery() throws Exception {
 
-        IndexReader indexReader = new IndexReader(indexName, client);
+        IndexReader indexReader = new IndexReader(indexName, client, ConsistencyLevel.ONE);
         IndexSearcher searcher = new IndexSearcher(indexReader);
         QueryParser qp = new QueryParser(Version.LUCENE_CURRENT, "key", analyzer);
 
@@ -254,7 +253,7 @@ public class LucandraTests extends TestCase {
     }
 
     public void testWildcardQuery() throws Exception {
-        IndexReader indexReader = new IndexReader(indexName, client);
+        IndexReader indexReader = new IndexReader(indexName, client, ConsistencyLevel.ONE);
         IndexSearcher searcher = new IndexSearcher(indexReader);
         QueryParser qp = new QueryParser(Version.LUCENE_CURRENT, "key", analyzer);
 
@@ -279,7 +278,7 @@ public class LucandraTests extends TestCase {
 
     public void testSortQuery() throws Exception {
 
-        IndexReader indexReader = new IndexReader(indexName, client);
+        IndexReader indexReader = new IndexReader(indexName, client, ConsistencyLevel.ONE);
         IndexSearcher searcher = new IndexSearcher(indexReader);
         QueryParser qp = new QueryParser(Version.LUCENE_CURRENT, "key", analyzer);
 
@@ -298,7 +297,7 @@ public class LucandraTests extends TestCase {
 
     public void testRangeQuery() throws Exception {
 
-        IndexReader indexReader = new IndexReader(indexName, client);
+        IndexReader indexReader = new IndexReader(indexName, client, ConsistencyLevel.ONE);
         IndexSearcher searcher = new IndexSearcher(indexReader);
         QueryParser qp = new QueryParser(Version.LUCENE_CURRENT, "key", analyzer);
 
@@ -312,7 +311,7 @@ public class LucandraTests extends TestCase {
 
     public void testExactQuery() throws Exception {
 
-        IndexReader indexReader = new IndexReader(indexName, client);
+        IndexReader indexReader = new IndexReader(indexName, client, ConsistencyLevel.ONE);
         IndexSearcher searcher = new IndexSearcher(indexReader);
         QueryParser qp = new QueryParser(Version.LUCENE_CURRENT, "key", analyzer);
 
@@ -338,7 +337,7 @@ public class LucandraTests extends TestCase {
         doc.add(f);
         indexWriter.addDocument(doc, analyzer);
         
-        IndexReader indexReader = new IndexReader(indexName, client);
+        IndexReader indexReader = new IndexReader(indexName, client, ConsistencyLevel.ONE);
         IndexSearcher searcher = new IndexSearcher(indexReader);
         QueryParser qp = new QueryParser(Version.LUCENE_CURRENT, "title", analyzer);
         
@@ -361,7 +360,7 @@ public class LucandraTests extends TestCase {
 
         // This tests the TermPositionVector classes
 
-        IndexReader indexReader = new IndexReader(indexName, client);
+        IndexReader indexReader = new IndexReader(indexName, client, ConsistencyLevel.ONE);
         IndexSearcher searcher = new IndexSearcher(indexReader);
         QueryParser qp = new QueryParser(Version.LUCENE_CURRENT, "key", analyzer);
 
@@ -384,7 +383,7 @@ public class LucandraTests extends TestCase {
     }
     
     public void testLucandraFilter() throws Exception {
-        IndexReader indexReader = new IndexReader(indexName, client);
+        IndexReader indexReader = new IndexReader(indexName, client, ConsistencyLevel.ONE);
         IndexSearcher searcher = new IndexSearcher(indexReader);
 
         try {

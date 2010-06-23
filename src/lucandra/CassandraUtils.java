@@ -272,7 +272,7 @@ public class CassandraUtils {
 
     }
 
-    public static void addToMutationMap(Map<String,Map<String,List<Mutation>>> mutationMap, String columnFamily, byte[] column, String key, byte[] value, Map<String,List<Number>> superColumns){
+    public static void addToMutationMap(Map<String,Map<String,List<Mutation>>> mutationMap, String columnFamily, byte[] column, String key, byte[] value, Map<String,List<Number>> superColumns, long timestamp){
         
         
         
@@ -295,7 +295,7 @@ public class CassandraUtils {
         
         if(value == null && superColumns == null){ //remove
             
-            Deletion d = new Deletion(System.currentTimeMillis());
+            Deletion d = new Deletion(timestamp);
             
             if(column != null){
                 d.setPredicate(new SlicePredicate().setColumn_names(Arrays.asList(new byte[][]{column})));
@@ -329,7 +329,7 @@ public class CassandraUtils {
                 }
                 
                 
-                cc.setColumn(new Column(column, value, System.currentTimeMillis()));                    
+                cc.setColumn(new Column(column, value, timestamp));                    
             
             } else {
                 
@@ -342,7 +342,7 @@ public class CassandraUtils {
                 for(Map.Entry<String, List<Number>> e : superColumns.entrySet()){        
                     
                     try {
-                        columns.add(new Column(e.getKey().getBytes("UTF-8"), intVectorToByteArray(e.getValue()), System.currentTimeMillis()));
+                        columns.add(new Column(e.getKey().getBytes("UTF-8"), intVectorToByteArray(e.getValue()), timestamp));
                     } catch (UnsupportedEncodingException e1) {
                         throw new RuntimeException("UTF-8 not supported by this JVM");
                     }
@@ -371,7 +371,7 @@ public class CassandraUtils {
                 
                 mutationMap.clear();
                 //if(logger.isDebugEnabled())
-                //    logger.debug("Inserted in " + (startTime - System.currentTimeMillis()) / 1000 + "ms");
+                //    logger.debug("Inserted in " + (startTime - timestamp) / 1000 + "ms");
             } catch (TException e) {
                 throw new RuntimeException(e);
             } catch (InvalidRequestException e) {

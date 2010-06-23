@@ -29,6 +29,7 @@ import java.util.Set;
 
 import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.ConsistencyLevel;
+import org.apache.commons.codec.binary.Hex;
 import org.apache.lucene.analysis.SimpleAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
@@ -43,7 +44,9 @@ import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
 import org.apache.thrift.transport.TTransportException;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
@@ -56,25 +59,33 @@ public class NumericRangeTests {
 
 	private static final int LONG_PRECISION = 6;
 	
+	
 	private Cassandra.Iface connection;
-	private Document first;
-	private Document second;
-	private Document third;
-	long low;
-	long mid;
-	long high;
+	private static Document first;
+	private static Document second;
+	private static Document third;
+	private static long low;
+	private static long mid;
+	private static long high;
 
 	@Before
-	public void setup() throws TTransportException, CorruptIndexException, IOException {
+	public void initializeConnection() throws TTransportException{
+		connection = CassandraUtils.createConnection();
+	}
+	
+	@BeforeClass
+	public static void writeIndexes() throws TTransportException, CorruptIndexException, IOException {
 
+		
 		low = 1277266160637l;
 		mid = low + 1000;
 		high = low + 1000;
 
-		connection = CassandraUtils.createConnection();
+		
 
 		first = new Document();
-		first.add(new Field("Id", "first", Store.YES, Index.NOT_ANALYZED));
+		first.add(new Field("Id", "first", Store.YES, Index.ANALYZED));
+		
 
 		NumericField numeric = new NumericField("long", LONG_PRECISION,
 				Store.YES, true);
@@ -82,20 +93,20 @@ public class NumericRangeTests {
 		first.add(numeric);
 
 		second = new Document();
-		second.add(new Field("Id", "second", Store.YES, Index.NOT_ANALYZED));
+		second.add(new Field("Id", "second", Store.YES, Index.ANALYZED));
 
 		numeric = new NumericField("long", LONG_PRECISION, Store.YES, true);
 		numeric.setLongValue(mid);
 		second.add(numeric);
 
 		third = new Document();
-		third.add(new Field("Id", "third", Store.YES, Index.NOT_ANALYZED));
+		third.add(new Field("Id", "third", Store.YES, Index.ANALYZED));
 
 		numeric = new NumericField("long", LONG_PRECISION, Store.YES, true);
 		numeric.setLongValue(high);
 		third.add(numeric);
 		
-		IndexWriter writer = new IndexWriter("longvals", connection,
+		IndexWriter writer = new IndexWriter("longvals", CassandraUtils.createConnection(),
 				ConsistencyLevel.ONE);
 		writer.setAutoCommit(false);
 
@@ -106,13 +117,17 @@ public class NumericRangeTests {
 		writer.addDocument(third, analyzer);
 
 		writer.commit();
+		
+	
 
 		
 	}
 
-	@After
-	public void cleanup() throws CorruptIndexException, IOException {
-		IndexWriter writer = new IndexWriter("longvals", connection,
+	@AfterClass
+	public static void cleanIndexes() throws CorruptIndexException, IOException, TTransportException {
+		
+		
+		IndexWriter writer = new IndexWriter("longvals", CassandraUtils.createConnection(),
 				ConsistencyLevel.ONE);
 		writer.deleteDocuments(new Term("Id", "first"));
 		writer.deleteDocuments(new Term("Id", "second"));
@@ -126,7 +141,7 @@ public class NumericRangeTests {
 		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
 				LONG_PRECISION, mid, null, true, true);
 
-		IndexReader reader = new IndexReader("longvals", connection);
+		IndexReader reader = new IndexReader("longvals", connection, ConsistencyLevel.ONE);
 
 		IndexSearcher searcher = new IndexSearcher(reader);
 
@@ -155,7 +170,7 @@ public class NumericRangeTests {
 		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
 				LONG_PRECISION, mid, null, false, true);
 
-		IndexReader reader = new IndexReader("longvals", connection);
+		IndexReader reader = new IndexReader("longvals", connection, ConsistencyLevel.ONE);
 
 		IndexSearcher searcher = new IndexSearcher(reader);
 
@@ -182,7 +197,7 @@ public class NumericRangeTests {
 		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
 				LONG_PRECISION, null, mid, true, false);
 
-		IndexReader reader = new IndexReader("longvals", connection);
+		IndexReader reader = new IndexReader("longvals", connection, ConsistencyLevel.ONE);
 
 		IndexSearcher searcher = new IndexSearcher(reader);
 
@@ -209,7 +224,7 @@ public class NumericRangeTests {
 		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
 				LONG_PRECISION, (long) 0, null, true, true);
 
-		IndexReader reader = new IndexReader("longvals", connection);
+		IndexReader reader = new IndexReader("longvals", connection, ConsistencyLevel.ONE);
 
 		IndexSearcher searcher = new IndexSearcher(reader);
 

@@ -216,7 +216,7 @@ public class IndexWriter {
                         term.getValue().put(CassandraUtils.normsKey, bnorm );
                     }
                     
-                    CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.termVecColumnFamily, docId.getBytes("UTF-8"), CassandraUtils.hashKey(key), null,term.getValue());                    
+                    CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.termVecColumnFamily, docId.getBytes("UTF-8"), CassandraUtils.hashKey(key), null,term.getValue(), timestamp);                    
                 }
             }
 
@@ -231,7 +231,7 @@ public class IndexWriter {
                 termMap.put(CassandraUtils.termFrequencyKey, CassandraUtils.emptyArray);
                 termMap.put(CassandraUtils.positionVectorKey, CassandraUtils.emptyArray);
                 
-                CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.termVecColumnFamily, docId.getBytes("UTF-8"), CassandraUtils.hashKey(key), null,termMap);
+                CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.termVecColumnFamily, docId.getBytes("UTF-8"), CassandraUtils.hashKey(key), null,termMap, timestamp);
                
             }
 
@@ -248,7 +248,7 @@ public class IndexWriter {
                 
                 String key = indexName+CassandraUtils.delimeter+docId;
                 
-                CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.docColumnFamily, field.name().getBytes("UTF-8"), CassandraUtils.hashKey(key), value, null);
+                CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.docColumnFamily, field.name().getBytes("UTF-8"), CassandraUtils.hashKey(key), value, null, timestamp);
                             
             }
         }
@@ -256,7 +256,7 @@ public class IndexWriter {
         //Finally, Store meta-data so we can delete this document
         String key = indexName+CassandraUtils.delimeter+docId;
         
-        CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.docColumnFamily, CassandraUtils.documentMetaField.getBytes("UTF-8"), CassandraUtils.hashKey(key), CassandraUtils.toBytes(allIndexedTerms), null);
+        CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.docColumnFamily, CassandraUtils.documentMetaField.getBytes("UTF-8"), CassandraUtils.hashKey(key), CassandraUtils.toBytes(allIndexedTerms), null, timestamp);
         
        
         
@@ -266,7 +266,7 @@ public class IndexWriter {
 
     public void deleteDocuments(Query query) throws CorruptIndexException, IOException {
         
-        IndexReader   reader   = new IndexReader(indexName,client);
+        IndexReader   reader   = new IndexReader(indexName,client, consistencyLevel);
         IndexSearcher searcher = new IndexSearcher(reader);
        
         TopDocs results = searcher.search(query,1000);
@@ -336,7 +336,7 @@ public class IndexWriter {
             
             key = indexName+CassandraUtils.delimeter+termStr;
             
-            CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.termVecColumnFamily, docId, CassandraUtils.hashKey(key), null, null);                                        
+            CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.termVecColumnFamily, docId, CassandraUtils.hashKey(key), null, null, timestamp);                                        
         }
     
         
