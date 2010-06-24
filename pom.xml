@@ -278,7 +278,7 @@
 		</plugins>
 	</build>
 	<properties>
-		<lucene.version>2.9.1</lucene.version>
+		<lucene.version>2.9.3</lucene.version>
 		<solr.version>1.4.0</solr.version>
 		<slf4j.version>1.5.8</slf4j.version>
 	</properties>

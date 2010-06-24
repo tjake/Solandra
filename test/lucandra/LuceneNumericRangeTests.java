@@ -10,27 +10,22 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.cassandra.thrift.Cassandra;
-import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.lucene.analysis.SimpleAnalyzer;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.analysis.WhitespaceAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.NumericField;
 import org.apache.lucene.document.Field.Index;
 import org.apache.lucene.document.Field.Store;
 import org.apache.lucene.index.CorruptIndexException;
-import org.apache.lucene.index.Term;
 import org.apache.lucene.index.IndexWriter.MaxFieldLength;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.NumericRangeQuery;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.RAMDirectory;
-import org.apache.lucene.util.Version;
 import org.apache.thrift.transport.TTransportException;
 import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -39,7 +34,7 @@ import org.junit.Test;
  * 
  */
 public class LuceneNumericRangeTests {
-	private static final int LONG_PRECISION = 6;
+//	private static final int LONG_PRECISION = 6;
 
 	private static Document first;
 	private static Document second;
@@ -47,10 +42,9 @@ public class LuceneNumericRangeTests {
 	private static long low;
 	private static long mid;
 	private static long high;
-	
-	private static org.apache.lucene.index.IndexReader reader;
 
-
+	private static RAMDirectory directory;
+	private static IndexSearcher searcher;
 
 	@BeforeClass
 	public static void writeIndexes() throws TTransportException,
@@ -65,27 +59,28 @@ public class LuceneNumericRangeTests {
 		first = new Document();
 		first.add(new Field("Id", "first", Store.YES, Index.ANALYZED));
 
-		NumericField numeric = new NumericField("long", LONG_PRECISION,
-				Store.YES, true);
+		NumericField numeric = new NumericField("long",  Store.YES, true);
 		numeric.setLongValue(low);
 		first.add(numeric);
 
 		second = new Document();
 		second.add(new Field("Id", "second", Store.YES, Index.ANALYZED));
 
-		numeric = new NumericField("long", LONG_PRECISION, Store.YES, true);
+		numeric = new NumericField("long",  Store.YES, true);
 		numeric.setLongValue(mid);
 		second.add(numeric);
 
 		third = new Document();
 		third.add(new Field("Id", "third", Store.YES, Index.ANALYZED));
 
-		numeric = new NumericField("long", LONG_PRECISION, Store.YES, true);
+		numeric = new NumericField("long",  Store.YES, true);
 		numeric.setLongValue(high);
 		third.add(numeric);
-		
-		org.apache.lucene.index.IndexWriter writer =new org.apache.lucene.index.IndexWriter(new RAMDirectory(), new StandardAnalyzer(Version.LUCENE_CURRENT), MaxFieldLength.UNLIMITED);
-		reader = writer.getReader();
+
+		directory = new RAMDirectory();
+		org.apache.lucene.index.IndexWriter writer = new org.apache.lucene.index.IndexWriter(
+				directory, new WhitespaceAnalyzer(), true,
+				MaxFieldLength.UNLIMITED);
 
 		SimpleAnalyzer analyzer = new SimpleAnalyzer();
 
@@ -93,7 +88,11 @@ public class LuceneNumericRangeTests {
 		writer.addDocument(second, analyzer);
 		writer.addDocument(third, analyzer);
 
+		writer.optimize();
 		writer.commit();
+		writer.close();
+
+		searcher = new IndexSearcher(directory, true);
 
 	}
 
@@ -101,21 +100,20 @@ public class LuceneNumericRangeTests {
 	public static void cleanIndexes() throws CorruptIndexException,
 			IOException, TTransportException {
 
-//		IndexWriter writer = new IndexWriter("longvals", CassandraUtils
-//				.createConnection(), ConsistencyLevel.ONE);
-//		writer.deleteDocuments(new Term("Id", "first"));
-//		writer.deleteDocuments(new Term("Id", "second"));
-//		writer.deleteDocuments(new Term("Id", "third"));
+		// IndexWriter writer = new IndexWriter("longvals", CassandraUtils
+		// .createConnection(), ConsistencyLevel.ONE);
+		// writer.deleteDocuments(new Term("Id", "first"));
+		// writer.deleteDocuments(new Term("Id", "second"));
+		// writer.deleteDocuments(new Term("Id", "third"));
 	}
 
 	@Test
 	public void testLongRangeInclusive() throws Exception {
 
 		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
-				LONG_PRECISION, mid, null, true, true);
+				 mid, null, true, true);
 
-		IndexSearcher searcher = new IndexSearcher(reader);
-
+		
 		TopDocs docs = searcher.search(query, 1000);
 
 		assertEquals(2, docs.totalHits);
@@ -136,14 +134,11 @@ public class LuceneNumericRangeTests {
 	@Test
 	public void testLongRangeExclusive() throws Exception {
 
-		// now we'll query from the middle inclusive
-
+		// now we'll query from the middle exclusive
 		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
-				LONG_PRECISION, mid, null, false, true);
+				 mid, null, false, true);
 
 		
-		IndexSearcher searcher = new IndexSearcher(reader);
-
 		TopDocs docs = searcher.search(query, 1000);
 
 		assertEquals(1, docs.totalHits);
@@ -163,12 +158,8 @@ public class LuceneNumericRangeTests {
 	public void testLongRangeLessExclusive() throws Exception {
 
 		// now we'll query from the middle inclusive
-
 		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
-				LONG_PRECISION, null, mid, true, false);
-
-		
-		IndexSearcher searcher = new IndexSearcher(reader);
+				 null, mid, true, false);
 
 		TopDocs docs = searcher.search(query, 1000);
 
@@ -188,14 +179,11 @@ public class LuceneNumericRangeTests {
 	@Test
 	public void testLongRangeLessInclusive() throws Exception {
 
-		// now we'll query from the middle inclusive
-
+		// now we'll query from the middle exclusive
 		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
-				LONG_PRECISION, null, mid, true, true);
+				 null, mid, true, true);
 
 		
-		IndexSearcher searcher = new IndexSearcher(reader);
-
 		TopDocs docs = searcher.search(query, 1000);
 
 		assertEquals(2, docs.totalHits);
@@ -215,14 +203,11 @@ public class LuceneNumericRangeTests {
 	@Test
 	public void testLongRangeZeroAll() throws Exception {
 
-		// now we'll query from the middle inclusive
-
+		// now we'll query from 0 to unbounded
 		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
-				LONG_PRECISION, (long) 0, null, true, true);
+				 (long) 0, null, true, true);
 
-		
-		IndexSearcher searcher = new IndexSearcher(reader);
-
+	
 		TopDocs docs = searcher.search(query, 1000);
 
 		assertEquals(3, docs.totalHits);
@@ -243,14 +228,11 @@ public class LuceneNumericRangeTests {
 	@Test
 	public void testLongRangeMaxAll() throws Exception {
 
-		// now we'll query from the middle inclusive
-
+		// now we'll query from the max value inclusive
 		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
-				LONG_PRECISION, null, high * 1000, true, true);
+				 null, Long.MIN_VALUE, true, true);
 
-	
-		IndexSearcher searcher = new IndexSearcher(reader);
-
+		
 		TopDocs docs = searcher.search(query, 1000);
 
 		assertEquals(3, docs.totalHits);
