@@ -75,7 +75,8 @@ public class NumericRangeTests {
 	
 	@BeforeClass
 	public static void writeIndexes() throws TTransportException, CorruptIndexException, IOException {
-
+		//clean up indexes before we run our test
+		cleanIndexes();
 		
 		low = 1277266160637l;
 		mid = low + 1000;
@@ -216,13 +217,72 @@ public class NumericRangeTests {
 
 	}
 
+	
 	@Test
-	public void testLongRangeAll() throws Exception {
+	public void testLongRangeLessInclusive() throws Exception {
+
+		// now we'll query from the middle inclusive
+
+		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
+				LONG_PRECISION, null, mid, true, true);
+
+		IndexReader reader = new IndexReader("longvals", connection, ConsistencyLevel.ONE);
+
+		IndexSearcher searcher = new IndexSearcher(reader);
+
+		TopDocs docs = searcher.search(query, 1000);
+
+		assertEquals(2, docs.totalHits);
+
+		Set<String> results = new HashSet<String>();
+
+		for (ScoreDoc doc : docs.scoreDocs) {
+			Document returned = searcher.doc(doc.doc);
+			results.add(returned.get("Id"));
+		}
+
+		assertTrue(results.contains("one"));
+		assertTrue(results.contains("two"));
+
+	}
+
+	
+	@Test
+	public void testLongRangeZeroAll() throws Exception {
 
 		// now we'll query from the middle inclusive
 
 		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
 				LONG_PRECISION, (long) 0, null, true, true);
+
+		IndexReader reader = new IndexReader("longvals", connection, ConsistencyLevel.ONE);
+
+		IndexSearcher searcher = new IndexSearcher(reader);
+
+		TopDocs docs = searcher.search(query, 1000);
+
+		assertEquals(3, docs.totalHits);
+
+		Set<String> results = new HashSet<String>();
+
+		for (ScoreDoc doc : docs.scoreDocs) {
+			Document returned = searcher.doc(doc.doc);
+			results.add(returned.get("Id"));
+		}
+
+		assertTrue(results.contains("first"));
+		assertTrue(results.contains("second"));
+		assertTrue(results.contains("third"));
+
+	}
+	
+	@Test
+	public void testLongRangeMaxAll() throws Exception {
+
+		// now we'll query from the middle inclusive
+
+		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
+				LONG_PRECISION, null, high*1000, true, true);
 
 		IndexReader reader = new IndexReader("longvals", connection, ConsistencyLevel.ONE);
 
