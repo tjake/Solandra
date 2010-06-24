@@ -23,13 +23,11 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.Calendar;
 import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.ConsistencyLevel;
-import org.apache.commons.codec.binary.Hex;
 import org.apache.lucene.analysis.SimpleAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
@@ -43,7 +41,6 @@ import org.apache.lucene.search.NumericRangeQuery;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
 import org.apache.thrift.transport.TTransportException;
-import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -57,7 +54,6 @@ import org.junit.Test;
  */
 public class NumericRangeTests {
 
-	private static final int LONG_PRECISION = 6;
 	
 	
 	private Cassandra.Iface connection;
@@ -78,9 +74,9 @@ public class NumericRangeTests {
 		//clean up indexes before we run our test
 		cleanIndexes();
 		
-		low = 1277266160637l;
+		low = 1277266160637L;
 		mid = low + 1000;
-		high = low + 1000;
+		high = mid + 1000;
 
 		
 
@@ -88,7 +84,7 @@ public class NumericRangeTests {
 		first.add(new Field("Id", "first", Store.YES, Index.ANALYZED));
 		
 
-		NumericField numeric = new NumericField("long", LONG_PRECISION,
+		NumericField numeric = new NumericField("long", 
 				Store.YES, true);
 		numeric.setLongValue(low);
 		first.add(numeric);
@@ -96,14 +92,14 @@ public class NumericRangeTests {
 		second = new Document();
 		second.add(new Field("Id", "second", Store.YES, Index.ANALYZED));
 
-		numeric = new NumericField("long", LONG_PRECISION, Store.YES, true);
+		numeric = new NumericField("long",  Store.YES, true);
 		numeric.setLongValue(mid);
 		second.add(numeric);
 
 		third = new Document();
 		third.add(new Field("Id", "third", Store.YES, Index.ANALYZED));
 
-		numeric = new NumericField("long", LONG_PRECISION, Store.YES, true);
+		numeric = new NumericField("long",  Store.YES, true);
 		numeric.setLongValue(high);
 		third.add(numeric);
 		
@@ -140,7 +136,7 @@ public class NumericRangeTests {
 
 
 		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
-				LONG_PRECISION, mid, null, true, true);
+				 mid, null, true, true);
 
 		IndexReader reader = new IndexReader("longvals", connection, ConsistencyLevel.ONE);
 
@@ -149,6 +145,7 @@ public class NumericRangeTests {
 		TopDocs docs = searcher.search(query, 1000);
 
 		assertEquals(2, docs.totalHits);
+
 
 		Set<String> results = new HashSet<String>();
 
@@ -169,13 +166,14 @@ public class NumericRangeTests {
 		// now we'll query from the middle inclusive
 
 		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
-				LONG_PRECISION, mid, null, false, true);
+				 mid, null, false, true);
 
 		IndexReader reader = new IndexReader("longvals", connection, ConsistencyLevel.ONE);
 
 		IndexSearcher searcher = new IndexSearcher(reader);
 
 		TopDocs docs = searcher.search(query, 1000);
+
 
 		assertEquals(1, docs.totalHits);
 
@@ -196,7 +194,7 @@ public class NumericRangeTests {
 		// now we'll query from the middle inclusive
 
 		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
-				LONG_PRECISION, null, mid, true, false);
+				 null, mid, true, false);
 
 		IndexReader reader = new IndexReader("longvals", connection, ConsistencyLevel.ONE);
 
@@ -213,7 +211,8 @@ public class NumericRangeTests {
 			results.add(returned.get("Id"));
 		}
 
-		assertTrue(results.contains("one"));
+		assertTrue(results.contains("first"));
+
 
 	}
 
@@ -224,7 +223,7 @@ public class NumericRangeTests {
 		// now we'll query from the middle inclusive
 
 		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
-				LONG_PRECISION, null, mid, true, true);
+				 null, mid, true, true);
 
 		IndexReader reader = new IndexReader("longvals", connection, ConsistencyLevel.ONE);
 
@@ -241,8 +240,8 @@ public class NumericRangeTests {
 			results.add(returned.get("Id"));
 		}
 
-		assertTrue(results.contains("one"));
-		assertTrue(results.contains("two"));
+		assertTrue(results.contains("first"));
+		assertTrue(results.contains("second"));
 
 	}
 
@@ -253,7 +252,7 @@ public class NumericRangeTests {
 		// now we'll query from the middle inclusive
 
 		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
-				LONG_PRECISION, (long) 0, null, true, true);
+				 Long.MIN_VALUE, null, true, true);
 
 		IndexReader reader = new IndexReader("longvals", connection, ConsistencyLevel.ONE);
 
@@ -274,6 +273,7 @@ public class NumericRangeTests {
 		assertTrue(results.contains("second"));
 		assertTrue(results.contains("third"));
 
+
 	}
 	
 	@Test
@@ -282,7 +282,7 @@ public class NumericRangeTests {
 		// now we'll query from the middle inclusive
 
 		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
-				LONG_PRECISION, null, high*1000, true, true);
+				 null, Long.MAX_VALUE, true, true);
 
 		IndexReader reader = new IndexReader("longvals", connection, ConsistencyLevel.ONE);
 
