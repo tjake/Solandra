@@ -1856,7 +1856,7 @@ public class Cassandra {
   public static class login_args implements TBase<login_args._Fields>, java.io.Serializable, Cloneable   {
     private static final TStruct STRUCT_DESC = new TStruct("login_args");
 
-    private static final TField KEYSPACE_FIELD_DESC = new TField("keyspace", TType.STRING, (short)1);
+    private static final TField KEYSPACE_FIELD_DESC = new TField("keySpace", TType.STRING, (short)1);
     private static final TField AUTH_REQUEST_FIELD_DESC = new TField("auth_request", TType.STRUCT, (short)2);
 
     public String keyspace;
@@ -1864,7 +1864,7 @@ public class Cassandra {
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
-      KEYSPACE((short)1, "keyspace"),
+      KEYSPACE((short)1, "keySpace"),
       AUTH_REQUEST((short)2, "auth_request");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
@@ -1921,7 +1921,7 @@ public class Cassandra {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.KEYSPACE, new FieldMetaData("keyspace", TFieldRequirementType.REQUIRED, 
+      put(_Fields.KEYSPACE, new FieldMetaData("keySpace", TFieldRequirementType.REQUIRED, 
           new FieldValueMetaData(TType.STRING)));
       put(_Fields.AUTH_REQUEST, new FieldMetaData("auth_request", TFieldRequirementType.REQUIRED, 
           new StructMetaData(TType.STRUCT, AuthenticationRequest.class)));
@@ -2566,7 +2566,7 @@ public class Cassandra {
   public static class get_args implements TBase<get_args._Fields>, java.io.Serializable, Cloneable, Comparable<get_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("get_args");
 
-    private static final TField KEYSPACE_FIELD_DESC = new TField("keyspace", TType.STRING, (short)1);
+    private static final TField KEYSPACE_FIELD_DESC = new TField("keySpace", TType.STRING, (short)1);
     private static final TField KEY_FIELD_DESC = new TField("key", TType.STRING, (short)2);
     private static final TField COLUMN_PATH_FIELD_DESC = new TField("column_path", TType.STRUCT, (short)3);
     private static final TField CONSISTENCY_LEVEL_FIELD_DESC = new TField("consistency_level", TType.I32, (short)4);
@@ -2582,7 +2582,7 @@ public class Cassandra {
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
-      KEYSPACE((short)1, "keyspace"),
+      KEYSPACE((short)1, "keySpace"),
       KEY((short)2, "key"),
       COLUMN_PATH((short)3, "column_path"),
       /**
@@ -2645,7 +2645,7 @@ public class Cassandra {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.KEYSPACE, new FieldMetaData("keyspace", TFieldRequirementType.REQUIRED, 
+      put(_Fields.KEYSPACE, new FieldMetaData("keySpace", TFieldRequirementType.REQUIRED, 
           new FieldValueMetaData(TType.STRING)));
       put(_Fields.KEY, new FieldMetaData("key", TFieldRequirementType.REQUIRED, 
           new FieldValueMetaData(TType.STRING)));
@@ -3754,7 +3754,7 @@ public class Cassandra {
   public static class get_slice_args implements TBase<get_slice_args._Fields>, java.io.Serializable, Cloneable, Comparable<get_slice_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("get_slice_args");
 
-    private static final TField KEYSPACE_FIELD_DESC = new TField("keyspace", TType.STRING, (short)1);
+    private static final TField KEYSPACE_FIELD_DESC = new TField("keySpace", TType.STRING, (short)1);
     private static final TField KEY_FIELD_DESC = new TField("key", TType.STRING, (short)2);
     private static final TField COLUMN_PARENT_FIELD_DESC = new TField("column_parent", TType.STRUCT, (short)3);
     private static final TField PREDICATE_FIELD_DESC = new TField("predicate", TType.STRUCT, (short)4);
@@ -3772,7 +3772,7 @@ public class Cassandra {
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
-      KEYSPACE((short)1, "keyspace"),
+      KEYSPACE((short)1, "keySpace"),
       KEY((short)2, "key"),
       COLUMN_PARENT((short)3, "column_parent"),
       PREDICATE((short)4, "predicate"),
@@ -3836,7 +3836,7 @@ public class Cassandra {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.KEYSPACE, new FieldMetaData("keyspace", TFieldRequirementType.REQUIRED, 
+      put(_Fields.KEYSPACE, new FieldMetaData("keySpace", TFieldRequirementType.REQUIRED, 
           new FieldValueMetaData(TType.STRING)));
       put(_Fields.KEY, new FieldMetaData("key", TFieldRequirementType.REQUIRED, 
           new FieldValueMetaData(TType.STRING)));
@@ -4983,7 +4983,7 @@ public class Cassandra {
   public static class multiget_args implements TBase<multiget_args._Fields>, java.io.Serializable, Cloneable, Comparable<multiget_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("multiget_args");
 
-    private static final TField KEYSPACE_FIELD_DESC = new TField("keyspace", TType.STRING, (short)1);
+    private static final TField KEYSPACE_FIELD_DESC = new TField("keySpace", TType.STRING, (short)1);
     private static final TField KEYS_FIELD_DESC = new TField("keys", TType.LIST, (short)2);
     private static final TField COLUMN_PATH_FIELD_DESC = new TField("column_path", TType.STRUCT, (short)3);
     private static final TField CONSISTENCY_LEVEL_FIELD_DESC = new TField("consistency_level", TType.I32, (short)4);
@@ -4999,7 +4999,7 @@ public class Cassandra {
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
-      KEYSPACE((short)1, "keyspace"),
+      KEYSPACE((short)1, "keySpace"),
       KEYS((short)2, "keys"),
       COLUMN_PATH((short)3, "column_path"),
       /**
@@ -5062,7 +5062,7 @@ public class Cassandra {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.KEYSPACE, new FieldMetaData("keyspace", TFieldRequirementType.REQUIRED, 
+      put(_Fields.KEYSPACE, new FieldMetaData("keySpace", TFieldRequirementType.REQUIRED, 
           new FieldValueMetaData(TType.STRING)));
       put(_Fields.KEYS, new FieldMetaData("keys", TFieldRequirementType.REQUIRED, 
           new ListMetaData(TType.LIST, 
@@ -6121,7 +6121,7 @@ public class Cassandra {
   public static class multiget_slice_args implements TBase<multiget_slice_args._Fields>, java.io.Serializable, Cloneable, Comparable<multiget_slice_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("multiget_slice_args");
 
-    private static final TField KEYSPACE_FIELD_DESC = new TField("keyspace", TType.STRING, (short)1);
+    private static final TField KEYSPACE_FIELD_DESC = new TField("keySpace", TType.STRING, (short)1);
     private static final TField KEYS_FIELD_DESC = new TField("keys", TType.LIST, (short)2);
     private static final TField COLUMN_PARENT_FIELD_DESC = new TField("column_parent", TType.STRUCT, (short)3);
     private static final TField PREDICATE_FIELD_DESC = new TField("predicate", TType.STRUCT, (short)4);
@@ -6139,7 +6139,7 @@ public class Cassandra {
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
-      KEYSPACE((short)1, "keyspace"),
+      KEYSPACE((short)1, "keySpace"),
       KEYS((short)2, "keys"),
       COLUMN_PARENT((short)3, "column_parent"),
       PREDICATE((short)4, "predicate"),
@@ -6203,7 +6203,7 @@ public class Cassandra {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.KEYSPACE, new FieldMetaData("keyspace", TFieldRequirementType.REQUIRED, 
+      put(_Fields.KEYSPACE, new FieldMetaData("keySpace", TFieldRequirementType.REQUIRED, 
           new FieldValueMetaData(TType.STRING)));
       put(_Fields.KEYS, new FieldMetaData("keys", TFieldRequirementType.REQUIRED, 
           new ListMetaData(TType.LIST, 
@@ -7369,7 +7369,7 @@ public class Cassandra {
   public static class get_count_args implements TBase<get_count_args._Fields>, java.io.Serializable, Cloneable, Comparable<get_count_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("get_count_args");
 
-    private static final TField KEYSPACE_FIELD_DESC = new TField("keyspace", TType.STRING, (short)1);
+    private static final TField KEYSPACE_FIELD_DESC = new TField("keySpace", TType.STRING, (short)1);
     private static final TField KEY_FIELD_DESC = new TField("key", TType.STRING, (short)2);
     private static final TField COLUMN_PARENT_FIELD_DESC = new TField("column_parent", TType.STRUCT, (short)3);
     private static final TField CONSISTENCY_LEVEL_FIELD_DESC = new TField("consistency_level", TType.I32, (short)4);
@@ -7385,7 +7385,7 @@ public class Cassandra {
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
-      KEYSPACE((short)1, "keyspace"),
+      KEYSPACE((short)1, "keySpace"),
       KEY((short)2, "key"),
       COLUMN_PARENT((short)3, "column_parent"),
       /**
@@ -7448,7 +7448,7 @@ public class Cassandra {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.KEYSPACE, new FieldMetaData("keyspace", TFieldRequirementType.REQUIRED, 
+      put(_Fields.KEYSPACE, new FieldMetaData("keySpace", TFieldRequirementType.REQUIRED, 
           new FieldValueMetaData(TType.STRING)));
       put(_Fields.KEY, new FieldMetaData("key", TFieldRequirementType.REQUIRED, 
           new FieldValueMetaData(TType.STRING)));
@@ -8470,7 +8470,7 @@ public class Cassandra {
   public static class get_range_slice_args implements TBase<get_range_slice_args._Fields>, java.io.Serializable, Cloneable, Comparable<get_range_slice_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("get_range_slice_args");
 
-    private static final TField KEYSPACE_FIELD_DESC = new TField("keyspace", TType.STRING, (short)1);
+    private static final TField KEYSPACE_FIELD_DESC = new TField("keySpace", TType.STRING, (short)1);
     private static final TField COLUMN_PARENT_FIELD_DESC = new TField("column_parent", TType.STRUCT, (short)2);
     private static final TField PREDICATE_FIELD_DESC = new TField("predicate", TType.STRUCT, (short)3);
     private static final TField START_KEY_FIELD_DESC = new TField("start_key", TType.STRING, (short)4);
@@ -8492,7 +8492,7 @@ public class Cassandra {
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
-      KEYSPACE((short)1, "keyspace"),
+      KEYSPACE((short)1, "keySpace"),
       COLUMN_PARENT((short)2, "column_parent"),
       PREDICATE((short)3, "predicate"),
       START_KEY((short)4, "start_key"),
@@ -8560,7 +8560,7 @@ public class Cassandra {
     private BitSet __isset_bit_vector = new BitSet(1);
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.KEYSPACE, new FieldMetaData("keyspace", TFieldRequirementType.REQUIRED, 
+      put(_Fields.KEYSPACE, new FieldMetaData("keySpace", TFieldRequirementType.REQUIRED, 
           new FieldValueMetaData(TType.STRING)));
       put(_Fields.COLUMN_PARENT, new FieldMetaData("column_parent", TFieldRequirementType.REQUIRED, 
           new StructMetaData(TType.STRUCT, ColumnParent.class)));
@@ -9879,7 +9879,7 @@ public class Cassandra {
   public static class get_range_slices_args implements TBase<get_range_slices_args._Fields>, java.io.Serializable, Cloneable, Comparable<get_range_slices_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("get_range_slices_args");
 
-    private static final TField KEYSPACE_FIELD_DESC = new TField("keyspace", TType.STRING, (short)1);
+    private static final TField KEYSPACE_FIELD_DESC = new TField("keySpace", TType.STRING, (short)1);
     private static final TField COLUMN_PARENT_FIELD_DESC = new TField("column_parent", TType.STRUCT, (short)2);
     private static final TField PREDICATE_FIELD_DESC = new TField("predicate", TType.STRUCT, (short)3);
     private static final TField RANGE_FIELD_DESC = new TField("range", TType.STRUCT, (short)4);
@@ -9897,7 +9897,7 @@ public class Cassandra {
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
-      KEYSPACE((short)1, "keyspace"),
+      KEYSPACE((short)1, "keySpace"),
       COLUMN_PARENT((short)2, "column_parent"),
       PREDICATE((short)3, "predicate"),
       RANGE((short)4, "range"),
@@ -9961,7 +9961,7 @@ public class Cassandra {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.KEYSPACE, new FieldMetaData("keyspace", TFieldRequirementType.REQUIRED, 
+      put(_Fields.KEYSPACE, new FieldMetaData("keySpace", TFieldRequirementType.REQUIRED, 
           new FieldValueMetaData(TType.STRING)));
       put(_Fields.COLUMN_PARENT, new FieldMetaData("column_parent", TFieldRequirementType.REQUIRED, 
           new StructMetaData(TType.STRUCT, ColumnParent.class)));
@@ -11109,7 +11109,7 @@ public class Cassandra {
   public static class insert_args implements TBase<insert_args._Fields>, java.io.Serializable, Cloneable, Comparable<insert_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("insert_args");
 
-    private static final TField KEYSPACE_FIELD_DESC = new TField("keyspace", TType.STRING, (short)1);
+    private static final TField KEYSPACE_FIELD_DESC = new TField("keySpace", TType.STRING, (short)1);
     private static final TField KEY_FIELD_DESC = new TField("key", TType.STRING, (short)2);
     private static final TField COLUMN_PATH_FIELD_DESC = new TField("column_path", TType.STRUCT, (short)3);
     private static final TField VALUE_FIELD_DESC = new TField("value", TType.STRING, (short)4);
@@ -11129,7 +11129,7 @@ public class Cassandra {
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
-      KEYSPACE((short)1, "keyspace"),
+      KEYSPACE((short)1, "keySpace"),
       KEY((short)2, "key"),
       COLUMN_PATH((short)3, "column_path"),
       VALUE((short)4, "value"),
@@ -11196,7 +11196,7 @@ public class Cassandra {
     private BitSet __isset_bit_vector = new BitSet(1);
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.KEYSPACE, new FieldMetaData("keyspace", TFieldRequirementType.REQUIRED, 
+      put(_Fields.KEYSPACE, new FieldMetaData("keySpace", TFieldRequirementType.REQUIRED, 
           new FieldValueMetaData(TType.STRING)));
       put(_Fields.KEY, new FieldMetaData("key", TFieldRequirementType.REQUIRED, 
           new FieldValueMetaData(TType.STRING)));
@@ -12307,7 +12307,7 @@ public class Cassandra {
   public static class batch_insert_args implements TBase<batch_insert_args._Fields>, java.io.Serializable, Cloneable   {
     private static final TStruct STRUCT_DESC = new TStruct("batch_insert_args");
 
-    private static final TField KEYSPACE_FIELD_DESC = new TField("keyspace", TType.STRING, (short)1);
+    private static final TField KEYSPACE_FIELD_DESC = new TField("keySpace", TType.STRING, (short)1);
     private static final TField KEY_FIELD_DESC = new TField("key", TType.STRING, (short)2);
     private static final TField CFMAP_FIELD_DESC = new TField("cfmap", TType.MAP, (short)3);
     private static final TField CONSISTENCY_LEVEL_FIELD_DESC = new TField("consistency_level", TType.I32, (short)4);
@@ -12323,7 +12323,7 @@ public class Cassandra {
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
-      KEYSPACE((short)1, "keyspace"),
+      KEYSPACE((short)1, "keySpace"),
       KEY((short)2, "key"),
       CFMAP((short)3, "cfmap"),
       /**
@@ -12386,7 +12386,7 @@ public class Cassandra {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.KEYSPACE, new FieldMetaData("keyspace", TFieldRequirementType.REQUIRED, 
+      put(_Fields.KEYSPACE, new FieldMetaData("keySpace", TFieldRequirementType.REQUIRED, 
           new FieldValueMetaData(TType.STRING)));
       put(_Fields.KEY, new FieldMetaData("key", TFieldRequirementType.REQUIRED, 
           new FieldValueMetaData(TType.STRING)));
@@ -13344,7 +13344,7 @@ public class Cassandra {
   public static class remove_args implements TBase<remove_args._Fields>, java.io.Serializable, Cloneable, Comparable<remove_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("remove_args");
 
-    private static final TField KEYSPACE_FIELD_DESC = new TField("keyspace", TType.STRING, (short)1);
+    private static final TField KEYSPACE_FIELD_DESC = new TField("keySpace", TType.STRING, (short)1);
     private static final TField KEY_FIELD_DESC = new TField("key", TType.STRING, (short)2);
     private static final TField COLUMN_PATH_FIELD_DESC = new TField("column_path", TType.STRUCT, (short)3);
     private static final TField TIMESTAMP_FIELD_DESC = new TField("timestamp", TType.I64, (short)4);
@@ -13362,7 +13362,7 @@ public class Cassandra {
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
-      KEYSPACE((short)1, "keyspace"),
+      KEYSPACE((short)1, "keySpace"),
       KEY((short)2, "key"),
       COLUMN_PATH((short)3, "column_path"),
       TIMESTAMP((short)4, "timestamp"),
@@ -13428,7 +13428,7 @@ public class Cassandra {
     private BitSet __isset_bit_vector = new BitSet(1);
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.KEYSPACE, new FieldMetaData("keyspace", TFieldRequirementType.REQUIRED, 
+      put(_Fields.KEYSPACE, new FieldMetaData("keySpace", TFieldRequirementType.REQUIRED, 
           new FieldValueMetaData(TType.STRING)));
       put(_Fields.KEY, new FieldMetaData("key", TFieldRequirementType.REQUIRED, 
           new FieldValueMetaData(TType.STRING)));
@@ -14445,7 +14445,7 @@ public class Cassandra {
   public static class batch_mutate_args implements TBase<batch_mutate_args._Fields>, java.io.Serializable, Cloneable   {
     private static final TStruct STRUCT_DESC = new TStruct("batch_mutate_args");
 
-    private static final TField KEYSPACE_FIELD_DESC = new TField("keyspace", TType.STRING, (short)1);
+    private static final TField KEYSPACE_FIELD_DESC = new TField("keySpace", TType.STRING, (short)1);
     private static final TField MUTATION_MAP_FIELD_DESC = new TField("mutation_map", TType.MAP, (short)2);
     private static final TField CONSISTENCY_LEVEL_FIELD_DESC = new TField("consistency_level", TType.I32, (short)3);
 
@@ -14459,7 +14459,7 @@ public class Cassandra {
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
-      KEYSPACE((short)1, "keyspace"),
+      KEYSPACE((short)1, "keySpace"),
       MUTATION_MAP((short)2, "mutation_map"),
       /**
        * 
@@ -14521,7 +14521,7 @@ public class Cassandra {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.KEYSPACE, new FieldMetaData("keyspace", TFieldRequirementType.REQUIRED, 
+      put(_Fields.KEYSPACE, new FieldMetaData("keySpace", TFieldRequirementType.REQUIRED, 
           new FieldValueMetaData(TType.STRING)));
       put(_Fields.MUTATION_MAP, new FieldMetaData("mutation_map", TFieldRequirementType.REQUIRED, 
           new MapMetaData(TType.MAP, 
@@ -18028,13 +18028,13 @@ public class Cassandra {
   public static class describe_ring_args implements TBase<describe_ring_args._Fields>, java.io.Serializable, Cloneable, Comparable<describe_ring_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("describe_ring_args");
 
-    private static final TField KEYSPACE_FIELD_DESC = new TField("keyspace", TType.STRING, (short)1);
+    private static final TField KEYSPACE_FIELD_DESC = new TField("keySpace", TType.STRING, (short)1);
 
     public String keyspace;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
-      KEYSPACE((short)1, "keyspace");
+      KEYSPACE((short)1, "keySpace");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
       private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
@@ -18090,7 +18090,7 @@ public class Cassandra {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.KEYSPACE, new FieldMetaData("keyspace", TFieldRequirementType.REQUIRED, 
+      put(_Fields.KEYSPACE, new FieldMetaData("keySpace", TFieldRequirementType.REQUIRED, 
           new FieldValueMetaData(TType.STRING)));
     }});
 
@@ -18630,13 +18630,13 @@ public class Cassandra {
   public static class describe_keyspace_args implements TBase<describe_keyspace_args._Fields>, java.io.Serializable, Cloneable, Comparable<describe_keyspace_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("describe_keyspace_args");
 
-    private static final TField KEYSPACE_FIELD_DESC = new TField("keyspace", TType.STRING, (short)1);
+    private static final TField KEYSPACE_FIELD_DESC = new TField("keySpace", TType.STRING, (short)1);
 
     public String keyspace;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
-      KEYSPACE((short)1, "keyspace");
+      KEYSPACE((short)1, "keySpace");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
       private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
@@ -18692,7 +18692,7 @@ public class Cassandra {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.KEYSPACE, new FieldMetaData("keyspace", TFieldRequirementType.REQUIRED, 
+      put(_Fields.KEYSPACE, new FieldMetaData("keySpace", TFieldRequirementType.REQUIRED, 
           new FieldValueMetaData(TType.STRING)));
     }});
 

@@ -39,6 +39,7 @@ import org.apache.cassandra.thrift.SlicePredicate;
 import org.apache.cassandra.thrift.SliceRange;
 import org.apache.cassandra.thrift.TimedOutException;
 import org.apache.cassandra.thrift.UnavailableException;
+import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
@@ -58,26 +59,21 @@ import org.apache.thrift.TException;
 public class IndexWriter {
 
     private final String indexName;
-    private final Cassandra.Iface client;
+    private final IndexContext context;
     private final ColumnPath docAllColumnPath;
     private boolean autoCommit;
-    
-    private final long timestamp;
-    private ConsistencyLevel consistencyLevel;
-    
     private static final ThreadLocal<Map<String,Map<String,List<Mutation>>>> mutationMap = new ThreadLocal<Map<String,Map<String,List<Mutation>>>>();
     
     private Similarity similarity = Similarity.getDefault(); // how to normalize;     
     
-    public IndexWriter(String indexName, Cassandra.Iface client, ConsistencyLevel consistencyLevel) {
+    private static final Logger logger = Logger.getLogger(IndexWriter.class);
+
+    public IndexWriter(String indexName, IndexContext context) {
 
         this.indexName = indexName;
-        this.client = client;
-        this.consistencyLevel = consistencyLevel;
-        this.timestamp = System.currentTimeMillis();
+        this.context = context;
         autoCommit  = true;
         docAllColumnPath = new ColumnPath(CassandraUtils.docColumnFamily);
-        
             
     }
 
@@ -216,7 +212,7 @@ public class IndexWriter {
                         term.getValue().put(CassandraUtils.normsKey, bnorm );
                     }
                     
-                    CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.termVecColumnFamily, docId.getBytes("UTF-8"), CassandraUtils.hashKey(key), null,term.getValue(), timestamp);                    
+                    CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.termVecColumnFamily, docId.getBytes("UTF-8"), CassandraUtils.hashKey(key), null,term.getValue());                    
                 }
             }
 
@@ -231,7 +227,7 @@ public class IndexWriter {
                 termMap.put(CassandraUtils.termFrequencyKey, CassandraUtils.emptyArray);
                 termMap.put(CassandraUtils.positionVectorKey, CassandraUtils.emptyArray);
                 
-                CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.termVecColumnFamily, docId.getBytes("UTF-8"), CassandraUtils.hashKey(key), null,termMap, timestamp);
+                CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.termVecColumnFamily, docId.getBytes("UTF-8"), CassandraUtils.hashKey(key), null,termMap);
                
             }
 
@@ -248,7 +244,7 @@ public class IndexWriter {
                 
                 String key = indexName+CassandraUtils.delimeter+docId;
                 
-                CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.docColumnFamily, field.name().getBytes("UTF-8"), CassandraUtils.hashKey(key), value, null, timestamp);
+                CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.docColumnFamily, field.name().getBytes("UTF-8"), CassandraUtils.hashKey(key), value, null);
                             
             }
         }
@@ -256,17 +252,17 @@ public class IndexWriter {
         //Finally, Store meta-data so we can delete this document
         String key = indexName+CassandraUtils.delimeter+docId;
         
-        CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.docColumnFamily, CassandraUtils.documentMetaField.getBytes("UTF-8"), CassandraUtils.hashKey(key), CassandraUtils.toBytes(allIndexedTerms), null, timestamp);
+        CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.docColumnFamily, CassandraUtils.documentMetaField.getBytes("UTF-8"), CassandraUtils.hashKey(key), CassandraUtils.toBytes(allIndexedTerms), null);
         
        
         
         if(autoCommit)
-            CassandraUtils.robustBatchInsert(client, getMutationMap());    
+            CassandraUtils.robustBatchInsert(context, getMutationMap());    
     }
 
     public void deleteDocuments(Query query) throws CorruptIndexException, IOException {
         
-        IndexReader   reader   = new IndexReader(indexName,client, consistencyLevel);
+        IndexReader   reader   = new IndexReader(indexName, context);
         IndexSearcher searcher = new IndexSearcher(reader);
        
         TopDocs results = searcher.search(query,1000);
@@ -295,13 +291,14 @@ public class IndexWriter {
         
     }
     
+    @SuppressWarnings("unchecked")
     public void deleteDocuments(Term term) throws CorruptIndexException, IOException {
         try {
                        
             ColumnParent cp = new ColumnParent(CassandraUtils.termVecColumnFamily);
             String key = indexName+CassandraUtils.delimeter+CassandraUtils.createColumnName(term);
             
-            List<ColumnOrSuperColumn> docs = client.get_slice(CassandraUtils.keySpace, CassandraUtils.hashKey(key), cp, new SlicePredicate().setSlice_range(new SliceRange(new byte[]{}, new byte[]{},true,Integer.MAX_VALUE)), consistencyLevel);
+            List<ColumnOrSuperColumn> docs = context.getClient().get_slice(context.getKeySpace(), CassandraUtils.hashKey(key), cp, new SlicePredicate().setSlice_range(new SliceRange(new byte[]{}, new byte[]{},true,Integer.MAX_VALUE)), context.getConsistencyLevel());
                 
             //delete by documentId
             for(ColumnOrSuperColumn docInfo : docs){
@@ -323,12 +320,11 @@ public class IndexWriter {
         }  
     }
     
-    @SuppressWarnings("unchecked")
-	private void deleteLucandraDocument(byte[] docId) throws InvalidRequestException, NotFoundException, UnavailableException, TimedOutException, TException, IOException, ClassNotFoundException{
+    private void deleteLucandraDocument(byte[] docId) throws InvalidRequestException, NotFoundException, UnavailableException, TimedOutException, TException, IOException, ClassNotFoundException{
 
         String key =  indexName+CassandraUtils.delimeter+new String(docId);
         
-        ColumnOrSuperColumn column = client.get(CassandraUtils.keySpace, CassandraUtils.hashKey(key), CassandraUtils.metaColumnPath, consistencyLevel);
+        ColumnOrSuperColumn column = context.getClient().get(context.getKeySpace(), CassandraUtils.hashKey(key), CassandraUtils.metaColumnPath, context.getConsistencyLevel());
         
         List<String> terms = (List<String>) CassandraUtils.fromBytes(column.column.value);
     
@@ -336,19 +332,19 @@ public class IndexWriter {
             
             key = indexName+CassandraUtils.delimeter+termStr;
             
-            CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.termVecColumnFamily, docId, CassandraUtils.hashKey(key), null, null, timestamp);                                        
+            CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.termVecColumnFamily, docId, CassandraUtils.hashKey(key), null, null);                                        
         }
     
         
         if(autoCommit)
-            CassandraUtils.robustBatchInsert(client, getMutationMap());
+            CassandraUtils.robustBatchInsert(context, getMutationMap());
         
         //finally delete ourselves
         String selfKey = indexName+CassandraUtils.delimeter+new String(docId);
         
         
         //FIXME: once cassandra batch mutation supports slice predicates in deletions
-        client.remove(CassandraUtils.keySpace, CassandraUtils.hashKey(selfKey), docAllColumnPath, timestamp, consistencyLevel);
+        context.getClient().remove(context.getKeySpace(), CassandraUtils.hashKey(selfKey), docAllColumnPath, System.currentTimeMillis(), context.getConsistencyLevel());
 
         
     }
@@ -374,7 +370,7 @@ public class IndexWriter {
             SliceRange sliceRange = new SliceRange(new byte[] {}, new byte[] {}, true, Integer.MAX_VALUE);
             slicePredicate.setSlice_range(sliceRange);
 
-            List<KeySlice> columns  = client.get_range_slice(CassandraUtils.keySpace, columnParent, slicePredicate, start, finish, 5000, consistencyLevel);
+            List<KeySlice> columns  = context.getClient().get_range_slice(context.getKeySpace(), columnParent, slicePredicate, start, finish, 5000, context.getConsistencyLevel());
         
             return columns.size();
             
@@ -394,7 +390,7 @@ public class IndexWriter {
     
     public void commit(){
         if(!autoCommit)
-            CassandraUtils.robustBatchInsert(client, getMutationMap());
+            CassandraUtils.robustBatchInsert(context, getMutationMap());
     }
     
     private Map<String,Map<String,List<Mutation>>> getMutationMap() {

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<testsuite failures="0" time="0.775" errors="0" skipped="0" tests="15" name="lucandra.LucandraTests">
+<testsuite failures="0" time="0.052" errors="0" skipped="0" tests="6" name="lucandra.LuceneNumericRangeTests">
   <properties>
     <property name="java.runtime.name" value="Java(TM) SE Runtime Environment"/>
     <property name="sun.boot.library.path" value="/usr/lib/jvm/java-6-sun-1.6.0.20/jre/lib/amd64"/>
@@ -57,19 +57,10 @@
     <property name="sun.desktop" value="gnome"/>
     <property name="sun.cpu.isalist" value=""/>
   </properties>
-  <testcase time="0.231" classname="lucandra.LucandraTests" name="testWriter"/>
-  <testcase time="0.088" classname="lucandra.LucandraTests" name="testUnicode"/>
-  <testcase time="0.012" classname="lucandra.LucandraTests" name="testMultiValuedFields"/>
-  <testcase time="0.004" classname="lucandra.LucandraTests" name="testKeywordField"/>
-  <testcase time="0.024" classname="lucandra.LucandraTests" name="testDelete"/>
-  <testcase time="0.005" classname="lucandra.LucandraTests" name="testSearch"/>
-  <testcase time="0.006" classname="lucandra.LucandraTests" name="testScore"/>
-  <testcase time="0.005" classname="lucandra.LucandraTests" name="testMissingQuery"/>
-  <testcase time="0.138" classname="lucandra.LucandraTests" name="testWildcardQuery"/>
-  <testcase time="0.116" classname="lucandra.LucandraTests" name="testSortQuery"/>
-  <testcase time="0.022" classname="lucandra.LucandraTests" name="testRangeQuery"/>
-  <testcase time="0.015" classname="lucandra.LucandraTests" name="testExactQuery"/>
-  <testcase time="0.01" classname="lucandra.LucandraTests" name="testSimpleAnalyzerWriteRead"/>
-  <testcase time="0.031" classname="lucandra.LucandraTests" name="testHighlight"/>
-  <testcase time="0.041" classname="lucandra.LucandraTests" name="testLucandraFilter"/>
+  <testcase time="0.004" classname="lucandra.LuceneNumericRangeTests" name="testLongRangeInclusive"/>
+  <testcase time="0.001" classname="lucandra.LuceneNumericRangeTests" name="testLongRangeExclusive"/>
+  <testcase time="0.001" classname="lucandra.LuceneNumericRangeTests" name="testLongRangeLessExclusive"/>
+  <testcase time="0" classname="lucandra.LuceneNumericRangeTests" name="testLongRangeLessInclusive"/>
+  <testcase time="0" classname="lucandra.LuceneNumericRangeTests" name="testLongRangeZeroAll"/>
+  <testcase time="0" classname="lucandra.LuceneNumericRangeTests" name="testLongRangeMaxAll"/>
 </testsuite>

@@ -31,7 +31,7 @@ Lucandra includes a delicious like bookmarks demo to get you started. to build r
 ANT setup
 
 2. ant lucandra.jar
-3. ant test -Dcassandra.host=127.0.0.1 -Dcassandra.port=9160 -Dcassandra.framed=false
+3. ant test -Dcassandra.host=127.0.0.1 -Dcassandra.port=9160 -Dcassandra.framed=false -Dcassandra.keyspace=Lucandra
 
 Maven
 

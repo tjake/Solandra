@@ -28,7 +28,7 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
     private TermVectorOffsetInfo[][] termOffsets;
 
     @SuppressWarnings("unchecked")
-	public TermFreqVector(String indexName, String field, String docId, Cassandra.Iface client) {
+	public TermFreqVector(String indexName, String field, String docId, IndexContext context) {
         this.field = field;
         
         String key = indexName + CassandraUtils.delimeter + docId;
@@ -36,7 +36,7 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
         // Get all terms
         ColumnOrSuperColumn column;
         try {
-            column = client.get(CassandraUtils.keySpace, CassandraUtils.hashKey(key), CassandraUtils.metaColumnPath, ConsistencyLevel.ONE);
+            column = context.getClient().get(context.getKeySpace(), CassandraUtils.hashKey(key), CassandraUtils.metaColumnPath, context.getConsistencyLevel());
 
             List<String> allTermList = (List<String>) CassandraUtils.fromBytes(column.column.value);
             List<String> keys        = new ArrayList<String>();
@@ -57,7 +57,7 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
 
             
             //Fetch all term vectors in this field
-            Map<String, ColumnOrSuperColumn> allTermInfo = client.multiget(CassandraUtils.keySpace, keys, new ColumnPath(CassandraUtils.termVecColumnFamily).setSuper_column(docId.getBytes()), ConsistencyLevel.ONE);
+            Map<String, ColumnOrSuperColumn> allTermInfo = context.getClient().multiget(context.getKeySpace(), keys, new ColumnPath(CassandraUtils.termVecColumnFamily).setSuper_column(docId.getBytes()), context.getConsistencyLevel());
             
             terms         = new String[allTermInfo.size()];
             freqVec       = new int[allTermInfo.size()];

@@ -40,7 +40,6 @@ import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.Column;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.cassandra.thrift.ColumnPath;
-import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.Deletion;
 import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.Mutation;
@@ -61,7 +60,6 @@ import org.apache.thrift.transport.TTransportException;
 
 public class CassandraUtils {
 
-    public static final String keySpace            = System.getProperty("lucandra.keyspace", "Lucandra");
     public static final String termVecColumnFamily = "TermInfo";
     public static final String docColumnFamily     = "Documents";
     
@@ -130,13 +128,14 @@ public class CassandraUtils {
         return createRobustConnection( System.getProperty("cassandra.host","localhost"),
                                  Integer.valueOf(System.getProperty("cassandra.port","9160")),
                                  Boolean.valueOf(System.getProperty("cassandra.framed", "false")),
+                                 System.getProperty("cassandra.keyspace","Lucandra"),
                                  true);
     }
     
     
-    public static Cassandra.Iface createRobustConnection(String host, Integer port, boolean framed, boolean randomizeConnections) {
+    public static Cassandra.Iface createRobustConnection(String host, Integer port, boolean framed, String keySpace, boolean randomizeConnections) {
         
-        return CassandraProxyClient.newInstance(host, port, framed, randomizeConnections);
+        return CassandraProxyClient.newInstance(host, port, framed, keySpace, randomizeConnections);
     }
     
     public static Cassandra.Client createConnection(String host, Integer port, boolean framed) throws TTransportException {
@@ -272,7 +271,7 @@ public class CassandraUtils {
 
     }
 
-    public static void addToMutationMap(Map<String,Map<String,List<Mutation>>> mutationMap, String columnFamily, byte[] column, String key, byte[] value, Map<String,List<Number>> superColumns, long timestamp){
+    public static void addToMutationMap(Map<String,Map<String,List<Mutation>>> mutationMap, String columnFamily, byte[] column, String key, byte[] value, Map<String,List<Number>> superColumns){
         
         
         
@@ -295,7 +294,7 @@ public class CassandraUtils {
         
         if(value == null && superColumns == null){ //remove
             
-            Deletion d = new Deletion(timestamp);
+            Deletion d = new Deletion(System.currentTimeMillis());
             
             if(column != null){
                 d.setPredicate(new SlicePredicate().setColumn_names(Arrays.asList(new byte[][]{column})));
@@ -329,7 +328,7 @@ public class CassandraUtils {
                 }
                 
                 
-                cc.setColumn(new Column(column, value, timestamp));                    
+                cc.setColumn(new Column(column, value, System.currentTimeMillis()));                    
             
             } else {
                 
@@ -342,7 +341,7 @@ public class CassandraUtils {
                 for(Map.Entry<String, List<Number>> e : superColumns.entrySet()){        
                     
                     try {
-                        columns.add(new Column(e.getKey().getBytes("UTF-8"), intVectorToByteArray(e.getValue()), timestamp));
+                        columns.add(new Column(e.getKey().getBytes("UTF-8"), intVectorToByteArray(e.getValue()), System.currentTimeMillis()));
                     } catch (UnsupportedEncodingException e1) {
                         throw new RuntimeException("UTF-8 not supported by this JVM");
                     }
@@ -358,20 +357,21 @@ public class CassandraUtils {
         mutationList.add(mutation);       
     }
     
-    public static void robustBatchInsert(Cassandra.Iface client, Map<String,Map<String,List<Mutation>>> mutationMap) {
+    public static void robustBatchInsert(IndexContext context, Map<String,Map<String,List<Mutation>>> mutationMap) {
 
         // Should use a circut breaker here
         boolean try_again = false;
         int attempts = 0;
-         do {
+        long startTime = System.currentTimeMillis();
+        do {
             try {
                 attempts++;
                 try_again = false;
-                client.batch_mutate(CassandraUtils.keySpace, mutationMap, ConsistencyLevel.ONE);
+                context.getClient().batch_mutate(context.getKeySpace(), mutationMap, context.getConsistencyLevel());
                 
                 mutationMap.clear();
                 //if(logger.isDebugEnabled())
-                //    logger.debug("Inserted in " + (startTime - timestamp) / 1000 + "ms");
+                //    logger.debug("Inserted in " + (startTime - System.currentTimeMillis()) / 1000 + "ms");
             } catch (TException e) {
                 throw new RuntimeException(e);
             } catch (InvalidRequestException e) {

@@ -50,24 +50,27 @@ public class CassandraProxyClient implements java.lang.reflect.InvocationHandler
     private String host;
     private int port;
     private final boolean framed;
+    private String keyspace;
     private final boolean randomizeConnections;
     private static ThreadLocal<Cassandra.Iface> clientPool = new ThreadLocal<Cassandra.Iface>();
     private long lastPoolCheck;
     private List<TokenRange> ring;
     private static ThreadLocal<CircuitBreaker> circuitBreakerPool = new ThreadLocal<CircuitBreaker>();
     
-    public static Cassandra.Iface newInstance(String host, int port, boolean framed, boolean randomizeConnections) {
+    public static Cassandra.Iface newInstance(String host, int port, boolean framed, String keyspace, boolean randomizeConnections) {
                     
-        return (Cassandra.Iface) java.lang.reflect.Proxy.newProxyInstance(Cassandra.Client.class.getClassLoader(), Cassandra.Client.class.getInterfaces(), new CassandraProxyClient(host,port,framed,randomizeConnections));
+        return (Cassandra.Iface) java.lang.reflect.Proxy.newProxyInstance(Cassandra.Client.class.getClassLoader(), Cassandra.Client.class.getInterfaces(), new CassandraProxyClient(host,port,framed, keyspace, randomizeConnections));
     }
 
-    private CassandraProxyClient(String host, int port, boolean framed, boolean randomizeConnections) {
+    private CassandraProxyClient(String host, int port, boolean framed, String keyspace, boolean randomizeConnections) {
         
         this.host = host;
         this.port = port;
         this.framed = framed;
         this.randomizeConnections = randomizeConnections;
-        lastPoolCheck  = 0;              
+        this.keyspace = keyspace;
+        lastPoolCheck  = 0;   
+        
 
         checkRing();
     }
@@ -117,7 +120,7 @@ public class CassandraProxyClient implements java.lang.reflect.InvocationHandler
         if( (now - lastPoolCheck) > 60*1000){
             try {
                 if(breaker.allow()){
-                    ring = client.describe_ring(CassandraUtils.keySpace);
+                    ring = client.describe_ring(keyspace);
                     lastPoolCheck = now;
 	       
                     breaker.success();

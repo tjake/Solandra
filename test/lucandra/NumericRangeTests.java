@@ -28,6 +28,7 @@ import java.util.Set;
 
 import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.ConsistencyLevel;
+import org.apache.cassandra.thrift.Cassandra.Iface;
 import org.apache.lucene.analysis.SimpleAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
@@ -56,7 +57,7 @@ public class NumericRangeTests {
 
 	
 	
-	private Cassandra.Iface connection;
+	private static IndexContext context;
 	private static Document first;
 	private static Document second;
 	private static Document third;
@@ -64,13 +65,13 @@ public class NumericRangeTests {
 	private static long mid;
 	private static long high;
 
-	@Before
-	public void initializeConnection() throws TTransportException{
-		connection = CassandraUtils.createConnection();
-	}
+
 	
 	@BeforeClass
 	public static void writeIndexes() throws TTransportException, CorruptIndexException, IOException {
+		
+		Iface connection = CassandraUtils.createConnection();
+		context = new IndexContext(connection, "Lucandra", ConsistencyLevel.ONE);
 		//clean up indexes before we run our test
 		cleanIndexes();
 		
@@ -103,8 +104,7 @@ public class NumericRangeTests {
 		numeric.setLongValue(high);
 		third.add(numeric);
 		
-		IndexWriter writer = new IndexWriter("longvals", CassandraUtils.createConnection(),
-				ConsistencyLevel.ONE);
+		IndexWriter writer = new IndexWriter("longvals", context);
 		writer.setAutoCommit(false);
 
 		SimpleAnalyzer analyzer = new SimpleAnalyzer();
@@ -124,8 +124,7 @@ public class NumericRangeTests {
 	public static void cleanIndexes() throws CorruptIndexException, IOException, TTransportException {
 		
 		
-		IndexWriter writer = new IndexWriter("longvals", CassandraUtils.createConnection(),
-				ConsistencyLevel.ONE);
+		IndexWriter writer = new IndexWriter("longvals", context);
 		writer.deleteDocuments(new Term("Id", "first"));
 		writer.deleteDocuments(new Term("Id", "second"));
 		writer.deleteDocuments(new Term("Id", "third"));
@@ -138,7 +137,7 @@ public class NumericRangeTests {
 		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
 				 mid, null, true, true);
 
-		IndexReader reader = new IndexReader("longvals", connection, ConsistencyLevel.ONE);
+		IndexReader reader = new IndexReader("longvals", context);
 
 		IndexSearcher searcher = new IndexSearcher(reader);
 
@@ -168,7 +167,7 @@ public class NumericRangeTests {
 		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
 				 mid, null, false, true);
 
-		IndexReader reader = new IndexReader("longvals", connection, ConsistencyLevel.ONE);
+		IndexReader reader = new IndexReader("longvals", context);
 
 		IndexSearcher searcher = new IndexSearcher(reader);
 
@@ -196,7 +195,7 @@ public class NumericRangeTests {
 		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
 				 null, mid, true, false);
 
-		IndexReader reader = new IndexReader("longvals", connection, ConsistencyLevel.ONE);
+		IndexReader reader = new IndexReader("longvals", context);
 
 		IndexSearcher searcher = new IndexSearcher(reader);
 
@@ -225,7 +224,7 @@ public class NumericRangeTests {
 		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
 				 null, mid, true, true);
 
-		IndexReader reader = new IndexReader("longvals", connection, ConsistencyLevel.ONE);
+		IndexReader reader = new IndexReader("longvals", context);
 
 		IndexSearcher searcher = new IndexSearcher(reader);
 
@@ -254,7 +253,7 @@ public class NumericRangeTests {
 		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
 				 Long.MIN_VALUE, null, true, true);
 
-		IndexReader reader = new IndexReader("longvals", connection, ConsistencyLevel.ONE);
+		IndexReader reader = new IndexReader("longvals", context);
 
 		IndexSearcher searcher = new IndexSearcher(reader);
 
@@ -284,7 +283,7 @@ public class NumericRangeTests {
 		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
 				 null, Long.MAX_VALUE, true, true);
 
-		IndexReader reader = new IndexReader("longvals", connection, ConsistencyLevel.ONE);
+		IndexReader reader = new IndexReader("longvals", context);
 
 		IndexSearcher searcher = new IndexSearcher(reader);
 

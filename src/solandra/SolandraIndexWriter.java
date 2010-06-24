@@ -24,8 +24,10 @@ import java.net.URL;
 import java.util.concurrent.atomic.AtomicLong;
 
 import lucandra.CassandraUtils;
+import lucandra.IndexContext;
 
 import org.apache.cassandra.thrift.ConsistencyLevel;
+import org.apache.cassandra.thrift.Cassandra.Iface;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
@@ -48,247 +50,246 @@ import org.apache.solr.update.UpdateHandler;
 
 public class SolandraIndexWriter extends UpdateHandler {
 
-    private lucandra.IndexWriter writer;
+	private lucandra.IndexWriter writer;
 
-    // stats
-    AtomicLong addCommands = new AtomicLong();
-    AtomicLong addCommandsCumulative = new AtomicLong();
-    AtomicLong deleteByIdCommands = new AtomicLong();
-    AtomicLong deleteByIdCommandsCumulative = new AtomicLong();
-    AtomicLong deleteByQueryCommands = new AtomicLong();
-    AtomicLong deleteByQueryCommandsCumulative = new AtomicLong();
-    AtomicLong expungeDeleteCommands = new AtomicLong();
-    AtomicLong mergeIndexesCommands = new AtomicLong();
-    AtomicLong commitCommands = new AtomicLong();
-    AtomicLong optimizeCommands = new AtomicLong();
-    AtomicLong rollbackCommands = new AtomicLong();
-    AtomicLong numDocsPending = new AtomicLong();
-    AtomicLong numErrors = new AtomicLong();
-    AtomicLong numErrorsCumulative = new AtomicLong();
+	// stats
+	AtomicLong addCommands = new AtomicLong();
+	AtomicLong addCommandsCumulative = new AtomicLong();
+	AtomicLong deleteByIdCommands = new AtomicLong();
+	AtomicLong deleteByIdCommandsCumulative = new AtomicLong();
+	AtomicLong deleteByQueryCommands = new AtomicLong();
+	AtomicLong deleteByQueryCommandsCumulative = new AtomicLong();
+	AtomicLong expungeDeleteCommands = new AtomicLong();
+	AtomicLong mergeIndexesCommands = new AtomicLong();
+	AtomicLong commitCommands = new AtomicLong();
+	AtomicLong optimizeCommands = new AtomicLong();
+	AtomicLong rollbackCommands = new AtomicLong();
+	AtomicLong numDocsPending = new AtomicLong();
+	AtomicLong numErrors = new AtomicLong();
+	AtomicLong numErrorsCumulative = new AtomicLong();
 
-    private String cassandraHost;
-    private Integer cassandraPort;
-    private Boolean cassandraFramed;
-    
-    
-    public SolandraIndexWriter(SolrCore core) {
-        super(core);
+	private String cassandraHost;
+	private Integer cassandraPort;
+	private Boolean cassandraFramed;
 
-        
-        cassandraHost = core.getSolrConfig().get("updateHandler/str[@name='cassandraHost']");
-        
-        if(cassandraHost == null || cassandraHost.length() == 0)
-            throw new SolrException(ErrorCode.NOT_FOUND, "<str name=\"cassandraHost\">localhost</str>  tag required");
-        
-        
-        cassandraPort = core.getSolrConfig().getInt("updateHandler/int[@name='cassandraPort']");
-        
-        if(cassandraPort == null)
-            throw new SolrException(ErrorCode.NOT_FOUND, "<int name=\"cassandraPort\">9160</int>  tag required");
-        
-        
-        cassandraFramed = core.getSolrConfig().getBool("updateHandler/bool[@name='cassandraFramed']",false);
-        
-        try {
-            writer = new lucandra.IndexWriter(core.getSchema().getSchemaName(), 
-                    CassandraUtils.createRobustConnection(cassandraHost,cassandraPort,cassandraFramed,true), ConsistencyLevel.ONE);
+	public SolandraIndexWriter(SolrCore core) {
+		super(core);
 
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
+		cassandraHost = core.getSolrConfig().get(
+				"updateHandler/str[@name='cassandraHost']");
 
-    
-    
-    
-    public int addDoc(AddUpdateCommand cmd) throws IOException {
+		if (cassandraHost == null || cassandraHost.length() == 0)
+			throw new SolrException(ErrorCode.NOT_FOUND,
+					"<str name=\"cassandraHost\">localhost</str>  tag required");
 
-        addCommands.incrementAndGet();
-        addCommandsCumulative.incrementAndGet();
-        int rc = -1;
+		cassandraPort = core.getSolrConfig().getInt(
+				"updateHandler/int[@name='cassandraPort']");
 
-        // if there is no ID field, use allowDups
-        if (idField == null) {
-            cmd.allowDups = true;
-            cmd.overwriteCommitted = false;
-            cmd.overwritePending = false;
-        }
+		if (cassandraPort == null)
+			throw new SolrException(ErrorCode.NOT_FOUND,
+					"<int name=\"cassandraPort\">9160</int>  tag required");
 
-        try {
+		cassandraFramed = core.getSolrConfig().getBool(
+				"updateHandler/bool[@name='cassandraFramed']", false);
 
-            Term updateTerm = null;
+		try {
 
-            if (cmd.overwriteCommitted || cmd.overwritePending) {
-                if (cmd.indexedId == null) {
-                    cmd.indexedId = getIndexedId(cmd.doc);
-                }
-                Term idTerm = this.idTerm.createTerm(cmd.indexedId);
-                boolean del = false;
-                if (cmd.updateTerm == null) {
-                    updateTerm = idTerm;
-                } else {
-                    del = true;
-                    updateTerm = cmd.updateTerm;
-                }
+			Iface client = 	CassandraUtils.createRobustConnection(cassandraHost, cassandraPort, cassandraFramed,"Lucandra", true);
+			IndexContext context = new IndexContext(client, "Lucandra", ConsistencyLevel.ONE);
 
-                writer.updateDocument(updateTerm, cmd.getLuceneDocument(schema), schema.getAnalyzer());
-                if (del) { // ensure id remains unique
-                    BooleanQuery bq = new BooleanQuery();
-                    bq.add(new BooleanClause(new TermQuery(updateTerm), Occur.MUST_NOT));
-                    bq.add(new BooleanClause(new TermQuery(idTerm), Occur.MUST));
-                    writer.deleteDocuments(bq);
-                }
-            } else {
-                // allow duplicates
-                writer.addDocument(cmd.getLuceneDocument(schema), schema.getAnalyzer());
-            }
+			writer = new lucandra.IndexWriter(core.getSchema().getSchemaName(),context);
 
-            rc = 1;
-        } finally {
-            if (rc != 1) {
-                numErrors.incrementAndGet();
-                numErrorsCumulative.incrementAndGet();
-            }
-        }
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
 
-        return rc;
+	public int addDoc(AddUpdateCommand cmd) throws IOException {
 
-    }
+		addCommands.incrementAndGet();
+		addCommandsCumulative.incrementAndGet();
+		int rc = -1;
 
-    
-    public void close() throws IOException {
-        // hehe
-    }
+		// if there is no ID field, use allowDups
+		if (idField == null) {
+			cmd.allowDups = true;
+			cmd.overwriteCommitted = false;
+			cmd.overwritePending = false;
+		}
 
-    
-    public void commit(CommitUpdateCommand cmd) throws IOException {
-        // hehe
-    }
+		try {
 
-    
-    public void delete(DeleteUpdateCommand cmd) throws IOException {
-        deleteByIdCommands.incrementAndGet();
-        deleteByIdCommandsCumulative.incrementAndGet();
+			Term updateTerm = null;
 
-        if (!cmd.fromPending && !cmd.fromCommitted) {
-            numErrors.incrementAndGet();
-            numErrorsCumulative.incrementAndGet();
-            throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, "meaningless command: " + cmd);
-        }
-        if (!cmd.fromPending || !cmd.fromCommitted) {
-            numErrors.incrementAndGet();
-            numErrorsCumulative.incrementAndGet();
-            throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, "operation not supported" + cmd);
-        }
+			if (cmd.overwriteCommitted || cmd.overwritePending) {
+				if (cmd.indexedId == null) {
+					cmd.indexedId = getIndexedId(cmd.doc);
+				}
+				Term idTerm = this.idTerm.createTerm(cmd.indexedId);
+				boolean del = false;
+				if (cmd.updateTerm == null) {
+					updateTerm = idTerm;
+				} else {
+					del = true;
+					updateTerm = cmd.updateTerm;
+				}
 
-        writer.deleteDocuments(idTerm.createTerm(idFieldType.toInternal(cmd.id)));
-    }
+				writer.updateDocument(updateTerm,
+						cmd.getLuceneDocument(schema), schema.getAnalyzer());
+				if (del) { // ensure id remains unique
+					BooleanQuery bq = new BooleanQuery();
+					bq.add(new BooleanClause(new TermQuery(updateTerm),
+							Occur.MUST_NOT));
+					bq
+							.add(new BooleanClause(new TermQuery(idTerm),
+									Occur.MUST));
+					writer.deleteDocuments(bq);
+				}
+			} else {
+				// allow duplicates
+				writer.addDocument(cmd.getLuceneDocument(schema), schema
+						.getAnalyzer());
+			}
 
-    
-    public void deleteByQuery(DeleteUpdateCommand cmd) throws IOException {
-        deleteByQueryCommands.incrementAndGet();
-        deleteByQueryCommandsCumulative.incrementAndGet();
+			rc = 1;
+		} finally {
+			if (rc != 1) {
+				numErrors.incrementAndGet();
+				numErrorsCumulative.incrementAndGet();
+			}
+		}
 
-        if (!cmd.fromPending && !cmd.fromCommitted) {
-            numErrors.incrementAndGet();
-            numErrorsCumulative.incrementAndGet();
-            throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, "meaningless command: " + cmd);
-        }
-        if (!cmd.fromPending || !cmd.fromCommitted) {
-            numErrors.incrementAndGet();
-            numErrorsCumulative.incrementAndGet();
-            throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, "operation not supported" + cmd);
-        }
+		return rc;
 
-        boolean madeIt = false;
-        boolean delAll = false;
-        try {
-            Query q = QueryParsing.parseQuery(cmd.query, schema);
-            delAll = MatchAllDocsQuery.class == q.getClass();
+	}
 
-            if (delAll) {
+	public void close() throws IOException {
+		// hehe
+	}
 
-                throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, "can't delete all: " + cmd);
-            } else {
-                writer.deleteDocuments(q);
-            }
+	public void commit(CommitUpdateCommand cmd) throws IOException {
+		// hehe
+	}
 
-            madeIt = true;
+	public void delete(DeleteUpdateCommand cmd) throws IOException {
+		deleteByIdCommands.incrementAndGet();
+		deleteByIdCommandsCumulative.incrementAndGet();
 
-        } finally {
-            if (!madeIt) {
-                numErrors.incrementAndGet();
-                numErrorsCumulative.incrementAndGet();
-            }
-        }
+		if (!cmd.fromPending && !cmd.fromCommitted) {
+			numErrors.incrementAndGet();
+			numErrorsCumulative.incrementAndGet();
+			throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
+					"meaningless command: " + cmd);
+		}
+		if (!cmd.fromPending || !cmd.fromCommitted) {
+			numErrors.incrementAndGet();
+			numErrorsCumulative.incrementAndGet();
+			throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
+					"operation not supported" + cmd);
+		}
 
-    }
+		writer.deleteDocuments(idTerm
+				.createTerm(idFieldType.toInternal(cmd.id)));
+	}
 
-    
-    public int mergeIndexes(MergeIndexesCommand cmd) throws IOException {
-        // haha
-        return 0;
-    }
+	public void deleteByQuery(DeleteUpdateCommand cmd) throws IOException {
+		deleteByQueryCommands.incrementAndGet();
+		deleteByQueryCommandsCumulative.incrementAndGet();
 
-    
-    public void rollback(RollbackUpdateCommand cmd) throws IOException {
-        // TODO Auto-generated method stub
+		if (!cmd.fromPending && !cmd.fromCommitted) {
+			numErrors.incrementAndGet();
+			numErrorsCumulative.incrementAndGet();
+			throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
+					"meaningless command: " + cmd);
+		}
+		if (!cmd.fromPending || !cmd.fromCommitted) {
+			numErrors.incrementAndGet();
+			numErrorsCumulative.incrementAndGet();
+			throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
+					"operation not supported" + cmd);
+		}
 
-    }
+		boolean madeIt = false;
+		boolean delAll = false;
+		try {
+			Query q = QueryParsing.parseQuery(cmd.query, schema);
+			delAll = MatchAllDocsQuery.class == q.getClass();
 
-    
-    public Category getCategory() {
-        return Category.UPDATEHANDLER;
-    }
+			if (delAll) {
 
-    
-    public String getDescription() {
-        return "Update handler for Solandra";
-    }
+				throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
+						"can't delete all: " + cmd);
+			} else {
+				writer.deleteDocuments(q);
+			}
 
-    
-    public URL[] getDocs() {
-        // TODO Auto-generated method stub
-        return null;
-    }
+			madeIt = true;
 
-    
-    public String getName() {
-        return SolandraIndexWriter.class.getName();
-    }
+		} finally {
+			if (!madeIt) {
+				numErrors.incrementAndGet();
+				numErrorsCumulative.incrementAndGet();
+			}
+		}
 
-    
-    public String getSource() {
-        // TODO Auto-generated method stub
-        return null;
-    }
+	}
 
-    
-    public String getSourceId() {
-        // TODO Auto-generated method stub
-        return null;
-    }
+	public int mergeIndexes(MergeIndexesCommand cmd) throws IOException {
+		// haha
+		return 0;
+	}
 
-    
-    @SuppressWarnings("unchecked")
-    public NamedList getStatistics() {
-        NamedList lst = new SimpleOrderedMap();
+	public void rollback(RollbackUpdateCommand cmd) throws IOException {
+		// TODO Auto-generated method stub
 
-        lst.add("rollbacks", rollbackCommands.get());
-        lst.add("adds", addCommands.get());
-        lst.add("deletesById", deleteByIdCommands.get());
-        lst.add("deletesByQuery", deleteByQueryCommands.get());
-        lst.add("errors", numErrors.get());
-        lst.add("cumulative_adds", addCommandsCumulative.get());
-        lst.add("cumulative_deletesById", deleteByIdCommandsCumulative.get());
-        lst.add("cumulative_deletesByQuery", deleteByQueryCommandsCumulative.get());
-        lst.add("cumulative_errors", numErrorsCumulative.get());
-        return lst;
-    }
+	}
 
-   
-    public String getVersion() {
-        return core.getVersion();
-    }
+	public Category getCategory() {
+		return Category.UPDATEHANDLER;
+	}
+
+	public String getDescription() {
+		return "Update handler for Solandra";
+	}
+
+	public URL[] getDocs() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public String getName() {
+		return SolandraIndexWriter.class.getName();
+	}
+
+	public String getSource() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public String getSourceId() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	public NamedList getStatistics() {
+		NamedList lst = new SimpleOrderedMap();
+
+		lst.add("rollbacks", rollbackCommands.get());
+		lst.add("adds", addCommands.get());
+		lst.add("deletesById", deleteByIdCommands.get());
+		lst.add("deletesByQuery", deleteByQueryCommands.get());
+		lst.add("errors", numErrors.get());
+		lst.add("cumulative_adds", addCommandsCumulative.get());
+		lst.add("cumulative_deletesById", deleteByIdCommandsCumulative.get());
+		lst.add("cumulative_deletesByQuery", deleteByQueryCommandsCumulative
+				.get());
+		lst.add("cumulative_errors", numErrorsCumulative.get());
+		return lst;
+	}
+
+	public String getVersion() {
+		return core.getVersion();
+	}
 
 }

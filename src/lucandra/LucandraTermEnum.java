@@ -39,11 +39,10 @@ import org.apache.cassandra.thrift.SlicePredicate;
 import org.apache.cassandra.thrift.SliceRange;
 import org.apache.cassandra.thrift.TimedOutException;
 import org.apache.cassandra.thrift.UnavailableException;
+import org.apache.log4j.Logger;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.TermEnum;
 import org.apache.thrift.TException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * 
@@ -69,18 +68,16 @@ public class LucandraTermEnum extends TermEnum {
     private String currentField = null;
     private int chunkCount = 0;
 
-    private final Cassandra.Iface client;
-    private final ConsistencyLevel consistencyLevel;
+    private final IndexContext context;
     private final Term finalTerm = new Term(CassandraUtils.delimeter, CassandraUtils.finalToken);
 
-    private static final Logger logger = LoggerFactory.getLogger(LucandraTermEnum.class);
+    private static final Logger logger = Logger.getLogger(LucandraTermEnum.class);
 
     public LucandraTermEnum(IndexReader indexReader) {
         this.indexReader = indexReader;
-        this.consistencyLevel = indexReader.getConsistencyLevel();
         this.indexName = indexReader.getIndexName();
-        this.client = indexReader.getClient();
         this.termPosition = 0;
+        this.context = indexReader.getIndexContext();
     }
 
     public boolean skipTo(Term term) throws IOException {
@@ -176,7 +173,7 @@ public class LucandraTermEnum extends TermEnum {
             termBuffer = termDocFreqBuffer.keySet().toArray(new Term[] {});
             termPosition = 0;
 
-            logger.debug("Found {} in cache", startTerm);
+            logger.debug("Found " + startTerm + " in cache");
             return;
         } else if (chunkCount > 1 && actualInitSize < maxChunkSize) {
             
@@ -216,15 +213,15 @@ public class LucandraTermEnum extends TermEnum {
 
         ColumnParent columnParent = new ColumnParent(CassandraUtils.termVecColumnFamily);        
         SlicePredicate slicePredicate = new SlicePredicate();
-    
-        
+       
+
         // Get all columns
         SliceRange sliceRange = new SliceRange(new byte[] {}, new byte[] {}, true, Integer.MAX_VALUE);
         slicePredicate.setSlice_range(sliceRange);
         
         List<KeySlice> columns;
         try {
-            columns = client.get_range_slice(CassandraUtils.keySpace, columnParent, slicePredicate, startTerm, endTerm, count, consistencyLevel);
+            columns = context.getClient().get_range_slice(context.getKeySpace(), columnParent, slicePredicate, startTerm, endTerm, count, context.getConsistencyLevel());
         } catch (InvalidRequestException e) {
             throw new RuntimeException(e);
         } catch (TException e) {
@@ -237,26 +234,21 @@ public class LucandraTermEnum extends TermEnum {
 
         // term to start with next time
         actualInitSize = columns.size();
-        logger.debug("Found {} keys in range: {} to {} in {} ms", new Object[]{ columns.size(), startTerm, endTerm,  (System.currentTimeMillis() - start)});
+        logger.debug("Found " + columns.size() + " keys in range:" + startTerm + " to " + endTerm + " in " + (System.currentTimeMillis() - start) + "ms");
 
         if (actualInitSize > 0) {
             for (KeySlice entry : columns) {
    
                 // term keys look like wikipedia/body/wiki
                 String termStr = entry.getKey().substring(entry.getKey().indexOf(CassandraUtils.delimeter) + CassandraUtils.delimeter.length());
+                Term term = CassandraUtils.parseTerm(termStr);                 
                 
-                 
-                Term term = CassandraUtils.parseTerm(termStr);  
-                
-                String fullTerm = CassandraUtils.hashKey(indexName+CassandraUtils.delimeter+term.field()+CassandraUtils.delimeter+term.text());
-                
-                          
-                logger.debug("{} has {}" ,termStr , entry.getColumns().size());
+                logger.debug(termStr + " has " + entry.getColumns().size());
                 
                 //check for tombstone keys or incorrect keys (from RP)
                 if(entry.getColumns().size() > 0 && term.field().equals(skipTo.field()) &&
                         //from this index
-                        entry.getKey().equals(fullTerm))
+                        entry.getKey().equals(CassandraUtils.hashKey(indexName+CassandraUtils.delimeter+term.field()+CassandraUtils.delimeter+term.text())))
                     
                     termDocFreqBuffer.put(term, entry.getColumns());
             }
@@ -290,7 +282,7 @@ public class LucandraTermEnum extends TermEnum {
 
         long end = System.currentTimeMillis();
 
-        logger.debug("loadTerms: {} ( {} ) took {} ms",new Object[]{ startTerm,termBuffer.length,  (end - start)});
+        logger.debug("loadTerms: " + startTerm + "(" + termBuffer.length + ") took " + (end - start) + "ms");
 
     }
 
@@ -314,7 +306,7 @@ public class LucandraTermEnum extends TermEnum {
 
         List<ColumnOrSuperColumn> columsList = null;
         try {
-            columsList = client.get_slice(CassandraUtils.keySpace, key, parent, slicePredicate, consistencyLevel);
+            columsList = context.getClient().get_slice(context.getKeySpace(), key, parent, slicePredicate, context.getConsistencyLevel());
         } catch (InvalidRequestException e) {
             throw new RuntimeException(e);
         } catch (UnavailableException e) {
