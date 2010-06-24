@@ -197,7 +197,7 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
 					<includes>
-						<include>**/LucandraTests.java</include>
+						<include>**/*Tests.java</include>
 					</includes>
 					<systemPropertyVariables>
 						<cassandra.host>127.0.0.1</cassandra.host>
