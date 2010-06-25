@@ -17,6 +17,7 @@ package lucandra.search;
  * limitations under the License.
  */
 
+import java.io.Writer;
 import java.util.Random;
 
 import lucandra.IndexReader;
@@ -58,7 +59,14 @@ public class TestNumericRangeQuery64 extends LucandraTestCase {
 			BooleanQuery.setMaxClauseCount(7 * 255 * 2 + 255);
 
 			IndexWriter writer = new IndexWriter(indexName, context);
+	
 
+			//clean up anything in our index
+			IndexReader reader = new IndexReader(indexName, context);
+			
+			searcher = new IndexSearcher(reader);
+		
+			
 			NumericField field8 = new NumericField("field8", 8,
 					Field.Store.YES, true), field6 = new NumericField("field6",
 					6, Field.Store.YES, true), field4 = new NumericField(
@@ -102,10 +110,10 @@ public class TestNumericRangeQuery64 extends LucandraTestCase {
 				ascfield2.setLongValue(val);
 				writer.addDocument(doc, analyzer);
 			}
+			
+			
 
-			IndexReader reader = new IndexReader(indexName, context);
-
-			searcher = new IndexSearcher(reader);
+			
 		} catch (Exception e) {
 			throw new Error(e);
 		}
