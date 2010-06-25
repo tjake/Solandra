@@ -60,9 +60,7 @@ import org.apache.thrift.transport.TTransportException;
 
 public class CassandraUtils {
 
-    public static final String termVecColumnFamily = "TermInfo";
-    public static final String docColumnFamily     = "Documents";
-    
+     
     public static final String positionVectorKey   = "Position";
     public static final String offsetVectorKey     = "Offsets";
     public static final String termFrequencyKey    = "Frequencies";
@@ -80,11 +78,9 @@ public class CassandraUtils {
     
     public static final boolean indexHashingEnabled = Boolean.valueOf(System.getProperty("index.hashing","true"));
     
-    public static final ColumnPath metaColumnPath;
     static{
         try {
             delimeterBytes = delimeter.getBytes("UTF-8");
-            metaColumnPath = new ColumnPath(CassandraUtils.docColumnFamily).setColumn(documentMetaField.getBytes("UTF-8"));
         } catch (UnsupportedEncodingException e) {
             throw new RuntimeException("UTF-8 not supported by this JVM");
         }

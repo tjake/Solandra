@@ -211,7 +211,7 @@ public class LucandraTermEnum extends TermEnum {
 
         termDocFreqBuffer = new TreeMap<Term, List<ColumnOrSuperColumn>>();
 
-        ColumnParent columnParent = new ColumnParent(CassandraUtils.termVecColumnFamily);        
+        ColumnParent columnParent = new ColumnParent(context.getTermColumnFamily());        
         SlicePredicate slicePredicate = new SlicePredicate();
        
 
@@ -289,7 +289,7 @@ public class LucandraTermEnum extends TermEnum {
     void loadFilteredTerms(Term term, List<String> docNums)  {
         long start = System.currentTimeMillis();
         ColumnParent parent = new ColumnParent();
-        parent.setColumn_family(CassandraUtils.termVecColumnFamily);
+        parent.setColumn_family(context.getTermColumnFamily());
 
         String key = CassandraUtils.hashKey(
                 indexName + CassandraUtils.delimeter + CassandraUtils.createColumnName(term)

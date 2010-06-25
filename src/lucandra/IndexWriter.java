@@ -26,11 +26,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.ColumnPath;
-import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.KeySlice;
 import org.apache.cassandra.thrift.Mutation;
@@ -73,7 +71,7 @@ public class IndexWriter {
         this.indexName = indexName;
         this.context = context;
         autoCommit  = true;
-        docAllColumnPath = new ColumnPath(CassandraUtils.docColumnFamily);
+        docAllColumnPath = new ColumnPath(context.getDocumentColumnFamily());
             
     }
 
@@ -212,7 +210,7 @@ public class IndexWriter {
                         term.getValue().put(CassandraUtils.normsKey, bnorm );
                     }
                     
-                    CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.termVecColumnFamily, docId.getBytes("UTF-8"), CassandraUtils.hashKey(key), null,term.getValue());                    
+                    CassandraUtils.addToMutationMap(getMutationMap(), context.getTermColumnFamily(), docId.getBytes("UTF-8"), CassandraUtils.hashKey(key), null,term.getValue());                    
                 }
             }
 
@@ -227,7 +225,7 @@ public class IndexWriter {
                 termMap.put(CassandraUtils.termFrequencyKey, CassandraUtils.emptyArray);
                 termMap.put(CassandraUtils.positionVectorKey, CassandraUtils.emptyArray);
                 
-                CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.termVecColumnFamily, docId.getBytes("UTF-8"), CassandraUtils.hashKey(key), null,termMap);
+                CassandraUtils.addToMutationMap(getMutationMap(), context.getTermColumnFamily(), docId.getBytes("UTF-8"), CassandraUtils.hashKey(key), null,termMap);
                
             }
 
@@ -244,7 +242,7 @@ public class IndexWriter {
                 
                 String key = indexName+CassandraUtils.delimeter+docId;
                 
-                CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.docColumnFamily, field.name().getBytes("UTF-8"), CassandraUtils.hashKey(key), value, null);
+                CassandraUtils.addToMutationMap(getMutationMap(), context.getDocumentColumnFamily(), field.name().getBytes("UTF-8"), CassandraUtils.hashKey(key), value, null);
                             
             }
         }
@@ -252,7 +250,7 @@ public class IndexWriter {
         //Finally, Store meta-data so we can delete this document
         String key = indexName+CassandraUtils.delimeter+docId;
         
-        CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.docColumnFamily, CassandraUtils.documentMetaField.getBytes("UTF-8"), CassandraUtils.hashKey(key), CassandraUtils.toBytes(allIndexedTerms), null);
+        CassandraUtils.addToMutationMap(getMutationMap(), context.getDocumentColumnFamily(), CassandraUtils.documentMetaField.getBytes("UTF-8"), CassandraUtils.hashKey(key), CassandraUtils.toBytes(allIndexedTerms), null);
         
        
         
@@ -295,7 +293,7 @@ public class IndexWriter {
     public void deleteDocuments(Term term) throws CorruptIndexException, IOException {
         try {
                        
-            ColumnParent cp = new ColumnParent(CassandraUtils.termVecColumnFamily);
+            ColumnParent cp = new ColumnParent(context.getTermColumnFamily());
             String key = indexName+CassandraUtils.delimeter+CassandraUtils.createColumnName(term);
             
             List<ColumnOrSuperColumn> docs = context.getClient().get_slice(context.getKeySpace(), CassandraUtils.hashKey(key), cp, new SlicePredicate().setSlice_range(new SliceRange(new byte[]{}, new byte[]{},true,Integer.MAX_VALUE)), context.getConsistencyLevel());
@@ -324,7 +322,8 @@ public class IndexWriter {
 
         String key =  indexName+CassandraUtils.delimeter+new String(docId);
         
-        ColumnOrSuperColumn column = context.getClient().get(context.getKeySpace(), CassandraUtils.hashKey(key), CassandraUtils.metaColumnPath, context.getConsistencyLevel());
+       
+        ColumnOrSuperColumn column = context.getClient().get(context.getKeySpace(), CassandraUtils.hashKey(key), context.getDocumentColumnPath(), context.getConsistencyLevel());
         
         List<String> terms = (List<String>) CassandraUtils.fromBytes(column.column.value);
     
@@ -332,7 +331,7 @@ public class IndexWriter {
             
             key = indexName+CassandraUtils.delimeter+termStr;
             
-            CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.termVecColumnFamily, docId, CassandraUtils.hashKey(key), null, null);                                        
+            CassandraUtils.addToMutationMap(getMutationMap(), context.getTermColumnFamily(), docId, CassandraUtils.hashKey(key), null, null);                                        
         }
     
         
@@ -363,7 +362,7 @@ public class IndexWriter {
             String start = CassandraUtils.hashKey(indexName + CassandraUtils.delimeter);
             String finish = start+CassandraUtils.delimeter;
 
-            ColumnParent columnParent = new ColumnParent(CassandraUtils.docColumnFamily);
+            ColumnParent columnParent = new ColumnParent(context.getDocumentColumnFamily());
             SlicePredicate slicePredicate = new SlicePredicate();
 
             // Get all columns

@@ -206,7 +206,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         }
         
         ColumnParent columnParent = new ColumnParent();
-        columnParent.setColumn_family(CassandraUtils.docColumnFamily);
+        columnParent.setColumn_family(context.getDocumentColumnFamily());
 
         SlicePredicate slicePredicate = new SlicePredicate();
         

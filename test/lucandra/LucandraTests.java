@@ -89,7 +89,7 @@ public class LucandraTests extends TestCase {
         String start = CassandraUtils.hashKey(indexName + CassandraUtils.delimeter + "key" + CassandraUtils.delimeter);
         String finish = "";
         
-        ColumnParent columnParent = new ColumnParent(CassandraUtils.termVecColumnFamily);
+        ColumnParent columnParent = new ColumnParent(context.getTermColumnFamily());
         SlicePredicate slicePredicate = new SlicePredicate();
 
         // Get all columns

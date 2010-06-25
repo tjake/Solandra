@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.Cassandra.Iface;
 import org.apache.lucene.analysis.SimpleAnalyzer;
@@ -43,7 +42,6 @@ import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
 import org.apache.thrift.transport.TTransportException;
 import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -246,7 +244,7 @@ public class NumericRangeTests {
 
 	
 	@Test
-	public void testLongRangeZeroAll() throws Exception {
+	public void testLongRangeMinValueAll() throws Exception {
 
 		// now we'll query from the middle inclusive
 
@@ -301,6 +299,36 @@ public class NumericRangeTests {
 		assertTrue(results.contains("first"));
 		assertTrue(results.contains("second"));
 		assertTrue(results.contains("third"));
+
+	}
+	
+
+	@Test
+	public void testLongRangeZeroAll() throws Exception {
+
+		// now we'll query from the middle inclusive
+
+		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",1L, null, true, true);
+
+		IndexReader reader = new IndexReader("longvals", context);
+
+		IndexSearcher searcher = new IndexSearcher(reader);
+
+		TopDocs docs = searcher.search(query, 1000);
+
+		assertEquals(3, docs.totalHits);
+
+		Set<String> results = new HashSet<String>();
+
+		for (ScoreDoc doc : docs.scoreDocs) {
+			Document returned = searcher.doc(doc.doc);
+			results.add(returned.get("Id"));
+		}
+
+		assertTrue(results.contains("first"));
+		assertTrue(results.contains("second"));
+		assertTrue(results.contains("third"));
+
 
 	}
 

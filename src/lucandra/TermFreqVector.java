@@ -6,11 +6,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.Column;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.cassandra.thrift.ColumnPath;
-import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.NotFoundException;
 import org.apache.cassandra.thrift.TimedOutException;
@@ -36,7 +34,7 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
         // Get all terms
         ColumnOrSuperColumn column;
         try {
-            column = context.getClient().get(context.getKeySpace(), CassandraUtils.hashKey(key), CassandraUtils.metaColumnPath, context.getConsistencyLevel());
+            column = context.getClient().get(context.getKeySpace(), CassandraUtils.hashKey(key), context.getDocumentColumnPath(), context.getConsistencyLevel());
 
             List<String> allTermList = (List<String>) CassandraUtils.fromBytes(column.column.value);
             List<String> keys        = new ArrayList<String>();
@@ -57,7 +55,7 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
 
             
             //Fetch all term vectors in this field
-            Map<String, ColumnOrSuperColumn> allTermInfo = context.getClient().multiget(context.getKeySpace(), keys, new ColumnPath(CassandraUtils.termVecColumnFamily).setSuper_column(docId.getBytes()), context.getConsistencyLevel());
+            Map<String, ColumnOrSuperColumn> allTermInfo = context.getClient().multiget(context.getKeySpace(), keys, new ColumnPath(context.getTermColumnFamily()).setSuper_column(docId.getBytes()), context.getConsistencyLevel());
             
             terms         = new String[allTermInfo.size()];
             freqVec       = new int[allTermInfo.size()];

@@ -19,31 +19,50 @@
  */
 package lucandra;
 
+import java.io.UnsupportedEncodingException;
+
 import org.apache.cassandra.thrift.Cassandra;
+import org.apache.cassandra.thrift.ColumnPath;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.Cassandra.Iface;
 
 /**
- * This class is intended to encapsulate all Cassandra connection information.   This class will be used
- * during all operations of an index reader and writer.
+ * This class is intended to encapsulate all Cassandra connection information.
+ * This class will be used during all operations of an index reader and writer.
+ * 
  * @author Todd Nine
- *
+ * 
  */
 public class IndexContext {
-	
-	 private final Cassandra.Iface client;
-	 private final String keySpace;
-	 private final ConsistencyLevel consistencyLevel;
-	 
-	 
+
+	private final Cassandra.Iface client;
+	private final String keySpace;
+	private final ConsistencyLevel consistencyLevel;
+	private final String termColumnFamily;
+	private final String documentColumnFamily;
+	private final ColumnPath documentPath;
+
 	public IndexContext(Iface client, String keySpace,
-			ConsistencyLevel consistencyLevel) {
+			ConsistencyLevel consistencyLevel, String termColumnFamily,
+			String documentColumnFamily) {
 		super();
 		this.client = client;
 		this.keySpace = keySpace;
 		this.consistencyLevel = consistencyLevel;
+		this.termColumnFamily = termColumnFamily;
+		this.documentColumnFamily = documentColumnFamily;
+		try {
+			this.documentPath = new ColumnPath(documentColumnFamily).setColumn(CassandraUtils.documentMetaField.getBytes("UTF-8"));
+		} catch (UnsupportedEncodingException e) {
+			//should never happen
+			throw new RuntimeException(e);
+		}
 	}
 
+	public IndexContext(Iface client, String keySpace,
+			ConsistencyLevel consistencyLevel) {
+		this(client, keySpace, consistencyLevel, "TermInfo", "Documents");
+	}
 
 	/**
 	 * @return the client
@@ -52,7 +71,6 @@ public class IndexContext {
 		return client;
 	}
 
-
 	/**
 	 * @return the keySpace
 	 */
@@ -60,15 +78,30 @@ public class IndexContext {
 		return keySpace;
 	}
 
-
 	/**
 	 * @return the consistencyLevel
 	 */
 	public ConsistencyLevel getConsistencyLevel() {
 		return consistencyLevel;
 	}
-	 
 
+	/**
+	 * @return the termColumnFamily
+	 */
+	public String getTermColumnFamily() {
+		return termColumnFamily;
+	}
+
+	/**
+	 * @return the documentColumnFamily
+	 */
+	public String getDocumentColumnFamily() {
+		return documentColumnFamily;
+	}
+
+	public ColumnPath getDocumentColumnPath(){
+		return documentPath;
+	}
 	
-	 
+
 }

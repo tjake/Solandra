@@ -262,8 +262,6 @@
 							<goal>deploy-file</goal>
 						</goals>
 						<configuration>
-							<repsitoryId>${env.repositoryId}</repsitoryId>
-							<url>${env.url}</url>
 							<packaging>jar</packaging>
 							<groupId>libthrift</groupId>
 							<artifactId>libthrift</artifactId>
