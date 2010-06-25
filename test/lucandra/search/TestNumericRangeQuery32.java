@@ -65,8 +65,7 @@ public class TestNumericRangeQuery32 extends LucandraTestCase {
 
 	private static IndexSearcher searcher;
 
-	@BeforeClass
-	public static void setupData() throws Exception {
+	static {
 		// set the theoretical maximum term count for 8bit (see docs for the
 		// number)
 		BooleanQuery.setMaxClauseCount(3 * 255 * 2 + 255);
@@ -110,7 +109,11 @@ public class TestNumericRangeQuery32 extends LucandraTestCase {
 			ascfield8.setIntValue(val);
 			ascfield4.setIntValue(val);
 			ascfield2.setIntValue(val);
-			writer.addDocument(doc, analyzer);
+			try {
+				writer.addDocument(doc, analyzer);
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
 		}
 
 		IndexReader reader = new IndexReader(indexName, context);
@@ -119,32 +122,32 @@ public class TestNumericRangeQuery32 extends LucandraTestCase {
 
 	}
 
-//	private void clearData(String cfName) throws InvalidRequestException,
-//			UnavailableException, TimedOutException, TException {
-//
-//		SlicePredicate predicate = new SlicePredicate();
-//
-//		Iface client = context.getClient();
-//
-//		ColumnPath path = new ColumnPath(cfName);
-//
-//		int numDocs = 1000;
-//		List<KeySlice> keys = null;
-//		do {
-//
-//			keys = client.get_range_slice(context.getKeySpace(),
-//					new ColumnParent(context.getDocumentColumnFamily()),
-//					predicate, "", "", numDocs, context.getConsistencyLevel());
-//
-//			for (KeySlice slice : keys) {
-//
-//				client.remove(context.getKeySpace(), slice.getKey(), path,
-//						System.currentTimeMillis(), context
-//								.getConsistencyLevel());
-//			}
-//		} while (keys.size() == numDocs);
-//
-//	}
+	// private void clearData(String cfName) throws InvalidRequestException,
+	// UnavailableException, TimedOutException, TException {
+	//
+	// SlicePredicate predicate = new SlicePredicate();
+	//
+	// Iface client = context.getClient();
+	//
+	// ColumnPath path = new ColumnPath(cfName);
+	//
+	// int numDocs = 1000;
+	// List<KeySlice> keys = null;
+	// do {
+	//
+	// keys = client.get_range_slice(context.getKeySpace(),
+	// new ColumnParent(context.getDocumentColumnFamily()),
+	// predicate, "", "", numDocs, context.getConsistencyLevel());
+	//
+	// for (KeySlice slice : keys) {
+	//
+	// client.remove(context.getKeySpace(), slice.getKey(), path,
+	// System.currentTimeMillis(), context
+	// .getConsistencyLevel());
+	// }
+	// } while (keys.size() == numDocs);
+	//
+	// }
 
 	/**
 	 * test for both constant score and boolean query, the other tests only use
