@@ -105,10 +105,10 @@ public class BytesOrderingEnumTest {
 		// add all the tokens to our list
 		while (firstStream.incrementToken()) {
 			buffer.reset();
-//			buffer.write("longvals".getBytes("UTF-8"));
-//			buffer.write(CassandraUtils.delimeter.getBytes("UTF-8"));
-//			buffer.write("long".getBytes("UTF-8"));
-//			buffer.write(CassandraUtils.delimeter.getBytes("UTF-8"));
+			buffer.write("longvals".getBytes("UTF-8"));
+			buffer.write(CassandraUtils.delimeter.getBytes("UTF-8"));
+			buffer.write("long".getBytes("UTF-8"));
+			buffer.write(CassandraUtils.delimeter.getBytes("UTF-8"));
 			buffer.write(firstAttribute.term().getBytes("UTF-8"));
 			buffer.flush();
 			bytes = buffer.toByteArray();
@@ -245,7 +245,8 @@ public class BytesOrderingEnumTest {
 
 		@Override
 		public int maxDoc() {
-			return 0;
+			//hard coded.  Our results should be 3
+			return 4;
 		}
 
 		@Override
@@ -290,20 +291,28 @@ public class BytesOrderingEnumTest {
 			
 			ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 
-//			buffer.write("longvals".getBytes("UTF-8"));
-//			buffer.write(CassandraUtils.delimeter.getBytes("UTF-8"));
-//			buffer.write("long".getBytes("UTF-8"));
-//			buffer.write(CassandraUtils.delimeter.getBytes("UTF-8"));
+			buffer.write("longvals".getBytes("UTF-8"));
+			buffer.write(CassandraUtils.delimeter.getBytes("UTF-8"));
+			buffer.write("long".getBytes("UTF-8"));
+			buffer.write(CassandraUtils.delimeter.getBytes("UTF-8"));
 			buffer.write(t.text().getBytes("UTF-8"));
 			buffer.flush();
 			byte[]  bytes = buffer.toByteArray();
 			
 			ByteComparator comparator = new ByteComparator();
 			
-
-			int results = Collections.binarySearch(data, bytes, comparator );
+			int firstMatch = -1;
 			
-			return new TestTermEnum(data, results, t.field());
+			for(int i =0; i < data.size(); i ++){
+				if(comparator.compare(data.get(i), bytes) == 0){
+					firstMatch = i;
+					break;
+				}
+			}
+			
+			
+			
+			return new TestTermEnum(data, firstMatch, t.field());
 			
 		}
 		
