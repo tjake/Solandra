@@ -78,8 +78,10 @@ public class IndexWriter {
     @SuppressWarnings("unchecked")
     public void addDocument(Document doc, Analyzer analyzer) throws CorruptIndexException, IOException {
 
-        List<String> allIndexedTerms = new ArrayList<String>();
-
+        List<String> allIndexedTerms  = new ArrayList<String>();
+        Map<String,byte[]> fieldCache = new HashMap<String,byte[]>(1024);
+        
+        
         // check for special field name
         String docId = doc.get(CassandraUtils.documentIdField);
 
@@ -242,17 +244,33 @@ public class IndexWriter {
 
                 value[value.length - 1] = (byte) (field.isBinary() ? Byte.MAX_VALUE : Byte.MIN_VALUE);
 
-                String key = indexName + CassandraUtils.delimeter + docId;
+                //logic to handle multiple fields w/ same name
+                byte[] currentValue = fieldCache.get(field.name());
+                if(currentValue == null){
+                    fieldCache.put(field.name(), value);
+                }else{
+                    
+                    // append new data
+                    byte[] newValue = new byte[currentValue.length + CassandraUtils.delimeterBytes.length + value.length - 1];
+                    System.arraycopy(currentValue, 0, newValue, 0, currentValue.length - 1);
+                    System.arraycopy(CassandraUtils.delimeterBytes, 0, newValue, currentValue.length - 1, CassandraUtils.delimeterBytes.length);
+                    System.arraycopy(value, 0, newValue, currentValue.length + CassandraUtils.delimeterBytes.length - 1, value.length);
 
-                CassandraUtils.addMutations(getMutationList(), CassandraUtils.docColumnFamily, field.name().getBytes("UTF-8"), CassandraUtils.hashKey(key),
-                        value, null);
-
+                    fieldCache.put(field.name(), newValue);   
+                }           
             }
         }
 
-        // Finally, Store meta-data so we can delete this document
+        
         String key = indexName + CassandraUtils.delimeter + docId;
 
+        //Store each field as a column under this docId
+        for(Map.Entry<String, byte[]> field : fieldCache.entrySet()){
+            CassandraUtils.addMutations(getMutationList(), CassandraUtils.docColumnFamily, field.getKey().getBytes("UTF-8"), CassandraUtils.hashKey(key),
+                field.getValue(), null);
+        }
+        
+        // Finally, Store meta-data so we can delete this document
         CassandraUtils.addMutations(getMutationList(), CassandraUtils.docColumnFamily, CassandraUtils.documentMetaField.getBytes("UTF-8"), CassandraUtils
                 .hashKey(key), CassandraUtils.toBytes(allIndexedTerms), null);
 

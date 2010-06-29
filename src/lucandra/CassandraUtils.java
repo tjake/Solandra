@@ -29,7 +29,6 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -41,22 +40,12 @@ import org.apache.cassandra.db.Column;
 import org.apache.cassandra.db.ColumnFamily;
 import org.apache.cassandra.db.IColumn;
 import org.apache.cassandra.db.RowMutation;
-import org.apache.cassandra.db.SuperColumn;
 import org.apache.cassandra.db.filter.QueryPath;
 import org.apache.cassandra.service.StorageProxy;
-import org.apache.cassandra.thrift.Cassandra;
-import org.apache.cassandra.thrift.ColumnPath;
 import org.apache.cassandra.thrift.ConsistencyLevel;
-import org.apache.cassandra.thrift.Deletion;
-import org.apache.cassandra.thrift.InvalidRequestException;
-import org.apache.cassandra.thrift.Mutation;
-import org.apache.cassandra.thrift.SlicePredicate;
-import org.apache.cassandra.thrift.SliceRange;
-import org.apache.cassandra.thrift.TimedOutException;
 import org.apache.cassandra.thrift.UnavailableException;
 import org.apache.log4j.Logger;
 import org.apache.lucene.index.Term;
-import org.apache.thrift.TException;
 
 public class CassandraUtils {
 
@@ -229,45 +218,6 @@ public class CassandraUtils {
         } else { // insert
 
             if (superColumns == null) {
-
-                // check for multi valued fields
-                // Lucene allows the same field to be added over and over to the
-                // same document, if this happens we need to merge them into 1
-                // rowMutation
-                for (RowMutation mm : mutationList) {
-                    Collection<ColumnFamily> cfs = mm.getColumnFamilies();
-                    
-                    if(!mm.key().equals(key))
-                        return;
-                    
-                    for (ColumnFamily cf : cfs) {
-                        if (!cf.name().equals(columnFamily))
-                            continue;
-
-                        IColumn col = cf.getColumn(column);
-
-                        if (col == null)
-                            continue;
-
-                        // Found a column with same name
-                        byte[] currentValue = col.value();
-
-                        // append new data
-                        byte[] newValue = new byte[currentValue.length + delimeterBytes.length + value.length - 1];
-                        System.arraycopy(currentValue, 0, newValue, 0, currentValue.length - 1);
-                        System.arraycopy(delimeterBytes, 0, newValue, currentValue.length - 1, delimeterBytes.length);
-                        System.arraycopy(value, 0, newValue, currentValue.length + delimeterBytes.length - 1, value.length);
-
-                        // remove old column
-                        cf.remove(column);
-
-                        // add new column
-                        IColumn newCol = new Column(column, newValue, System.currentTimeMillis());
-                        cf.addColumn(newCol);
-
-                        return;
-                    }
-                }
 
                 RowMutation rm = new RowMutation(CassandraUtils.keySpace, key);
                 rm.add(new QueryPath(columnFamily,null, column), value, System.currentTimeMillis());

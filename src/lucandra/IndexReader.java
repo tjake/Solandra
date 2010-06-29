@@ -291,7 +291,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
                 }
                 
                 //Mark the required doc
-                if(row.key.equals(docNum))
+                if(key.getKey().equals(docNum))
                     doc = cacheDoc;
                 
                 getDocumentCache().put(key.getKey(),cacheDoc);
