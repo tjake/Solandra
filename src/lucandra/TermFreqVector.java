@@ -29,7 +29,7 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
     private TermVectorOffsetInfo[][] termOffsets;
 
     public TermFreqVector(String indexName, String field, String docId, Cassandra.Iface client) {
-        this.field = field;
+      /*  this.field = field;
         this.docId = docId;
 
         String key = indexName + CassandraUtils.delimeter + docId;
@@ -130,7 +130,7 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
         } catch (ClassNotFoundException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
-        }
+        }*/
 
     }
 

@@ -24,7 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.cassandra.thrift.ColumnOrSuperColumn;
+import org.apache.cassandra.db.IColumn;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.DocIdSet;
@@ -58,7 +58,7 @@ public class LucandraFilter extends Filter {
         LucandraTermDocs termDocs = (LucandraTermDocs) reader.termDocs();
 
         for (Term term : terms) {
-            List<ColumnOrSuperColumn> terms = termDocs.filteredSeek(term, filteredValues);
+            IColumn[] terms = termDocs.filteredSeek(term, filteredValues);
             // This is a conjunction and at least one value must match
             if (terms == null)
                 return null;

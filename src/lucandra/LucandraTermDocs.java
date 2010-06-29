@@ -21,8 +21,10 @@ package lucandra;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
+import org.apache.cassandra.db.IColumn;
 import org.apache.cassandra.thrift.Column;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.log4j.Logger;
@@ -35,7 +37,7 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
 
     private IndexReader indexReader;
     private LucandraTermEnum termEnum;
-    private List<ColumnOrSuperColumn> termDocs;
+    private IColumn[] termDocs;
     private int docPosition;
     private int[] termPositionArray;
     private int termPosition;
@@ -55,35 +57,23 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         if (docPosition < 0)
             docPosition = 0;
 
-        int docid = indexReader.getDocumentNumber(termDocs.get(docPosition).getSuper_column().getName()); 
+        int docid = indexReader.getDocumentNumber(termDocs[docPosition].name()); 
 
         return docid;
     }
 
     public int freq() {
-
+              
         //Find the termFrequency
-        List<Column> columns  = termDocs.get(docPosition).getSuper_column().getColumns();
-        Column termFrequency = null;
-        Column positionVector = null;
-        
-        for(Column c : columns){
-            if(Arrays.equals(CassandraUtils.termFrequencyKey.getBytes(), c.getName())){
-                termFrequency = c;
-            }
-            
-            if(Arrays.equals(CassandraUtils.positionVectorKey.getBytes(), c.getName())){
-                positionVector = c;
-            }
-        }
-        
+        IColumn termFrequency  = termDocs[docPosition].getSubColumn(CassandraUtils.termFrequencyKey.getBytes());     
+        IColumn positionVector = termDocs[docPosition].getSubColumn(CassandraUtils.positionVectorKey.getBytes());
+          
         if(termFrequency == null){
             throw new RuntimeException("termFrequency is missing from supercolumn");
         }
-        
-        
-        Integer freq      = CassandraUtils.byteArrayToInt(termFrequency.getValue());
-        termPositionArray =  positionVector == null ? null : CassandraUtils.byteArrayToIntArray(positionVector.getValue());
+             
+        Integer freq      = CassandraUtils.byteArrayToInt(termFrequency.value());
+        termPositionArray =  positionVector == null ? null : CassandraUtils.byteArrayToIntArray(positionVector.value());
         termPosition      = 0;
 
         return freq;
@@ -94,13 +84,13 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         if (termDocs == null)
             return false;
 
-        return ++docPosition < termDocs.size();
+        return ++docPosition < termDocs.length;
     }
 
     public int read(int[] docs, int[] freqs) throws IOException {
 
         int i = 0;
-        for (; (termDocs != null && docPosition < termDocs.size() && i < docs.length); i++, docPosition++) {
+        for (; (termDocs != null && docPosition < termDocs.length && i < docs.length); i++, docPosition++) {
             docs[i] = doc();
             freqs[i] = freq();
         }
@@ -115,7 +105,7 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
 
             if (termEnum.skipTo(term)) {
                 if (termEnum.term().compareTo(term) == 0) {
-                    termDocs = termEnum.getTermDocFreq();
+                    termDocs = termEnum.getTermDocFreq().toArray(new IColumn[]{});
                 } else {
                     termDocs = null;
                 }
@@ -125,7 +115,7 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
             if (termEnum.skipTo(term)) {
 
                 if (termEnum.term().equals(term)) {
-                    termDocs = termEnum.getTermDocFreq();
+                    termDocs = termEnum.getTermDocFreq().toArray(new IColumn[]{});
                 } else {
                     termDocs = null;
                 }
@@ -144,15 +134,15 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
             this.termEnum = (LucandraTermEnum) indexReader.terms(termEnum.term());
         }
     
-        termDocs = this.termEnum.getTermDocFreq();
+        termDocs = this.termEnum.getTermDocFreq().toArray(new IColumn[]{});
         docPosition = -1;
     }
 
-    public List<ColumnOrSuperColumn> filteredSeek(Term term, List<String> docNums){
+    public IColumn[] filteredSeek(Term term, List<String> docNums){
       
         termEnum.loadFilteredTerms(term, docNums);
        
-        termDocs = termEnum.getTermDocFreq();
+        termDocs = termEnum.getTermDocFreq().toArray(new IColumn[]{});
 
         docPosition = -1;
         return termDocs;

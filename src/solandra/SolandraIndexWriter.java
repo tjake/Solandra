@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import lucandra.CassandraUtils;
 
+import org.apache.cassandra.service.StorageService;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
@@ -89,9 +90,21 @@ public class SolandraIndexWriter extends UpdateHandler {
         cassandraFramed = core.getSolrConfig().getBool("updateHandler/bool[@name='cassandraFramed']",false);
         
         try {
-            writer = new lucandra.IndexWriter(core.getSchema().getSchemaName(), 
-                    CassandraUtils.createRobustConnection(cassandraHost,cassandraPort,cassandraFramed,true));
-
+            
+            StorageService.instance.initClient();
+            
+            //Wait for gossip
+            try
+            {
+                Thread.sleep(10000L);
+            }
+            catch (Exception ex)
+            {
+            }
+            
+            
+            writer = new lucandra.IndexWriter(core.getSchema().getSchemaName());
+            
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

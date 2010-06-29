@@ -22,19 +22,28 @@ package lucandra;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.TimeoutException;
 
-import org.apache.cassandra.thrift.Cassandra;
-import org.apache.cassandra.thrift.ColumnOrSuperColumn;
+import org.apache.cassandra.db.IColumn;
+import org.apache.cassandra.db.RangeSliceCommand;
+import org.apache.cassandra.db.ReadCommand;
+import org.apache.cassandra.db.Row;
+import org.apache.cassandra.db.SliceByNamesReadCommand;
+import org.apache.cassandra.dht.AbstractBounds;
+import org.apache.cassandra.dht.Bounds;
+import org.apache.cassandra.dht.IPartitioner;
+import org.apache.cassandra.service.StorageProxy;
+import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.InvalidRequestException;
-import org.apache.cassandra.thrift.KeySlice;
 import org.apache.cassandra.thrift.SlicePredicate;
 import org.apache.cassandra.thrift.SliceRange;
 import org.apache.cassandra.thrift.TimedOutException;
@@ -56,8 +65,8 @@ public class LucandraTermEnum extends TermEnum {
 
     private int termPosition;
     private Term[] termBuffer;
-    private SortedMap<Term, List<ColumnOrSuperColumn>> termDocFreqBuffer;
-    private SortedMap<Term, List<ColumnOrSuperColumn>> termCache;
+    private SortedMap<Term, Collection<IColumn>> termDocFreqBuffer;
+    private SortedMap<Term, Collection<IColumn>> termCache;
 
     // number of sequential terms to read initially
     private final int maxInitSize = 2;
@@ -68,7 +77,6 @@ public class LucandraTermEnum extends TermEnum {
     private String currentField = null;
     private int chunkCount = 0;
 
-    private final Cassandra.Iface client;
     private final Term finalTerm = new Term(CassandraUtils.delimeter, CassandraUtils.finalToken);
 
     private static final Logger logger = Logger.getLogger(LucandraTermEnum.class);
@@ -76,7 +84,6 @@ public class LucandraTermEnum extends TermEnum {
     public LucandraTermEnum(IndexReader indexReader) {
         this.indexReader = indexReader;
         this.indexName = indexReader.getIndexName();
-        this.client = indexReader.getClient();
         this.termPosition = 0;
     }
 
@@ -209,7 +216,7 @@ public class LucandraTermEnum extends TermEnum {
 
         long start = System.currentTimeMillis();
 
-        termDocFreqBuffer = new TreeMap<Term, List<ColumnOrSuperColumn>>();
+        termDocFreqBuffer = new TreeMap<Term, Collection<IColumn>>();
 
         ColumnParent columnParent = new ColumnParent(CassandraUtils.termVecColumnFamily);        
         SlicePredicate slicePredicate = new SlicePredicate();
@@ -219,38 +226,43 @@ public class LucandraTermEnum extends TermEnum {
         SliceRange sliceRange = new SliceRange(new byte[] {}, new byte[] {}, true, Integer.MAX_VALUE);
         slicePredicate.setSlice_range(sliceRange);
         
-        List<KeySlice> columns;
+        List<Row> rows;
         try {
-            columns = client.get_range_slice(CassandraUtils.keySpace, columnParent, slicePredicate, startTerm, endTerm, count, ConsistencyLevel.ONE);
-        } catch (InvalidRequestException e) {
-            throw new RuntimeException(e);
-        } catch (TException e) {
+            
+            IPartitioner        p = StorageService.getPartitioner();
+            AbstractBounds bounds = new Bounds(p.getToken(startTerm), p.getToken(endTerm));
+
+            rows = StorageProxy.getRangeSlice(new RangeSliceCommand(CassandraUtils.keySpace, columnParent, slicePredicate, bounds, count), ConsistencyLevel.ONE);
+
+        } catch (IOException e) {
             throw new RuntimeException(e);
         } catch (UnavailableException e) {
             throw new RuntimeException(e);
-        } catch (TimedOutException e) {
+        } catch (TimeoutException e) {
             throw new RuntimeException(e);
         }
 
         // term to start with next time
-        actualInitSize = columns.size();
-        logger.debug("Found " + columns.size() + " keys in range:" + startTerm + " to " + endTerm + " in " + (System.currentTimeMillis() - start) + "ms");
+        actualInitSize = rows.size();
+        logger.debug("Found " + rows.size() + " keys in range:" + startTerm + " to " + endTerm + " in " + (System.currentTimeMillis() - start) + "ms");
 
         if (actualInitSize > 0) {
-            for (KeySlice entry : columns) {
+            for (Row entry : rows) {
    
                 // term keys look like wikipedia/body/wiki
-                String termStr = entry.getKey().substring(entry.getKey().indexOf(CassandraUtils.delimeter) + CassandraUtils.delimeter.length());
+                String termStr = entry.key.substring(entry.key.indexOf(CassandraUtils.delimeter) + CassandraUtils.delimeter.length());
                 Term term = CassandraUtils.parseTerm(termStr);                 
                 
-                logger.debug(termStr + " has " + entry.getColumns().size());
+                Collection<IColumn> columns = entry.cf.getSortedColumns();
+                
+                logger.debug(termStr + " has " + columns.size());
                 
                 //check for tombstone keys or incorrect keys (from RP)
-                if(entry.getColumns().size() > 0 && term.field().equals(skipTo.field()) &&
+                if(columns.size() > 0 && term.field().equals(skipTo.field()) &&
                         //from this index
-                        entry.getKey().equals(CassandraUtils.hashKey(indexName+CassandraUtils.delimeter+term.field()+CassandraUtils.delimeter+term.text())))
+                        entry.key.equals(CassandraUtils.hashKey(indexName+CassandraUtils.delimeter+term.field()+CassandraUtils.delimeter+term.text())))
                     
-                    termDocFreqBuffer.put(term, entry.getColumns());
+                    termDocFreqBuffer.put(term, columns);
             }
 
             if(!termDocFreqBuffer.isEmpty()){
@@ -295,59 +307,69 @@ public class LucandraTermEnum extends TermEnum {
                 indexName + CassandraUtils.delimeter + CassandraUtils.createColumnName(term)
             );
 
-        SlicePredicate slicePredicate = new SlicePredicate();
 
-        
+        List<byte[]> columns = new ArrayList<byte[]>();
         for (String docNum : docNums) {
-            slicePredicate.addToColumn_names(docNum.getBytes());
+            columns.add(docNum.getBytes());
         }
+      
 
+        List<Row> rows = null;
         
+        ReadCommand rc = new SliceByNamesReadCommand(CassandraUtils.keySpace, key, parent, columns);
 
-        List<ColumnOrSuperColumn> columsList = null;
-        try {
-            columsList = client.get_slice(CassandraUtils.keySpace, key, parent, slicePredicate, ConsistencyLevel.ONE);
-        } catch (InvalidRequestException e) {
-            throw new RuntimeException(e);
-        } catch (UnavailableException e) {
-            throw new RuntimeException(e);
-        } catch (TimedOutException e) {
-            throw new RuntimeException(e);
-        } catch (TException e) {
-            throw new RuntimeException(e);
-        }catch (Exception e) {
-            throw new RuntimeException(e);
+        int attempts = 0;
+        while (attempts++ < 10) {
+            try {
+                rows = StorageProxy.readProtocol(Arrays.asList(rc), ConsistencyLevel.ONE);
+                break;
+            } catch (IOException e1) {
+               throw new RuntimeException(e1);
+            } catch (UnavailableException e1) {
+                
+            } catch (TimeoutException e1) {
+               
+            }
+            
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                
+            }
         }
 
+        if(attempts >= 10)
+            throw new RuntimeException("Read command failed after 10 attempts");
+        
         termBuffer = new Term[0];
 
-        if (columsList != null  && columsList.size()>0){
+        if (rows != null  && rows.size()>0 && rows.get(0).cf.getSortedColumns().size() > 0){
             termBuffer = new Term[1];
             termBuffer[0] = term;
-            termDocFreqBuffer = new TreeMap<Term, List<ColumnOrSuperColumn>>();
-            termDocFreqBuffer.put(term, columsList);
+            termDocFreqBuffer = new TreeMap<Term, Collection<IColumn>>();
+            termDocFreqBuffer.put(term, rows.get(0).cf.getSortedColumns());
         }
         long end = System.currentTimeMillis();
         logger.debug("loadFilterdTerms: " + term + "(" + termBuffer.length + ") took " + (end - start) + "ms");
 
     }
     
-    public final List<ColumnOrSuperColumn> getTermDocFreq() {
+    public final Collection<IColumn> getTermDocFreq() {
         if (termBuffer.length == 0)
             return null;
 
-        List<ColumnOrSuperColumn> termDocs = termDocFreqBuffer.get(termBuffer[termPosition]);
+        Collection<IColumn> termDocs = termDocFreqBuffer.get(termBuffer[termPosition]);
 
         // create proper docIds.
         // Make sure these ids are sorted in ascending order since lucene
         // requires this.
         int docIds[] = new int[termDocs.size()];
         int idx = 0;
-        List<ColumnOrSuperColumn> sortedTermDocs = new ArrayList<ColumnOrSuperColumn>(termDocs.size());
-        Map<Integer, ColumnOrSuperColumn> termDocMap = new HashMap<Integer, ColumnOrSuperColumn>();
+        Collection<IColumn> sortedTermDocs = new ArrayList<IColumn>(termDocs.size());
+        Map<Integer, IColumn> termDocMap = new HashMap<Integer, IColumn>();
 
-        for (ColumnOrSuperColumn col : termDocs) {
-            int docId = indexReader.addDocument(col.getSuper_column(), currentField);
+        for (IColumn col : termDocs) {
+            int docId = indexReader.addDocument(col, currentField);
             termDocMap.put(docId, col);
             docIds[idx++] = docId;
         }
