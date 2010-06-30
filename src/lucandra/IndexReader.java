@@ -206,10 +206,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         }
         
         ColumnParent columnParent = new ColumnParent();
-        columnParent.setColumn_family(CassandraUtils.docColumnFamily);
-
-        SlicePredicate slicePredicate = new SlicePredicate();
-        
+        columnParent.setColumn_family(CassandraUtils.docColumnFamily);        
        
        
         long start = System.currentTimeMillis();
@@ -319,7 +316,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
         String docId = getDocIndexToDocId().get(docNum);
 
-        TermFreqVector termVector = null; //new lucandra.TermFreqVector(indexName, field, docId);
+        TermFreqVector termVector = new lucandra.TermFreqVector(indexName, field, docId);
 
         return termVector;
     }

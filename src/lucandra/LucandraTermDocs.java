@@ -142,7 +142,10 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
       
         termEnum.loadFilteredTerms(term, docNums);
        
-        termDocs = termEnum.getTermDocFreq().toArray(new IColumn[]{});
+        if(termEnum.getTermDocFreq() == null)
+            termDocs = null;
+        else
+            termDocs = termEnum.getTermDocFreq().toArray(new IColumn[]{});
 
         docPosition = -1;
         return termDocs;

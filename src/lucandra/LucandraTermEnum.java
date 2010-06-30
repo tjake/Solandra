@@ -43,15 +43,12 @@ import org.apache.cassandra.service.StorageProxy;
 import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.ConsistencyLevel;
-import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.SlicePredicate;
 import org.apache.cassandra.thrift.SliceRange;
-import org.apache.cassandra.thrift.TimedOutException;
 import org.apache.cassandra.thrift.UnavailableException;
 import org.apache.log4j.Logger;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.TermEnum;
-import org.apache.thrift.TException;
 
 /**
  * 
@@ -260,9 +257,11 @@ public class LucandraTermEnum extends TermEnum {
                 //check for tombstone keys or incorrect keys (from RP)
                 if(columns.size() > 0 && term.field().equals(skipTo.field()) &&
                         //from this index
-                        entry.key.equals(CassandraUtils.hashKey(indexName+CassandraUtils.delimeter+term.field()+CassandraUtils.delimeter+term.text())))
+                        entry.key.equals(CassandraUtils.hashKey(indexName+CassandraUtils.delimeter+term.field()+CassandraUtils.delimeter+term.text()))){
                     
-                    termDocFreqBuffer.put(term, columns);
+                    if(columns.iterator().next().getSubColumns().size() > 0)
+                        termDocFreqBuffer.put(term, columns);
+                }
             }
 
             if(!termDocFreqBuffer.isEmpty()){
@@ -343,7 +342,7 @@ public class LucandraTermEnum extends TermEnum {
         
         termBuffer = new Term[0];
 
-        if (rows != null  && rows.size()>0 && rows.get(0).cf.getSortedColumns().size() > 0){
+        if (rows != null  && rows.size()>0 && rows.get(0) != null && rows.get(0).cf != null && rows.get(0).cf.getSortedColumns() != null && rows.get(0).cf.getSortedColumns().size() > 0){
             termBuffer = new Term[1];
             termBuffer[0] = term;
             termDocFreqBuffer = new TreeMap<Term, Collection<IColumn>>();
