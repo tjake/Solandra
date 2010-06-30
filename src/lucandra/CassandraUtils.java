@@ -30,15 +30,11 @@ import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.cassandra.db.Column;
-import org.apache.cassandra.db.ColumnFamily;
-import org.apache.cassandra.db.IColumn;
 import org.apache.cassandra.db.RowMutation;
 import org.apache.cassandra.db.filter.QueryPath;
 import org.apache.cassandra.service.StorageProxy;
@@ -67,14 +63,16 @@ public class CassandraUtils {
 
     public static final String documentIdField = System.getProperty("lucandra.id.field", delimeter + "KEY" + delimeter);
     public static final String documentMetaField = delimeter + "META" + delimeter;
-
+    public static final byte[] documentMetaFieldBytes;
+    
     public static final boolean indexHashingEnabled = Boolean.valueOf(System.getProperty("index.hashing", "true"));
 
     public static final QueryPath metaColumnPath;
     static {
         try {
             delimeterBytes = delimeter.getBytes("UTF-8");
-            metaColumnPath = new QueryPath(CassandraUtils.docColumnFamily, documentMetaField.getBytes("UTF-8"));
+            documentMetaFieldBytes = documentMetaField.getBytes("UTF-8");
+            metaColumnPath = new QueryPath(CassandraUtils.docColumnFamily);
         } catch (UnsupportedEncodingException e) {
             throw new RuntimeException("UTF-8 not supported by this JVM");
         }

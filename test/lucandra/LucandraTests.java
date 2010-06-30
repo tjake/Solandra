@@ -186,7 +186,7 @@ public class LucandraTests extends TestCase {
         
     }
     
-    /*public void testDelete() throws Exception {
+   public void testDelete() throws Exception {
         indexWriter.deleteDocuments(new Term("key", new String("\u5639\u563b")));
         IndexReader indexReader = new IndexReader(indexName);
         IndexSearcher searcher = new IndexSearcher(indexReader);
@@ -197,7 +197,7 @@ public class LucandraTests extends TestCase {
         TopDocs docs = searcher.search(q, 10);
 
         assertEquals(0, docs.totalHits);
-    }*/
+    }
 
     public void testSearch() throws Exception {
 

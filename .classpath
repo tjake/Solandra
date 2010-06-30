@@ -30,7 +30,7 @@
 	<classpathentry kind="lib" path="lib/solr-solrj-1.4.0.jar"/>
 	<classpathentry kind="lib" path="lib/stax-api-1.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/wstx-asl-3.2.7.jar"/>
-	<classpathentry kind="lib" path="/Users/jake/workspace/cassandra-0.6/build/apache-cassandra-0.6.1.jar"/>
+	<classpathentry kind="lib" path="/Users/jake/workspace/cassandra-0.6/build/apache-cassandra-0.6.1.jar" sourcepath="/cassandra-0.6"/>
 	<classpathentry kind="lib" path="/cassandra-0.6/lib/antlr-3.1.3.jar"/>
 	<classpathentry kind="lib" path="/cassandra-0.6/lib/avro-1.2.0-dev.jar"/>
 	<classpathentry kind="lib" path="/cassandra-0.6/lib/clhm-production.jar"/>

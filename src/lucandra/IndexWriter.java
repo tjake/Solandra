@@ -328,7 +328,7 @@ public class IndexWriter {
         String key = indexName + CassandraUtils.delimeter + new String(docId);
 
         ReadCommand rc = new SliceByNamesReadCommand(CassandraUtils.keySpace, CassandraUtils.hashKey(key), CassandraUtils.metaColumnPath, Arrays
-                .asList(CassandraUtils.metaColumnPath.superColumnName));
+                .asList(CassandraUtils.documentMetaFieldBytes));
 
         List<Row> rows = null;
         int attempts = 0;
@@ -359,7 +359,7 @@ public class IndexWriter {
 
         List<String> terms;
         try {
-            terms = (List<String>) CassandraUtils.fromBytes(rows.get(0).cf.getColumn(CassandraUtils.metaColumnPath.superColumnName).value());
+            terms = (List<String>) CassandraUtils.fromBytes(rows.get(0).cf.getColumn(CassandraUtils.documentMetaFieldBytes).value());
         } catch (IOException e) {
             throw new RuntimeException(e);
         } catch (ClassNotFoundException e) {
