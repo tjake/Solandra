@@ -24,8 +24,10 @@ import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.cassandra.db.IColumn;
@@ -60,7 +62,7 @@ public class IndexWriter {
     private final String indexName;
 
     private boolean autoCommit;
-    private static final ThreadLocal<List<RowMutation>> mutationList = new ThreadLocal<List<RowMutation>>();
+    private static final ThreadLocal<Map<String,RowMutation>> mutationList = new ThreadLocal<Map<String,RowMutation>>();
 
     private Similarity similarity = Similarity.getDefault(); // how to
                                                              // normalize;
@@ -408,12 +410,12 @@ public class IndexWriter {
             CassandraUtils.robustInsert(getMutationList());
     }
 
-    private List<RowMutation> getMutationList() {
+    private Map<String,RowMutation> getMutationList() {
 
-        List<RowMutation> list = mutationList.get();
+        Map<String,RowMutation> list = mutationList.get();
 
         if (list == null) {
-            list = new ArrayList<RowMutation>();
+            list = new HashMap<String,RowMutation>(1024);
             mutationList.set(list);
         }
 

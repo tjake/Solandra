@@ -35,9 +35,14 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.cassandra.config.DatabaseDescriptor;
+import org.apache.cassandra.db.CompactionManager;
 import org.apache.cassandra.db.RowMutation;
+import org.apache.cassandra.db.Table;
+import org.apache.cassandra.db.commitlog.CommitLog;
 import org.apache.cassandra.db.filter.QueryPath;
 import org.apache.cassandra.service.StorageProxy;
+import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.UnavailableException;
 import org.apache.log4j.Logger;
@@ -83,6 +88,31 @@ public class CassandraUtils {
 
     private static final Logger logger = Logger.getLogger(CassandraUtils.class);
 
+    //Start Cassandra up!!!
+    static{
+        try {
+         // initialize keyspaces
+            for (String table : DatabaseDescriptor.getTables())
+            {
+                Table.open(table);
+            }
+
+            // replay the log if necessary and check for compaction candidates
+            CommitLog.recover();
+            CompactionManager.instance.checkAllColumnFamilies();
+
+            // start server internals
+            StorageService.instance.initServer();
+
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    
+        
+    }
+    
+    
     public static String createColumnName(Term term) {
 
         return createColumnName(term.field(), term.text());
@@ -198,12 +228,19 @@ public class CassandraUtils {
 
     }
 
-    public static void addMutations(List<RowMutation> mutationList, String columnFamily, byte[] column, String key, byte[] value,
+   
+    
+    public static void addMutations(Map<String,RowMutation> mutationList, String columnFamily, byte[] column, String key, byte[] value,
             Map<String, List<Number>> superColumns) {
 
+        //Find or create row mutation
+        RowMutation rm = mutationList.get(key); 
+        if(rm == null){
+            rm = new RowMutation(CassandraUtils.keySpace, key);
+            mutationList.put(key, rm);
+        }
+        
         if (value == null && superColumns == null) { // remove
-
-            RowMutation rm = new RowMutation(CassandraUtils.keySpace, key);
 
             if (column != null) {
                 rm.delete(new QueryPath(columnFamily, column), System.currentTimeMillis());
@@ -211,40 +248,33 @@ public class CassandraUtils {
                 rm.delete(new QueryPath(columnFamily), System.currentTimeMillis());
             }
 
-            mutationList.add(rm);
-
         } else { // insert
 
             if (superColumns == null) {
 
-                RowMutation rm = new RowMutation(CassandraUtils.keySpace, key);
                 rm.add(new QueryPath(columnFamily,null, column), value, System.currentTimeMillis());
-                mutationList.add(rm);
 
             } else {
 
                 for (Map.Entry<String, List<Number>> e : superColumns.entrySet()) {
 
-                    RowMutation rm = new RowMutation(CassandraUtils.keySpace, key);
                     try {
                         rm.add(new QueryPath(columnFamily,column,e.getKey().getBytes("UTF-8")), intVectorToByteArray(e.getValue()), System.currentTimeMillis());
                     } catch (UnsupportedEncodingException ex) {
                         throw new RuntimeException("This JVM doesn't support UTF-8 Encoding");
                     }
-
-                    mutationList.add(rm);
                 }
             }
         }
     }
 
-    public static void robustInsert(List<RowMutation> mutations) {
+    public static void robustInsert(Map<String,RowMutation> mutations) {
 
         int attempts = 0;
         while (attempts++ < 10) {
 
             try {
-                StorageProxy.mutateBlocking(mutations, ConsistencyLevel.ONE);
+                StorageProxy.mutateBlocking(Arrays.asList(mutations.values().toArray(new RowMutation[]{})), ConsistencyLevel.ONE);
                 return;
             } catch (UnavailableException e) {
                 

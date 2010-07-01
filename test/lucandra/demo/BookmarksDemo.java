@@ -48,19 +48,10 @@ import org.apache.thrift.transport.TTransportException;
  */
 public class BookmarksDemo {
 
-    // Connect to casssssssssandra
-    private static Cassandra.Iface client;
-    static {
-        try {
-            client = CassandraUtils.createConnection();
-        } catch (TTransportException e) {
-            System.err.println("Error connecting to Cassandra: "+e.getMessage());
-            System.exit(2);
-        }
-    }
+    
 
-    private static IndexWriter indexWriter = new IndexWriter("bookmarks", client);
-    private static IndexReader indexReader = new IndexReader("bookmarks", client);
+    private static IndexWriter indexWriter = new IndexWriter("bookmarks");
+    private static IndexReader indexReader = new IndexReader("bookmarks");
     private static IndexSearcher indexSearcher = new IndexSearcher(indexReader);
     private static Analyzer analyzer = new SimpleAnalyzer();
 

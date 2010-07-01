@@ -39,35 +39,31 @@ public class BenchmarkTest {
     private static String text = "this is a benchmark of lucandra";
     private static String queryString = "text:benchmark";
     private static Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_CURRENT);
-    private static Cassandra.Iface client;
-    private static int   threadId = 0;
+    private static int threadId = 0;
     private static final Query query;
     private static final Document doc;
 
     static {
-        try {
-            client = CassandraUtils.createConnection();
-            query = new QueryParser(Version.LUCENE_CURRENT, "text", analyzer).parse(queryString);
-            doc = new Document();
-            doc.add(new Field("text", text, Store.YES, Index.ANALYZED, TermVector.WITH_POSITIONS_OFFSETS));
 
-        } catch (TTransportException e) {
-            throw new RuntimeException(e);
+        try {
+            query = new QueryParser(Version.LUCENE_CURRENT, "text", analyzer).parse(queryString);
         } catch (ParseException e) {
-            throw new RuntimeException(e);
+           throw new RuntimeException(e);
         }
+        doc = new Document();
+        doc.add(new Field("text", text, Store.YES, Index.ANALYZED, TermVector.WITH_POSITIONS_OFFSETS));
+
     }
 
     private static Runnable getRunnable() {
-         
+
         return new Runnable() {
 
-            private final IndexReader indexReader = new IndexReader(indexName, client);
-            private final IndexWriter indexWriter = new IndexWriter(indexName, client);
+            private final IndexReader indexReader = new IndexReader(indexName);
+            private final IndexWriter indexWriter = new IndexWriter(indexName);
             private final IndexSearcher indexSearcher = new IndexSearcher(indexReader);
             private final int myThreadId = threadId++;
-            
-            
+
             public void run() {
 
                 switch (type) {
@@ -84,29 +80,27 @@ public class BenchmarkTest {
             }
 
             private void read() {
-                
+
                 int total = 0;
-                
+
                 try {
                     for (int i = 0; i < numLoops; i++) {
 
-                         
-                        
                         TopDocs td = indexSearcher.search(query, 10);
-                        
+
                         total = td.totalHits;
-                        
+
                         indexReader.reopen();
-                        
+
                         if (i % 1000 == 999)
-                            System.err.println("Thread "+myThreadId+": total "+total);
+                            System.err.println("Thread " + myThreadId + ": total " + total);
                     }
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
-                
-                if(myThreadId == 0)
-                    System.err.println("Documents found: "+total);
+
+                if (myThreadId == 0)
+                    System.err.println("Documents found: " + total);
             }
 
             private void write() {
@@ -123,9 +117,9 @@ public class BenchmarkTest {
             }
 
             private void both() {
-                
+
                 int total = 0;
-                
+
                 for (int i = 0; i < numLoops; i++) {
                     try {
                         if (i % 2 == 1) {
@@ -135,7 +129,7 @@ public class BenchmarkTest {
                             indexReader.reopen();
 
                             if (i % 1000 == 999)
-                                System.err.println("Thread "+myThreadId+": total "+total);
+                                System.err.println("Thread " + myThreadId + ": total " + total);
 
                         } else {
                             indexWriter.addDocument(doc, analyzer);
@@ -146,13 +140,13 @@ public class BenchmarkTest {
                         throw new RuntimeException(e);
                     }
                 }
-                
-                if(myThreadId == 0)
-                    System.err.println("Documents found: "+total);
+
+                if (myThreadId == 0)
+                    System.err.println("Documents found: " + total);
             }
         };
     }
-       
+
     private static void usage() {
 
         System.err.print(BenchmarkTest.class.getSimpleName() + " [--clients=<client-count>] [--loop=<loop-count>] [--type=<test-type>]\n"
@@ -165,12 +159,12 @@ public class BenchmarkTest {
 
     public static void main(String[] args) {
 
-        if(args.length == 0)
+        if (args.length == 0)
             usage();
-        
+
         // parse args
         for (int i = 0; i < args.length; i++) {
-            
+
             if (args[i].startsWith("--")) {
                 int eq = args[i].indexOf("=");
 
@@ -200,33 +194,29 @@ public class BenchmarkTest {
         for (int i = 0; i < numClients; i++)
             runners[i] = getRunnable();
 
-        
         System.out.println("Starting Benchmark...");
         long startTime = System.currentTimeMillis();
-        
+
         for (int i = 0; i < numClients; i++)
             threadPool.submit(runners[i]);
-        
-        
+
         threadPool.shutdown();
-        
+
         try {
             threadPool.awaitTermination(1024, TimeUnit.MINUTES);
         } catch (InterruptedException e) {
-           
+
             threadPool.shutdownNow();
-            System.err.println("Benchmark manually stopped");           
+            System.err.println("Benchmark manually stopped");
             System.exit(1);
         }
-        
+
         long endTime = System.currentTimeMillis();
-        
-        
-        System.out.println("Finished:");                                                                                                                                    
-        System.out.println("\tclients:"+numClients + ", loops:"+numLoops+                                                                                                  
-            ", type:" + type+ ", rate(ops/sec):" +  Math.ceil((double)((numClients * numLoops * 1000)/(endTime - startTime))));                                
-                                                                                                                                                                     
-        
+
+        System.out.println("Finished:");
+        System.out.println("\tclients:" + numClients + ", loops:" + numLoops + ", type:" + type + ", rate(ops/sec):"
+                + Math.ceil((double) ((numClients * numLoops * 1000) / (endTime - startTime))));
+
     }
-         
+
 }

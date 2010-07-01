@@ -47,16 +47,7 @@ public class WikipediaIndexWorker implements Callable<Integer> {
     private static ThreadLocal<lucandra.IndexWriter> clientPool = new ThreadLocal<lucandra.IndexWriter>();
     private static ThreadLocal<Integer> batchCount = new ThreadLocal<Integer>();
 
-    // get ring info
-    private static List<TokenRange> ring;
-    static {
-        try {
-            Cassandra.Iface client = CassandraUtils.createConnection();
-            ring = client.describe_ring(CassandraUtils.keySpace);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
+    
 
     //Add shutdown hook for batched commits to complete
     static {
@@ -87,11 +78,8 @@ public class WikipediaIndexWorker implements Callable<Integer> {
 
         if (indexWriter == null) {
 
-            Random r = new Random();
-            List<String> endpoints = ring.get(r.nextInt(ring.size())).endpoints;
-            String endpoint = endpoints.get(r.nextInt(endpoints.size()));
-
-            indexWriter = new lucandra.IndexWriter("wikipedia", CassandraUtils.createRobustConnection(endpoint, 9160, false, false));
+           
+            indexWriter = new lucandra.IndexWriter("wikipedia");
             clientPool.set(indexWriter);
 
             indexWriter.setAutoCommit(false);

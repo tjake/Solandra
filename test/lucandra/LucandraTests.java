@@ -23,6 +23,10 @@ import java.io.IOException;
 
 import junit.framework.TestCase;
 
+import org.apache.cassandra.config.DatabaseDescriptor;
+import org.apache.cassandra.db.CompactionManager;
+import org.apache.cassandra.db.Table;
+import org.apache.cassandra.db.commitlog.CommitLog;
 import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.SlicePredicate;
@@ -55,24 +59,7 @@ public class LucandraTests extends TestCase {
     private static final String text = "this is an example value foobar foobar";
     private static final String highlightedText = "this is an example value <B>foobar</B> <B>foobar</B>";
 
-    static{
-        try {
-            StorageService.instance.initClient();
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-    
-        //Wait for gossip
-        try
-        {
-            System.err.println("Waiting 10s for gossip to complete...");
-            Thread.sleep(10000L);
-        }
-        catch (Exception ex)
-        {
-        }
-    }
+ 
 
     private static final IndexWriter indexWriter = new IndexWriter(indexName);
 
