@@ -18,7 +18,6 @@ package lucandra.search;
  */
 
 import java.io.PrintStream;
-import java.io.File;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Random;
@@ -29,12 +28,9 @@ import lucandra.IndexContext;
 
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.Cassandra.Iface;
-import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.SimpleAnalyzer;
 import org.apache.lucene.index.ConcurrentMergeScheduler;
 import org.apache.lucene.search.FieldCache;
-import org.apache.lucene.search.FieldCache.CacheEntry;
-import org.apache.lucene.util.FieldCacheSanityChecker.Insanity;
 import org.apache.thrift.transport.TTransportException;
 
 /**

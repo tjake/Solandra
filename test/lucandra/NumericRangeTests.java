@@ -43,6 +43,7 @@ import org.apache.lucene.search.TopDocs;
 import org.apache.thrift.transport.TTransportException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -51,6 +52,7 @@ import org.junit.Test;
  * @author Todd Nine
  * 
  */
+@Ignore("Ignored until this issue is fixed.  Numeric ranges won't work.  https://issues.apache.org/jira/browse/CASSANDRA-1235")
 public class NumericRangeTests {
 
 	
@@ -103,7 +105,7 @@ public class NumericRangeTests {
 		third.add(numeric);
 		
 		IndexWriter writer = new IndexWriter("longvals", context);
-		writer.setAutoCommit(false);
+		//writer.setAutoCommit(false);
 
 		SimpleAnalyzer analyzer = new SimpleAnalyzer();
 
@@ -111,7 +113,7 @@ public class NumericRangeTests {
 		writer.addDocument(second, analyzer);
 		writer.addDocument(third, analyzer);
 
-		writer.commit();
+		//writer.commit();
 		
 	
 
@@ -308,7 +310,7 @@ public class NumericRangeTests {
 
 		// now we'll query from the middle inclusive
 
-		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",1L, null, true, true);
+		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",0L, Long.MAX_VALUE, true, true);
 
 		IndexReader reader = new IndexReader("longvals", context);
 

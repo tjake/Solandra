@@ -17,6 +17,12 @@
 			<artifactId>libthrift</artifactId>
 			<version>917130</version>
 		</dependency>
+		
+		<dependency>
+			<groupId>org.apache.cassandra</groupId>
+			<artifactId>cassandra</artifactId>
+			<version>0.6.2</version>
+		</dependency>
 
 		<!--  our lucene depencies -->
 

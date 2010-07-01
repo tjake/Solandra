@@ -17,7 +17,6 @@ package lucandra.search;
  * limitations under the License.
  */
 
-import java.io.Writer;
 import java.util.Random;
 
 import lucandra.IndexReader;
@@ -41,7 +40,9 @@ import org.apache.lucene.search.SortField;
 import org.apache.lucene.search.TermRangeQuery;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.util.NumericUtils;
+import org.junit.Ignore;
 
+@Ignore("Ignored until this issue is fixed.  Numeric ranges won't work.  https://issues.apache.org/jira/browse/CASSANDRA-1235")
 public class TestNumericRangeQuery64 extends LucandraTestCase {
 	// distance of entries
 	private static final long distance = 66666L;
