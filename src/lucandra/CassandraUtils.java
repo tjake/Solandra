@@ -89,7 +89,7 @@ public class CassandraUtils {
     private static final Logger logger = Logger.getLogger(CassandraUtils.class);
 
     //Start Cassandra up!!!
-    static{
+    public static void startup(){
         try {
          // initialize keyspaces
             for (String table : DatabaseDescriptor.getTables())
@@ -275,6 +275,7 @@ public class CassandraUtils {
 
             try {
                 StorageProxy.mutateBlocking(Arrays.asList(mutations.values().toArray(new RowMutation[]{})), ConsistencyLevel.ONE);
+                mutations.clear();
                 return;
             } catch (UnavailableException e) {
                 

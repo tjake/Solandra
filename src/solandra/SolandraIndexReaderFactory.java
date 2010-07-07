@@ -33,9 +33,6 @@ import org.apache.solr.core.IndexReaderFactory;
 public class SolandraIndexReaderFactory extends IndexReaderFactory {  
         
     private String indexName;
-    private String cassandraHost;
-    private Integer cassandraPort;
-    private Boolean cassandraFramed;
     
     
     public void init(NamedList args){
@@ -47,40 +44,10 @@ public class SolandraIndexReaderFactory extends IndexReaderFactory {
             throw new SolrException(ErrorCode.NOT_FOUND, "<str name=\"indexName\">example</str>  tag required");
         
         
-        cassandraHost = (String)args.get("cassandraHost");
-        
-        if(cassandraHost == null || cassandraHost.length() == 0)
-            throw new SolrException(ErrorCode.NOT_FOUND, "<str name=\"cassandraHost\">localhost</str>  tag required");
-        
-        
-        cassandraPort = (Integer)args.get("cassandraPort");
-        
-        if(cassandraPort == null)
-            throw new SolrException(ErrorCode.NOT_FOUND, "<int name=\"cassandraPort\">9160</int>  tag required");
-        
-        
-        cassandraFramed = (Boolean)args.get("cassandraFramed");
-        if(cassandraFramed == null)
-            cassandraFramed = false;
-        
     }
     
     @Override
-    public IndexReader newReader(Directory indexDir, boolean readOnly) throws IOException {
-        
-        StorageService.instance.initClient();
-        
-        //Wait for gossip
-        try
-        {
-            Thread.sleep(10000L);
-        }
-        catch (Exception ex)
-        {
-        }
-        
-        
-                
+    public IndexReader newReader(Directory indexDir, boolean readOnly) throws IOException {               
         return new IndexReader(indexName);        
     }
 

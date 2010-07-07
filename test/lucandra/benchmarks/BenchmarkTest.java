@@ -9,7 +9,6 @@ import lucandra.CassandraUtils;
 import lucandra.IndexReader;
 import lucandra.IndexWriter;
 
-import org.apache.cassandra.thrift.Cassandra;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
@@ -24,7 +23,6 @@ import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.util.Version;
-import org.apache.thrift.transport.TTransportException;
 
 public class BenchmarkTest {
 
@@ -92,11 +90,13 @@ public class BenchmarkTest {
 
                         indexReader.reopen();
 
-                        if (i % 1000 == 999)
+                        //if (i % 1000 == 999)
                             System.err.println("Thread " + myThreadId + ": total " + total);
                     }
                 } catch (IOException e) {
                     throw new RuntimeException(e);
+                }catch(Throwable t){
+                    t.printStackTrace();
                 }
 
                 if (myThreadId == 0)
@@ -194,6 +194,8 @@ public class BenchmarkTest {
         for (int i = 0; i < numClients; i++)
             runners[i] = getRunnable();
 
+        CassandraUtils.startup();
+        
         System.out.println("Starting Benchmark...");
         long startTime = System.currentTimeMillis();
 
@@ -217,6 +219,10 @@ public class BenchmarkTest {
         System.out.println("\tclients:" + numClients + ", loops:" + numLoops + ", type:" + type + ", rate(ops/sec):"
                 + Math.ceil((double) ((numClients * numLoops * 1000) / (endTime - startTime))));
 
+        
+        System.exit(0);
+        
+        
     }
 
 }

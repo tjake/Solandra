@@ -59,12 +59,14 @@ public class LucandraTests extends TestCase {
     private static final String text = "this is an example value foobar foobar";
     private static final String highlightedText = "this is an example value <B>foobar</B> <B>foobar</B>";
 
- 
+    static{
+        CassandraUtils.startup();
+    }
 
     private static final IndexWriter indexWriter = new IndexWriter(indexName);
 
     public void testWriter() throws Exception {
-
+        
         Document doc1 = new Document();
         Field f = new Field("key", text, Field.Store.YES, Field.Index.ANALYZED, TermVector.WITH_POSITIONS_OFFSETS);
         doc1.add(f);

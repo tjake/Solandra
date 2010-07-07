@@ -66,42 +66,19 @@ public class SolandraIndexWriter extends UpdateHandler {
     AtomicLong numErrors = new AtomicLong();
     AtomicLong numErrorsCumulative = new AtomicLong();
 
-    private String cassandraHost;
-    private Integer cassandraPort;
-    private Boolean cassandraFramed;
-    
+    private String indexName;
     
     public SolandraIndexWriter(SolrCore core) {
         super(core);
 
+        indexName = (String)core.getSolrConfig().get("indexName");
         
-        cassandraHost = core.getSolrConfig().get("updateHandler/str[@name='cassandraHost']");
-        
-        if(cassandraHost == null || cassandraHost.length() == 0)
-            throw new SolrException(ErrorCode.NOT_FOUND, "<str name=\"cassandraHost\">localhost</str>  tag required");
-        
-        
-        cassandraPort = core.getSolrConfig().getInt("updateHandler/int[@name='cassandraPort']");
-        
-        if(cassandraPort == null)
-            throw new SolrException(ErrorCode.NOT_FOUND, "<int name=\"cassandraPort\">9160</int>  tag required");
+        if(indexName == null || indexName.length() == 0)
+            throw new SolrException(ErrorCode.NOT_FOUND, "<str name=\"indexName\">example</str>  tag required");
         
         
-        cassandraFramed = core.getSolrConfig().getBool("updateHandler/bool[@name='cassandraFramed']",false);
-        
+         
         try {
-            
-            StorageService.instance.initClient();
-            
-            //Wait for gossip
-            try
-            {
-                Thread.sleep(10000L);
-            }
-            catch (Exception ex)
-            {
-            }
-            
             
             writer = new lucandra.IndexWriter(core.getSchema().getSchemaName());
             

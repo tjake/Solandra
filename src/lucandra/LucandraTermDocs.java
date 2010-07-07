@@ -37,7 +37,7 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
 
     private IndexReader indexReader;
     private LucandraTermEnum termEnum;
-    private IColumn[] termDocs;
+    private DocumentRank[] termDocs;
     private int docPosition;
     private int[] termPositionArray;
     private int termPosition;
@@ -57,7 +57,7 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         if (docPosition < 0)
             docPosition = 0;
 
-        int docid = indexReader.getDocumentNumber(termDocs[docPosition].name()); 
+        int docid = indexReader.getDocumentNumber(termDocs[docPosition].column.name()); 
 
         return docid;
     }
@@ -65,8 +65,8 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
     public int freq() {
               
         //Find the termFrequency
-        IColumn termFrequency  = termDocs[docPosition].getSubColumn(CassandraUtils.termFrequencyKey.getBytes());     
-        IColumn positionVector = termDocs[docPosition].getSubColumn(CassandraUtils.positionVectorKey.getBytes());
+        IColumn termFrequency  = termDocs[docPosition].column.getSubColumn(CassandraUtils.termFrequencyKey.getBytes());     
+        IColumn positionVector = termDocs[docPosition].column.getSubColumn(CassandraUtils.positionVectorKey.getBytes());
           
         if(termFrequency == null){
             throw new RuntimeException("termFrequency is missing from supercolumn");
@@ -105,7 +105,7 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
 
             if (termEnum.skipTo(term)) {
                 if (termEnum.term().compareTo(term) == 0) {
-                    termDocs = termEnum.getTermDocFreq().toArray(new IColumn[]{});
+                    termDocs = termEnum.getTermDocFreq();
                 } else {
                     termDocs = null;
                 }
@@ -115,7 +115,7 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
             if (termEnum.skipTo(term)) {
 
                 if (termEnum.term().equals(term)) {
-                    termDocs = termEnum.getTermDocFreq().toArray(new IColumn[]{});
+                    termDocs = termEnum.getTermDocFreq();
                 } else {
                     termDocs = null;
                 }
@@ -134,18 +134,18 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
             this.termEnum = (LucandraTermEnum) indexReader.terms(termEnum.term());
         }
     
-        termDocs = this.termEnum.getTermDocFreq().toArray(new IColumn[]{});
+        termDocs = this.termEnum.getTermDocFreq();
         docPosition = -1;
     }
 
-    public IColumn[] filteredSeek(Term term, List<String> docNums){
+    public DocumentRank[] filteredSeek(Term term, List<String> docNums){
       
         termEnum.loadFilteredTerms(term, docNums);
        
         if(termEnum.getTermDocFreq() == null)
             termDocs = null;
         else
-            termDocs = termEnum.getTermDocFreq().toArray(new IColumn[]{});
+            termDocs = termEnum.getTermDocFreq();
 
         docPosition = -1;
         return termDocs;
