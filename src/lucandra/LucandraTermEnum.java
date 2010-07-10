@@ -24,7 +24,9 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -63,7 +65,7 @@ public class LucandraTermEnum extends TermEnum {
     private Term[] termBuffer;
     private SortedMap<Term, Collection<IColumn>> termDocFreqBuffer;
     private SortedMap<Term, Collection<IColumn>> termCache;
-//    private DocumentRank[]  sortedTermDocs; 
+    private Map<Term,DocumentRank[]>  termDocsCache; 
     
     
     // number of sequential terms to read initially
@@ -81,12 +83,7 @@ public class LucandraTermEnum extends TermEnum {
 
     public LucandraTermEnum(IndexReader indexReader) {
         this.indexReader = indexReader;
-        this.indexName = indexReader.getIndexName();
- //       this.sortedTermDocs = new DocumentRank[indexReader.numDocs()];
- //       for(int i=0; i<sortedTermDocs.length; i++){
- //           sortedTermDocs[i] = new DocumentRank();
- //       }
-        
+        this.indexName = indexReader.getIndexName();       
         this.termPosition = 0;
     }
 
@@ -376,14 +373,26 @@ public class LucandraTermEnum extends TermEnum {
         if (termBuffer.length == 0)
             return null;
 
-        Collection<IColumn> termDocs = termDocFreqBuffer.get(termBuffer[termPosition]);
+        Term term = termBuffer[termPosition];
+        
+        //Memoize
+        DocumentRank docIds[] = null;
+        
+        if(termDocsCache != null)
+            docIds = termDocsCache.get(term);  
+        
+        if(docIds != null)
+            return docIds;
+             
+        
+        Collection<IColumn> termDocs = termDocFreqBuffer.get(term);
 
         long start = System.currentTimeMillis();
         
         // create proper docIds.
         // Make sure these ids are sorted in ascending order since lucene
         // requires this.
-        DocumentRank docIds[] = new DocumentRank[termDocs.size()];
+        docIds = new DocumentRank[termDocs.size()];
         int idx = 0;
 
         for (IColumn col : termDocs) {
@@ -400,10 +409,14 @@ public class LucandraTermEnum extends TermEnum {
         Arrays.sort(docIds);
 
         end = System.currentTimeMillis();
-        //logger.info("termDocFreq: phase 2 in "+(end-start)+"ms");
+        logger.info("termDocFreq: in "+(end-start)+"ms");
 
+        if(termDocsCache == null)
+            termDocsCache = new HashMap<Term,DocumentRank[]>();
         
-       return docIds;
+        termDocsCache.put(term, docIds);
+        
+        return docIds;
     }
 
     public Set<Term> getCachedTerms() {
