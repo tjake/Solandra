@@ -20,6 +20,7 @@
 package lucandra;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -156,16 +157,16 @@ public class LucandraTermEnum extends TermEnum {
             initTerm = skipTo;
         
         // chose starting term
-        String startTerm = CassandraUtils.hashKey(
+        byte[] startTerm = CassandraUtils.hashKeyBytes(
                     indexName + CassandraUtils.delimeter + CassandraUtils.createColumnName(skipTo)
                 );
                 
         // ending term. the initial query we don't care since
         // we only pull 2 terms, also we don't
-        String endTerm = "";
+        byte[] endTerm = new byte[]{};
       
         //The boundary condition for this search. currently the field.
-        String boundryTerm = CassandraUtils.hashKey(
+        byte[] boundryTerm = CassandraUtils.hashKeyBytes(
                 indexName + CassandraUtils.delimeter + 
                 CassandraUtils.createColumnName(skipTo.field(), CassandraUtils.finalToken)
                 );
@@ -206,7 +207,7 @@ public class LucandraTermEnum extends TermEnum {
         // otherwise we grab all the rest of the keys
         if (chunkBoundryTerm != null) {
             count = maxChunkSize;
-            startTerm = CassandraUtils.hashKey(
+            startTerm = CassandraUtils.hashKeyBytes(
                         indexName + CassandraUtils.delimeter + CassandraUtils.createColumnName(chunkBoundryTerm)
                     );
             
@@ -232,10 +233,14 @@ public class LucandraTermEnum extends TermEnum {
         try {
             
             IPartitioner        p = StorageService.getPartitioner();
+            
             AbstractBounds bounds = new Bounds(p.getToken(startTerm), p.getToken(endTerm));
 
-            rows = StorageProxy.getRangeSlice(new RangeSliceCommand(CassandraUtils.keySpace, columnParent, slicePredicate, bounds, count), ConsistencyLevel.ONE);
+            rows = StorageProxy.getRangeSlice(new RangeSliceCommand(CassandraUtils.keySpace, columnParent, slicePredicate, bounds, 1), ConsistencyLevel.ONE);
 
+            //rows = StorageProxy.readProtocol(Arrays.asList((ReadCommand)new SliceFromReadCommand(CassandraUtils.keySpace, startTerm, columnParent, new byte[] {}, new byte[]{},
+            //               false, Integer.MAX_VALUE)), ConsistencyLevel.ONE);
+            
         } catch (IOException e) {
             throw new RuntimeException(e);
         } catch (UnavailableException e) {
@@ -246,26 +251,35 @@ public class LucandraTermEnum extends TermEnum {
 
         // term to start with next time
         actualInitSize = rows.size();
-        logger.debug("Found " + rows.size() + " keys in range:" + startTerm + " to " + endTerm + " in " + (System.currentTimeMillis() - start) + "ms");
+        logger.info("Found " + rows.size() + " keys in range:" + startTerm + " to " + endTerm + " in " + (System.currentTimeMillis() - start) + "ms");
 
         if (actualInitSize > 0) {
-            for (Row entry : rows) {
+            for (Row row : rows) {
    
+                String key;
+                try {
+                    key = new String(row.key.key,"UTF-8");
+                } catch (UnsupportedEncodingException e) {
+                    throw new RuntimeException("This JVM doesn't support UTF-8");
+                }
+                
                 // term keys look like wikipedia/body/wiki
-                String termStr = entry.key.substring(entry.key.indexOf(CassandraUtils.delimeter) + CassandraUtils.delimeter.length());
+                String termStr = key.substring(key.indexOf(CassandraUtils.delimeter) + CassandraUtils.delimeter.length());
                 Term term = CassandraUtils.parseTerm(termStr);                 
                 
-                Collection<IColumn> columns = entry.cf.getSortedColumns();
+                Collection<IColumn> columns = row.cf.getSortedColumns();
                 
                 logger.debug(termStr + " has " + columns.size());
                 
                 //check for tombstone keys or incorrect keys (from RP)
                 if(columns.size() > 0 && term.field().equals(skipTo.field()) &&
                         //from this index
-                        entry.key.equals(CassandraUtils.hashKey(indexName+CassandraUtils.delimeter+term.field()+CassandraUtils.delimeter+term.text()))){
+                        key.equals(CassandraUtils.hashKey(indexName+CassandraUtils.delimeter+term.field()+CassandraUtils.delimeter+term.text()))){
                     
-                    if(columns.iterator().next().getSubColumns().size() > 0)
+                    if(!columns.iterator().next().isMarkedForDelete()){
+                                                
                         termDocFreqBuffer.put(term, columns);
+                    }
                 }
             }
 
@@ -307,7 +321,7 @@ public class LucandraTermEnum extends TermEnum {
         ColumnParent parent = new ColumnParent();
         parent.setColumn_family(CassandraUtils.termVecColumnFamily);
 
-        String key = CassandraUtils.hashKey(
+        byte[] key = CassandraUtils.hashKeyBytes(
                 indexName + CassandraUtils.delimeter + CassandraUtils.createColumnName(term)
             );
 
@@ -380,13 +394,13 @@ public class LucandraTermEnum extends TermEnum {
 
         long end = System.currentTimeMillis();
         
-        logger.info("termDocFreq: phase 1 in "+(end-start)+"ms");
+        //logger.info("termDocFreq: phase 1 in "+(end-start)+"ms");
         
         // sort
         Arrays.sort(docIds);
 
         end = System.currentTimeMillis();
-        logger.info("termDocFreq: phase 2 in "+(end-start)+"ms");
+        //logger.info("termDocFreq: phase 2 in "+(end-start)+"ms");
 
         
        return docIds;

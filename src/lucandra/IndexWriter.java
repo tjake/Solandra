@@ -306,7 +306,7 @@ public class IndexWriter {
             ColumnParent cp = new ColumnParent(CassandraUtils.termVecColumnFamily);
             String key = indexName + CassandraUtils.delimeter + CassandraUtils.createColumnName(term);
 
-            ReadCommand rc = new SliceFromReadCommand(CassandraUtils.keySpace, CassandraUtils.hashKey(key), cp, new byte[] {}, new byte[] {}, false,
+            ReadCommand rc = new SliceFromReadCommand(CassandraUtils.keySpace, CassandraUtils.hashKeyBytes(key), cp, new byte[] {}, new byte[] {}, false,
                     Integer.MAX_VALUE);
 
             List<Row> rows = StorageProxy.readProtocol(Arrays.asList(rc), ConsistencyLevel.ONE);
@@ -329,7 +329,7 @@ public class IndexWriter {
 
         String key = indexName + CassandraUtils.delimeter + new String(docId);
 
-        ReadCommand rc = new SliceByNamesReadCommand(CassandraUtils.keySpace, CassandraUtils.hashKey(key), CassandraUtils.metaColumnPath, Arrays
+        ReadCommand rc = new SliceByNamesReadCommand(CassandraUtils.keySpace, CassandraUtils.hashKeyBytes(key), CassandraUtils.metaColumnPath, Arrays
                 .asList(CassandraUtils.documentMetaFieldBytes));
 
         List<Row> rows = null;

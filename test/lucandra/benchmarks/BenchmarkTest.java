@@ -17,6 +17,7 @@ import org.apache.lucene.document.Field.Index;
 import org.apache.lucene.document.Field.Store;
 import org.apache.lucene.document.Field.TermVector;
 import org.apache.lucene.index.CorruptIndexException;
+import org.apache.lucene.index.TermPositionVector;
 import org.apache.lucene.queryParser.ParseException;
 import org.apache.lucene.queryParser.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
@@ -49,7 +50,7 @@ public class BenchmarkTest {
            throw new RuntimeException(e);
         }
         doc = new Document();
-        doc.add(new Field("text", text, Store.YES, Index.ANALYZED, TermVector.WITH_POSITIONS_OFFSETS));
+        doc.add(new Field("text", text, Store.YES, Index.ANALYZED_NO_NORMS, TermVector.NO ));
 
     }
 

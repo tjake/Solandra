@@ -86,7 +86,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     private final ThreadLocal<Map<Integer, Document>> documentCache = new ThreadLocal<Map<Integer, Document>>();
     private final ThreadLocal<AtomicInteger> docCounter = new ThreadLocal<AtomicInteger>();
     private final ThreadLocal<Map<Term, LucandraTermEnum>> termEnumCache = new ThreadLocal<Map<Term, LucandraTermEnum>>();
-    private final ThreadLocal<Map<String, Object[]>> fieldNorms = new ThreadLocal<Map<String, Object[]>>();
+    private final ThreadLocal<Map<String, byte[]>> fieldNorms = new ThreadLocal<Map<String, byte[]>>();
 
     private static final Logger logger = Logger.getLogger(IndexReader.class);
 
@@ -172,9 +172,9 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         if (docId == null)
             return null;
 
-        Map<Integer, String> keyMap = new HashMap<Integer, String>();
+        Map<Integer, byte[]> keyMap = new HashMap<Integer, byte[]>();
 
-        keyMap.put(docNum, CassandraUtils.hashKey(indexName + CassandraUtils.delimeter + docId));
+        keyMap.put(docNum, CassandraUtils.hashKeyBytes(indexName + CassandraUtils.delimeter + docId));
 
         List<byte[]> fieldNames = null;
 
@@ -199,7 +199,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
                 if (docKey == null)
                     continue;
 
-                keyMap.put(otherDocNum, CassandraUtils.hashKey(indexName + CassandraUtils.delimeter + docKey));
+                keyMap.put(otherDocNum, CassandraUtils.hashKeyBytes(indexName + CassandraUtils.delimeter + docKey));
             }
         }
 
@@ -212,7 +212,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
             List<Row> rows = null;
             List<ReadCommand> readCommands = new ArrayList<ReadCommand>();
-            for (String key : keyMap.values()) {
+            for (byte[] key : keyMap.values()) {
 
                 if (fieldNames == null || fieldNames.size() == 0) {
                     // get all columns ( except this skips meta info )
@@ -228,13 +228,13 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
             // allow lookup by row
             Map<String, Row> rowMap = new HashMap<String, Row>(keyMap.size());
             for (Row row : rows) {
-                rowMap.put(row.key, row);
+                rowMap.put(new String(row.key.key,"UTF-8"), row);
             }
 
-            for (Map.Entry<Integer, String> key : keyMap.entrySet()) {
+            for (Map.Entry<Integer, byte[]> key : keyMap.entrySet()) {
                 Document cacheDoc = new Document();
 
-                Row row = rowMap.get(key.getValue());
+                Row row = rowMap.get(new String(key.getValue(),"UTF-8"));
 
                 if (row == null) {
                     logger.warn("Missing document in multiget_slice for: " + key.getValue());
@@ -357,12 +357,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     @Override
     public byte[] norms(String field) throws IOException {
-        Object[] fieldNorms = getFieldNorms().get(field);
-
-        if (fieldNorms == null)
-            return null;
-
-        return (byte[]) fieldNorms[1];
+        return getFieldNorms().get(field);          
     }
 
     @Override
@@ -435,39 +430,33 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
                     throw new IllegalStateException("Norm for field " + field + " must be a single byte");
 
                 norm = normCol.value()[0];
+                
+                //logger.info(Byte.valueOf(norm));
             }
 
             if (norm == null)
                 norm = Similarity.encodeNorm(1.0f);
 
-            Object[] norms = getFieldNorms().get(field);
+            byte[] norms = getFieldNorms().get(field);
 
             if (norms == null) {
                 
-                //0 - stores current position in byte array
-                //1 - stored byte array
-                norms = new Object[2];
-                norms[0] = new Integer(1);
-                norms[1] = new byte[1024];
+                norms = new byte[1024];
                 
-                
-                ((byte[]) norms[1])[0] = norm;
+                norms[idx] = norm;
                 getFieldNorms().put(field, norms);
             } else {
                 // find next empty position
-                idx = (Integer) norms[0];
-                
-                
-                ((byte[]) norms[1])[idx] = norm;
-                norms[0] = new Integer(idx + 1);
+                                
+                norms[idx] = norm;
 
                 //extend array
-                if ((idx+1) >= ((byte[]) norms[1]).length) {
+                if ((idx+1) >= norms.length) {
 
-                    byte[] _norms = new byte[((byte[])norms[1]).length * 2];
-                    System.arraycopy((byte[])norms[1], 0, _norms, 0, ((byte[])norms[1]).length);
+                    byte[] _norms = new byte[norms.length * 2];
+                    System.arraycopy(norms, 0, _norms, 0, norms.length);
 
-                    norms[1] = _norms;
+                    getFieldNorms().put(field, _norms);
                 }
 
             }
@@ -581,11 +570,11 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         return c;
     }
 
-    private Map<String, Object[]> getFieldNorms() {
-        Map<String, Object[]> c = fieldNorms.get();
+    private Map<String, byte[]> getFieldNorms() {
+        Map<String, byte[]> c = fieldNorms.get();
 
         if (c == null) {
-            c = new HashMap<String, Object[]>(10);
+            c = new HashMap<String, byte[]>(10);
             fieldNorms.set(c);
         }
 

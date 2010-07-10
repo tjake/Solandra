@@ -19,15 +19,8 @@
  */
 package lucandra;
 
-import java.io.IOException;
-
 import junit.framework.TestCase;
 
-import org.apache.cassandra.config.DatabaseDescriptor;
-import org.apache.cassandra.db.CompactionManager;
-import org.apache.cassandra.db.Table;
-import org.apache.cassandra.db.commitlog.CommitLog;
-import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.SlicePredicate;
 import org.apache.cassandra.thrift.SliceRange;
@@ -173,7 +166,7 @@ public class LucandraTests extends TestCase {
         
         assertEquals(topDocs.totalHits,1);
         
-    }
+   }
     
    public void testDelete() throws Exception {
         indexWriter.deleteDocuments(new Term("key", new String("\u5639\u563b")));
@@ -182,7 +175,7 @@ public class LucandraTests extends TestCase {
 
         QueryParser qp = new QueryParser(Version.LUCENE_CURRENT, "key", analyzer);
         Query q = qp.parse("+key:\u5639\u563b");
-
+        
         TopDocs docs = searcher.search(q, 10);
 
         assertEquals(0, docs.totalHits);

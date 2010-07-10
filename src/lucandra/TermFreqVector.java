@@ -1,6 +1,7 @@
 package lucandra;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -35,9 +36,9 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
         this.field = field;
         this.docId = docId;
 
-        String key = indexName + CassandraUtils.delimeter + docId;
+        byte[] key = CassandraUtils.hashKeyBytes(indexName + CassandraUtils.delimeter + docId);
 
-        ReadCommand rc = new SliceByNamesReadCommand(CassandraUtils.keySpace, CassandraUtils.hashKey(key), CassandraUtils.metaColumnPath, Arrays
+        ReadCommand rc = new SliceByNamesReadCommand(CassandraUtils.keySpace, key, CassandraUtils.metaColumnPath, Arrays
                 .asList(CassandraUtils.documentMetaFieldBytes));
 
         List<Row> rows = null;
@@ -88,7 +89,7 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
 
             // add to multiget params
 
-            key = CassandraUtils.hashKey(indexName + CassandraUtils.delimeter + termStr);
+            key = CassandraUtils.hashKeyBytes(indexName + CassandraUtils.delimeter + termStr);
 
             readCommands.add(new SliceFromReadCommand(CassandraUtils.keySpace, key, new ColumnParent().setColumn_family(CassandraUtils.termVecColumnFamily)
                     .setSuper_column(docId.getBytes()), new byte[] {}, new byte[] {}, false, 1024));
@@ -112,7 +113,13 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
         int i = 0;
 
         for (Row row : rows) {
-            String termStr = row.key.substring(row.key.indexOf(CassandraUtils.delimeter) + CassandraUtils.delimeter.length());
+            String rowKey;
+            try {
+                rowKey = new String(row.key.key,"UTF-8");
+            } catch (UnsupportedEncodingException e) {
+               throw new RuntimeException("JVM does not support UTF-8");
+            }
+            String termStr = rowKey.substring(rowKey.indexOf(CassandraUtils.delimeter) + CassandraUtils.delimeter.length());
 
             Term t = CassandraUtils.parseTerm(termStr);
 

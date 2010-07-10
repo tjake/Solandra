@@ -35,12 +35,16 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.cassandra.config.ConfigurationException;
 import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.db.CompactionManager;
 import org.apache.cassandra.db.RowMutation;
 import org.apache.cassandra.db.Table;
+import org.apache.cassandra.db.TimestampClock;
 import org.apache.cassandra.db.commitlog.CommitLog;
 import org.apache.cassandra.db.filter.QueryPath;
+import org.apache.cassandra.db.migration.Migration;
+import org.apache.cassandra.service.MigrationManager;
 import org.apache.cassandra.service.StorageProxy;
 import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.thrift.ConsistencyLevel;
@@ -91,20 +95,48 @@ public class CassandraUtils {
     //Start Cassandra up!!!
     public static void startup(){
         try {
-         // initialize keyspaces
+            
+            // initialize keyspaces
+            DatabaseDescriptor.loadSchemas();
+            
+            // initialize keyspaces
+            boolean hasLucandra = false;
             for (String table : DatabaseDescriptor.getTables())
             {
+                if (logger.isDebugEnabled())
+                    logger.debug("opening keyspace " + table);
                 Table.open(table);
+            
+                if(table.equalsIgnoreCase(CassandraUtils.keySpace))
+                    hasLucandra = true;
             }
+            
+            if(!hasLucandra)
+                StorageService.instance.loadSchemaFromYAML();
+
 
             // replay the log if necessary and check for compaction candidates
             CommitLog.recover();
             CompactionManager.instance.checkAllColumnFamilies();
 
+            // check to see if CL.recovery modified the lastMigrationId. if it did, we need to re apply migrations. this isn't
+            // the same as merely reloading the schema (which wouldn't perform file deletion after a DROP). The solution
+            // is to read those migrations from disk and apply them.
+            UUID currentMigration = DatabaseDescriptor.getDefsVersion();
+            UUID lastMigration = Migration.getLastMigrationId();
+            if ((lastMigration != null) && (lastMigration.timestamp() > currentMigration.timestamp()))
+            {
+                MigrationManager.applyMigrations(currentMigration, lastMigration);
+            }
+            
+            
             // start server internals
             StorageService.instance.initServer();
 
         } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (ConfigurationException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
@@ -236,30 +268,34 @@ public class CassandraUtils {
         //Find or create row mutation
         RowMutation rm = mutationList.get(key); 
         if(rm == null){
-            rm = new RowMutation(CassandraUtils.keySpace, key);
+            try {
+                rm = new RowMutation(CassandraUtils.keySpace, key.getBytes("UTF-8"));
+            } catch (UnsupportedEncodingException e) {
+                 throw new RuntimeException("UTF-8 not supported by this JVM");
+            }
             mutationList.put(key, rm);
         }
         
         if (value == null && superColumns == null) { // remove
 
             if (column != null) {
-                rm.delete(new QueryPath(columnFamily, column), System.currentTimeMillis());
+                rm.delete(new QueryPath(columnFamily, column), new TimestampClock(System.currentTimeMillis()));
             } else {
-                rm.delete(new QueryPath(columnFamily), System.currentTimeMillis());
+                rm.delete(new QueryPath(columnFamily), new TimestampClock(System.currentTimeMillis()));
             }
 
         } else { // insert
 
             if (superColumns == null) {
 
-                rm.add(new QueryPath(columnFamily,null, column), value, System.currentTimeMillis());
+                rm.add(new QueryPath(columnFamily,null, column), value, new TimestampClock(System.currentTimeMillis()));
 
             } else {
 
                 for (Map.Entry<String, List<Number>> e : superColumns.entrySet()) {
 
                     try {
-                        rm.add(new QueryPath(columnFamily,column,e.getKey().getBytes("UTF-8")), intVectorToByteArray(e.getValue()), System.currentTimeMillis());
+                        rm.add(new QueryPath(columnFamily,column,e.getKey().getBytes("UTF-8")), intVectorToByteArray(e.getValue()), new TimestampClock(System.currentTimeMillis()));
                     } catch (UnsupportedEncodingException ex) {
                         throw new RuntimeException("This JVM doesn't support UTF-8 Encoding");
                     }
@@ -311,6 +347,14 @@ public class CassandraUtils {
         return baos.toByteArray();
     }
 
+    public static byte[] hashKeyBytes(String key){
+        try {
+            return hashKey(key).getBytes("UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException("UTF-8 not supported by this JVM");
+        }
+    }
+    
     public static String hashKey(String key) {
 
         if (!indexHashingEnabled)
