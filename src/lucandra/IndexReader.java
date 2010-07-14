@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.cassandra.db.IColumn;
@@ -38,6 +39,7 @@ import org.apache.cassandra.db.SliceFromReadCommand;
 import org.apache.cassandra.service.StorageProxy;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.ConsistencyLevel;
+import org.apache.cassandra.utils.FBUtilities;
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.SimpleAnalyzer;
 import org.apache.lucene.document.Document;
@@ -63,7 +65,7 @@ import solandra.SolandraFieldSelector;
 
 public class IndexReader extends org.apache.lucene.index.IndexReader {
 
-    private final static int numDocs = 1000000;
+    private final static int numDocs = 100000;
 
     private final static Directory mockDirectory = new RAMDirectory();
     static {
@@ -81,13 +83,14 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     private final String indexName;
 
-    private final ThreadLocal<Map<String, Integer>> docIdToDocIndex = new ThreadLocal<Map<String, Integer>>();
-    private final ThreadLocal<Map<Integer, String>> docIndexToDocId = new ThreadLocal<Map<Integer, String>>();
+    private final ThreadLocal<Map<byte[], Integer>> docIdToDocIndex = new ThreadLocal<Map<byte[], Integer>>();
+    private final ThreadLocal<Map<Integer, byte[]>> docIndexToDocId = new ThreadLocal<Map<Integer, byte[]>>();
     private final ThreadLocal<Map<Integer, Document>> documentCache = new ThreadLocal<Map<Integer, Document>>();
     private final ThreadLocal<AtomicInteger> docCounter = new ThreadLocal<AtomicInteger>();
     private final ThreadLocal<Map<Term, LucandraTermEnum>> termEnumCache = new ThreadLocal<Map<Term, LucandraTermEnum>>();
     private final ThreadLocal<Map<String, byte[]>> fieldNorms = new ThreadLocal<Map<String, byte[]>>();
 
+ 
     private static final Logger logger = Logger.getLogger(IndexReader.class);
 
     public IndexReader(String name) {
@@ -96,7 +99,6 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     }
 
     public synchronized IndexReader reopen() throws CorruptIndexException, IOException {
-
         clearCache();
 
         return this;
@@ -167,14 +169,14 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
             return doc;
         }
 
-        String docId = getDocIndexToDocId().get(docNum);
+        byte[] docId = getDocIndexToDocId().get(docNum);
 
         if (docId == null)
             return null;
 
         Map<Integer, byte[]> keyMap = new HashMap<Integer, byte[]>();
 
-        keyMap.put(docNum, CassandraUtils.hashKeyBytes(indexName + CassandraUtils.delimeter + docId));
+        keyMap.put(docNum, CassandraUtils.hashKeyBytes(indexName.getBytes(),CassandraUtils.delimeterBytes, docId));
 
         List<byte[]> fieldNames = null;
 
@@ -194,12 +196,12 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
                 if (getDocumentCache().containsKey(otherDocNum))
                     continue;
 
-                String docKey = getDocIndexToDocId().get(otherDocNum);
+                byte[] docKey = getDocIndexToDocId().get(otherDocNum);
 
                 if (docKey == null)
                     continue;
 
-                keyMap.put(otherDocNum, CassandraUtils.hashKeyBytes(indexName + CassandraUtils.delimeter + docKey));
+                keyMap.put(otherDocNum, CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, docKey));
             }
         }
 
@@ -311,7 +313,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     @Override
     public TermFreqVector getTermFreqVector(int docNum, String field) throws IOException {
 
-        String docId = getDocIndexToDocId().get(docNum);
+        byte[] docId = getDocIndexToDocId().get(docNum);
 
         TermFreqVector termVector = new lucandra.TermFreqVector(indexName, field, docId);
 
@@ -403,16 +405,9 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         return termEnum;
     }
 
-    public int addDocument(IColumn docInfo, String field) {
+    public int addDocument(IColumn docInfo, String field, Map<String,byte[]> fieldNorms) {
 
-        String id;
-        try {
-            id = new String(docInfo.name(), "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            throw new IllegalStateException("Cant make docId a string");
-        }
-
-        Integer idx = getDocIdToDocIndex().get(id);
+        Integer idx = getDocIdToDocIndex().get(docInfo.name());
 
         if (idx == null) {
             idx = getDocCounter().incrementAndGet();
@@ -420,11 +415,11 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
             if (idx > numDocs)
                 throw new IllegalStateException("numDocs reached");
 
-            getDocIdToDocIndex().put(id, idx);
-            getDocIndexToDocId().put(idx, id);
+            getDocIdToDocIndex().put(docInfo.name(), idx);
+            getDocIndexToDocId().put(idx, docInfo.name());
 
             Byte norm = null;
-            IColumn normCol = docInfo.getSubColumn(CassandraUtils.normsKey.getBytes());
+            IColumn normCol = docInfo.getSubColumn(CassandraUtils.normsKeyBytes);
             if (normCol != null) {
                 if (normCol.value().length != 1)
                     throw new IllegalStateException("Norm for field " + field + " must be a single byte");
@@ -437,7 +432,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
             if (norm == null)
                 norm = Similarity.encodeNorm(1.0f);
 
-            byte[] norms = getFieldNorms().get(field);
+            byte[] norms = fieldNorms.get(field);
 
             if (norms == null) {
                 
@@ -453,10 +448,10 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
                 //extend array
                 if ((idx+1) >= norms.length) {
 
-                    byte[] _norms = new byte[norms.length * 2];
+                    byte[] _norms = new byte[(norms.length*2) < numDocs ? (norms.length * 2) : (numDocs+1)];
                     System.arraycopy(norms, 0, _norms, 0, norms.length);
 
-                    getFieldNorms().put(field, _norms);
+                    fieldNorms.put(field, _norms);
                 }
 
             }
@@ -467,17 +462,10 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     }
 
     public int getDocumentNumber(byte[] docId) {
-        String id;
-        try {
-            id = new String(docId, "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            throw new IllegalStateException("Cant make docId a string");
-        }
-
-        return getDocIdToDocIndex().get(id);
+        return getDocIdToDocIndex().get(docId);
     }
 
-    public String getDocumentId(int docNum) {
+    public byte[] getDocumentId(int docNum) {
         return getDocIndexToDocId().get(docNum);
     }
 
@@ -515,22 +503,22 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         return true;
     }
 
-    public Map<Integer, String> getDocIndexToDocId() {
-        Map<Integer, String> c = docIndexToDocId.get();
+    public Map<Integer, byte[]> getDocIndexToDocId() {
+        Map<Integer, byte[]> c = docIndexToDocId.get();
 
         if (c == null) {
-            c = new HashMap<Integer, String>();
+            c = new HashMap<Integer, byte[]>();
             docIndexToDocId.set(c);
         }
 
         return c;
     }
 
-    private Map<String, Integer> getDocIdToDocIndex() {
-        Map<String, Integer> c = docIdToDocIndex.get();
+    private Map<byte[], Integer> getDocIdToDocIndex() {
+        Map<byte[], Integer> c = docIdToDocIndex.get();
 
         if (c == null) {
-            c = new HashMap<String, Integer>();
+            c = new ConcurrentSkipListMap<byte[], Integer>(FBUtilities.byteArrayComparator);
             docIdToDocIndex.set(c);
         }
 
@@ -570,7 +558,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         return c;
     }
 
-    private Map<String, byte[]> getFieldNorms() {
+    public Map<String, byte[]> getFieldNorms() {
         Map<String, byte[]> c = fieldNorms.get();
 
         if (c == null) {

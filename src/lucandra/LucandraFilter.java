@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.cassandra.db.IColumn;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.DocIdSet;
@@ -43,11 +44,11 @@ public class LucandraFilter extends Filter {
     public DocIdSet getDocIdSet(IndexReader reader) throws IOException {
         OpenBitSet result = new OpenBitSet(reader.maxDoc());
 
-        Map<Integer, String> filterMap = ((lucandra.IndexReader) reader).getDocIndexToDocId();
+        Map<Integer, byte[]> filterMap = ((lucandra.IndexReader) reader).getDocIndexToDocId();
         
        
-        List<String> filteredValues = new ArrayList<String>();
-        for(Map.Entry<Integer, String> entry : filterMap.entrySet()){          
+        List<byte[]> filteredValues = new ArrayList<byte[]>();
+        for(Map.Entry<Integer, byte[]> entry : filterMap.entrySet()){          
             filteredValues.add(entry.getValue());
         }
 
@@ -57,7 +58,7 @@ public class LucandraFilter extends Filter {
         LucandraTermDocs termDocs = (LucandraTermDocs) reader.termDocs();
 
         for (Term term : terms) {
-            DocumentRank[] terms = termDocs.filteredSeek(term, filteredValues);
+            IColumn[] terms = termDocs.filteredSeek(term, filteredValues);
             // This is a conjunction and at least one value must match
             if (terms == null)
                 return null;

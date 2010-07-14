@@ -17,7 +17,7 @@
 	<classpathentry kind="lib" path="lib/geronimo-stax-api_1.0_spec-1.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/log4j-1.2.14.jar"/>
 	<classpathentry kind="lib" path="lib/lucene-analyzers-2.9.1.jar"/>
-	<classpathentry kind="lib" path="lib/lucene-core-2.9.1.jar"/>
+	<classpathentry kind="lib" path="lib/lucene-core-2.9.1.jar" sourcepath="lib/lucene-core-2.9.1-sources.jar"/>
 	<classpathentry kind="lib" path="lib/lucene-highlighter-2.9.1.jar"/>
 	<classpathentry kind="lib" path="lib/lucene-memory-2.9.1.jar"/>
 	<classpathentry kind="lib" path="lib/lucene-misc-2.9.1.jar"/>

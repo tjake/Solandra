@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -37,6 +38,7 @@ import org.apache.cassandra.db.RangeSliceCommand;
 import org.apache.cassandra.db.ReadCommand;
 import org.apache.cassandra.db.Row;
 import org.apache.cassandra.db.SliceByNamesReadCommand;
+import org.apache.cassandra.db.SliceFromReadCommand;
 import org.apache.cassandra.dht.AbstractBounds;
 import org.apache.cassandra.dht.Bounds;
 import org.apache.cassandra.dht.IPartitioner;
@@ -65,7 +67,7 @@ public class LucandraTermEnum extends TermEnum {
     private Term[] termBuffer;
     private SortedMap<Term, Collection<IColumn>> termDocFreqBuffer;
     private SortedMap<Term, Collection<IColumn>> termCache;
-    private Map<Term,DocumentRank[]>  termDocsCache; 
+    private Map<Term,IColumn[]>  termDocsCache; 
     
     
     // number of sequential terms to read initially
@@ -154,9 +156,14 @@ public class LucandraTermEnum extends TermEnum {
             initTerm = skipTo;
         
         // chose starting term
-        byte[] startTerm = CassandraUtils.hashKeyBytes(
-                    indexName + CassandraUtils.delimeter + CassandraUtils.createColumnName(skipTo)
-                );
+        byte[] startTerm;
+        try {
+            startTerm = CassandraUtils.hashKeyBytes(
+                        indexName.getBytes(), CassandraUtils.delimeterBytes, skipTo.field().getBytes(), CassandraUtils.delimeterBytes, skipTo.text().getBytes("UTF-8")
+                    );
+        } catch (UnsupportedEncodingException e1) {
+           throw new RuntimeException("JVM doesn't support UTF-8",e1);
+        }
                 
         // ending term. the initial query we don't care since
         // we only pull 2 terms, also we don't
@@ -164,8 +171,8 @@ public class LucandraTermEnum extends TermEnum {
       
         //The boundary condition for this search. currently the field.
         byte[] boundryTerm = CassandraUtils.hashKeyBytes(
-                indexName + CassandraUtils.delimeter + 
-                CassandraUtils.createColumnName(skipTo.field(), CassandraUtils.finalToken)
+                indexName.getBytes(), CassandraUtils.delimeterBytes, 
+                skipTo.field().getBytes(), CassandraUtils.delimeterBytes, CassandraUtils.finalTokenBytes
                 );
         
         
@@ -204,9 +211,13 @@ public class LucandraTermEnum extends TermEnum {
         // otherwise we grab all the rest of the keys
         if (chunkBoundryTerm != null) {
             count = maxChunkSize;
-            startTerm = CassandraUtils.hashKeyBytes(
-                        indexName + CassandraUtils.delimeter + CassandraUtils.createColumnName(chunkBoundryTerm)
-                    );
+            try {
+                startTerm = CassandraUtils.hashKeyBytes(
+                            indexName.getBytes(),  CassandraUtils.delimeterBytes, chunkBoundryTerm.field().getBytes(), CassandraUtils.delimeterBytes, chunkBoundryTerm.text().getBytes("UTF-8")
+                        );
+            } catch (UnsupportedEncodingException e) {
+                throw new RuntimeException("JVM doesn't support UTF-8",e);
+            }
             
             
             //After first pass use the boundary term, since we know on pass 2 we are using the OPP
@@ -214,6 +225,7 @@ public class LucandraTermEnum extends TermEnum {
             
         }
 
+        
         long start = System.currentTimeMillis();
 
         termDocFreqBuffer = new TreeMap<Term, Collection<IColumn>>();
@@ -233,7 +245,7 @@ public class LucandraTermEnum extends TermEnum {
             
             AbstractBounds bounds = new Bounds(p.getToken(startTerm), p.getToken(endTerm));
 
-            rows = StorageProxy.getRangeSlice(new RangeSliceCommand(CassandraUtils.keySpace, columnParent, slicePredicate, bounds, 1), ConsistencyLevel.ONE);
+            rows = StorageProxy.getRangeSlice(new RangeSliceCommand(CassandraUtils.keySpace, columnParent, slicePredicate, bounds, count), ConsistencyLevel.ONE);
 
             //rows = StorageProxy.readProtocol(Arrays.asList((ReadCommand)new SliceFromReadCommand(CassandraUtils.keySpace, startTerm, columnParent, new byte[] {}, new byte[]{},
             //               false, Integer.MAX_VALUE)), ConsistencyLevel.ONE);
@@ -269,14 +281,23 @@ public class LucandraTermEnum extends TermEnum {
                 logger.debug(termStr + " has " + columns.size());
                 
                 //check for tombstone keys or incorrect keys (from RP)
-                if(columns.size() > 0 && term.field().equals(skipTo.field()) &&
-                        //from this index
-                        key.equals(CassandraUtils.hashKey(indexName+CassandraUtils.delimeter+term.field()+CassandraUtils.delimeter+term.text()))){
-                    
-                    if(!columns.iterator().next().isMarkedForDelete()){
-                                                
-                        termDocFreqBuffer.put(term, columns);
+                try {
+                    if(columns.size() > 0 && term.field().equals(skipTo.field()) &&
+                            //from this index
+                            Arrays.equals(row.key.key, CassandraUtils.hashKeyBytes(indexName.getBytes(),CassandraUtils.delimeterBytes,term.field().getBytes(),CassandraUtils.delimeterBytes,term.text().getBytes("UTF-8")))){
+                        
+                        if(!columns.iterator().next().isMarkedForDelete())                                                 
+                            termDocFreqBuffer.put(term, columns);
+                        
+                    }else{
+                        byte[] same = CassandraUtils.hashKeyBytes(indexName.getBytes(),CassandraUtils.delimeterBytes,term.field().getBytes(),CassandraUtils.delimeterBytes,term.text().getBytes("UTF-8"));
+                       
+                        logger.info(new String(row.key.key,"UTF-8"));
+                        logger.info(new String(same,"UTF-8"));
+                        
                     }
+                } catch (UnsupportedEncodingException e) {
+                    throw new RuntimeException("JVM doesn't support UTF-8",e);                   
                 }
             }
 
@@ -313,25 +334,24 @@ public class LucandraTermEnum extends TermEnum {
 
     }
 
-    void loadFilteredTerms(Term term, List<String> docNums)  {
+    void loadFilteredTerms(Term term, List<byte[]> docNums)  {
         long start = System.currentTimeMillis();
         ColumnParent parent = new ColumnParent();
         parent.setColumn_family(CassandraUtils.termVecColumnFamily);
 
-        byte[] key = CassandraUtils.hashKeyBytes(
-                indexName + CassandraUtils.delimeter + CassandraUtils.createColumnName(term)
-            );
-
-
-        List<byte[]> columns = new ArrayList<byte[]>();
-        for (String docNum : docNums) {
-            columns.add(docNum.getBytes());
+        byte[] key;
+        try {
+            key = CassandraUtils.hashKeyBytes(
+                    indexName.getBytes(), CassandraUtils.delimeterBytes, term.field().getBytes(),
+                    CassandraUtils.delimeterBytes, term.text().getBytes("UTF-8")
+                );
+        } catch (UnsupportedEncodingException e2) {
+            throw new RuntimeException("JVM doesn't support UTF-8",e2);
         }
-      
-
+        
         List<Row> rows = null;
         
-        ReadCommand rc = new SliceByNamesReadCommand(CassandraUtils.keySpace, key, parent, columns);
+        ReadCommand rc = new SliceByNamesReadCommand(CassandraUtils.keySpace, key, parent, docNums);
 
         int attempts = 0;
         while (attempts++ < 10) {
@@ -369,14 +389,14 @@ public class LucandraTermEnum extends TermEnum {
 
     }
     
-    public final DocumentRank[] getTermDocFreq() {
+    public final IColumn[] getTermDocFreq() {
         if (termBuffer.length == 0)
             return null;
 
         Term term = termBuffer[termPosition];
         
         //Memoize
-        DocumentRank docIds[] = null;
+        IColumn[] docIds = null;
         
         if(termDocsCache != null)
             docIds = termDocsCache.get(term);  
@@ -390,29 +410,28 @@ public class LucandraTermEnum extends TermEnum {
         long start = System.currentTimeMillis();
         
         // create proper docIds.
-        // Make sure these ids are sorted in ascending order since lucene
-        // requires this.
-        docIds = new DocumentRank[termDocs.size()];
-        int idx = 0;
+        // Make sure these ids are sorted in ascending order
+        // (lucene requires this).
+        //LinkedList<IColumn> orderedDocs = new LinkedList<IColumn>();
 
+        //we pass this to the func to avoid many threadlocal calls
+        Map<String,byte[]> fieldNorms = indexReader.getFieldNorms();
+        
         for (IColumn col : termDocs) {
-            int docId = indexReader.addDocument(col, currentField);
+            int docId = indexReader.addDocument(col, currentField, fieldNorms);
             
-            docIds[idx++] = new DocumentRank(docId,col);
-        }
-
+        }     
+        
+        docIds = termDocs.toArray(new IColumn[]{});
         long end = System.currentTimeMillis();
         
         //logger.info("termDocFreq: phase 1 in "+(end-start)+"ms");
         
-        // sort
-        Arrays.sort(docIds);
-
         end = System.currentTimeMillis();
         logger.info("termDocFreq: in "+(end-start)+"ms");
 
         if(termDocsCache == null)
-            termDocsCache = new HashMap<Term,DocumentRank[]>();
+            termDocsCache = new HashMap<Term,IColumn[]>();
         
         termDocsCache.put(term, docIds);
         

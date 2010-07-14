@@ -214,4 +214,5 @@ keyspaces:
           read_repair_chance: 0.1
           keys_cached: .9
           rows_cached: .9
+          preload_row_cache: true
        

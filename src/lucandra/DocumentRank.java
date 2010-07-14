@@ -5,6 +5,7 @@ import org.apache.cassandra.db.IColumn;
 public class DocumentRank implements Comparable<DocumentRank> {
     public int rank;
     public IColumn column;
+    public int freq = -1;
     
     public DocumentRank(){
         

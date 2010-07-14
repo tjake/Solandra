@@ -62,6 +62,11 @@ public class CassandraUtils {
     public static final String offsetVectorKey = "Offsets";
     public static final String termFrequencyKey = "Frequencies";
     public static final String normsKey = "Norms";
+    public static final byte[] positionVectorKeyBytes = positionVectorKey.getBytes();
+    public static final byte[] offsetVectorKeyBytes   = offsetVectorKey.getBytes();
+    public static final byte[] termFrequencyKeyBytes  = termFrequencyKey.getBytes();
+    public static final byte[] normsKeyBytes = normsKey.getBytes();
+    
 
     public static final byte[] emptyByteArray = new byte[] {};
     public static final List<Number> emptyArray = Arrays.asList(new Number[] { 0 });
@@ -69,6 +74,7 @@ public class CassandraUtils {
     public static final byte[] delimeterBytes;
 
     public static final String finalToken = new String("\ufffe\ufffe");
+    public static final byte[] finalTokenBytes; 
 
     public static final String documentIdField = System.getProperty("lucandra.id.field", delimeter + "KEY" + delimeter);
     public static final String documentMetaField = delimeter + "META" + delimeter;
@@ -81,6 +87,7 @@ public class CassandraUtils {
         try {
             delimeterBytes = delimeter.getBytes("UTF-8");
             documentMetaFieldBytes = documentMetaField.getBytes("UTF-8");
+            finalTokenBytes = finalToken.getBytes("UTF-8");
             metaColumnPath = new QueryPath(CassandraUtils.docColumnFamily);
         } catch (UnsupportedEncodingException e) {
             throw new RuntimeException("UTF-8 not supported by this JVM");
@@ -145,18 +152,22 @@ public class CassandraUtils {
     }
     
     
-    public static String createColumnName(Term term) {
+    public static byte[] createColumnName(Term term) {
 
         return createColumnName(term.field(), term.text());
     }
 
-    public static String createColumnName(String field, String text) {
+    public static byte[] createColumnName(String field, String text) {
 
         // case of all terms
         if (field.equals("") || text == null)
-            return delimeter;
+            return delimeterBytes;
 
-        return field + delimeter + text;
+        try {
+            return (field + delimeter + text).getBytes("UTF-8");
+        } catch (UnsupportedEncodingException e) {
+           throw new RuntimeException("JVM doesn't support UTF-8",e);
+        }
     }
 
     public static Term parseTerm(String termStr) {
@@ -262,17 +273,15 @@ public class CassandraUtils {
 
    
     
-    public static void addMutations(Map<String,RowMutation> mutationList, String columnFamily, byte[] column, String key, byte[] value,
-            Map<String, List<Number>> superColumns) {
+    public static void addMutations(Map<byte[],RowMutation> mutationList, String columnFamily, byte[] column, byte[] key, byte[] value,
+            Map<byte[], List<Number>> superColumns) {
 
         //Find or create row mutation
         RowMutation rm = mutationList.get(key); 
         if(rm == null){
-            try {
-                rm = new RowMutation(CassandraUtils.keySpace, key.getBytes("UTF-8"));
-            } catch (UnsupportedEncodingException e) {
-                 throw new RuntimeException("UTF-8 not supported by this JVM");
-            }
+           
+            rm = new RowMutation(CassandraUtils.keySpace, key);
+           
             mutationList.put(key, rm);
         }
         
@@ -292,19 +301,14 @@ public class CassandraUtils {
 
             } else {
 
-                for (Map.Entry<String, List<Number>> e : superColumns.entrySet()) {
-
-                    try {
-                        rm.add(new QueryPath(columnFamily,column,e.getKey().getBytes("UTF-8")), intVectorToByteArray(e.getValue()), new TimestampClock(System.currentTimeMillis()));
-                    } catch (UnsupportedEncodingException ex) {
-                        throw new RuntimeException("This JVM doesn't support UTF-8 Encoding");
-                    }
+                for (Map.Entry<byte[], List<Number>> e : superColumns.entrySet()) {
+                    rm.add(new QueryPath(columnFamily,column,e.getKey()), intVectorToByteArray(e.getValue()), new TimestampClock(System.currentTimeMillis()));                  
                 }
             }
         }
     }
 
-    public static void robustInsert(Map<String,RowMutation> mutations) {
+    public static void robustInsert(Map<byte[],RowMutation> mutations) {
 
         int attempts = 0;
         while (attempts++ < 10) {
@@ -347,12 +351,89 @@ public class CassandraUtils {
         return baos.toByteArray();
     }
 
-    public static byte[] hashKeyBytes(String key){
-        try {
-            return hashKey(key).getBytes("UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException("UTF-8 not supported by this JVM");
+    public static byte[] hashKeyBytes(byte[]... keys){
+        byte hashedKey[] = null;
+        
+        if(keys.length <= 1 || !Arrays.equals(keys[keys.length-2], delimeterBytes))
+            throw new IllegalStateException("malformed key");
+
+        if(indexHashingEnabled){
+            MessageDigest md;
+            try {
+                md = MessageDigest.getInstance("SHA");
+            } catch (NoSuchAlgorithmException e) {
+               throw new RuntimeException(e);
+            }
+            
+            int saltSize = 0;
+            int delimiterCount = 1;
+            for(int i=0; i<keys.length-2; i++){
+                
+                if(Arrays.equals(keys[i], delimeterBytes)){
+                    delimiterCount++;
+                }
+                
+                saltSize += keys[i].length;                
+            }
+            
+            if(delimiterCount > 2)
+                throw new IllegalStateException("key contains too many delimiters");
+
+            byte[] salt = new byte[saltSize];
+            int currentLen = 0;
+            for(int i=0; i<keys.length-2;  i++){
+                    System.arraycopy(keys[i], 0, salt, currentLen, keys[i].length);
+                    currentLen += keys[i].length;            
+            }
+                
+            md.update(salt);
+           
+            byte[] hashPart  = bytesForBig(new BigInteger(1, md.digest()), 8);            
+            byte[] otherPart = null;
+            
+            if(delimiterCount == 2){
+                otherPart = new byte[ keys[keys.length-3].length + delimeterBytes.length + keys[keys.length-1].length];
+
+                int len = 0;
+  
+                System.arraycopy(keys[keys.length-3], 0, otherPart, len, keys[keys.length-3].length);
+                
+                len += keys[keys.length-3].length;
+                
+                System.arraycopy(delimeterBytes, 0, otherPart, len, delimeterBytes.length);
+                
+                len += delimeterBytes.length;
+                
+                System.arraycopy(keys[keys.length-1], 0, otherPart, len, keys[keys.length-1].length);
+            }else{
+                otherPart = keys[keys.length-1];
+            }
+            
+            hashedKey = new byte[hashPart.length + delimeterBytes.length + otherPart.length];
+            
+            
+            //combine the 3 parts
+            System.arraycopy(hashPart, 0, hashedKey, 0, hashPart.length);            
+            System.arraycopy(delimeterBytes, 0, hashedKey, hashPart.length, delimeterBytes.length);
+            System.arraycopy(otherPart, 0, hashedKey, hashPart.length+delimeterBytes.length, otherPart.length);
+                 
+        } else {
+            
+            //no hashing, just combine the arrays together
+            
+            int totalBytes = 0;
+            for(int i=0; i<keys.length; i++)
+                totalBytes += keys[i].length;
+            
+            hashedKey = new byte[totalBytes];
+            int currentLen = 0;
+            for(int i=0; i<keys.length; i++){
+                System.arraycopy(keys[i], 0, hashedKey, currentLen, keys[i].length);
+                currentLen += keys[i].length;
+            }
         }
+        
+        return hashedKey;
     }
     
     public static String hashKey(String key) {
@@ -381,7 +462,7 @@ public class CassandraUtils {
                 throw new RuntimeException("UTF-8 not supported by this JVM");
             }
 
-            return stringForBig(new BigInteger(1, md.digest()), 8) + key.substring(indexPoint);
+            return bytesForBig(new BigInteger(1, md.digest()), 8) + key.substring(indexPoint);
 
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException(e);
@@ -390,15 +471,15 @@ public class CassandraUtils {
     }
 
     // based on cassandra source
-    private static String stringForBig(BigInteger big, int sigchars) {
-        char[] chars = new char[sigchars];
+    private static byte[] bytesForBig(BigInteger big, int sigchars) {
+        byte[] chars = new byte[sigchars];
 
         for (int i = 0; i < sigchars; i++) {
             int maskpos = 16 * (sigchars - (i + 1));
             // apply bitmask and get char value
-            chars[i] = hashChars.charAt(big.and(CHAR_MASK.shiftLeft(maskpos)).shiftRight(maskpos).intValue() % hashChars.length());
+            chars[i] = (byte)hashChars.charAt(big.and(CHAR_MASK.shiftLeft(maskpos)).shiftRight(maskpos).intValue() % hashChars.length());
         }
-        return new String(chars);
+        return chars;
     }
 
 }

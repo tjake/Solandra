@@ -26,17 +26,17 @@ import org.apache.lucene.index.TermVectorOffsetInfo;
 public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, org.apache.lucene.index.TermPositionVector {
 
     private String field;
-    private String docId;
+    private byte[] docId;
     private String[] terms;
     private int[] freqVec;
     private int[][] termPositions;
     private TermVectorOffsetInfo[][] termOffsets;
 
-    public TermFreqVector(String indexName, String field, String docId) {
+    public TermFreqVector(String indexName, String field, byte[] docId) {
         this.field = field;
         this.docId = docId;
 
-        byte[] key = CassandraUtils.hashKeyBytes(indexName + CassandraUtils.delimeter + docId);
+        byte[] key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes,  docId);
 
         ReadCommand rc = new SliceByNamesReadCommand(CassandraUtils.keySpace, key, CassandraUtils.metaColumnPath, Arrays
                 .asList(CassandraUtils.documentMetaFieldBytes));
@@ -68,9 +68,9 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
         if (rows.isEmpty())
             return; // nothing to delete
 
-        List<String> allTerms;
+        List<Term> allTerms;
         try {
-            allTerms = (List<String>) CassandraUtils.fromBytes(rows.get(0).cf.getColumn(CassandraUtils.documentMetaFieldBytes).value());
+            allTerms = (List<Term>) CassandraUtils.fromBytes(rows.get(0).cf.getColumn(CassandraUtils.documentMetaFieldBytes).value());
         } catch (IOException e) {
             throw new RuntimeException(e);
         } catch (ClassNotFoundException e) {
@@ -79,20 +79,21 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
 
         List<ReadCommand> readCommands = new ArrayList<ReadCommand>();
 
-        for (String termStr : allTerms) {
-
-            Term t = CassandraUtils.parseTerm(termStr);
+        for (Term t : allTerms) {
 
             // skip the ones not of this field
             if (!t.field().equals(field))
                 continue;
 
             // add to multiget params
-
-            key = CassandraUtils.hashKeyBytes(indexName + CassandraUtils.delimeter + termStr);
+            try {
+                key = CassandraUtils.hashKeyBytes(indexName.getBytes(),  CassandraUtils.delimeterBytes, t.field().getBytes(), CassandraUtils.delimeterBytes, t.text().getBytes("UTF-8"));
+            } catch (UnsupportedEncodingException e) {
+                throw new RuntimeException("JVM doesn't support UTF-8",e);
+            }
 
             readCommands.add(new SliceFromReadCommand(CassandraUtils.keySpace, key, new ColumnParent().setColumn_family(CassandraUtils.termVecColumnFamily)
-                    .setSuper_column(docId.getBytes()), new byte[] {}, new byte[] {}, false, 1024));
+                    .setSuper_column(docId), new byte[] {}, new byte[] {}, false, 1024));
         }
 
         try {

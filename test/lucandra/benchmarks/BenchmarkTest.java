@@ -17,7 +17,6 @@ import org.apache.lucene.document.Field.Index;
 import org.apache.lucene.document.Field.Store;
 import org.apache.lucene.document.Field.TermVector;
 import org.apache.lucene.index.CorruptIndexException;
-import org.apache.lucene.index.TermPositionVector;
 import org.apache.lucene.queryParser.ParseException;
 import org.apache.lucene.queryParser.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
@@ -150,7 +149,7 @@ public class BenchmarkTest {
 
     private static void usage() {
 
-        System.err.print(BenchmarkTest.class.getSimpleName() + " [--clients=<client-count>] [--loop=<loop-count>] [--type=<test-type>]\n"
+        System.err.print(BenchmarkTest.class.getSimpleName() + " [--clients=<client-count>] [--loops=<loop-count>] [--type=<test-type>]\n"
                 + "\tclients        Number of client threads to create: Default is " + numClients + "\n"
                 + "\tloops          The number of remote thrift calls each client makes.  Default is " + numLoops + "\n"
                 + "\ttype           The type of operation to test. Options are:\n" + "\t\tread\n\t\twrite\n\t\tboth (default)\n");
