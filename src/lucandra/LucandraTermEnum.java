@@ -338,10 +338,12 @@ public class LucandraTermEnum extends TermEnum {
 
         List<ColumnOrSuperColumn> termDocs = termDocFreqBuffer.get(termBuffer[termPosition]);
 
+        int size = termDocs.size();
+
         // create proper docIds.
         // Make sure these ids are sorted in ascending order since lucene
         // requires this.
-        int docIds[] = new int[termDocs.size()];
+        int docIds[] = new int[size];
         int idx = 0;
         List<ColumnOrSuperColumn> sortedTermDocs = new ArrayList<ColumnOrSuperColumn>(termDocs.size());
         Map<Integer, ColumnOrSuperColumn> termDocMap = new HashMap<Integer, ColumnOrSuperColumn>();
@@ -356,7 +358,7 @@ public class LucandraTermEnum extends TermEnum {
         Arrays.sort(docIds);
 
         // move
-        for (idx = 0; idx < termDocs.size(); idx++) {
+        for (idx = 0; idx < size; idx++) {
             sortedTermDocs.add(termDocMap.get(docIds[idx]));
         }
 
