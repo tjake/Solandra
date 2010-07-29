@@ -21,7 +21,7 @@
 		<dependency>
 			<groupId>org.apache.cassandra</groupId>
 			<artifactId>cassandra</artifactId>
-			<version>0.6.2</version>
+			<version>0.6.3</version>
 		</dependency>
 
 		<!--  our lucene depencies -->
@@ -254,6 +254,20 @@
 							<file>${basedir}/lib/libthrift-r917130.jar</file>
 						</configuration>
 					</execution>
+					<execution>
+						<id>install cassandra</id>
+						<phase>initialize</phase>
+						<goals>
+							<goal>install-file</goal>
+						</goals>
+						<configuration>
+							<packaging>jar</packaging>
+							<groupId>org.apache.cassandra</groupId>
+							<artifactId>cassandra</artifactId>
+							<version>0.6.3</version>
+							<file>${basedir}/lib/apache-cassandra-0.6.3.jar</file>
+						</configuration>
+					</execution>
 				</executions>
 			</plugin>
 			<!--  deploy the thrift binarie -->
@@ -273,6 +287,20 @@
 							<artifactId>libthrift</artifactId>
 							<version>917130</version>
 							<file>${basedir}/lib/libthrift-r917130.jar</file>
+						</configuration>
+					</execution>
+					<execution>
+						<id>deploy cassandra</id>
+						<phase>deploy</phase>
+						<goals>
+							<goal>deploy-file</goal>
+						</goals>
+						<configuration>
+						<packaging>jar</packaging>
+							<groupId>org.apache.cassandra</groupId>
+							<artifactId>cassandra</artifactId>
+							<version>0.6.3</version>
+							<file>${basedir}/lib/apache-cassandra-0.6.3.jar</file>
 						</configuration>
 					</execution>
 				</executions>
