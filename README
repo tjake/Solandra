@@ -42,6 +42,7 @@ if you perform a release from your own fork, you will need to do so with the fol
 
 mvn release:prepare release:perform -Darguments="-DrepositoryId=<your repo> -Durl=<your repository repo>"
 
+note that if uploading to a webdav repository, you will need to use the url dav:<repositoryurl>
 
 #edit run-demo with appropriate settings (delicious clone)
 4. run_demo.sh -index bookmarks.tsv
