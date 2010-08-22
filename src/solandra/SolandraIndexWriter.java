@@ -24,8 +24,8 @@ import java.net.URL;
 import java.util.concurrent.atomic.AtomicLong;
 
 import lucandra.CassandraUtils;
+import lucandra.cluster.RedisIndexManager;
 
-import org.apache.cassandra.service.StorageService;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
@@ -48,8 +48,9 @@ import org.apache.solr.update.UpdateHandler;
 
 public class SolandraIndexWriter extends UpdateHandler {
 
-    private lucandra.IndexWriter writer;
-
+    private final lucandra.IndexWriter writer;
+    private final RedisIndexManager    indexManager;
+    
     // stats
     AtomicLong addCommands = new AtomicLong();
     AtomicLong addCommandsCumulative = new AtomicLong();
@@ -66,36 +67,30 @@ public class SolandraIndexWriter extends UpdateHandler {
     AtomicLong numErrors = new AtomicLong();
     AtomicLong numErrorsCumulative = new AtomicLong();
 
-    private String indexName;
     
     public SolandraIndexWriter(SolrCore core) {
         super(core);
 
-        indexName = (String)core.getSolrConfig().get("indexName");
-        
-        if(indexName == null || indexName.length() == 0)
-            throw new SolrException(ErrorCode.NOT_FOUND, "<str name=\"indexName\">example</str>  tag required");
-        
-        
+        CassandraUtils.startup();
          
+        indexManager = new RedisIndexManager(CassandraUtils.service);
+        
         try {
             
-            writer = new lucandra.IndexWriter(core.getSchema().getSchemaName());
+            writer = new lucandra.IndexWriter("");
             
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    
-    
-    
     public int addDoc(AddUpdateCommand cmd) throws IOException {
 
         addCommands.incrementAndGet();
         addCommandsCumulative.incrementAndGet();
         int rc = -1;
 
+        
         // if there is no ID field, use allowDups
         if (idField == null) {
             cmd.allowDups = true;
@@ -107,6 +102,8 @@ public class SolandraIndexWriter extends UpdateHandler {
 
             Term updateTerm = null;
 
+            int docId =  indexManager.getCurrentDocId(core.getName());
+            
             if (cmd.overwriteCommitted || cmd.overwritePending) {
                 if (cmd.indexedId == null) {
                     cmd.indexedId = getIndexedId(cmd.doc);
@@ -120,7 +117,9 @@ public class SolandraIndexWriter extends UpdateHandler {
                     updateTerm = cmd.updateTerm;
                 }
 
-                writer.updateDocument(updateTerm, cmd.getLuceneDocument(schema), schema.getAnalyzer());
+                
+                
+                writer.updateDocument(updateTerm, cmd.getLuceneDocument(schema), schema.getAnalyzer(), docId);
                 if (del) { // ensure id remains unique
                     BooleanQuery bq = new BooleanQuery();
                     bq.add(new BooleanClause(new TermQuery(updateTerm), Occur.MUST_NOT));
@@ -129,7 +128,7 @@ public class SolandraIndexWriter extends UpdateHandler {
                 }
             } else {
                 // allow duplicates
-                writer.addDocument(cmd.getLuceneDocument(schema), schema.getAnalyzer());
+                writer.addDocument(cmd.getLuceneDocument(schema), schema.getAnalyzer(), docId);
             }
 
             rc = 1;

@@ -19,7 +19,10 @@
  */
 package lucandra;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 import junit.framework.TestCase;
+import lucandra.cluster.RedisIndexManager;
 
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.SlicePredicate;
@@ -57,19 +60,21 @@ public class LucandraTests extends TestCase {
     }
 
     private static final IndexWriter indexWriter = new IndexWriter(indexName);
-
+    private static final RedisIndexManager indexManager = new RedisIndexManager(CassandraUtils.service);
+    private static final AtomicInteger docId = new AtomicInteger(0);
+    
     public void testWriter() throws Exception {
         
         Document doc1 = new Document();
         Field f = new Field("key", text, Field.Store.YES, Field.Index.ANALYZED, TermVector.WITH_POSITIONS_OFFSETS);
         doc1.add(f);
 
-        indexWriter.addDocument(doc1, analyzer);
+        indexWriter.addDocument(doc1, analyzer, docId.incrementAndGet());
 
         Document doc2 = new Document();
         Field f2 = new Field("key", "this is another example", Field.Store.YES, Field.Index.ANALYZED);
         doc2.add(f2);
-        indexWriter.addDocument(doc2, analyzer);
+        indexWriter.addDocument(doc2, analyzer, docId.incrementAndGet());
 
         String start = CassandraUtils.hashKey(indexName + CassandraUtils.delimeter + "key" + CassandraUtils.delimeter);
         String finish = "";
@@ -98,7 +103,7 @@ public class LucandraTests extends TestCase {
             Document doc = new Document();
             doc.add(new Field("key", "sort this", Field.Store.YES, Field.Index.ANALYZED));
             doc.add(new Field("date", "test" + i, Field.Store.YES, Field.Index.NOT_ANALYZED));
-            indexWriter.addDocument(doc, analyzer);
+            indexWriter.addDocument(doc, analyzer, docId.incrementAndGet());
         }
 
         // Unicode doc
@@ -106,7 +111,7 @@ public class LucandraTests extends TestCase {
         d3.add(new Field("key", new String("\u5639\u563b"), Field.Store.YES, Field.Index.ANALYZED));
         d3.add(new Field("key", new String("samefield"), Field.Store.YES, Field.Index.ANALYZED));
         d3.add(new Field("url", "http://www.google.com", Field.Store.YES, Field.Index.NOT_ANALYZED));
-        indexWriter.addDocument(d3, analyzer);
+        indexWriter.addDocument(d3, analyzer, docId.incrementAndGet());
 
         
         //
@@ -242,7 +247,7 @@ public class LucandraTests extends TestCase {
 
         assertEquals(1, docs.totalHits);
 
-        Document d = indexReader.document(1);
+        Document d = indexReader.document(docs.scoreDocs[0].doc);
 
         String val = d.get("key");
         assertTrue(val.equals("this is another example"));
@@ -314,7 +319,7 @@ public class LucandraTests extends TestCase {
         Document doc = new Document();
         Field f = new Field("title", text, Field.Store.YES, Field.Index.ANALYZED);
         doc.add(f);
-        indexWriter.addDocument(doc, analyzer);
+        indexWriter.addDocument(doc, analyzer, docId.incrementAndGet());
         
         IndexReader indexReader = new IndexReader(indexName);
         IndexSearcher searcher = new IndexSearcher(indexReader);
@@ -370,7 +375,7 @@ public class LucandraTests extends TestCase {
                 Document doc1 = new Document();
                 doc1.add(new Field("aKey", "aKey"+i, Field.Store.YES, Field.Index.ANALYZED, TermVector.WITH_POSITIONS_OFFSETS));
                 doc1.add(new Field("category", "category1", Field.Store.YES, Field.Index.ANALYZED, TermVector.WITH_POSITIONS_OFFSETS));
-                indexWriter.addDocument(doc1, analyzer);
+                indexWriter.addDocument(doc1, analyzer, docId.incrementAndGet());
             }
 
             

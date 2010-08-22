@@ -24,7 +24,7 @@ authenticator: org.apache.cassandra.auth.AllowAllAuthenticator
 # org.apache.cassandra.dht.RandomPartitioner
 # org.apache.cassandra.dht.OrderPreservingPartitioner, and
 # org.apache.cassandra.dht.CollatingOrderPreservingPartitioner.
-partitioner: org.apache.cassandra.dht.CollatingOrderPreservingPartitioner
+partitioner: org.apache.cassandra.dht.OrderPreservingPartitioner
 
 # directories where Cassandra should store data on disk.
 data_file_directories:
@@ -77,9 +77,14 @@ listen_address: localhost
 rpc_address: localhost
 # port for Thrift to listen on
 rpc_port: 9160
-# Whether or not to use a framed transport for Thrift.
-thrift_framed_transport: false
-snapshot_before_compaction: false
+
+# Frame size for thrift (maximum field length).
+# 0 disables TFramedTransport in favor of TSocket. 
+thrift_framed_transport_size_in_mb: 15
+
+# The max length of a thrift message, including all fields and
+# internal thrift overhead.
+thrift_max_message_length_in_mb: 16
 
 # The threshold size in megabytes the binary memtable must grow to,
 # before it's submitted for flushing to disk.
@@ -90,11 +95,6 @@ memtable_flush_after_mins: 60
 memtable_throughput_in_mb: 64
 # Number of objects in millions in the memtable before it is dumped
 memtable_operations_in_millions: 0.3
-# Buffer size to use when flushing !memtables to disk.
-flush_data_buffer_size_in_mb: 32
-# Increase (decrease) the index buffer size relative to the data
-# buffer if you have few (many) columns per key.
-flush_index_buffer_size_in_mb: 8
 
 column_index_size_in_kb: 64
 in_memory_compaction_limit_in_mb: 128
@@ -125,7 +125,7 @@ rpc_timeout_in_ms: 10000
 # phi_convict_threshold: 8
 
 # time to wait before garbage collecting tombstones (deletion markers)
-gc_grace_seconds: 864000
+#gc_grace_seconds: 864000
 
 # endpoint_snitch -- Set this to a class that implements
 # IEndpointSnitch, which will let Cassandra know enough
@@ -200,19 +200,35 @@ endpoint_snitch: org.apache.cassandra.locator.SimpleSnitch
 #       Cassandra will not load these definitions during startup. See
 #       http://wiki.apache.org/cassandra/FAQ#no_keyspaces for an explanation.
 keyspaces:
-    - name: Lucandra
+    - name: L
       replica_placement_strategy: org.apache.cassandra.locator.RackUnawareStrategy
       replication_factor: 1
       column_families:
-        - name: Documents
+        - name: Docs 
           compare_with: BytesType
+          clock_type: Timestamp
+          reconciler: TimestampReconciler   
           keys_cached: .9
+          preload_row_cache: true
 
-        - name: TermInfo
+        - name: TI
           column_type: Super
-          compare_with: BytesType
+          compare_with: lucandra.VIntType
           read_repair_chance: 0.1
           keys_cached: .9
           rows_cached: .9
+          clock_type: Timestamp
+          reconciler: TimestampReconciler   
           preload_row_cache: true
-       
+          
+        - name: Solr
+          compare_with: BytesType
+          
+        - name: MI
+          compare_with: BytesType
+          clock_type: Timestamp
+          reconciler: lucandra.BitSetReconciler 
+         
+         
+         
+          

@@ -24,12 +24,10 @@ import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.TimeoutException;
 
@@ -37,12 +35,11 @@ import org.apache.cassandra.db.IColumn;
 import org.apache.cassandra.db.ReadCommand;
 import org.apache.cassandra.db.Row;
 import org.apache.cassandra.db.RowMutation;
-import org.apache.cassandra.db.SliceByNamesReadCommand;
 import org.apache.cassandra.db.SliceFromReadCommand;
 import org.apache.cassandra.service.StorageProxy;
 import org.apache.cassandra.thrift.ColumnParent;
-import org.apache.cassandra.thrift.ColumnPath;
 import org.apache.cassandra.thrift.ConsistencyLevel;
+import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.UnavailableException;
 import org.apache.cassandra.utils.FBUtilities;
 import org.apache.log4j.Logger;
@@ -63,37 +60,35 @@ import org.apache.lucene.search.TopDocs;
 
 public class IndexWriter {
 
-    private final String indexName;
+    private String indexName;
 
     private boolean autoCommit;
-    private static final ThreadLocal<Map<byte[],RowMutation>> mutationList = new ThreadLocal<Map<byte[],RowMutation>>();
+    private static final ThreadLocal<Map<byte[], RowMutation>> mutationList = new ThreadLocal<Map<byte[], RowMutation>>();
 
-    private Similarity similarity = Similarity.getDefault(); // how to
-                                                             // normalize;
-    private final ColumnPath docAllColumnPath;
+    private Similarity similarity = Similarity.getDefault(); // how to normalize;
     private static final Logger logger = Logger.getLogger(IndexWriter.class);
-
+    
     public IndexWriter(String indexName) {
-
         this.indexName = indexName;
         autoCommit = true;
-        docAllColumnPath = new ColumnPath(CassandraUtils.docColumnFamily);
-
     }
 
+    public void addDocument(Document doc, Analyzer analyzer, int docNumber, String indexName) throws CorruptIndexException, IOException{
+        this.indexName = indexName;      
+        addDocument(doc, analyzer, docNumber);
+    }
+    
     @SuppressWarnings("unchecked")
-    public void addDocument(Document doc, Analyzer analyzer) throws CorruptIndexException, IOException {
+    public void addDocument(Document doc, Analyzer analyzer, int docNumber) throws CorruptIndexException, IOException {
 
-        List<Term> allIndexedTerms  = new ArrayList<Term>();
-        Map<String,byte[]> fieldCache = new HashMap<String,byte[]>(1024);
-        
-        
-        // check for special field name
-        byte[] docId = null;//doc.get(CassandraUtils.documentIdField).getBytes("UTF-8");
+        List<Term> allIndexedTerms = new ArrayList<Term>();
+        Map<String, byte[]> fieldCache = new HashMap<String, byte[]>(1024);
 
-        if (docId == null)
-            docId = Long.toHexString((long) (System.nanoTime() + (Math.random() * System.nanoTime()))).getBytes();
-
+        //By default we don't handle indexSharding
+        //We round robin replace the index      
+        docNumber = docNumber % CassandraUtils.maxDocsPerShard;
+                
+        byte[] docId = CassandraUtils.writeVInt(docNumber);
         int position = 0;
 
         for (Fieldable field : (List<Fieldable>) doc.getFields()) {
@@ -209,7 +204,8 @@ public class IndexWriter {
                     // Terms are stored within a unique key combination
                     // This is required since cassandra loads all columns
                     // in a key/column family into memory
-                    byte[] key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes,  term.getKey().field().getBytes(), CassandraUtils.delimeterBytes, term.getKey().text().getBytes("UTF-8"));
+                    byte[] key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, term.getKey().field().getBytes(),
+                            CassandraUtils.delimeterBytes, term.getKey().text().getBytes("UTF-8"));
 
                     // Mix in the norm for this field alongside each term
                     // more writes but faster on read side.
@@ -227,7 +223,8 @@ public class IndexWriter {
                 Term term = new Term(field.name(), field.stringValue());
                 allIndexedTerms.add(term);
 
-                byte[] key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, field.name().getBytes(), CassandraUtils.delimeterBytes, field.stringValue().getBytes("UTF-8"));
+                byte[] key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, field.name().getBytes(),
+                        CassandraUtils.delimeterBytes, field.stringValue().getBytes("UTF-8"));
 
                 Map<byte[], List<Number>> termMap = new ConcurrentSkipListMap<byte[], List<Number>>(FBUtilities.byteArrayComparator);
                 termMap.put(CassandraUtils.termFrequencyKeyBytes, CassandraUtils.emptyArray);
@@ -248,37 +245,37 @@ public class IndexWriter {
 
                 value[value.length - 1] = (byte) (field.isBinary() ? Byte.MAX_VALUE : Byte.MIN_VALUE);
 
-                //logic to handle multiple fields w/ same name
+                // logic to handle multiple fields w/ same name
                 byte[] currentValue = fieldCache.get(field.name());
-                if(currentValue == null){
+                if (currentValue == null) {
                     fieldCache.put(field.name(), value);
-                }else{
-                    
+                } else {
+
                     // append new data
                     byte[] newValue = new byte[currentValue.length + CassandraUtils.delimeterBytes.length + value.length - 1];
                     System.arraycopy(currentValue, 0, newValue, 0, currentValue.length - 1);
                     System.arraycopy(CassandraUtils.delimeterBytes, 0, newValue, currentValue.length - 1, CassandraUtils.delimeterBytes.length);
                     System.arraycopy(value, 0, newValue, currentValue.length + CassandraUtils.delimeterBytes.length - 1, value.length);
 
-                    fieldCache.put(field.name(), newValue);   
-                }           
+                    fieldCache.put(field.name(), newValue);
+                }
             }
         }
 
-        
-        byte[] key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes,  docId);
+        byte[] key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, Integer.toHexString(docNumber).getBytes());
 
-        //Store each field as a column under this docId
-        for(Map.Entry<String, byte[]> field : fieldCache.entrySet()){
-            CassandraUtils.addMutations(getMutationList(), CassandraUtils.docColumnFamily, field.getKey().getBytes("UTF-8"), key,
-                field.getValue(), null);
+        // Store each field as a column under this docId
+        for (Map.Entry<String, byte[]> field : fieldCache.entrySet()) {
+            CassandraUtils.addMutations(getMutationList(), CassandraUtils.docColumnFamily, field.getKey().getBytes("UTF-8"), key, field.getValue(), null);
         }
-        
+
         // Finally, Store meta-data so we can delete this document
-        CassandraUtils.addMutations(getMutationList(), CassandraUtils.docColumnFamily, CassandraUtils.documentMetaFieldBytes, key, CassandraUtils.toBytes(allIndexedTerms), null);
+        CassandraUtils.addMutations(getMutationList(), CassandraUtils.docColumnFamily, CassandraUtils.documentMetaFieldBytes, key, CassandraUtils
+                .toBytes(allIndexedTerms), null);
 
         if (autoCommit) {
-            CassandraUtils.robustInsert(getMutationList());
+            CassandraUtils.robustInsert(Arrays.asList(getMutationList().values().toArray(new RowMutation[]{})), ConsistencyLevel.ONE);
+            getMutationList().clear();
         }
     }
 
@@ -292,38 +289,42 @@ public class IndexWriter {
         for (int i = 0; i < results.totalHits; i++) {
             ScoreDoc doc = results.scoreDocs[i];
 
-            byte[] docId = reader.getDocumentId(doc.doc);
-            
+            byte[] docId = Integer.toHexString(doc.doc).getBytes();
+
             deleteLucandraDocument(docId);
-           
+
         }
 
     }
 
-    @SuppressWarnings("unchecked")
     public void deleteDocuments(Term term) throws CorruptIndexException, IOException {
         try {
 
             ColumnParent cp = new ColumnParent(CassandraUtils.termVecColumnFamily);
-            //String key = indexName + CassandraUtils.delimeter + CassandraUtils.createColumnName(term);
 
-            byte[] key = CassandraUtils.hashKeyBytes(indexName.getBytes(),CassandraUtils.delimeterBytes,term.field().getBytes(),CassandraUtils.delimeterBytes,term.text().getBytes("UTF-8"));
-            
-            ReadCommand rc = new SliceFromReadCommand(CassandraUtils.keySpace, key, cp, new byte[] {}, new byte[] {}, false,
-                    Integer.MAX_VALUE);
+            byte[] key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, term.field().getBytes(),
+                    CassandraUtils.delimeterBytes, term.text().getBytes("UTF-8"));
+
+            ReadCommand rc = new SliceFromReadCommand(CassandraUtils.keySpace, key, cp, new byte[] {}, new byte[] {}, false, Integer.MAX_VALUE);
 
             List<Row> rows = StorageProxy.readProtocol(Arrays.asList(rc), ConsistencyLevel.ONE);
 
             // delete by documentId
             for (Row row : rows) {
-                for (IColumn col : row.cf.getSortedColumns()) {
-                    deleteLucandraDocument(col.name());
+                if(row.cf != null){
+                    Collection<IColumn> columns = row.cf.getSortedColumns();
+                
+                    for (IColumn col : columns) {
+                        deleteLucandraDocument(Integer.toHexString(CassandraUtils.readVInt(col.name())).getBytes());
+                    }
                 }
             }
 
         } catch (TimeoutException e) {
             throw new RuntimeException(e);
         } catch (UnavailableException e) {
+            throw new RuntimeException(e);
+        } catch (InvalidRequestException e) {
             throw new RuntimeException(e);
         }
     }
@@ -332,32 +333,7 @@ public class IndexWriter {
 
         byte[] key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, docId);
 
-        ReadCommand rc = new SliceByNamesReadCommand(CassandraUtils.keySpace, key, CassandraUtils.metaColumnPath, Arrays
-                .asList(CassandraUtils.documentMetaFieldBytes));
-
-        List<Row> rows = null;
-        int attempts = 0;
-        while (attempts++ < 10) {
-            try {
-                rows = StorageProxy.readProtocol(Arrays.asList(rc), ConsistencyLevel.ONE);
-                break;
-            } catch (IOException e1) {
-               throw new RuntimeException(e1);
-            } catch (UnavailableException e1) {
-                
-            } catch (TimeoutException e1) {
-               
-            }
-            
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                
-            }
-        }
-
-        if(attempts >= 10)
-            throw new RuntimeException("Read command failed after 10 attempts");
+        List<Row> rows = CassandraUtils.robustGet(key, CassandraUtils.metaColumnPath, Arrays.asList(CassandraUtils.documentMetaFieldBytes), ConsistencyLevel.ONE);
         
         if (rows.isEmpty())
             return; // nothing to delete
@@ -372,29 +348,31 @@ public class IndexWriter {
         }
 
         for (Term term : terms) {
-            
+
             try {
-                key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, term.field().getBytes(), CassandraUtils.delimeterBytes, term.text().getBytes("UTF-8"));
+                key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, term.field().getBytes(), CassandraUtils.delimeterBytes,
+                        term.text().getBytes("UTF-8"));
             } catch (UnsupportedEncodingException e) {
-               throw new RuntimeException("JVM doesn't support UTF-8",e);
+                throw new RuntimeException("JVM doesn't support UTF-8", e);
             }
 
             CassandraUtils.addMutations(getMutationList(), CassandraUtils.termVecColumnFamily, docId, key, null, null);
         }
 
         // finally delete ourselves
-        byte[] selfKey = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes,docId);
+        byte[] selfKey = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, docId);
         CassandraUtils.addMutations(getMutationList(), CassandraUtils.docColumnFamily, null, selfKey, null, null);
 
-        if (autoCommit)
-            CassandraUtils.robustInsert(getMutationList());
-
+        if (autoCommit){
+            CassandraUtils.robustInsert(Arrays.asList(getMutationList().values().toArray(new RowMutation[]{})), ConsistencyLevel.ONE);
+            getMutationList().clear();
+        }
     }
 
-    public void updateDocument(Term updateTerm, Document doc, Analyzer analyzer) throws CorruptIndexException, IOException {
+    public void updateDocument(Term updateTerm, Document doc, Analyzer analyzer, int docNumber) throws CorruptIndexException, IOException {
 
         deleteDocuments(updateTerm);
-        addDocument(doc, analyzer);
+        addDocument(doc, analyzer, docNumber);
 
     }
 
@@ -413,20 +391,30 @@ public class IndexWriter {
     }
 
     public void commit() {
-        if (!autoCommit)
-            CassandraUtils.robustInsert(getMutationList());
+        if (!autoCommit){
+            CassandraUtils.robustInsert(Arrays.asList(getMutationList().values().toArray(new RowMutation[]{})), ConsistencyLevel.ONE);
+            getMutationList().clear();
+        }
     }
 
-    private Map<byte[],RowMutation> getMutationList() {
+    private Map<byte[], RowMutation> getMutationList() {
 
-        Map<byte[],RowMutation> list = mutationList.get();
+        Map<byte[], RowMutation> list = mutationList.get();
 
         if (list == null) {
-            list = new ConcurrentSkipListMap<byte[],RowMutation>(FBUtilities.byteArrayComparator);
+            list = new ConcurrentSkipListMap<byte[], RowMutation>(FBUtilities.byteArrayComparator);
             mutationList.set(list);
         }
 
         return list;
+    }
+
+    public String getIndexName() {
+        return indexName;
+    }
+
+    public void setIndexName(String indexName) {
+        this.indexName = indexName;
     }
 
 }

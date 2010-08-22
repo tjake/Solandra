@@ -38,7 +38,11 @@ import java.util.concurrent.TimeoutException;
 import org.apache.cassandra.config.ConfigurationException;
 import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.db.CompactionManager;
+import org.apache.cassandra.db.ReadCommand;
+import org.apache.cassandra.db.Row;
 import org.apache.cassandra.db.RowMutation;
+import org.apache.cassandra.db.SliceByNamesReadCommand;
+import org.apache.cassandra.db.SystemTable;
 import org.apache.cassandra.db.Table;
 import org.apache.cassandra.db.TimestampClock;
 import org.apache.cassandra.db.commitlog.CommitLog;
@@ -48,25 +52,30 @@ import org.apache.cassandra.service.MigrationManager;
 import org.apache.cassandra.service.StorageProxy;
 import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.thrift.ConsistencyLevel;
+import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.UnavailableException;
 import org.apache.log4j.Logger;
 import org.apache.lucene.index.Term;
+import org.jredis.connector.ConnectionSpec;
+import org.jredis.ri.alphazero.JRedisService;
+import org.jredis.ri.alphazero.connection.DefaultConnectionSpec;
 
 public class CassandraUtils {
 
-    public static final String keySpace = System.getProperty("lucandra.keyspace", "Lucandra");
-    public static final String termVecColumnFamily = "TermInfo";
-    public static final String docColumnFamily = "Documents";
+    public static final String keySpace = System.getProperty("lucandra.keyspace", "L");
+    public static final String termVecColumnFamily = "TI";
+    public static final String docColumnFamily = "Docs";
 
-    public static final String positionVectorKey = "Position";
-    public static final String offsetVectorKey = "Offsets";
-    public static final String termFrequencyKey = "Frequencies";
-    public static final String normsKey = "Norms";
+    public static final String positionVectorKey = "P";
+    public static final String offsetVectorKey = "O";
+    public static final String termFrequencyKey = "F";
+    public static final String normsKey = "N";
     public static final byte[] positionVectorKeyBytes = positionVectorKey.getBytes();
     public static final byte[] offsetVectorKeyBytes   = offsetVectorKey.getBytes();
     public static final byte[] termFrequencyKeyBytes  = termFrequencyKey.getBytes();
     public static final byte[] normsKeyBytes = normsKey.getBytes();
     
+    public static final int maxDocsPerShard = 100000;
 
     public static final byte[] emptyByteArray = new byte[] {};
     public static final List<Number> emptyArray = Arrays.asList(new Number[] { 0 });
@@ -82,8 +91,18 @@ public class CassandraUtils {
     
     public static final boolean indexHashingEnabled = Boolean.valueOf(System.getProperty("index.hashing", "true"));
 
+    public static final JRedisService service;
+    
     public static final QueryPath metaColumnPath;
     static {
+        
+        int database = 11;
+        int connCnt = 7;
+        
+        ConnectionSpec connectionSpec = DefaultConnectionSpec.newSpec("localhost", 6379, database, "jredis".getBytes());
+        
+        service = new JRedisService(connectionSpec, connCnt);
+        
         try {
             delimeterBytes = delimeter.getBytes("UTF-8");
             documentMetaFieldBytes = documentMetaField.getBytes("UTF-8");
@@ -100,8 +119,24 @@ public class CassandraUtils {
     private static final Logger logger = Logger.getLogger(CassandraUtils.class);
 
     //Start Cassandra up!!!
-    public static void startup(){
+    public static void startup(){   
+        
         try {
+            
+            
+            Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler()
+            {
+                public void uncaughtException(Thread t, Throwable e)
+                {
+                    logger.error("Uncaught exception in thread " + t, e);
+                    if (e instanceof OutOfMemoryError)
+                    {
+                        System.exit(100);
+                    }
+                }
+            });
+            
+            SystemTable.checkHealth();
             
             // initialize keyspaces
             DatabaseDescriptor.loadSchemas();
@@ -118,9 +153,6 @@ public class CassandraUtils {
                     hasLucandra = true;
             }
             
-            if(!hasLucandra)
-                StorageService.instance.loadSchemaFromYAML();
-
 
             // replay the log if necessary and check for compaction candidates
             CommitLog.recover();
@@ -139,14 +171,35 @@ public class CassandraUtils {
             
             // start server internals
             StorageService.instance.initServer();
+            
+            if(!hasLucandra){
+                StorageService.instance.loadSchemaFromYAML();
 
+                //reinit new tables
+                for (String table : DatabaseDescriptor.getTables())
+                {
+                    if (logger.isDebugEnabled())
+                        logger.debug("opening keyspace " + table);
+                    Table.open(table);
+                
+                    if(table.equalsIgnoreCase(CassandraUtils.keySpace))
+                        hasLucandra = true;
+                }
+                
+                
+                
+                if(!hasLucandra)
+                    throw new RuntimeException("Cassandra.yaml missing schema for keyspace: "+keySpace);
+            
+            }
+            
         } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         } catch (ConfigurationException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
-        }
+        } 
     
         
     }
@@ -308,14 +361,13 @@ public class CassandraUtils {
         }
     }
 
-    public static void robustInsert(Map<byte[],RowMutation> mutations) {
+    public static void robustInsert(List<RowMutation> mutations, ConsistencyLevel cl) {
 
         int attempts = 0;
         while (attempts++ < 10) {
 
             try {
-                StorageProxy.mutateBlocking(Arrays.asList(mutations.values().toArray(new RowMutation[]{})), ConsistencyLevel.ONE);
-                mutations.clear();
+                StorageProxy.mutateBlocking(mutations, cl);
                 return;
             } catch (UnavailableException e) {
                 
@@ -333,6 +385,41 @@ public class CassandraUtils {
         throw new RuntimeException("insert failed after 10 attempts");
     }
 
+    
+    public static List<Row> robustGet(byte[] key, QueryPath qp, List<byte[]> columns, ConsistencyLevel cl){
+       
+        ReadCommand rc = new SliceByNamesReadCommand(CassandraUtils.keySpace, key, qp, columns);
+
+        List<Row> rows = null;
+        int attempts = 0;
+        while (attempts++ < 10) {
+            try {
+                rows = StorageProxy.readProtocol(Arrays.asList(rc), cl);
+                break;
+            } catch (IOException e1) {
+                throw new RuntimeException(e1);
+            } catch (UnavailableException e1) {
+
+            } catch (TimeoutException e1) {
+
+            } catch (InvalidRequestException e) {
+                throw new RuntimeException(e);
+            }
+
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+
+            }
+        }
+
+        if (attempts >= 10)
+            throw new RuntimeException("Read command failed after 10 attempts");
+
+        return rows;
+
+    }
+    
     /** Read the object from bytes string. */
     public static Object fromBytes(byte[] data) throws IOException, ClassNotFoundException {
 
@@ -482,4 +569,38 @@ public class CassandraUtils {
         return chars;
     }
 
+    public static int readVInt(byte[] buf) {
+        int length = buf.length;
+        
+        byte b = buf[0];
+        int i = b & 0x7F;
+        for (int pos = 1, shift = 7; (b & 0x80) != 0 && pos<length; shift += 7,pos++) {
+          b = buf[pos];
+          i |= (b & 0x7F) << shift;
+        }
+        
+        return i;
+    }
+    
+    public static byte[] writeVInt(int i)  {
+        int length = 0;
+        int p      = i;
+        
+        while ((p & ~0x7F) != 0) {
+            p >>>= 7;
+            length++;
+        }
+        length++;
+        
+        byte[] buf = new byte[length];
+        int    pos = 0;
+        while ((i & ~0x7F) != 0) {
+          buf[pos] = ((byte)((i & 0x7f) | 0x80));
+          i >>>= 7;
+          pos++;
+        }
+        buf[pos] = (byte)i;
+ 
+        return buf;
+    }
 }

@@ -23,6 +23,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import lucandra.CassandraUtils;
 import lucandra.IndexReader;
@@ -54,7 +55,9 @@ public class BookmarksDemo {
     private static IndexReader indexReader = new IndexReader("bookmarks");
     private static IndexSearcher indexSearcher = new IndexSearcher(indexReader);
     private static Analyzer analyzer = new SimpleAnalyzer();
+    private static final AtomicInteger docId = new AtomicInteger(0);
 
+    
     public static void usage() {
         System.out.println("Usage: BookmarkDemo [-index file.tsv] [-search query]");
         System.exit(1);
@@ -90,7 +93,7 @@ public class BookmarksDemo {
         doc.add(new Field("title", title, Store.YES, Index.ANALYZED));
         doc.add(new Field("tags", tags, Store.NO, Index.ANALYZED));
 
-        indexWriter.addDocument(doc, analyzer);
+        indexWriter.addDocument(doc, analyzer, docId.incrementAndGet());
     }
 
     public static void search(String query) throws IOException, org.apache.lucene.queryParser.ParseException {

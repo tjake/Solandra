@@ -138,7 +138,7 @@
             <formatter type="brief" usefile="false"/>
 
             <batchtest todir="${build}/output">
-              <fileset dir="${build.test.classes}" includes="**/*Test*" />
+              <fileset dir="${build.test.classes}" includes="**/UtilitiesTest*" />
             </batchtest>
             <jvmarg value="-Dcassandra.host=${cassandra.host}"/>
             <jvmarg value="-Dcassandra.port=${cassandra.port}"/>

@@ -8,6 +8,7 @@ import java.util.concurrent.TimeUnit;
 import lucandra.CassandraUtils;
 import lucandra.IndexReader;
 import lucandra.IndexWriter;
+import lucandra.cluster.RedisIndexManager;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
@@ -40,6 +41,7 @@ public class BenchmarkTest {
     private static int threadId = 0;
     private static final Query query;
     private static final Document doc;
+    private static final RedisIndexManager indexManager = new RedisIndexManager(CassandraUtils.service);
 
     static {
 
@@ -49,7 +51,7 @@ public class BenchmarkTest {
            throw new RuntimeException(e);
         }
         doc = new Document();
-        doc.add(new Field("text", text, Store.YES, Index.ANALYZED_NO_NORMS, TermVector.NO ));
+        doc.add(new Field("text", text, Store.YES, Index.ANALYZED, TermVector.WITH_POSITIONS_OFFSETS ));
 
     }
 
@@ -107,11 +109,16 @@ public class BenchmarkTest {
 
                 for (int i = 0; i < numLoops; i++) {
                     try {
-                        indexWriter.addDocument(doc, analyzer);
+                        indexWriter.addDocument(doc, analyzer, indexManager.incrementDocId(indexName));
                     } catch (CorruptIndexException e) {
+                        e.printStackTrace();
                         throw new RuntimeException(e);
                     } catch (IOException e) {
+                        e.printStackTrace();
                         throw new RuntimeException(e);
+                    } catch(Throwable t){
+                        t.printStackTrace();
+                        throw new RuntimeException(t);
                     }
                 }
             }
@@ -132,7 +139,7 @@ public class BenchmarkTest {
                                 System.err.println("Thread " + myThreadId + ": total " + total);
 
                         } else {
-                            indexWriter.addDocument(doc, analyzer);
+                            indexWriter.addDocument(doc, analyzer, indexManager.incrementDocId(indexName));
                         }
                     } catch (CorruptIndexException e) {
                         throw new RuntimeException(e);
@@ -188,13 +195,15 @@ public class BenchmarkTest {
                 }
             }
         }
+        
+        CassandraUtils.startup();
 
         ExecutorService threadPool = Executors.newFixedThreadPool(numClients);
         Runnable runners[] = new Runnable[numClients];
         for (int i = 0; i < numClients; i++)
             runners[i] = getRunnable();
 
-        CassandraUtils.startup();
+      
         
         System.out.println("Starting Benchmark...");
         long startTime = System.currentTimeMillis();
@@ -202,6 +211,8 @@ public class BenchmarkTest {
         for (int i = 0; i < numClients; i++)
             threadPool.submit(runners[i]);
 
+     
+        
         threadPool.shutdown();
 
         try {

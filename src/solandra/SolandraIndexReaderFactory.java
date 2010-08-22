@@ -23,7 +23,6 @@ import java.io.IOException;
 
 import lucandra.IndexReader;
 
-import org.apache.cassandra.service.StorageService;
 import org.apache.lucene.store.Directory;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.SolrException.ErrorCode;

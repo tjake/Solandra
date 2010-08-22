@@ -19,6 +19,7 @@ import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.Column;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.ConsistencyLevel;
+import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.UnavailableException;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.TermVectorOffsetInfo;
@@ -32,11 +33,11 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
     private int[][] termPositions;
     private TermVectorOffsetInfo[][] termOffsets;
 
-    public TermFreqVector(String indexName, String field, byte[] docId) {
+    public TermFreqVector(String indexName, String field, int docI) {
         this.field = field;
-        this.docId = docId;
+        this.docId = Integer.toHexString(docI).getBytes();
 
-        byte[] key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes,  docId);
+        byte[] key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, docId );
 
         ReadCommand rc = new SliceByNamesReadCommand(CassandraUtils.keySpace, key, CassandraUtils.metaColumnPath, Arrays
                 .asList(CassandraUtils.documentMetaFieldBytes));
@@ -50,9 +51,11 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
             } catch (IOException e1) {
                 throw new RuntimeException(e1);
             } catch (UnavailableException e1) {
-
+                
             } catch (TimeoutException e1) {
-
+                
+            } catch (InvalidRequestException e) {
+                throw new RuntimeException(e);
             }
 
             try {
@@ -87,13 +90,13 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
 
             // add to multiget params
             try {
-                key = CassandraUtils.hashKeyBytes(indexName.getBytes(),  CassandraUtils.delimeterBytes, t.field().getBytes(), CassandraUtils.delimeterBytes, t.text().getBytes("UTF-8"));
+                key = CassandraUtils.hashKeyBytes(indexName.getBytes(),  CassandraUtils.delimeterBytes, t.field().getBytes("UTF-8"), CassandraUtils.delimeterBytes, t.text().getBytes("UTF-8"));
             } catch (UnsupportedEncodingException e) {
                 throw new RuntimeException("JVM doesn't support UTF-8",e);
             }
 
             readCommands.add(new SliceFromReadCommand(CassandraUtils.keySpace, key, new ColumnParent().setColumn_family(CassandraUtils.termVecColumnFamily)
-                    .setSuper_column(docId), new byte[] {}, new byte[] {}, false, 1024));
+                    .setSuper_column( CassandraUtils.writeVInt(docI)), new byte[] {}, new byte[] {}, false, 1024));
         }
 
         try {
@@ -103,6 +106,8 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
         } catch (UnavailableException e) {
             throw new RuntimeException(e);
         } catch (TimeoutException e) {
+            throw new RuntimeException(e);
+        } catch (InvalidRequestException e) {
             throw new RuntimeException(e);
         }
 
@@ -127,9 +132,14 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
             terms[i] = t.text();
 
             // Find the offsets and positions
-            IColumn positionVector = row.cf.getSortedColumns().iterator().next().getSubColumn(CassandraUtils.positionVectorKey.getBytes());
-            IColumn offsetVector = row.cf.getSortedColumns().iterator().next().getSubColumn(CassandraUtils.offsetVectorKey.getBytes());
-
+            IColumn positionVector = null;
+            IColumn offsetVector   = null;
+            
+            if(row.cf != null){
+                positionVector = row.cf.getSortedColumns().iterator().next().getSubColumn(CassandraUtils.positionVectorKeyBytes);
+                offsetVector   = row.cf.getSortedColumns().iterator().next().getSubColumn(CassandraUtils.offsetVectorKeyBytes);
+            }
+            
             termPositions[i] = positionVector == null ? new int[] {} : CassandraUtils.byteArrayToIntArray(positionVector.value());
             freqVec[i] = termPositions[i].length;
 

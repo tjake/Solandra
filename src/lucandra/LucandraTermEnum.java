@@ -46,6 +46,7 @@ import org.apache.cassandra.service.StorageProxy;
 import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.ConsistencyLevel;
+import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.SlicePredicate;
 import org.apache.cassandra.thrift.SliceRange;
 import org.apache.cassandra.thrift.UnavailableException;
@@ -364,6 +365,8 @@ public class LucandraTermEnum extends TermEnum {
                 
             } catch (TimeoutException e1) {
                
+            } catch (InvalidRequestException e) {
+              
             }
             
             try {
@@ -398,42 +401,24 @@ public class LucandraTermEnum extends TermEnum {
         //Memoize
         IColumn[] docIds = null;
         
-        if(termDocsCache != null)
-            docIds = termDocsCache.get(term);  
+        //if(termDocsCache != null)
+        //    docIds = termDocsCache.get(term);  
         
-        if(docIds != null)
-            return docIds;
+        //if(docIds != null)
+        //    return docIds;
              
         
         Collection<IColumn> termDocs = termDocFreqBuffer.get(term);
 
-        long start = System.currentTimeMillis();
-        
-        // create proper docIds.
-        // Make sure these ids are sorted in ascending order
-        // (lucene requires this).
-        //LinkedList<IColumn> orderedDocs = new LinkedList<IColumn>();
-
-        //we pass this to the func to avoid many threadlocal calls
-        Map<String,byte[]> fieldNorms = indexReader.getFieldNorms();
-        
-        for (IColumn col : termDocs) {
-            int docId = indexReader.addDocument(col, currentField, fieldNorms);
-            
-        }     
+        //set normalizations     
+        indexReader.addDocumentNormalizations(termDocs, currentField);                
         
         docIds = termDocs.toArray(new IColumn[]{});
-        long end = System.currentTimeMillis();
         
-        //logger.info("termDocFreq: phase 1 in "+(end-start)+"ms");
+        //if(termDocsCache == null)
+        //    termDocsCache = new HashMap<Term,IColumn[]>();
         
-        end = System.currentTimeMillis();
-        logger.info("termDocFreq: in "+(end-start)+"ms");
-
-        if(termDocsCache == null)
-            termDocsCache = new HashMap<Term,IColumn[]>();
-        
-        termDocsCache.put(term, docIds);
+        //termDocsCache.put(term, docIds);
         
         return docIds;
     }

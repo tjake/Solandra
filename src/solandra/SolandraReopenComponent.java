@@ -20,15 +20,25 @@
 package solandra;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 
+import lucandra.CassandraUtils;
+import lucandra.cluster.AbstractIndexManager;
+import lucandra.cluster.RedisIndexManager;
+
+import org.apache.cassandra.dht.Token;
+import org.apache.cassandra.service.StorageService;
 import org.apache.log4j.Logger;
 import org.apache.lucene.document.FieldSelector;
+import org.apache.solr.core.SolrCore;
 import org.apache.solr.handler.component.ResponseBuilder;
 import org.apache.solr.handler.component.SearchComponent;
 import org.apache.solr.highlight.SolrHighlighter;
+import org.apache.solr.request.LocalSolrQueryRequest;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.DocIterator;
 import org.apache.solr.search.DocList;
@@ -36,6 +46,13 @@ import org.apache.solr.search.DocList;
 public class SolandraReopenComponent extends SearchComponent {
 
     private static final Logger logger = Logger.getLogger(SolandraReopenComponent.class);
+    private final RedisIndexManager indexManager;
+    private final Random random;
+   
+    public SolandraReopenComponent(){
+        indexManager = new RedisIndexManager(CassandraUtils.service);
+        random       = new Random(System.currentTimeMillis());
+    }
     
     public String getDescription() {
        return "Reopens Lucandra readers";
@@ -56,12 +73,52 @@ public class SolandraReopenComponent extends SearchComponent {
     }
 
     public void prepare(ResponseBuilder rb) throws IOException {
-       
+            
         //Fixme: this is quite hacky, but the only way to make it work
         //without altering solr. neeeds reopen!
-        rb.req.getSearcher().getIndexReader().directory();
+        rb.req.getSearcher().getIndexReader().directory();      
+        
+        String indexName = rb.req.getCore().getName();
+        
+        if(indexName.equals(""))
+            return;
+        
+        //re-create new request object
+        // rb.req = new LocalSolrQueryRequest(newCore, rb.req.getParams());
+        
+        if(rb.shards == null){
+        
+            //find number of shards
+            int docId =  indexManager.getCurrentDocId(indexName);
+        
+            int numShards = AbstractIndexManager.getShardFromDocId(docId);
+               
+            //assign shards
+            String[] shards = new String[numShards+1];
+            
+            for(int i=0; i<=numShards; i++){
+                String subIndex = indexName + i;
+                Token t = StorageService.getPartitioner().getToken(subIndex.getBytes());
+                List<InetAddress> addrs = StorageService.instance.getReplicationStrategy(CassandraUtils.keySpace).getNaturalEndpoints(t, CassandraUtils.keySpace);
+            
+                //pick a replica at random
+                if(addrs.isEmpty())
+                    throw new IOException("can't locate index");
+                
+                
+                InetAddress addr = addrs.get(random.nextInt(addrs.size())); 
+                String shard = addr.getHostAddress() + ":8983/solr";
+
+                logger.info("Adding shard("+indexName+"): "+shard);
+            }
+            
+            //assign to shards
+            rb.shards = shards;
+            
+        }
     }
 
+    
     public void process(ResponseBuilder rb) throws IOException {
         
         DocList list = rb.getResults().docList;
@@ -101,16 +158,10 @@ public class SolandraReopenComponent extends SearchComponent {
                   if(!returnFields.contains(keyField))
                       fieldFilter.add(keyField.getName().getBytes());  
             }
-            
-    
-            
+                      
             FieldSelector selector = new SolandraFieldSelector(docIds,fieldFilter);
         
-            rb.req.getSearcher().getReader().document(docIds.get(0), selector);
-      
-        
-        
+            rb.req.getSearcher().getReader().document(docIds.get(0), selector);    
         }  
     }
-
 }

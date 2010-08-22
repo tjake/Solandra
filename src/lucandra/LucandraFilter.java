@@ -44,7 +44,7 @@ public class LucandraFilter extends Filter {
     public DocIdSet getDocIdSet(IndexReader reader) throws IOException {
         OpenBitSet result = new OpenBitSet(reader.maxDoc());
 
-        Map<Integer, byte[]> filterMap = ((lucandra.IndexReader) reader).getDocIndexToDocId();
+        /*Map<Integer, byte[]> filterMap = ((lucandra.IndexReader) reader).getDocIndexToDocId();
         
        
         List<byte[]> filteredValues = new ArrayList<byte[]>();
@@ -67,7 +67,7 @@ public class LucandraFilter extends Filter {
                 result.set(termDocs.doc());
             }
         }
-        termDocs.close();
+        termDocs.close();*/
         return result;
     }
 }

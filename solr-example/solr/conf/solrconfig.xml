@@ -47,6 +47,7 @@
   <!--These are specific to Lucandra example -->
   <lib dir="../../" />
   <lib dir="../../lib" />
+  <lib dir="../../config" />
 
 
   <!--  Enables JMX if and only if an existing MBeanServer is found, use this
@@ -65,9 +66,7 @@
 
   <!-- the Solandra high-performance update handler -->
   <updateHandler class="solandra.SolandraIndexWriter">
-     <str name="cassandraHost">127.0.0.1</str>
-     <int name="cassandraPort">9160</int>
-     <bool name="cassandraFramed">false</bool>
+     <str name="indexName">example</str>
   </updateHandler>
 
   <!-- Use the following format to specify a custom IndexReaderFactory - allows for alternate
@@ -85,9 +84,6 @@
   -->
   <indexReaderFactory name="IndexReaderFactory" class="solandra.SolandraIndexReaderFactory">
      <str name="indexName">example</str>
-     <str name="cassandraHost">127.0.0.1</str>
-     <int name="cassandraPort">9160</int>
-     <bool name="cassandraFramed">false</bool>
   </indexReaderFactory >
 
 

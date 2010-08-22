@@ -57,7 +57,7 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         if (docPosition < 0)
             docPosition = 0;
 
-        int docid = indexReader.getDocumentNumber(termDocs[docPosition].name()); 
+        int docid = CassandraUtils.readVInt(termDocs[docPosition].name()); 
 
         return docid;
     }

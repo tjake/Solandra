@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import lucandra.CassandraUtils;
 import lucandra.IndexWriter;
+import lucandra.cluster.RedisIndexManager;
 
 import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.TokenRange;
@@ -45,10 +46,9 @@ public class WikipediaIndexWorker implements Callable<Integer> {
     // each worker thread has a connection to cassandra
     private static ConcurrentLinkedQueue<lucandra.IndexWriter> allClients = new ConcurrentLinkedQueue<IndexWriter>();
     private static ThreadLocal<lucandra.IndexWriter> clientPool = new ThreadLocal<lucandra.IndexWriter>();
-    private static ThreadLocal<Integer> batchCount = new ThreadLocal<Integer>();
-
+    private static ThreadLocal<Integer> batchCount = new ThreadLocal<Integer>();   
+    private static RedisIndexManager indexManager = new RedisIndexManager(CassandraUtils.service);
     
-
     //Add shutdown hook for batched commits to complete
     static {
         Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -103,7 +103,7 @@ public class WikipediaIndexWorker implements Callable<Integer> {
 
         d.add(new Field("url", article.url, Store.YES, Index.NOT_ANALYZED));
 
-        indexWriter.addDocument(d, analyzer);
+        indexWriter.addDocument(d, analyzer, indexManager.incrementDocId("wikipedia"));
 
         Integer c = batchCount.get();
         if ((c + 1) % 64 == 0) {
