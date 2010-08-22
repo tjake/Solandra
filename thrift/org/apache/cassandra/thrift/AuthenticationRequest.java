@@ -41,13 +41,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.thrift.*;
+import org.apache.thrift.async.*;
 import org.apache.thrift.meta_data.*;
+import org.apache.thrift.transport.*;
 import org.apache.thrift.protocol.*;
 
 /**
  * Authentication requests can contain any data, dependent on the AuthenticationBackend used
  */
-public class AuthenticationRequest implements TBase<AuthenticationRequest._Fields>, java.io.Serializable, Cloneable {
+public class AuthenticationRequest implements TBase<AuthenticationRequest, AuthenticationRequest._Fields>, java.io.Serializable, Cloneable {
   private static final TStruct STRUCT_DESC = new TStruct("AuthenticationRequest");
 
   private static final TField CREDENTIALS_FIELD_DESC = new TField("credentials", TType.MAP, (short)1);
@@ -58,12 +60,10 @@ public class AuthenticationRequest implements TBase<AuthenticationRequest._Field
   public enum _Fields implements TFieldIdEnum {
     CREDENTIALS((short)1, "credentials");
 
-    private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
     static {
       for (_Fields field : EnumSet.allOf(_Fields.class)) {
-        byId.put((int)field._thriftId, field);
         byName.put(field.getFieldName(), field);
       }
     }
@@ -72,7 +72,12 @@ public class AuthenticationRequest implements TBase<AuthenticationRequest._Field
      * Find the _Fields constant that matches fieldId, or null if its not found.
      */
     public static _Fields findByThriftId(int fieldId) {
-      return byId.get(fieldId);
+      switch(fieldId) {
+        case 1: // CREDENTIALS
+          return CREDENTIALS;
+        default:
+          return null;
+      }
     }
 
     /**
@@ -111,14 +116,14 @@ public class AuthenticationRequest implements TBase<AuthenticationRequest._Field
 
   // isset id assignments
 
-  public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-    put(_Fields.CREDENTIALS, new FieldMetaData("credentials", TFieldRequirementType.REQUIRED, 
+  public static final Map<_Fields, FieldMetaData> metaDataMap;
+  static {
+    Map<_Fields, FieldMetaData> tmpMap = new EnumMap<_Fields, FieldMetaData>(_Fields.class);
+    tmpMap.put(_Fields.CREDENTIALS, new FieldMetaData("credentials", TFieldRequirementType.REQUIRED, 
         new MapMetaData(TType.MAP, 
             new FieldValueMetaData(TType.STRING), 
             new FieldValueMetaData(TType.STRING))));
-  }});
-
-  static {
+    metaDataMap = Collections.unmodifiableMap(tmpMap);
     FieldMetaData.addStructMetaDataMap(AuthenticationRequest.class, metaDataMap);
   }
 
@@ -270,6 +275,26 @@ public class AuthenticationRequest implements TBase<AuthenticationRequest._Field
     return 0;
   }
 
+  public int compareTo(AuthenticationRequest other) {
+    if (!getClass().equals(other.getClass())) {
+      return getClass().getName().compareTo(other.getClass().getName());
+    }
+
+    int lastComparison = 0;
+    AuthenticationRequest typedOther = (AuthenticationRequest)other;
+
+    lastComparison = Boolean.valueOf(isSetCredentials()).compareTo(typedOther.isSetCredentials());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetCredentials()) {      lastComparison = TBaseHelper.compareTo(this.credentials, typedOther.credentials);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    return 0;
+  }
+
   public void read(TProtocol iprot) throws TException {
     TField field;
     iprot.readStructBegin();
@@ -283,15 +308,15 @@ public class AuthenticationRequest implements TBase<AuthenticationRequest._Field
         case 1: // CREDENTIALS
           if (field.type == TType.MAP) {
             {
-              TMap _map16 = iprot.readMapBegin();
-              this.credentials = new HashMap<String,String>(2*_map16.size);
-              for (int _i17 = 0; _i17 < _map16.size; ++_i17)
+              TMap _map20 = iprot.readMapBegin();
+              this.credentials = new HashMap<String,String>(2*_map20.size);
+              for (int _i21 = 0; _i21 < _map20.size; ++_i21)
               {
-                String _key18;
-                String _val19;
-                _key18 = iprot.readString();
-                _val19 = iprot.readString();
-                this.credentials.put(_key18, _val19);
+                String _key22;
+                String _val23;
+                _key22 = iprot.readString();
+                _val23 = iprot.readString();
+                this.credentials.put(_key22, _val23);
               }
               iprot.readMapEnd();
             }
@@ -318,10 +343,10 @@ public class AuthenticationRequest implements TBase<AuthenticationRequest._Field
       oprot.writeFieldBegin(CREDENTIALS_FIELD_DESC);
       {
         oprot.writeMapBegin(new TMap(TType.STRING, TType.STRING, this.credentials.size()));
-        for (Map.Entry<String, String> _iter20 : this.credentials.entrySet())
+        for (Map.Entry<String, String> _iter24 : this.credentials.entrySet())
         {
-          oprot.writeString(_iter20.getKey());
-          oprot.writeString(_iter20.getValue());
+          oprot.writeString(_iter24.getKey());
+          oprot.writeString(_iter24.getValue());
         }
         oprot.writeMapEnd();
       }

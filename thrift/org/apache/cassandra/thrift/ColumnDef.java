@@ -46,25 +46,33 @@ import org.apache.thrift.meta_data.*;
 import org.apache.thrift.transport.*;
 import org.apache.thrift.protocol.*;
 
-/**
- * A named list of columns.
- * @param name. see Column.name.
- * @param columns. A collection of standard Columns.  The columns within a super column are defined in an adhoc manner.
- *                 Columns within a super column do not have to have matching structures (similarly named child columns).
- */
-public class SuperColumn implements TBase<SuperColumn, SuperColumn._Fields>, java.io.Serializable, Cloneable {
-  private static final TStruct STRUCT_DESC = new TStruct("SuperColumn");
+public class ColumnDef implements TBase<ColumnDef, ColumnDef._Fields>, java.io.Serializable, Cloneable {
+  private static final TStruct STRUCT_DESC = new TStruct("ColumnDef");
 
   private static final TField NAME_FIELD_DESC = new TField("name", TType.STRING, (short)1);
-  private static final TField COLUMNS_FIELD_DESC = new TField("columns", TType.LIST, (short)2);
+  private static final TField VALIDATION_CLASS_FIELD_DESC = new TField("validation_class", TType.STRING, (short)2);
+  private static final TField INDEX_TYPE_FIELD_DESC = new TField("index_type", TType.I32, (short)3);
+  private static final TField INDEX_NAME_FIELD_DESC = new TField("index_name", TType.STRING, (short)4);
 
   public byte[] name;
-  public List<Column> columns;
+  public String validation_class;
+  /**
+   * 
+   * @see IndexType
+   */
+  public IndexType index_type;
+  public String index_name;
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements TFieldIdEnum {
     NAME((short)1, "name"),
-    COLUMNS((short)2, "columns");
+    VALIDATION_CLASS((short)2, "validation_class"),
+    /**
+     * 
+     * @see IndexType
+     */
+    INDEX_TYPE((short)3, "index_type"),
+    INDEX_NAME((short)4, "index_name");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -81,8 +89,12 @@ public class SuperColumn implements TBase<SuperColumn, SuperColumn._Fields>, jav
       switch(fieldId) {
         case 1: // NAME
           return NAME;
-        case 2: // COLUMNS
-          return COLUMNS;
+        case 2: // VALIDATION_CLASS
+          return VALIDATION_CLASS;
+        case 3: // INDEX_TYPE
+          return INDEX_TYPE;
+        case 4: // INDEX_NAME
+          return INDEX_NAME;
         default:
           return null;
       }
@@ -129,56 +141,61 @@ public class SuperColumn implements TBase<SuperColumn, SuperColumn._Fields>, jav
     Map<_Fields, FieldMetaData> tmpMap = new EnumMap<_Fields, FieldMetaData>(_Fields.class);
     tmpMap.put(_Fields.NAME, new FieldMetaData("name", TFieldRequirementType.REQUIRED, 
         new FieldValueMetaData(TType.STRING)));
-    tmpMap.put(_Fields.COLUMNS, new FieldMetaData("columns", TFieldRequirementType.REQUIRED, 
-        new ListMetaData(TType.LIST, 
-            new StructMetaData(TType.STRUCT, Column.class))));
+    tmpMap.put(_Fields.VALIDATION_CLASS, new FieldMetaData("validation_class", TFieldRequirementType.REQUIRED, 
+        new FieldValueMetaData(TType.STRING)));
+    tmpMap.put(_Fields.INDEX_TYPE, new FieldMetaData("index_type", TFieldRequirementType.OPTIONAL, 
+        new EnumMetaData(TType.ENUM, IndexType.class)));
+    tmpMap.put(_Fields.INDEX_NAME, new FieldMetaData("index_name", TFieldRequirementType.OPTIONAL, 
+        new FieldValueMetaData(TType.STRING)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
-    FieldMetaData.addStructMetaDataMap(SuperColumn.class, metaDataMap);
+    FieldMetaData.addStructMetaDataMap(ColumnDef.class, metaDataMap);
   }
 
-  public SuperColumn() {
+  public ColumnDef() {
   }
 
-  public SuperColumn(
+  public ColumnDef(
     byte[] name,
-    List<Column> columns)
+    String validation_class)
   {
     this();
     this.name = name;
-    this.columns = columns;
+    this.validation_class = validation_class;
   }
 
   /**
    * Performs a deep copy on <i>other</i>.
    */
-  public SuperColumn(SuperColumn other) {
+  public ColumnDef(ColumnDef other) {
     if (other.isSetName()) {
       this.name = new byte[other.name.length];
       System.arraycopy(other.name, 0, name, 0, other.name.length);
     }
-    if (other.isSetColumns()) {
-      List<Column> __this__columns = new ArrayList<Column>();
-      for (Column other_element : other.columns) {
-        __this__columns.add(new Column(other_element));
-      }
-      this.columns = __this__columns;
+    if (other.isSetValidation_class()) {
+      this.validation_class = other.validation_class;
+    }
+    if (other.isSetIndex_type()) {
+      this.index_type = other.index_type;
+    }
+    if (other.isSetIndex_name()) {
+      this.index_name = other.index_name;
     }
   }
 
-  public SuperColumn deepCopy() {
-    return new SuperColumn(this);
+  public ColumnDef deepCopy() {
+    return new ColumnDef(this);
   }
 
   @Deprecated
-  public SuperColumn clone() {
-    return new SuperColumn(this);
+  public ColumnDef clone() {
+    return new ColumnDef(this);
   }
 
   public byte[] getName() {
     return this.name;
   }
 
-  public SuperColumn setName(byte[] name) {
+  public ColumnDef setName(byte[] name) {
     this.name = name;
     return this;
   }
@@ -198,42 +215,83 @@ public class SuperColumn implements TBase<SuperColumn, SuperColumn._Fields>, jav
     }
   }
 
-  public int getColumnsSize() {
-    return (this.columns == null) ? 0 : this.columns.size();
+  public String getValidation_class() {
+    return this.validation_class;
   }
 
-  public java.util.Iterator<Column> getColumnsIterator() {
-    return (this.columns == null) ? null : this.columns.iterator();
-  }
-
-  public void addToColumns(Column elem) {
-    if (this.columns == null) {
-      this.columns = new ArrayList<Column>();
-    }
-    this.columns.add(elem);
-  }
-
-  public List<Column> getColumns() {
-    return this.columns;
-  }
-
-  public SuperColumn setColumns(List<Column> columns) {
-    this.columns = columns;
+  public ColumnDef setValidation_class(String validation_class) {
+    this.validation_class = validation_class;
     return this;
   }
 
-  public void unsetColumns() {
-    this.columns = null;
+  public void unsetValidation_class() {
+    this.validation_class = null;
   }
 
-  /** Returns true if field columns is set (has been asigned a value) and false otherwise */
-  public boolean isSetColumns() {
-    return this.columns != null;
+  /** Returns true if field validation_class is set (has been asigned a value) and false otherwise */
+  public boolean isSetValidation_class() {
+    return this.validation_class != null;
   }
 
-  public void setColumnsIsSet(boolean value) {
+  public void setValidation_classIsSet(boolean value) {
     if (!value) {
-      this.columns = null;
+      this.validation_class = null;
+    }
+  }
+
+  /**
+   * 
+   * @see IndexType
+   */
+  public IndexType getIndex_type() {
+    return this.index_type;
+  }
+
+  /**
+   * 
+   * @see IndexType
+   */
+  public ColumnDef setIndex_type(IndexType index_type) {
+    this.index_type = index_type;
+    return this;
+  }
+
+  public void unsetIndex_type() {
+    this.index_type = null;
+  }
+
+  /** Returns true if field index_type is set (has been asigned a value) and false otherwise */
+  public boolean isSetIndex_type() {
+    return this.index_type != null;
+  }
+
+  public void setIndex_typeIsSet(boolean value) {
+    if (!value) {
+      this.index_type = null;
+    }
+  }
+
+  public String getIndex_name() {
+    return this.index_name;
+  }
+
+  public ColumnDef setIndex_name(String index_name) {
+    this.index_name = index_name;
+    return this;
+  }
+
+  public void unsetIndex_name() {
+    this.index_name = null;
+  }
+
+  /** Returns true if field index_name is set (has been asigned a value) and false otherwise */
+  public boolean isSetIndex_name() {
+    return this.index_name != null;
+  }
+
+  public void setIndex_nameIsSet(boolean value) {
+    if (!value) {
+      this.index_name = null;
     }
   }
 
@@ -247,11 +305,27 @@ public class SuperColumn implements TBase<SuperColumn, SuperColumn._Fields>, jav
       }
       break;
 
-    case COLUMNS:
+    case VALIDATION_CLASS:
       if (value == null) {
-        unsetColumns();
+        unsetValidation_class();
       } else {
-        setColumns((List<Column>)value);
+        setValidation_class((String)value);
+      }
+      break;
+
+    case INDEX_TYPE:
+      if (value == null) {
+        unsetIndex_type();
+      } else {
+        setIndex_type((IndexType)value);
+      }
+      break;
+
+    case INDEX_NAME:
+      if (value == null) {
+        unsetIndex_name();
+      } else {
+        setIndex_name((String)value);
       }
       break;
 
@@ -267,8 +341,14 @@ public class SuperColumn implements TBase<SuperColumn, SuperColumn._Fields>, jav
     case NAME:
       return getName();
 
-    case COLUMNS:
-      return getColumns();
+    case VALIDATION_CLASS:
+      return getValidation_class();
+
+    case INDEX_TYPE:
+      return getIndex_type();
+
+    case INDEX_NAME:
+      return getIndex_name();
 
     }
     throw new IllegalStateException();
@@ -283,8 +363,12 @@ public class SuperColumn implements TBase<SuperColumn, SuperColumn._Fields>, jav
     switch (field) {
     case NAME:
       return isSetName();
-    case COLUMNS:
-      return isSetColumns();
+    case VALIDATION_CLASS:
+      return isSetValidation_class();
+    case INDEX_TYPE:
+      return isSetIndex_type();
+    case INDEX_NAME:
+      return isSetIndex_name();
     }
     throw new IllegalStateException();
   }
@@ -297,12 +381,12 @@ public class SuperColumn implements TBase<SuperColumn, SuperColumn._Fields>, jav
   public boolean equals(Object that) {
     if (that == null)
       return false;
-    if (that instanceof SuperColumn)
-      return this.equals((SuperColumn)that);
+    if (that instanceof ColumnDef)
+      return this.equals((ColumnDef)that);
     return false;
   }
 
-  public boolean equals(SuperColumn that) {
+  public boolean equals(ColumnDef that) {
     if (that == null)
       return false;
 
@@ -315,12 +399,30 @@ public class SuperColumn implements TBase<SuperColumn, SuperColumn._Fields>, jav
         return false;
     }
 
-    boolean this_present_columns = true && this.isSetColumns();
-    boolean that_present_columns = true && that.isSetColumns();
-    if (this_present_columns || that_present_columns) {
-      if (!(this_present_columns && that_present_columns))
+    boolean this_present_validation_class = true && this.isSetValidation_class();
+    boolean that_present_validation_class = true && that.isSetValidation_class();
+    if (this_present_validation_class || that_present_validation_class) {
+      if (!(this_present_validation_class && that_present_validation_class))
         return false;
-      if (!this.columns.equals(that.columns))
+      if (!this.validation_class.equals(that.validation_class))
+        return false;
+    }
+
+    boolean this_present_index_type = true && this.isSetIndex_type();
+    boolean that_present_index_type = true && that.isSetIndex_type();
+    if (this_present_index_type || that_present_index_type) {
+      if (!(this_present_index_type && that_present_index_type))
+        return false;
+      if (!this.index_type.equals(that.index_type))
+        return false;
+    }
+
+    boolean this_present_index_name = true && this.isSetIndex_name();
+    boolean that_present_index_name = true && that.isSetIndex_name();
+    if (this_present_index_name || that_present_index_name) {
+      if (!(this_present_index_name && that_present_index_name))
+        return false;
+      if (!this.index_name.equals(that.index_name))
         return false;
     }
 
@@ -332,13 +434,13 @@ public class SuperColumn implements TBase<SuperColumn, SuperColumn._Fields>, jav
     return 0;
   }
 
-  public int compareTo(SuperColumn other) {
+  public int compareTo(ColumnDef other) {
     if (!getClass().equals(other.getClass())) {
       return getClass().getName().compareTo(other.getClass().getName());
     }
 
     int lastComparison = 0;
-    SuperColumn typedOther = (SuperColumn)other;
+    ColumnDef typedOther = (ColumnDef)other;
 
     lastComparison = Boolean.valueOf(isSetName()).compareTo(typedOther.isSetName());
     if (lastComparison != 0) {
@@ -349,11 +451,29 @@ public class SuperColumn implements TBase<SuperColumn, SuperColumn._Fields>, jav
         return lastComparison;
       }
     }
-    lastComparison = Boolean.valueOf(isSetColumns()).compareTo(typedOther.isSetColumns());
+    lastComparison = Boolean.valueOf(isSetValidation_class()).compareTo(typedOther.isSetValidation_class());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    if (isSetColumns()) {      lastComparison = TBaseHelper.compareTo(this.columns, typedOther.columns);
+    if (isSetValidation_class()) {      lastComparison = TBaseHelper.compareTo(this.validation_class, typedOther.validation_class);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetIndex_type()).compareTo(typedOther.isSetIndex_type());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetIndex_type()) {      lastComparison = TBaseHelper.compareTo(this.index_type, typedOther.index_type);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetIndex_name()).compareTo(typedOther.isSetIndex_name());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetIndex_name()) {      lastComparison = TBaseHelper.compareTo(this.index_name, typedOther.index_name);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -378,20 +498,23 @@ public class SuperColumn implements TBase<SuperColumn, SuperColumn._Fields>, jav
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case 2: // COLUMNS
-          if (field.type == TType.LIST) {
-            {
-              TList _list0 = iprot.readListBegin();
-              this.columns = new ArrayList<Column>(_list0.size);
-              for (int _i1 = 0; _i1 < _list0.size; ++_i1)
-              {
-                Column _elem2;
-                _elem2 = new Column();
-                _elem2.read(iprot);
-                this.columns.add(_elem2);
-              }
-              iprot.readListEnd();
-            }
+        case 2: // VALIDATION_CLASS
+          if (field.type == TType.STRING) {
+            this.validation_class = iprot.readString();
+          } else { 
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        case 3: // INDEX_TYPE
+          if (field.type == TType.I32) {
+            this.index_type = IndexType.findByValue(iprot.readI32());
+          } else { 
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        case 4: // INDEX_NAME
+          if (field.type == TType.STRING) {
+            this.index_name = iprot.readString();
           } else { 
             TProtocolUtil.skip(iprot, field.type);
           }
@@ -416,17 +539,24 @@ public class SuperColumn implements TBase<SuperColumn, SuperColumn._Fields>, jav
       oprot.writeBinary(this.name);
       oprot.writeFieldEnd();
     }
-    if (this.columns != null) {
-      oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
-      {
-        oprot.writeListBegin(new TList(TType.STRUCT, this.columns.size()));
-        for (Column _iter3 : this.columns)
-        {
-          _iter3.write(oprot);
-        }
-        oprot.writeListEnd();
-      }
+    if (this.validation_class != null) {
+      oprot.writeFieldBegin(VALIDATION_CLASS_FIELD_DESC);
+      oprot.writeString(this.validation_class);
       oprot.writeFieldEnd();
+    }
+    if (this.index_type != null) {
+      if (isSetIndex_type()) {
+        oprot.writeFieldBegin(INDEX_TYPE_FIELD_DESC);
+        oprot.writeI32(this.index_type.getValue());
+        oprot.writeFieldEnd();
+      }
+    }
+    if (this.index_name != null) {
+      if (isSetIndex_name()) {
+        oprot.writeFieldBegin(INDEX_NAME_FIELD_DESC);
+        oprot.writeString(this.index_name);
+        oprot.writeFieldEnd();
+      }
     }
     oprot.writeFieldStop();
     oprot.writeStructEnd();
@@ -434,7 +564,7 @@ public class SuperColumn implements TBase<SuperColumn, SuperColumn._Fields>, jav
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder("SuperColumn(");
+    StringBuilder sb = new StringBuilder("ColumnDef(");
     boolean first = true;
 
     sb.append("name:");
@@ -450,13 +580,33 @@ public class SuperColumn implements TBase<SuperColumn, SuperColumn._Fields>, jav
     }
     first = false;
     if (!first) sb.append(", ");
-    sb.append("columns:");
-    if (this.columns == null) {
+    sb.append("validation_class:");
+    if (this.validation_class == null) {
       sb.append("null");
     } else {
-      sb.append(this.columns);
+      sb.append(this.validation_class);
     }
     first = false;
+    if (isSetIndex_type()) {
+      if (!first) sb.append(", ");
+      sb.append("index_type:");
+      if (this.index_type == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.index_type);
+      }
+      first = false;
+    }
+    if (isSetIndex_name()) {
+      if (!first) sb.append(", ");
+      sb.append("index_name:");
+      if (this.index_name == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.index_name);
+      }
+      first = false;
+    }
     sb.append(")");
     return sb.toString();
   }
@@ -466,8 +616,8 @@ public class SuperColumn implements TBase<SuperColumn, SuperColumn._Fields>, jav
     if (name == null) {
       throw new TProtocolException("Required field 'name' was not present! Struct: " + toString());
     }
-    if (columns == null) {
-      throw new TProtocolException("Required field 'columns' was not present! Struct: " + toString());
+    if (validation_class == null) {
+      throw new TProtocolException("Required field 'validation_class' was not present! Struct: " + toString());
     }
   }
 

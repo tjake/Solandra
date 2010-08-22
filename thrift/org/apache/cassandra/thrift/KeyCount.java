@@ -46,25 +46,19 @@ import org.apache.thrift.meta_data.*;
 import org.apache.thrift.transport.*;
 import org.apache.thrift.protocol.*;
 
-/**
- * ColumnParent is used when selecting groups of columns from the same ColumnFamily. In directory structure terms, imagine
- * ColumnParent as ColumnPath + '/../'.
- * 
- * See also <a href="cassandra.html#Struct_ColumnPath">ColumnPath</a>
- */
-public class ColumnParent implements TBase<ColumnParent, ColumnParent._Fields>, java.io.Serializable, Cloneable {
-  private static final TStruct STRUCT_DESC = new TStruct("ColumnParent");
+public class KeyCount implements TBase<KeyCount, KeyCount._Fields>, java.io.Serializable, Cloneable {
+  private static final TStruct STRUCT_DESC = new TStruct("KeyCount");
 
-  private static final TField COLUMN_FAMILY_FIELD_DESC = new TField("column_family", TType.STRING, (short)3);
-  private static final TField SUPER_COLUMN_FIELD_DESC = new TField("super_column", TType.STRING, (short)4);
+  private static final TField KEY_FIELD_DESC = new TField("key", TType.STRING, (short)1);
+  private static final TField COUNT_FIELD_DESC = new TField("count", TType.I32, (short)2);
 
-  public String column_family;
-  public byte[] super_column;
+  public byte[] key;
+  public int count;
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements TFieldIdEnum {
-    COLUMN_FAMILY((short)3, "column_family"),
-    SUPER_COLUMN((short)4, "super_column");
+    KEY((short)1, "key"),
+    COUNT((short)2, "count");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -79,10 +73,10 @@ public class ColumnParent implements TBase<ColumnParent, ColumnParent._Fields>, 
      */
     public static _Fields findByThriftId(int fieldId) {
       switch(fieldId) {
-        case 3: // COLUMN_FAMILY
-          return COLUMN_FAMILY;
-        case 4: // SUPER_COLUMN
-          return SUPER_COLUMN;
+        case 1: // KEY
+          return KEY;
+        case 2: // COUNT
+          return COUNT;
         default:
           return null;
       }
@@ -123,113 +117,117 @@ public class ColumnParent implements TBase<ColumnParent, ColumnParent._Fields>, 
   }
 
   // isset id assignments
+  private static final int __COUNT_ISSET_ID = 0;
+  private BitSet __isset_bit_vector = new BitSet(1);
 
   public static final Map<_Fields, FieldMetaData> metaDataMap;
   static {
     Map<_Fields, FieldMetaData> tmpMap = new EnumMap<_Fields, FieldMetaData>(_Fields.class);
-    tmpMap.put(_Fields.COLUMN_FAMILY, new FieldMetaData("column_family", TFieldRequirementType.REQUIRED, 
+    tmpMap.put(_Fields.KEY, new FieldMetaData("key", TFieldRequirementType.REQUIRED, 
         new FieldValueMetaData(TType.STRING)));
-    tmpMap.put(_Fields.SUPER_COLUMN, new FieldMetaData("super_column", TFieldRequirementType.OPTIONAL, 
-        new FieldValueMetaData(TType.STRING)));
+    tmpMap.put(_Fields.COUNT, new FieldMetaData("count", TFieldRequirementType.REQUIRED, 
+        new FieldValueMetaData(TType.I32)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
-    FieldMetaData.addStructMetaDataMap(ColumnParent.class, metaDataMap);
+    FieldMetaData.addStructMetaDataMap(KeyCount.class, metaDataMap);
   }
 
-  public ColumnParent() {
+  public KeyCount() {
   }
 
-  public ColumnParent(
-    String column_family)
+  public KeyCount(
+    byte[] key,
+    int count)
   {
     this();
-    this.column_family = column_family;
+    this.key = key;
+    this.count = count;
+    setCountIsSet(true);
   }
 
   /**
    * Performs a deep copy on <i>other</i>.
    */
-  public ColumnParent(ColumnParent other) {
-    if (other.isSetColumn_family()) {
-      this.column_family = other.column_family;
+  public KeyCount(KeyCount other) {
+    __isset_bit_vector.clear();
+    __isset_bit_vector.or(other.__isset_bit_vector);
+    if (other.isSetKey()) {
+      this.key = new byte[other.key.length];
+      System.arraycopy(other.key, 0, key, 0, other.key.length);
     }
-    if (other.isSetSuper_column()) {
-      this.super_column = new byte[other.super_column.length];
-      System.arraycopy(other.super_column, 0, super_column, 0, other.super_column.length);
-    }
+    this.count = other.count;
   }
 
-  public ColumnParent deepCopy() {
-    return new ColumnParent(this);
+  public KeyCount deepCopy() {
+    return new KeyCount(this);
   }
 
   @Deprecated
-  public ColumnParent clone() {
-    return new ColumnParent(this);
+  public KeyCount clone() {
+    return new KeyCount(this);
   }
 
-  public String getColumn_family() {
-    return this.column_family;
+  public byte[] getKey() {
+    return this.key;
   }
 
-  public ColumnParent setColumn_family(String column_family) {
-    this.column_family = column_family;
+  public KeyCount setKey(byte[] key) {
+    this.key = key;
     return this;
   }
 
-  public void unsetColumn_family() {
-    this.column_family = null;
+  public void unsetKey() {
+    this.key = null;
   }
 
-  /** Returns true if field column_family is set (has been asigned a value) and false otherwise */
-  public boolean isSetColumn_family() {
-    return this.column_family != null;
+  /** Returns true if field key is set (has been asigned a value) and false otherwise */
+  public boolean isSetKey() {
+    return this.key != null;
   }
 
-  public void setColumn_familyIsSet(boolean value) {
+  public void setKeyIsSet(boolean value) {
     if (!value) {
-      this.column_family = null;
+      this.key = null;
     }
   }
 
-  public byte[] getSuper_column() {
-    return this.super_column;
+  public int getCount() {
+    return this.count;
   }
 
-  public ColumnParent setSuper_column(byte[] super_column) {
-    this.super_column = super_column;
+  public KeyCount setCount(int count) {
+    this.count = count;
+    setCountIsSet(true);
     return this;
   }
 
-  public void unsetSuper_column() {
-    this.super_column = null;
+  public void unsetCount() {
+    __isset_bit_vector.clear(__COUNT_ISSET_ID);
   }
 
-  /** Returns true if field super_column is set (has been asigned a value) and false otherwise */
-  public boolean isSetSuper_column() {
-    return this.super_column != null;
+  /** Returns true if field count is set (has been asigned a value) and false otherwise */
+  public boolean isSetCount() {
+    return __isset_bit_vector.get(__COUNT_ISSET_ID);
   }
 
-  public void setSuper_columnIsSet(boolean value) {
-    if (!value) {
-      this.super_column = null;
-    }
+  public void setCountIsSet(boolean value) {
+    __isset_bit_vector.set(__COUNT_ISSET_ID, value);
   }
 
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
-    case COLUMN_FAMILY:
+    case KEY:
       if (value == null) {
-        unsetColumn_family();
+        unsetKey();
       } else {
-        setColumn_family((String)value);
+        setKey((byte[])value);
       }
       break;
 
-    case SUPER_COLUMN:
+    case COUNT:
       if (value == null) {
-        unsetSuper_column();
+        unsetCount();
       } else {
-        setSuper_column((byte[])value);
+        setCount((Integer)value);
       }
       break;
 
@@ -242,11 +240,11 @@ public class ColumnParent implements TBase<ColumnParent, ColumnParent._Fields>, 
 
   public Object getFieldValue(_Fields field) {
     switch (field) {
-    case COLUMN_FAMILY:
-      return getColumn_family();
+    case KEY:
+      return getKey();
 
-    case SUPER_COLUMN:
-      return getSuper_column();
+    case COUNT:
+      return new Integer(getCount());
 
     }
     throw new IllegalStateException();
@@ -259,10 +257,10 @@ public class ColumnParent implements TBase<ColumnParent, ColumnParent._Fields>, 
   /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
   public boolean isSet(_Fields field) {
     switch (field) {
-    case COLUMN_FAMILY:
-      return isSetColumn_family();
-    case SUPER_COLUMN:
-      return isSetSuper_column();
+    case KEY:
+      return isSetKey();
+    case COUNT:
+      return isSetCount();
     }
     throw new IllegalStateException();
   }
@@ -275,30 +273,30 @@ public class ColumnParent implements TBase<ColumnParent, ColumnParent._Fields>, 
   public boolean equals(Object that) {
     if (that == null)
       return false;
-    if (that instanceof ColumnParent)
-      return this.equals((ColumnParent)that);
+    if (that instanceof KeyCount)
+      return this.equals((KeyCount)that);
     return false;
   }
 
-  public boolean equals(ColumnParent that) {
+  public boolean equals(KeyCount that) {
     if (that == null)
       return false;
 
-    boolean this_present_column_family = true && this.isSetColumn_family();
-    boolean that_present_column_family = true && that.isSetColumn_family();
-    if (this_present_column_family || that_present_column_family) {
-      if (!(this_present_column_family && that_present_column_family))
+    boolean this_present_key = true && this.isSetKey();
+    boolean that_present_key = true && that.isSetKey();
+    if (this_present_key || that_present_key) {
+      if (!(this_present_key && that_present_key))
         return false;
-      if (!this.column_family.equals(that.column_family))
+      if (!java.util.Arrays.equals(this.key, that.key))
         return false;
     }
 
-    boolean this_present_super_column = true && this.isSetSuper_column();
-    boolean that_present_super_column = true && that.isSetSuper_column();
-    if (this_present_super_column || that_present_super_column) {
-      if (!(this_present_super_column && that_present_super_column))
+    boolean this_present_count = true;
+    boolean that_present_count = true;
+    if (this_present_count || that_present_count) {
+      if (!(this_present_count && that_present_count))
         return false;
-      if (!java.util.Arrays.equals(this.super_column, that.super_column))
+      if (this.count != that.count)
         return false;
     }
 
@@ -310,28 +308,28 @@ public class ColumnParent implements TBase<ColumnParent, ColumnParent._Fields>, 
     return 0;
   }
 
-  public int compareTo(ColumnParent other) {
+  public int compareTo(KeyCount other) {
     if (!getClass().equals(other.getClass())) {
       return getClass().getName().compareTo(other.getClass().getName());
     }
 
     int lastComparison = 0;
-    ColumnParent typedOther = (ColumnParent)other;
+    KeyCount typedOther = (KeyCount)other;
 
-    lastComparison = Boolean.valueOf(isSetColumn_family()).compareTo(typedOther.isSetColumn_family());
+    lastComparison = Boolean.valueOf(isSetKey()).compareTo(typedOther.isSetKey());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    if (isSetColumn_family()) {      lastComparison = TBaseHelper.compareTo(this.column_family, typedOther.column_family);
+    if (isSetKey()) {      lastComparison = TBaseHelper.compareTo(this.key, typedOther.key);
       if (lastComparison != 0) {
         return lastComparison;
       }
     }
-    lastComparison = Boolean.valueOf(isSetSuper_column()).compareTo(typedOther.isSetSuper_column());
+    lastComparison = Boolean.valueOf(isSetCount()).compareTo(typedOther.isSetCount());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    if (isSetSuper_column()) {      lastComparison = TBaseHelper.compareTo(this.super_column, typedOther.super_column);
+    if (isSetCount()) {      lastComparison = TBaseHelper.compareTo(this.count, typedOther.count);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -349,16 +347,17 @@ public class ColumnParent implements TBase<ColumnParent, ColumnParent._Fields>, 
         break;
       }
       switch (field.id) {
-        case 3: // COLUMN_FAMILY
+        case 1: // KEY
           if (field.type == TType.STRING) {
-            this.column_family = iprot.readString();
+            this.key = iprot.readBinary();
           } else { 
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case 4: // SUPER_COLUMN
-          if (field.type == TType.STRING) {
-            this.super_column = iprot.readBinary();
+        case 2: // COUNT
+          if (field.type == TType.I32) {
+            this.count = iprot.readI32();
+            setCountIsSet(true);
           } else { 
             TProtocolUtil.skip(iprot, field.type);
           }
@@ -371,6 +370,9 @@ public class ColumnParent implements TBase<ColumnParent, ColumnParent._Fields>, 
     iprot.readStructEnd();
 
     // check for required fields of primitive type, which can't be checked in the validate method
+    if (!isSetCount()) {
+      throw new TProtocolException("Required field 'count' was not found in serialized data! Struct: " + toString());
+    }
     validate();
   }
 
@@ -378,58 +380,49 @@ public class ColumnParent implements TBase<ColumnParent, ColumnParent._Fields>, 
     validate();
 
     oprot.writeStructBegin(STRUCT_DESC);
-    if (this.column_family != null) {
-      oprot.writeFieldBegin(COLUMN_FAMILY_FIELD_DESC);
-      oprot.writeString(this.column_family);
+    if (this.key != null) {
+      oprot.writeFieldBegin(KEY_FIELD_DESC);
+      oprot.writeBinary(this.key);
       oprot.writeFieldEnd();
     }
-    if (this.super_column != null) {
-      if (isSetSuper_column()) {
-        oprot.writeFieldBegin(SUPER_COLUMN_FIELD_DESC);
-        oprot.writeBinary(this.super_column);
-        oprot.writeFieldEnd();
-      }
-    }
+    oprot.writeFieldBegin(COUNT_FIELD_DESC);
+    oprot.writeI32(this.count);
+    oprot.writeFieldEnd();
     oprot.writeFieldStop();
     oprot.writeStructEnd();
   }
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder("ColumnParent(");
+    StringBuilder sb = new StringBuilder("KeyCount(");
     boolean first = true;
 
-    sb.append("column_family:");
-    if (this.column_family == null) {
+    sb.append("key:");
+    if (this.key == null) {
       sb.append("null");
     } else {
-      sb.append(this.column_family);
+        int __key_size = Math.min(this.key.length, 128);
+        for (int i = 0; i < __key_size; i++) {
+          if (i != 0) sb.append(" ");
+          sb.append(Integer.toHexString(this.key[i]).length() > 1 ? Integer.toHexString(this.key[i]).substring(Integer.toHexString(this.key[i]).length() - 2).toUpperCase() : "0" + Integer.toHexString(this.key[i]).toUpperCase());
+        }
+        if (this.key.length > 128) sb.append(" ...");
     }
     first = false;
-    if (isSetSuper_column()) {
-      if (!first) sb.append(", ");
-      sb.append("super_column:");
-      if (this.super_column == null) {
-        sb.append("null");
-      } else {
-          int __super_column_size = Math.min(this.super_column.length, 128);
-          for (int i = 0; i < __super_column_size; i++) {
-            if (i != 0) sb.append(" ");
-            sb.append(Integer.toHexString(this.super_column[i]).length() > 1 ? Integer.toHexString(this.super_column[i]).substring(Integer.toHexString(this.super_column[i]).length() - 2).toUpperCase() : "0" + Integer.toHexString(this.super_column[i]).toUpperCase());
-          }
-          if (this.super_column.length > 128) sb.append(" ...");
-      }
-      first = false;
-    }
+    if (!first) sb.append(", ");
+    sb.append("count:");
+    sb.append(this.count);
+    first = false;
     sb.append(")");
     return sb.toString();
   }
 
   public void validate() throws TException {
     // check for required fields
-    if (column_family == null) {
-      throw new TProtocolException("Required field 'column_family' was not present! Struct: " + toString());
+    if (key == null) {
+      throw new TProtocolException("Required field 'key' was not present! Struct: " + toString());
     }
+    // alas, we cannot check 'count' because it's a primitive and you chose the non-beans generator.
   }
 
 }

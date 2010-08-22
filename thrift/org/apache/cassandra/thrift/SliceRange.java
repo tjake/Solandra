@@ -41,7 +41,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.thrift.*;
+import org.apache.thrift.async.*;
 import org.apache.thrift.meta_data.*;
+import org.apache.thrift.transport.*;
 import org.apache.thrift.protocol.*;
 
 /**
@@ -53,14 +55,14 @@ import org.apache.thrift.protocol.*;
  *               must a valid value under the rules of the Comparator defined for the given ColumnFamily.
  * @param finish. The column name to stop the slice at. This attribute is not required, though there is no default value,
  *                and can be safely set to an empty byte array to not stop until 'count' results are seen. Otherwise, it
- *                must also be a value value to the ColumnFamily Comparator.
+ *                must also be a valid value to the ColumnFamily Comparator.
  * @param reversed. Whether the results should be ordered in reversed order. Similar to ORDER BY blah DESC in SQL.
- * @param count. How many keys to return. Similar to LIMIT 100 in SQL. May be arbitrarily large, but Thrift will
+ * @param count. How many columns to return. Similar to LIMIT in SQL. May be arbitrarily large, but Thrift will
  *               materialize the whole result into memory before returning it to the client, so be aware that you may
  *               be better served by iterating through slices by passing the last value of one call in as the 'start'
  *               of the next instead of increasing 'count' arbitrarily large.
  */
-public class SliceRange implements TBase<SliceRange._Fields>, java.io.Serializable, Cloneable, Comparable<SliceRange> {
+public class SliceRange implements TBase<SliceRange, SliceRange._Fields>, java.io.Serializable, Cloneable {
   private static final TStruct STRUCT_DESC = new TStruct("SliceRange");
 
   private static final TField START_FIELD_DESC = new TField("start", TType.STRING, (short)1);
@@ -80,12 +82,10 @@ public class SliceRange implements TBase<SliceRange._Fields>, java.io.Serializab
     REVERSED((short)3, "reversed"),
     COUNT((short)4, "count");
 
-    private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
     static {
       for (_Fields field : EnumSet.allOf(_Fields.class)) {
-        byId.put((int)field._thriftId, field);
         byName.put(field.getFieldName(), field);
       }
     }
@@ -94,7 +94,18 @@ public class SliceRange implements TBase<SliceRange._Fields>, java.io.Serializab
      * Find the _Fields constant that matches fieldId, or null if its not found.
      */
     public static _Fields findByThriftId(int fieldId) {
-      return byId.get(fieldId);
+      switch(fieldId) {
+        case 1: // START
+          return START;
+        case 2: // FINISH
+          return FINISH;
+        case 3: // REVERSED
+          return REVERSED;
+        case 4: // COUNT
+          return COUNT;
+        default:
+          return null;
+      }
     }
 
     /**
@@ -136,18 +147,18 @@ public class SliceRange implements TBase<SliceRange._Fields>, java.io.Serializab
   private static final int __COUNT_ISSET_ID = 1;
   private BitSet __isset_bit_vector = new BitSet(2);
 
-  public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-    put(_Fields.START, new FieldMetaData("start", TFieldRequirementType.REQUIRED, 
-        new FieldValueMetaData(TType.STRING)));
-    put(_Fields.FINISH, new FieldMetaData("finish", TFieldRequirementType.REQUIRED, 
-        new FieldValueMetaData(TType.STRING)));
-    put(_Fields.REVERSED, new FieldMetaData("reversed", TFieldRequirementType.REQUIRED, 
-        new FieldValueMetaData(TType.BOOL)));
-    put(_Fields.COUNT, new FieldMetaData("count", TFieldRequirementType.REQUIRED, 
-        new FieldValueMetaData(TType.I32)));
-  }});
-
+  public static final Map<_Fields, FieldMetaData> metaDataMap;
   static {
+    Map<_Fields, FieldMetaData> tmpMap = new EnumMap<_Fields, FieldMetaData>(_Fields.class);
+    tmpMap.put(_Fields.START, new FieldMetaData("start", TFieldRequirementType.REQUIRED, 
+        new FieldValueMetaData(TType.STRING)));
+    tmpMap.put(_Fields.FINISH, new FieldMetaData("finish", TFieldRequirementType.REQUIRED, 
+        new FieldValueMetaData(TType.STRING)));
+    tmpMap.put(_Fields.REVERSED, new FieldMetaData("reversed", TFieldRequirementType.REQUIRED, 
+        new FieldValueMetaData(TType.BOOL)));
+    tmpMap.put(_Fields.COUNT, new FieldMetaData("count", TFieldRequirementType.REQUIRED, 
+        new FieldValueMetaData(TType.I32)));
+    metaDataMap = Collections.unmodifiableMap(tmpMap);
     FieldMetaData.addStructMetaDataMap(SliceRange.class, metaDataMap);
   }
 
@@ -445,7 +456,7 @@ public class SliceRange implements TBase<SliceRange._Fields>, java.io.Serializab
     if (lastComparison != 0) {
       return lastComparison;
     }
-    if (isSetStart()) {      lastComparison = TBaseHelper.compareTo(start, typedOther.start);
+    if (isSetStart()) {      lastComparison = TBaseHelper.compareTo(this.start, typedOther.start);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -454,7 +465,7 @@ public class SliceRange implements TBase<SliceRange._Fields>, java.io.Serializab
     if (lastComparison != 0) {
       return lastComparison;
     }
-    if (isSetFinish()) {      lastComparison = TBaseHelper.compareTo(finish, typedOther.finish);
+    if (isSetFinish()) {      lastComparison = TBaseHelper.compareTo(this.finish, typedOther.finish);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -463,7 +474,7 @@ public class SliceRange implements TBase<SliceRange._Fields>, java.io.Serializab
     if (lastComparison != 0) {
       return lastComparison;
     }
-    if (isSetReversed()) {      lastComparison = TBaseHelper.compareTo(reversed, typedOther.reversed);
+    if (isSetReversed()) {      lastComparison = TBaseHelper.compareTo(this.reversed, typedOther.reversed);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -472,7 +483,7 @@ public class SliceRange implements TBase<SliceRange._Fields>, java.io.Serializab
     if (lastComparison != 0) {
       return lastComparison;
     }
-    if (isSetCount()) {      lastComparison = TBaseHelper.compareTo(count, typedOther.count);
+    if (isSetCount()) {      lastComparison = TBaseHelper.compareTo(this.count, typedOther.count);
       if (lastComparison != 0) {
         return lastComparison;
       }

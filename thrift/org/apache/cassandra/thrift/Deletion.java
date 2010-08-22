@@ -41,32 +41,32 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.thrift.*;
+import org.apache.thrift.async.*;
 import org.apache.thrift.meta_data.*;
+import org.apache.thrift.transport.*;
 import org.apache.thrift.protocol.*;
 
-public class Deletion implements TBase<Deletion._Fields>, java.io.Serializable, Cloneable, Comparable<Deletion> {
+public class Deletion implements TBase<Deletion, Deletion._Fields>, java.io.Serializable, Cloneable {
   private static final TStruct STRUCT_DESC = new TStruct("Deletion");
 
-  private static final TField TIMESTAMP_FIELD_DESC = new TField("timestamp", TType.I64, (short)1);
+  private static final TField CLOCK_FIELD_DESC = new TField("clock", TType.STRUCT, (short)1);
   private static final TField SUPER_COLUMN_FIELD_DESC = new TField("super_column", TType.STRING, (short)2);
   private static final TField PREDICATE_FIELD_DESC = new TField("predicate", TType.STRUCT, (short)3);
 
-  public long timestamp;
+  public Clock clock;
   public byte[] super_column;
   public SlicePredicate predicate;
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements TFieldIdEnum {
-    TIMESTAMP((short)1, "timestamp"),
+    CLOCK((short)1, "clock"),
     SUPER_COLUMN((short)2, "super_column"),
     PREDICATE((short)3, "predicate");
 
-    private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
     static {
       for (_Fields field : EnumSet.allOf(_Fields.class)) {
-        byId.put((int)field._thriftId, field);
         byName.put(field.getFieldName(), field);
       }
     }
@@ -75,7 +75,16 @@ public class Deletion implements TBase<Deletion._Fields>, java.io.Serializable, 
      * Find the _Fields constant that matches fieldId, or null if its not found.
      */
     public static _Fields findByThriftId(int fieldId) {
-      return byId.get(fieldId);
+      switch(fieldId) {
+        case 1: // CLOCK
+          return CLOCK;
+        case 2: // SUPER_COLUMN
+          return SUPER_COLUMN;
+        case 3: // PREDICATE
+          return PREDICATE;
+        default:
+          return null;
+      }
     }
 
     /**
@@ -113,19 +122,17 @@ public class Deletion implements TBase<Deletion._Fields>, java.io.Serializable, 
   }
 
   // isset id assignments
-  private static final int __TIMESTAMP_ISSET_ID = 0;
-  private BitSet __isset_bit_vector = new BitSet(1);
 
-  public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-    put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.REQUIRED, 
-        new FieldValueMetaData(TType.I64)));
-    put(_Fields.SUPER_COLUMN, new FieldMetaData("super_column", TFieldRequirementType.OPTIONAL, 
-        new FieldValueMetaData(TType.STRING)));
-    put(_Fields.PREDICATE, new FieldMetaData("predicate", TFieldRequirementType.OPTIONAL, 
-        new StructMetaData(TType.STRUCT, SlicePredicate.class)));
-  }});
-
+  public static final Map<_Fields, FieldMetaData> metaDataMap;
   static {
+    Map<_Fields, FieldMetaData> tmpMap = new EnumMap<_Fields, FieldMetaData>(_Fields.class);
+    tmpMap.put(_Fields.CLOCK, new FieldMetaData("clock", TFieldRequirementType.REQUIRED, 
+        new StructMetaData(TType.STRUCT, Clock.class)));
+    tmpMap.put(_Fields.SUPER_COLUMN, new FieldMetaData("super_column", TFieldRequirementType.OPTIONAL, 
+        new FieldValueMetaData(TType.STRING)));
+    tmpMap.put(_Fields.PREDICATE, new FieldMetaData("predicate", TFieldRequirementType.OPTIONAL, 
+        new StructMetaData(TType.STRUCT, SlicePredicate.class)));
+    metaDataMap = Collections.unmodifiableMap(tmpMap);
     FieldMetaData.addStructMetaDataMap(Deletion.class, metaDataMap);
   }
 
@@ -133,20 +140,19 @@ public class Deletion implements TBase<Deletion._Fields>, java.io.Serializable, 
   }
 
   public Deletion(
-    long timestamp)
+    Clock clock)
   {
     this();
-    this.timestamp = timestamp;
-    setTimestampIsSet(true);
+    this.clock = clock;
   }
 
   /**
    * Performs a deep copy on <i>other</i>.
    */
   public Deletion(Deletion other) {
-    __isset_bit_vector.clear();
-    __isset_bit_vector.or(other.__isset_bit_vector);
-    this.timestamp = other.timestamp;
+    if (other.isSetClock()) {
+      this.clock = new Clock(other.clock);
+    }
     if (other.isSetSuper_column()) {
       this.super_column = new byte[other.super_column.length];
       System.arraycopy(other.super_column, 0, super_column, 0, other.super_column.length);
@@ -165,27 +171,28 @@ public class Deletion implements TBase<Deletion._Fields>, java.io.Serializable, 
     return new Deletion(this);
   }
 
-  public long getTimestamp() {
-    return this.timestamp;
+  public Clock getClock() {
+    return this.clock;
   }
 
-  public Deletion setTimestamp(long timestamp) {
-    this.timestamp = timestamp;
-    setTimestampIsSet(true);
+  public Deletion setClock(Clock clock) {
+    this.clock = clock;
     return this;
   }
 
-  public void unsetTimestamp() {
-    __isset_bit_vector.clear(__TIMESTAMP_ISSET_ID);
+  public void unsetClock() {
+    this.clock = null;
   }
 
-  /** Returns true if field timestamp is set (has been asigned a value) and false otherwise */
-  public boolean isSetTimestamp() {
-    return __isset_bit_vector.get(__TIMESTAMP_ISSET_ID);
+  /** Returns true if field clock is set (has been asigned a value) and false otherwise */
+  public boolean isSetClock() {
+    return this.clock != null;
   }
 
-  public void setTimestampIsSet(boolean value) {
-    __isset_bit_vector.set(__TIMESTAMP_ISSET_ID, value);
+  public void setClockIsSet(boolean value) {
+    if (!value) {
+      this.clock = null;
+    }
   }
 
   public byte[] getSuper_column() {
@@ -238,11 +245,11 @@ public class Deletion implements TBase<Deletion._Fields>, java.io.Serializable, 
 
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
-    case TIMESTAMP:
+    case CLOCK:
       if (value == null) {
-        unsetTimestamp();
+        unsetClock();
       } else {
-        setTimestamp((Long)value);
+        setClock((Clock)value);
       }
       break;
 
@@ -271,8 +278,8 @@ public class Deletion implements TBase<Deletion._Fields>, java.io.Serializable, 
 
   public Object getFieldValue(_Fields field) {
     switch (field) {
-    case TIMESTAMP:
-      return new Long(getTimestamp());
+    case CLOCK:
+      return getClock();
 
     case SUPER_COLUMN:
       return getSuper_column();
@@ -291,8 +298,8 @@ public class Deletion implements TBase<Deletion._Fields>, java.io.Serializable, 
   /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
   public boolean isSet(_Fields field) {
     switch (field) {
-    case TIMESTAMP:
-      return isSetTimestamp();
+    case CLOCK:
+      return isSetClock();
     case SUPER_COLUMN:
       return isSetSuper_column();
     case PREDICATE:
@@ -318,12 +325,12 @@ public class Deletion implements TBase<Deletion._Fields>, java.io.Serializable, 
     if (that == null)
       return false;
 
-    boolean this_present_timestamp = true;
-    boolean that_present_timestamp = true;
-    if (this_present_timestamp || that_present_timestamp) {
-      if (!(this_present_timestamp && that_present_timestamp))
+    boolean this_present_clock = true && this.isSetClock();
+    boolean that_present_clock = true && that.isSetClock();
+    if (this_present_clock || that_present_clock) {
+      if (!(this_present_clock && that_present_clock))
         return false;
-      if (this.timestamp != that.timestamp)
+      if (!this.clock.equals(that.clock))
         return false;
     }
 
@@ -361,11 +368,11 @@ public class Deletion implements TBase<Deletion._Fields>, java.io.Serializable, 
     int lastComparison = 0;
     Deletion typedOther = (Deletion)other;
 
-    lastComparison = Boolean.valueOf(isSetTimestamp()).compareTo(typedOther.isSetTimestamp());
+    lastComparison = Boolean.valueOf(isSetClock()).compareTo(typedOther.isSetClock());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    if (isSetTimestamp()) {      lastComparison = TBaseHelper.compareTo(timestamp, typedOther.timestamp);
+    if (isSetClock()) {      lastComparison = TBaseHelper.compareTo(this.clock, typedOther.clock);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -374,7 +381,7 @@ public class Deletion implements TBase<Deletion._Fields>, java.io.Serializable, 
     if (lastComparison != 0) {
       return lastComparison;
     }
-    if (isSetSuper_column()) {      lastComparison = TBaseHelper.compareTo(super_column, typedOther.super_column);
+    if (isSetSuper_column()) {      lastComparison = TBaseHelper.compareTo(this.super_column, typedOther.super_column);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -383,7 +390,7 @@ public class Deletion implements TBase<Deletion._Fields>, java.io.Serializable, 
     if (lastComparison != 0) {
       return lastComparison;
     }
-    if (isSetPredicate()) {      lastComparison = TBaseHelper.compareTo(predicate, typedOther.predicate);
+    if (isSetPredicate()) {      lastComparison = TBaseHelper.compareTo(this.predicate, typedOther.predicate);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -401,10 +408,10 @@ public class Deletion implements TBase<Deletion._Fields>, java.io.Serializable, 
         break;
       }
       switch (field.id) {
-        case 1: // TIMESTAMP
-          if (field.type == TType.I64) {
-            this.timestamp = iprot.readI64();
-            setTimestampIsSet(true);
+        case 1: // CLOCK
+          if (field.type == TType.STRUCT) {
+            this.clock = new Clock();
+            this.clock.read(iprot);
           } else { 
             TProtocolUtil.skip(iprot, field.type);
           }
@@ -432,9 +439,6 @@ public class Deletion implements TBase<Deletion._Fields>, java.io.Serializable, 
     iprot.readStructEnd();
 
     // check for required fields of primitive type, which can't be checked in the validate method
-    if (!isSetTimestamp()) {
-      throw new TProtocolException("Required field 'timestamp' was not found in serialized data! Struct: " + toString());
-    }
     validate();
   }
 
@@ -442,9 +446,11 @@ public class Deletion implements TBase<Deletion._Fields>, java.io.Serializable, 
     validate();
 
     oprot.writeStructBegin(STRUCT_DESC);
-    oprot.writeFieldBegin(TIMESTAMP_FIELD_DESC);
-    oprot.writeI64(this.timestamp);
-    oprot.writeFieldEnd();
+    if (this.clock != null) {
+      oprot.writeFieldBegin(CLOCK_FIELD_DESC);
+      this.clock.write(oprot);
+      oprot.writeFieldEnd();
+    }
     if (this.super_column != null) {
       if (isSetSuper_column()) {
         oprot.writeFieldBegin(SUPER_COLUMN_FIELD_DESC);
@@ -468,8 +474,12 @@ public class Deletion implements TBase<Deletion._Fields>, java.io.Serializable, 
     StringBuilder sb = new StringBuilder("Deletion(");
     boolean first = true;
 
-    sb.append("timestamp:");
-    sb.append(this.timestamp);
+    sb.append("clock:");
+    if (this.clock == null) {
+      sb.append("null");
+    } else {
+      sb.append(this.clock);
+    }
     first = false;
     if (isSetSuper_column()) {
       if (!first) sb.append(", ");
@@ -502,7 +512,9 @@ public class Deletion implements TBase<Deletion._Fields>, java.io.Serializable, 
 
   public void validate() throws TException {
     // check for required fields
-    // alas, we cannot check 'timestamp' because it's a primitive and you chose the non-beans generator.
+    if (clock == null) {
+      throw new TProtocolException("Required field 'clock' was not present! Struct: " + toString());
+    }
   }
 
 }

@@ -41,7 +41,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.thrift.*;
+import org.apache.thrift.async.*;
 import org.apache.thrift.meta_data.*;
+import org.apache.thrift.transport.*;
 import org.apache.thrift.protocol.*;
 
 /**
@@ -51,13 +53,13 @@ import org.apache.thrift.protocol.*;
  * @param columns. List of data represented by the key. Typically, the list is pared down to only the columns specified by
  *                 a SlicePredicate.
  */
-public class KeySlice implements TBase<KeySlice._Fields>, java.io.Serializable, Cloneable, Comparable<KeySlice> {
+public class KeySlice implements TBase<KeySlice, KeySlice._Fields>, java.io.Serializable, Cloneable {
   private static final TStruct STRUCT_DESC = new TStruct("KeySlice");
 
   private static final TField KEY_FIELD_DESC = new TField("key", TType.STRING, (short)1);
   private static final TField COLUMNS_FIELD_DESC = new TField("columns", TType.LIST, (short)2);
 
-  public String key;
+  public byte[] key;
   public List<ColumnOrSuperColumn> columns;
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
@@ -65,12 +67,10 @@ public class KeySlice implements TBase<KeySlice._Fields>, java.io.Serializable, 
     KEY((short)1, "key"),
     COLUMNS((short)2, "columns");
 
-    private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
     static {
       for (_Fields field : EnumSet.allOf(_Fields.class)) {
-        byId.put((int)field._thriftId, field);
         byName.put(field.getFieldName(), field);
       }
     }
@@ -79,7 +79,14 @@ public class KeySlice implements TBase<KeySlice._Fields>, java.io.Serializable, 
      * Find the _Fields constant that matches fieldId, or null if its not found.
      */
     public static _Fields findByThriftId(int fieldId) {
-      return byId.get(fieldId);
+      switch(fieldId) {
+        case 1: // KEY
+          return KEY;
+        case 2: // COLUMNS
+          return COLUMNS;
+        default:
+          return null;
+      }
     }
 
     /**
@@ -118,15 +125,15 @@ public class KeySlice implements TBase<KeySlice._Fields>, java.io.Serializable, 
 
   // isset id assignments
 
-  public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-    put(_Fields.KEY, new FieldMetaData("key", TFieldRequirementType.REQUIRED, 
+  public static final Map<_Fields, FieldMetaData> metaDataMap;
+  static {
+    Map<_Fields, FieldMetaData> tmpMap = new EnumMap<_Fields, FieldMetaData>(_Fields.class);
+    tmpMap.put(_Fields.KEY, new FieldMetaData("key", TFieldRequirementType.REQUIRED, 
         new FieldValueMetaData(TType.STRING)));
-    put(_Fields.COLUMNS, new FieldMetaData("columns", TFieldRequirementType.REQUIRED, 
+    tmpMap.put(_Fields.COLUMNS, new FieldMetaData("columns", TFieldRequirementType.REQUIRED, 
         new ListMetaData(TType.LIST, 
             new StructMetaData(TType.STRUCT, ColumnOrSuperColumn.class))));
-  }});
-
-  static {
+    metaDataMap = Collections.unmodifiableMap(tmpMap);
     FieldMetaData.addStructMetaDataMap(KeySlice.class, metaDataMap);
   }
 
@@ -134,7 +141,7 @@ public class KeySlice implements TBase<KeySlice._Fields>, java.io.Serializable, 
   }
 
   public KeySlice(
-    String key,
+    byte[] key,
     List<ColumnOrSuperColumn> columns)
   {
     this();
@@ -147,7 +154,8 @@ public class KeySlice implements TBase<KeySlice._Fields>, java.io.Serializable, 
    */
   public KeySlice(KeySlice other) {
     if (other.isSetKey()) {
-      this.key = other.key;
+      this.key = new byte[other.key.length];
+      System.arraycopy(other.key, 0, key, 0, other.key.length);
     }
     if (other.isSetColumns()) {
       List<ColumnOrSuperColumn> __this__columns = new ArrayList<ColumnOrSuperColumn>();
@@ -167,11 +175,11 @@ public class KeySlice implements TBase<KeySlice._Fields>, java.io.Serializable, 
     return new KeySlice(this);
   }
 
-  public String getKey() {
+  public byte[] getKey() {
     return this.key;
   }
 
-  public KeySlice setKey(String key) {
+  public KeySlice setKey(byte[] key) {
     this.key = key;
     return this;
   }
@@ -236,7 +244,7 @@ public class KeySlice implements TBase<KeySlice._Fields>, java.io.Serializable, 
       if (value == null) {
         unsetKey();
       } else {
-        setKey((String)value);
+        setKey((byte[])value);
       }
       break;
 
@@ -304,7 +312,7 @@ public class KeySlice implements TBase<KeySlice._Fields>, java.io.Serializable, 
     if (this_present_key || that_present_key) {
       if (!(this_present_key && that_present_key))
         return false;
-      if (!this.key.equals(that.key))
+      if (!java.util.Arrays.equals(this.key, that.key))
         return false;
     }
 
@@ -337,7 +345,7 @@ public class KeySlice implements TBase<KeySlice._Fields>, java.io.Serializable, 
     if (lastComparison != 0) {
       return lastComparison;
     }
-    if (isSetKey()) {      lastComparison = TBaseHelper.compareTo(key, typedOther.key);
+    if (isSetKey()) {      lastComparison = TBaseHelper.compareTo(this.key, typedOther.key);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -346,7 +354,7 @@ public class KeySlice implements TBase<KeySlice._Fields>, java.io.Serializable, 
     if (lastComparison != 0) {
       return lastComparison;
     }
-    if (isSetColumns()) {      lastComparison = TBaseHelper.compareTo(columns, typedOther.columns);
+    if (isSetColumns()) {      lastComparison = TBaseHelper.compareTo(this.columns, typedOther.columns);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -366,7 +374,7 @@ public class KeySlice implements TBase<KeySlice._Fields>, java.io.Serializable, 
       switch (field.id) {
         case 1: // KEY
           if (field.type == TType.STRING) {
-            this.key = iprot.readString();
+            this.key = iprot.readBinary();
           } else { 
             TProtocolUtil.skip(iprot, field.type);
           }
@@ -374,14 +382,14 @@ public class KeySlice implements TBase<KeySlice._Fields>, java.io.Serializable, 
         case 2: // COLUMNS
           if (field.type == TType.LIST) {
             {
-              TList _list8 = iprot.readListBegin();
-              this.columns = new ArrayList<ColumnOrSuperColumn>(_list8.size);
-              for (int _i9 = 0; _i9 < _list8.size; ++_i9)
+              TList _list12 = iprot.readListBegin();
+              this.columns = new ArrayList<ColumnOrSuperColumn>(_list12.size);
+              for (int _i13 = 0; _i13 < _list12.size; ++_i13)
               {
-                ColumnOrSuperColumn _elem10;
-                _elem10 = new ColumnOrSuperColumn();
-                _elem10.read(iprot);
-                this.columns.add(_elem10);
+                ColumnOrSuperColumn _elem14;
+                _elem14 = new ColumnOrSuperColumn();
+                _elem14.read(iprot);
+                this.columns.add(_elem14);
               }
               iprot.readListEnd();
             }
@@ -406,16 +414,16 @@ public class KeySlice implements TBase<KeySlice._Fields>, java.io.Serializable, 
     oprot.writeStructBegin(STRUCT_DESC);
     if (this.key != null) {
       oprot.writeFieldBegin(KEY_FIELD_DESC);
-      oprot.writeString(this.key);
+      oprot.writeBinary(this.key);
       oprot.writeFieldEnd();
     }
     if (this.columns != null) {
       oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
       {
         oprot.writeListBegin(new TList(TType.STRUCT, this.columns.size()));
-        for (ColumnOrSuperColumn _iter11 : this.columns)
+        for (ColumnOrSuperColumn _iter15 : this.columns)
         {
-          _iter11.write(oprot);
+          _iter15.write(oprot);
         }
         oprot.writeListEnd();
       }
@@ -434,7 +442,12 @@ public class KeySlice implements TBase<KeySlice._Fields>, java.io.Serializable, 
     if (this.key == null) {
       sb.append("null");
     } else {
-      sb.append(this.key);
+        int __key_size = Math.min(this.key.length, 128);
+        for (int i = 0; i < __key_size; i++) {
+          if (i != 0) sb.append(" ");
+          sb.append(Integer.toHexString(this.key[i]).length() > 1 ? Integer.toHexString(this.key[i]).substring(Integer.toHexString(this.key[i]).length() - 2).toUpperCase() : "0" + Integer.toHexString(this.key[i]).toUpperCase());
+        }
+        if (this.key.length > 128) sb.append(" ...");
     }
     first = false;
     if (!first) sb.append(", ");
