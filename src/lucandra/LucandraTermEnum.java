@@ -20,6 +20,7 @@
 package lucandra;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -29,11 +30,14 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import javax.management.RuntimeErrorException;
+
 import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.InvalidRequestException;
+import org.apache.cassandra.thrift.KeyRange;
 import org.apache.cassandra.thrift.KeySlice;
 import org.apache.cassandra.thrift.SlicePredicate;
 import org.apache.cassandra.thrift.SliceRange;
@@ -52,7 +56,7 @@ import org.apache.thrift.TException;
 public class LucandraTermEnum extends TermEnum {
 
     private final IndexReader indexReader;
-    private final String indexName;
+    private final byte[] indexName;
 
     private int termPosition;
     private Term[] termBuffer;
@@ -147,19 +151,29 @@ public class LucandraTermEnum extends TermEnum {
             initTerm = skipTo;
         
         // chose starting term
-        String startTerm = CassandraUtils.hashKey(
-                    indexName + CassandraUtils.delimeter + CassandraUtils.createColumnName(skipTo)
-                );
+        byte[] startTerm;
+        try {
+            startTerm = CassandraUtils.hashKeyBytes(
+                    indexName, CassandraUtils.delimeterBytes, skipTo.field().getBytes("UTF-8"), CassandraUtils.delimeterBytes, skipTo.text().getBytes("UTF-8")
+                    );
+        } catch (UnsupportedEncodingException e2) {
+            throw new RuntimeException(e2);
+        }
                 
         // ending term. the initial query we don't care since
         // we only pull 2 terms, also we don't
-        String endTerm = "";
+        byte[] endTerm = CassandraUtils.emptyByteArray;
       
         //The boundary condition for this search. currently the field.
-        String boundryTerm = CassandraUtils.hashKey(
-                indexName + CassandraUtils.delimeter + 
-                CassandraUtils.createColumnName(skipTo.field(), CassandraUtils.finalToken)
-                );
+        byte[] boundryTerm;
+        try {
+            boundryTerm = CassandraUtils.hashKeyBytes(
+                    indexName, CassandraUtils.delimeterBytes, 
+                    skipTo.field().getBytes("UTF-8"), CassandraUtils.delimeterBytes, CassandraUtils.finalTokenBytes
+            );
+        } catch (UnsupportedEncodingException e2) {
+           throw new RuntimeException(e2);
+        }
         
         
         if ((!skipTo.equals(chunkBoundryTerm) || termPosition == 0) && termCache != null) {
@@ -173,7 +187,13 @@ public class LucandraTermEnum extends TermEnum {
             termBuffer = termDocFreqBuffer.keySet().toArray(new Term[] {});
             termPosition = 0;
 
-            logger.debug("Found " + startTerm + " in cache");
+            if(logger.isDebugEnabled()){
+                try {
+                    logger.debug("Found " + new String(startTerm,"UTF-8") + " in cache");
+                } catch (UnsupportedEncodingException e) {
+                   throw new RuntimeException(e);
+                }
+            }
             return;
         } else if (chunkCount > 1 && actualInitSize < maxChunkSize) {
             
@@ -197,9 +217,13 @@ public class LucandraTermEnum extends TermEnum {
         // otherwise we grab all the rest of the keys
         if (chunkBoundryTerm != null) {
             count = maxChunkSize;
-            startTerm = CassandraUtils.hashKey(
-                        indexName + CassandraUtils.delimeter + CassandraUtils.createColumnName(chunkBoundryTerm)
-                    );
+            try {
+                startTerm = CassandraUtils.hashKeyBytes(
+                        indexName,  CassandraUtils.delimeterBytes, chunkBoundryTerm.field().getBytes("UTF-8"), CassandraUtils.delimeterBytes, chunkBoundryTerm.text().getBytes("UTF-8")
+                        );
+            } catch (UnsupportedEncodingException e) {
+                throw new RuntimeException(e);
+            }
             
             
             //After first pass use the boundary term, since we know on pass 2 we are using the OPP
@@ -214,6 +238,10 @@ public class LucandraTermEnum extends TermEnum {
         ColumnParent columnParent = new ColumnParent(CassandraUtils.termVecColumnFamily);        
         SlicePredicate slicePredicate = new SlicePredicate();
        
+        KeyRange kr = new KeyRange();
+        kr.setStart_key(startTerm);
+        kr.setEnd_key(endTerm);
+        kr.setCount(count);
 
         // Get all columns
         SliceRange sliceRange = new SliceRange(new byte[] {}, new byte[] {}, true, Integer.MAX_VALUE);
@@ -221,7 +249,7 @@ public class LucandraTermEnum extends TermEnum {
         
         List<KeySlice> columns;
         try {
-            columns = client.get_range_slice(CassandraUtils.keySpace, columnParent, slicePredicate, startTerm, endTerm, count, ConsistencyLevel.ONE);
+            columns = client.get_range_slices(columnParent, slicePredicate, kr, ConsistencyLevel.ONE);
         } catch (InvalidRequestException e) {
             throw new RuntimeException(e);
         } catch (TException e) {
@@ -234,23 +262,42 @@ public class LucandraTermEnum extends TermEnum {
 
         // term to start with next time
         actualInitSize = columns.size();
-        logger.debug("Found " + columns.size() + " keys in range:" + startTerm + " to " + endTerm + " in " + (System.currentTimeMillis() - start) + "ms");
+        
+        if(logger.isDebugEnabled()){
+            try {
+                logger.debug("Found " + columns.size() + " keys in range:" + new String(startTerm,"UTF-8") + " to " + new String(endTerm,"UTF-8") + " in " + (System.currentTimeMillis() - start) + "ms");
+            } catch (UnsupportedEncodingException e1) {
+                throw new RuntimeException(e1);
+            }
+        }
 
         if (actualInitSize > 0) {
             for (KeySlice entry : columns) {
    
+                String key;
+                try {
+                    key = new String(entry.getKey(),"UTF-8");
+                } catch (UnsupportedEncodingException e) {
+                    throw new RuntimeException("This JVM doesn't support UTF-8");
+                }
+                
                 // term keys look like wikipedia/body/wiki
-                String termStr = entry.getKey().substring(entry.getKey().indexOf(CassandraUtils.delimeter) + CassandraUtils.delimeter.length());
+                String termStr = key.substring(key.indexOf(CassandraUtils.delimeter) + CassandraUtils.delimeter.length());
                 Term term = CassandraUtils.parseTerm(termStr);                 
                 
                 logger.debug(termStr + " has " + entry.getColumns().size());
                 
                 //check for tombstone keys or incorrect keys (from RP)
-                if(entry.getColumns().size() > 0 && term.field().equals(skipTo.field()) &&
-                        //from this index
-                        entry.getKey().equals(CassandraUtils.hashKey(indexName+CassandraUtils.delimeter+term.field()+CassandraUtils.delimeter+term.text())))
-                    
-                    termDocFreqBuffer.put(term, entry.getColumns());
+                try {
+                    if(entry.getColumns().size() > 0 && term.field().equals(skipTo.field()) &&
+                            //from this index
+                            Arrays.equals(entry.getKey(), CassandraUtils.hashKeyBytes(indexName,CassandraUtils.delimeterBytes,term.field().getBytes("UTF-8"),CassandraUtils.delimeterBytes,term.text().getBytes("UTF-8")))){
+                        
+                        termDocFreqBuffer.put(term, entry.getColumns());
+                    }
+                } catch (UnsupportedEncodingException e) {
+                    throw new RuntimeException(e);
+                }
             }
 
             if(!termDocFreqBuffer.isEmpty()){
@@ -282,31 +329,42 @@ public class LucandraTermEnum extends TermEnum {
 
         long end = System.currentTimeMillis();
 
-        logger.debug("loadTerms: " + startTerm + "(" + termBuffer.length + ") took " + (end - start) + "ms");
-
+        if(logger.isDebugEnabled()){
+            try {
+                logger.debug("loadTerms: " + new String(startTerm,"UTF-8") + "(" + termBuffer.length + ") took " + (end - start) + "ms");
+            } catch (UnsupportedEncodingException e) {
+                throw new RuntimeException(e);
+            }
+            
+        }
     }
 
-    void loadFilteredTerms(Term term, List<String> docNums)  {
+    void loadFilteredTerms(Term term, List<byte[]> docNums)  {
         long start = System.currentTimeMillis();
         ColumnParent parent = new ColumnParent();
         parent.setColumn_family(CassandraUtils.termVecColumnFamily);
 
-        String key = CassandraUtils.hashKey(
-                indexName + CassandraUtils.delimeter + CassandraUtils.createColumnName(term)
-            );
+        byte[] key;
+        try {
+            key = CassandraUtils.hashKeyBytes(
+                    indexName, CassandraUtils.delimeterBytes , term.field().getBytes("UTF-8"), CassandraUtils.delimeterBytes, term.text().getBytes("UTF-8")
+                );
+        } catch (UnsupportedEncodingException e1) {
+            throw new RuntimeException(e1);
+        }
 
         SlicePredicate slicePredicate = new SlicePredicate();
 
         
-        for (String docNum : docNums) {
-            slicePredicate.addToColumn_names(docNum.getBytes());
+        for (byte[] docNum : docNums) {
+            slicePredicate.addToColumn_names(docNum);
         }
 
         
 
         List<ColumnOrSuperColumn> columsList = null;
         try {
-            columsList = client.get_slice(CassandraUtils.keySpace, key, parent, slicePredicate, ConsistencyLevel.ONE);
+            columsList = client.get_slice(key, parent, slicePredicate, ConsistencyLevel.ONE);
         } catch (InvalidRequestException e) {
             throw new RuntimeException(e);
         } catch (UnavailableException e) {

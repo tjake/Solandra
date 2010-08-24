@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.cassandra.thrift.Cassandra;
@@ -78,11 +79,11 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         }
     }
 
-    private final String indexName;
+    private final byte[] indexName;
     private final Cassandra.Iface client;
     
-    private final ThreadLocal<Map<String, Integer>> docIdToDocIndex = new ThreadLocal<Map<String, Integer>>();
-    private final ThreadLocal<Map<Integer, String>> docIndexToDocId = new ThreadLocal<Map<Integer, String>>();
+    private final ThreadLocal<Map<byte[], Integer>> docIdToDocIndex = new ThreadLocal<Map<byte[], Integer>>();
+    private final ThreadLocal<Map<Integer, byte[]>> docIndexToDocId = new ThreadLocal<Map<Integer, byte[]>>();
     private final ThreadLocal<Map<Integer, Document>> documentCache = new ThreadLocal<Map<Integer, Document>>();
     private final ThreadLocal<AtomicInteger> docCounter = new ThreadLocal<AtomicInteger>();
     private final ThreadLocal<Map<Term, LucandraTermEnum>> termEnumCache = new ThreadLocal<Map<Term, LucandraTermEnum>>();
@@ -92,7 +93,11 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     public IndexReader(String name, Cassandra.Iface client) {
         super();
-        this.indexName = name;
+        try {
+            this.indexName = name.getBytes("UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException("JVM does not support UTF-8");
+        }
         this.client = client; 
     }
 
@@ -168,14 +173,14 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
             return doc;
         }
 
-        String docId = getDocIndexToDocId().get(docNum);
+        byte[] docId = getDocIndexToDocId().get(docNum);
 
         if (docId == null)
             return null;
 
-        Map<Integer, String> keyMap = new HashMap<Integer, String>();
+        Map<byte[], byte[]> keyMap = new ConcurrentSkipListMap<byte[], byte[]>(CassandraUtils.byteArrayComparator);
 
-        keyMap.put(docNum, CassandraUtils.hashKey(indexName + CassandraUtils.delimeter + docId));
+        keyMap.put(CassandraUtils.hashKeyBytes(indexName, CassandraUtils.delimeterBytes , docId), docId);
 
         
         List<byte[]> fieldNames = null;
@@ -196,12 +201,12 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
                 if (getDocumentCache().containsKey(otherDocNum))
                     continue;
 
-                String docKey = getDocIndexToDocId().get(otherDocNum);
+                byte[] docKey = getDocIndexToDocId().get(otherDocNum);
 
                 if (docKey == null)
                     continue;
 
-                keyMap.put(otherDocNum, CassandraUtils.hashKey(indexName + CassandraUtils.delimeter + docKey));
+                keyMap.put(CassandraUtils.hashKeyBytes(indexName, CassandraUtils.delimeterBytes, docKey), docKey);
             }           
         }
         
@@ -212,7 +217,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         
         if (fieldNames == null || fieldNames.size() == 0) {
             // get all columns ( except this skips meta info )
-            slicePredicate.setSlice_range(new SliceRange(new byte[] {}, CassandraUtils.finalToken.getBytes("UTF-8"), false, 100));
+            slicePredicate.setSlice_range(new SliceRange(new byte[] {}, CassandraUtils.finalTokenBytes, false, 100));
         } else {
             
             slicePredicate.setColumn_names(fieldNames);
@@ -222,15 +227,18 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         long start = System.currentTimeMillis();
 
         try {
-            Map<String, List<ColumnOrSuperColumn>> docMap = client.multiget_slice(CassandraUtils.keySpace, Arrays.asList(keyMap.values().toArray(
-                    new String[] {})), columnParent, slicePredicate, ConsistencyLevel.ONE);
+            Map<byte[], List<ColumnOrSuperColumn>> docMap = client.multiget_slice(Arrays.asList(keyMap.keySet().toArray(new byte[][]{})), columnParent, slicePredicate, ConsistencyLevel.ONE);
+      
+            if(keyMap.size() != docMap.size()){
+                logger.warn("Missing documents in multiget_slice call");
+            }
+            
+            for (Map.Entry<byte[], List<ColumnOrSuperColumn>> entry : docMap.entrySet()) {
 
-            for (Map.Entry<Integer, String> key : keyMap.entrySet()) {
-
-                List<ColumnOrSuperColumn> cols = docMap.get(key.getValue());
+                List<ColumnOrSuperColumn> cols = entry.getValue();
 
                 if (cols == null) {
-                    logger.warn("Missing document in multiget_slice for: " + key.getValue());
+                    logger.warn("Missing document in multiget_slice for: " + new String(entry.getKey(),"UTF-8"));
                     continue;
                 }
 
@@ -277,15 +285,15 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
                             cacheDoc.add(field);
                         }
                     }
-
-                    
                 }
                 
                 //Mark the required doc
-                if(key.getKey().equals(docNum))
+                int thisDocNum = getDocumentNumber(keyMap.get(entry.getKey()));
+                
+                if(thisDocNum == docNum)
                     doc = cacheDoc;
                 
-                getDocumentCache().put(key.getKey(),cacheDoc);
+                getDocumentCache().put(thisDocNum,cacheDoc);
             }
 
             long end = System.currentTimeMillis();
@@ -295,7 +303,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
             return doc;
 
         } catch (Exception e) {
-            throw new IOException(e.getLocalizedMessage());
+            throw new IOException(e);
         }
 
     }
@@ -308,7 +316,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     @Override
     public TermFreqVector getTermFreqVector(int docNum, String field) throws IOException {
 
-        String docId = getDocIndexToDocId().get(docNum);
+        byte[] docId = getDocIndexToDocId().get(docNum);
 
         TermFreqVector termVector = new lucandra.TermFreqVector(indexName, field, docId, client);
 
@@ -402,13 +410,8 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     public int addDocument(SuperColumn docInfo, String field) {
 
-        String id;
-        try {
-            id = new String(docInfo.name, "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            throw new IllegalStateException("Cant make docId a string");
-        }
-
+        byte[] id =  docInfo.name;
+        
         Integer idx = getDocIdToDocIndex().get(id);
 
         if (idx == null) {
@@ -463,21 +466,15 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     }
     
     public int getDocumentNumber(byte[] docId){
-        String id;
-        try {
-            id = new String(docId, "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            throw new IllegalStateException("Cant make docId a string");
-        }
-        
-        return getDocIdToDocIndex().get(id);
+       
+        return getDocIdToDocIndex().get(docId);
     }
     
-    public String getDocumentId(int docNum) {
+    public byte[] getDocumentId(int docNum) {
         return getDocIndexToDocId().get(docNum);
     }
 
-    public String getIndexName() {
+    public byte[] getIndexName() {
         return indexName;
     }
 
@@ -515,22 +512,22 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
        return true;
     }
 
-    public Map<Integer, String> getDocIndexToDocId() {
-        Map<Integer, String> c = docIndexToDocId.get();
+    public Map<Integer, byte[]> getDocIndexToDocId() {
+        Map<Integer, byte[]> c = docIndexToDocId.get();
         
         if(c == null){
-            c = new HashMap<Integer,String>();
+            c = new HashMap<Integer,byte[]>();
             docIndexToDocId.set(c);
         }
         
         return c;
     }
     
-    private Map<String,Integer> getDocIdToDocIndex(){
-        Map<String, Integer> c = docIdToDocIndex.get();
+    private Map<byte[],Integer> getDocIdToDocIndex(){
+        Map<byte[], Integer> c = docIdToDocIndex.get();
         
         if(c == null){
-            c = new HashMap<String,Integer>();
+            c = new ConcurrentSkipListMap<byte[],Integer>(CassandraUtils.byteArrayComparator);
             docIdToDocIndex.set(c);
         }
         

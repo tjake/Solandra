@@ -148,7 +148,7 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         docPosition = -1;
     }
 
-    public List<ColumnOrSuperColumn> filteredSeek(Term term, List<String> docNums){
+    public List<ColumnOrSuperColumn> filteredSeek(Term term, List<byte[]> docNums){
       
         termEnum.loadFilteredTerms(term, docNums);
        

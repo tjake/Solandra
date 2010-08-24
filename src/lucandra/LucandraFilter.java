@@ -44,11 +44,11 @@ public class LucandraFilter extends Filter {
     public DocIdSet getDocIdSet(IndexReader reader) throws IOException {
         OpenBitSet result = new OpenBitSet(reader.maxDoc());
 
-        Map<Integer, String> filterMap = ((lucandra.IndexReader) reader).getDocIndexToDocId();
+        Map<Integer, byte[]> filterMap = ((lucandra.IndexReader) reader).getDocIndexToDocId();
         
        
-        List<String> filteredValues = new ArrayList<String>();
-        for(Map.Entry<Integer, String> entry : filterMap.entrySet()){          
+        List<byte[]> filteredValues = new ArrayList<byte[]>();
+        for(Map.Entry<Integer, byte[]> entry : filterMap.entrySet()){          
             filteredValues.add(entry.getValue());
         }
 

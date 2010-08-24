@@ -9,10 +9,13 @@ import java.util.Map;
 import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.Column;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
+import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.ColumnPath;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.NotFoundException;
+import org.apache.cassandra.thrift.SlicePredicate;
+import org.apache.cassandra.thrift.SliceRange;
 import org.apache.cassandra.thrift.TimedOutException;
 import org.apache.cassandra.thrift.UnavailableException;
 import org.apache.lucene.index.Term;
@@ -22,43 +25,42 @@ import org.apache.thrift.TException;
 public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, org.apache.lucene.index.TermPositionVector {
 
     private String field;
-    private String docId;
+    private byte[] docId;
     private String[] terms;
     private int[] freqVec;
     private int[][] termPositions;
     private TermVectorOffsetInfo[][] termOffsets;
 
-    public TermFreqVector(String indexName, String field, String docId, Cassandra.Iface client) {
+    public TermFreqVector(byte[] indexName, String field, byte[] docId, Cassandra.Iface client) {
         this.field = field;
         this.docId = docId;
 
-        String key = indexName + CassandraUtils.delimeter + docId;
+        byte[] key = CassandraUtils.hashKeyBytes(indexName, CassandraUtils.delimeterBytes, docId);
 
         // Get all terms
         ColumnOrSuperColumn column;
         try {
-            column = client.get(CassandraUtils.keySpace, CassandraUtils.hashKey(key), CassandraUtils.metaColumnPath, ConsistencyLevel.ONE);
+            column = client.get( key, CassandraUtils.metaColumnPath, ConsistencyLevel.ONE);
 
-            List<String> allTermList = (List<String>) CassandraUtils.fromBytes(column.column.value);
-            List<String> keys        = new ArrayList<String>();
+            List<Term> allTermList = (List<Term>) CassandraUtils.fromBytes(column.column.value);
+            List<byte[]> keys        = new ArrayList<byte[]>();
          
             
-            for (String termStr : allTermList) {
-                Term t = CassandraUtils.parseTerm(termStr);
+            for (Term t : allTermList) {
              
                 // skip the ones not of this field
                 if (!t.field().equals(field))
                     continue;
              
                 // add to multiget params
-                keys.add(CassandraUtils.hashKey(
-                        indexName+CassandraUtils.delimeter+termStr
+                keys.add(CassandraUtils.hashKeyBytes(
+                        indexName,CassandraUtils.delimeterBytes,t.field().getBytes("UTF-8"),CassandraUtils.delimeterBytes,t.text().getBytes("UTF-8")
                 ));                            
             }
 
             
             //Fetch all term vectors in this field
-            Map<String, ColumnOrSuperColumn> allTermInfo = client.multiget(CassandraUtils.keySpace, keys, new ColumnPath(CassandraUtils.termVecColumnFamily).setSuper_column(docId.getBytes()), ConsistencyLevel.ONE);
+            Map<byte[], List<ColumnOrSuperColumn>> allTermInfo = client.multiget_slice( keys, new ColumnParent(CassandraUtils.termVecColumnFamily).setSuper_column(docId), new SlicePredicate().setSlice_range(new SliceRange(CassandraUtils.emptyByteArray, CassandraUtils.emptyByteArray, false, Integer.MAX_VALUE)), ConsistencyLevel.ONE);
             
             terms         = new String[allTermInfo.size()];
             freqVec       = new int[allTermInfo.size()];
@@ -67,8 +69,10 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
             
             int i  = 0;
             
-            for(Map.Entry<String, ColumnOrSuperColumn> e : allTermInfo.entrySet()){
-                String termStr = e.getKey().substring(e.getKey().indexOf(CassandraUtils.delimeter) + CassandraUtils.delimeter.length());
+            for(Map.Entry<byte[],List<ColumnOrSuperColumn>> e : allTermInfo.entrySet()){
+                
+                String ekey = new String(e.getKey(), "UTF-8");
+                String termStr = ekey.substring(ekey.indexOf(CassandraUtils.delimeter) + CassandraUtils.delimeter.length());
                 
                 Term t = CassandraUtils.parseTerm(termStr);
             
@@ -78,7 +82,7 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
                 Column positionVector = null;
                 Column offsetVector   = null;
                 
-                List<Column> columns  = e.getValue().getSuper_column().getColumns();
+                List<Column> columns  = e.getValue().get(0).getSuper_column().getColumns();
                 for(Column c : columns){
                     
                     if(Arrays.equals(c.getName(), CassandraUtils.positionVectorKey.getBytes()))
