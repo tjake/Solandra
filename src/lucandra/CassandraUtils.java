@@ -80,6 +80,11 @@ public class CassandraUtils {
     public static final String finalToken          = new String("\ufffe\ufffe");
     public static final byte[] finalTokenBytes; 
 
+    public static final List<byte[]> allTermColumns = Arrays.asList(
+            CassandraUtils.termFrequencyKey.getBytes(),
+            CassandraUtils.positionVectorKey.getBytes(),
+            CassandraUtils.normsKey.getBytes(),
+            CassandraUtils.offsetVectorKey.getBytes());
     
     public static final String documentIdField     = System.getProperty("lucandra.id.field",delimeter+"KEY"+delimeter);
     public static final String documentMetaField   = delimeter+"META"+delimeter;
@@ -170,31 +175,11 @@ public class CassandraUtils {
         
         return client;
     }
-
-   /* public static byte[] createColumnName(Term term) {
-        
-        return createColumnName(term.field(), term.text());
-    }
-
-    public static byte[] createColumnName(String field, String text) {
-
-        // case of all terms
-        if (field.equals("") || text == null)
-            return delimeterBytes;
-
-        try {
-            return (field + delimeter + text).getBytes("UTF-8");
-        } catch (UnsupportedEncodingException e) {
-           throw new RuntimeException("JVM doesn't support UTF-8",e);
-        }
-    }*/
    
-
     public static Term parseTerm(String termStr) {
              
-	int index = termStr.indexOf(delimeter);
-        
-       
+        int index = termStr.indexOf(delimeter);
+             
         if (index < 0){
             throw new RuntimeException("invalid term format: "+index+" " + termStr);
         }
@@ -329,10 +314,23 @@ public class CassandraUtils {
         
         if(value == null && superColumns == null){ //remove
             
-            Deletion d = new Deletion(clock);
+            Deletion d = new Deletion();
+            
+            d.setClock(clock);
             
             if(column != null){
-                d.setPredicate(new SlicePredicate().setColumn_names(Arrays.asList(new byte[][]{column})));
+                try {
+                    String skey = new String(key,"UTF-8");
+                    logger.debug("deleting "+skey+"("+new String(column,"UTF-8")+")");
+                } catch (UnsupportedEncodingException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+
+                d.setSuper_column(column);
+
+                //FIXME: Somthing ain't right, we shouldn't need to specify these to work
+                d.setPredicate(new SlicePredicate().setColumn_names(allTermColumns));
             }else{
                 d.setPredicate(new SlicePredicate().setSlice_range(new SliceRange(new byte[]{}, new byte[]{},false,Integer.MAX_VALUE)));
             }

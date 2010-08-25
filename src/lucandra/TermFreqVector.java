@@ -82,14 +82,14 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
                 Column positionVector = null;
                 Column offsetVector   = null;
                 
-                List<Column> columns  = e.getValue().get(0).getSuper_column().getColumns();
-                for(Column c : columns){
+                //List<Column> columns  = e.getValue().get(0).getSuper_column().getColumns();
+                for(ColumnOrSuperColumn c : e.getValue()){
                     
-                    if(Arrays.equals(c.getName(), CassandraUtils.positionVectorKey.getBytes()))
-                        positionVector = c;
+                    if(Arrays.equals(c.column.getName(), CassandraUtils.positionVectorKey.getBytes()))
+                        positionVector = c.column;
                     
-                    if(Arrays.equals(c.getName(), CassandraUtils.offsetVectorKey.getBytes()))
-                        offsetVector   = c;
+                    if(Arrays.equals(c.column.getName(), CassandraUtils.offsetVectorKey.getBytes()))
+                        offsetVector   = c.column;
                     
                 }
             

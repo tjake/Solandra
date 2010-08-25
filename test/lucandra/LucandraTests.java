@@ -83,27 +83,6 @@ public class LucandraTests extends TestCase {
         doc2.add(f2);
         indexWriter.addDocument(doc2, analyzer);
 
-       /* String start = CassandraUtils.hashKey(indexName + CassandraUtils.delimeter + "key" + CassandraUtils.delimeter);
-        String finish = "";
-        
-        ColumnParent columnParent = new ColumnParent(CassandraUtils.termVecColumnFamily);
-        SlicePredicate slicePredicate = new SlicePredicate();
-
-        // Get all columns
-        SliceRange sliceRange = new SliceRange(new byte[] {}, new byte[] {}, true, Integer.MAX_VALUE);
-        slicePredicate.setSlice_range(sliceRange);
-
-        List<KeySlice> columns = client.get_range_slice(CassandraUtils.keySpace, columnParent, slicePredicate, start, finish, 5000, ConsistencyLevel.ONE);
-
-        int matchingColumns = 0;
-        for(KeySlice ks : columns){
-            String termStr = ks.getKey().substring(ks.getKey().indexOf(CassandraUtils.delimeter) + CassandraUtils.delimeter.length());
-            Term term = CassandraUtils.parseTerm(termStr);
-            
-            if(term.field().equals("key") && ks.getKey().equals(CassandraUtils.hashKey(indexName+CassandraUtils.delimeter+term.field()+CassandraUtils.delimeter+term.text())))
-                matchingColumns++;
-              
-        }*/
 
         // Index 10 documents to test order
         for (int i = 300; i >= 200; i--) {
@@ -119,11 +98,6 @@ public class LucandraTests extends TestCase {
         d3.add(new Field("key", new String("samefield"), Field.Store.YES, Field.Index.ANALYZED));
         d3.add(new Field("url", "http://www.google.com", Field.Store.YES, Field.Index.NOT_ANALYZED));
         indexWriter.addDocument(d3, analyzer);
-
-        
-        //
-        //assertEquals(5, matchingColumns);
-        assertEquals(104, indexWriter.docCount());
         
     }
 

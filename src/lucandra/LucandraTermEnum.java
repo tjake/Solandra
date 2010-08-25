@@ -275,6 +275,7 @@ public class LucandraTermEnum extends TermEnum {
             for (KeySlice entry : columns) {
    
                 String key;
+               
                 try {
                     key = new String(entry.getKey(),"UTF-8");
                 } catch (UnsupportedEncodingException e) {

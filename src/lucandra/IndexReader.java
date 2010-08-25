@@ -412,6 +412,14 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
         byte[] id =  docInfo.name;
         
+        if(logger.isDebugEnabled()){
+            try {
+                logger.debug("adding docId "+new String(id,"UTF-8"));
+            } catch (UnsupportedEncodingException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        
         Integer idx = getDocIdToDocIndex().get(id);
 
         if (idx == null) {
