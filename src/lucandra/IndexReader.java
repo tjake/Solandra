@@ -435,26 +435,17 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
             
             byte[] norms = getFieldNorms().get(field);
             
+            if (norms == null) 
+                norms = new byte[1024];                         
 
-            if (norms == null) {
-
-                norms = new byte[1024];
-
-                norms[idx] = norm; 
-            } else {
-
-                // extend array
-                if ((idx + 1) >= norms.length) {
-
-                    byte[] _norms = new byte[(norms.length * 2) < numDocs ? (norms.length * 2) : (numDocs + 1)];
-                    System.arraycopy(norms, 0, _norms, 0, norms.length);
-                    norms = _norms;
-                }
-
-                // find next empty position
-                norms[idx] = norm;
-
+            while(norms.length < idx && norms.length < numDocs ){
+                byte[] _norms = new byte[(norms.length * 2) < numDocs ? (norms.length * 2) : (numDocs + 1)];
+                System.arraycopy(norms, 0, _norms, 0, norms.length);
+                norms = _norms;           
             }
+
+            // find next empty position
+            norms[idx] = norm;
 
             getFieldNorms().put(field, norms);            
         }
