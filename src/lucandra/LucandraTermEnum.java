@@ -261,7 +261,13 @@ public class LucandraTermEnum extends TermEnum {
 
         // term to start with next time
         actualInitSize = rows.size();
-        logger.info("Found " + rows.size() + " keys in range:" + startTerm + " to " + endTerm + " in " + (System.currentTimeMillis() - start) + "ms");
+        if(logger.isDebugEnabled()){
+            try {
+                logger.debug("Found " + rows.size() + " keys in range:" + new String(startTerm,"UTF-8") + " to " + new String(endTerm,"UTF-8") + " in " + (System.currentTimeMillis() - start) + "ms");
+            } catch (UnsupportedEncodingException e1) {
+                throw new RuntimeException(e1);
+            }
+        }
 
         if (actualInitSize > 0) {
             for (Row row : rows) {
@@ -289,12 +295,6 @@ public class LucandraTermEnum extends TermEnum {
                         
                         if(!columns.iterator().next().isMarkedForDelete())                                                 
                             termDocFreqBuffer.put(term, columns);
-                        
-                    }else{
-                        byte[] same = CassandraUtils.hashKeyBytes(indexName.getBytes(),CassandraUtils.delimeterBytes,term.field().getBytes(),CassandraUtils.delimeterBytes,term.text().getBytes("UTF-8"));
-                       
-                        logger.info(new String(row.key.key,"UTF-8"));
-                        logger.info(new String(same,"UTF-8"));
                         
                     }
                 } catch (UnsupportedEncodingException e) {
@@ -331,8 +331,13 @@ public class LucandraTermEnum extends TermEnum {
 
         long end = System.currentTimeMillis();
 
-        logger.info("loadTerms: " + startTerm + "(" + termBuffer.length + ") took " + (end - start) + "ms");
-
+        if(logger.isDebugEnabled()){
+            try {
+                logger.debug("loadTerms: " + new String(startTerm,"UTF-8") + "(" + termBuffer.length + ") took " + (end - start) + "ms");
+            } catch (UnsupportedEncodingException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     void loadFilteredTerms(Term term, List<byte[]> docNums)  {

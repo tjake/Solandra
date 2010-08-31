@@ -221,7 +221,7 @@ keyspaces:
           reconciler: TimestampReconciler   
           preload_row_cache: true
           
-        - name: Solr
+        - name: SI
           compare_with: BytesType
           
         - name: MI

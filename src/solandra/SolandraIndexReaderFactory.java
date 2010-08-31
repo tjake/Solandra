@@ -47,7 +47,7 @@ public class SolandraIndexReaderFactory extends IndexReaderFactory {
     
     @Override
     public IndexReader newReader(Directory indexDir, boolean readOnly) throws IOException {               
-        return new IndexReader(indexName);        
+        return new lucandra.IndexReader(indexName);        
     }
 
 }

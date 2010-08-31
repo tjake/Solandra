@@ -5,6 +5,7 @@ import java.io.IOException;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.solr.core.CoreContainer;
+import org.apache.solr.core.SolandraCoreContainer;
 import org.apache.solr.core.SolrConfig;
 import org.apache.solr.core.CoreContainer.Initializer;
 import org.xml.sax.SAXException;

@@ -62,7 +62,7 @@
 
                 For more details see http://wiki.apache.org/solr/SolrJmx
   -->
-  <jmx />
+  <!--  <jmx /> turned off since it tracks each core -->
 
   <!-- the Solandra high-performance update handler -->
   <updateHandler class="solandra.SolandraIndexWriter">
@@ -142,7 +142,7 @@
          then immediately register the still warming searcher and use it.  If
          "false" then all requests will block until the first searcher is done
          warming. -->
-    <useColdSearcher>true</useColdSearcher>
+    <useColdSearcher>false</useColdSearcher>
 
     <!-- Maximum number of searchers that may be warming in the background
       concurrently.  An error is returned if this limit is exceeded. Recommend
@@ -360,63 +360,7 @@
   <searchComponent name="reopenComponent" class="solandra.SolandraReopenComponent"/>
 
 
-   <!-- The spell check component can return a list of alternative spelling
-  suggestions.  -->
-  <searchComponent name="spellcheck" class="solr.SpellCheckComponent">
-
-    <str name="queryAnalyzerFieldType">textSpell</str>
-
-    <lst name="spellchecker">
-      <str name="name">default</str>
-      <str name="field">name</str>
-      <str name="spellcheckIndexDir">./spellchecker</str>
-    </lst>
-
-    <!-- a spellchecker that uses a different distance measure
-    <lst name="spellchecker">
-      <str name="name">jarowinkler</str>
-      <str name="field">spell</str>
-      <str name="distanceMeasure">org.apache.lucene.search.spell.JaroWinklerDistance</str>
-      <str name="spellcheckIndexDir">./spellchecker2</str>
-    </lst>
-     -->
-
-    <!-- a file based spell checker
-    <lst name="spellchecker">
-      <str name="classname">solr.FileBasedSpellChecker</str>
-      <str name="name">file</str>
-      <str name="sourceLocation">spellings.txt</str>
-      <str name="characterEncoding">UTF-8</str>
-      <str name="spellcheckIndexDir">./spellcheckerFile</str>
-    </lst>
-    -->
-  </searchComponent>
-
-  <!-- A request handler utilizing the spellcheck component.
-  #############################################################################
-  NOTE: This is purely as an example.  The whole purpose of the
-  SpellCheckComponent is to hook it into the request handler that handles (i.e.
-  the standard or dismax SearchHandler) queries such that a separate request is
-  not needed to get suggestions.
-
-  IN OTHER WORDS, THERE IS REALLY GOOD CHANCE THE SETUP BELOW IS NOT WHAT YOU
-  WANT FOR YOUR PRODUCTION SYSTEM!
-  #############################################################################
-  -->
-  <requestHandler name="/spell" class="solr.SearchHandler" lazy="true">
-    <lst name="defaults">
-      <!-- omp = Only More Popular -->
-      <str name="spellcheck.onlyMorePopular">false</str>
-      <!-- exr = Extended Results -->
-      <str name="spellcheck.extendedResults">false</str>
-      <!--  The number of suggestions to return -->
-      <str name="spellcheck.count">1</str>
-    </lst>
-    <arr name="last-components">
-      <str>spellcheck</str>
-    </arr>
-  </requestHandler>
-
+  
   <searchComponent name="tvComponent" class="org.apache.solr.handler.component.TermVectorComponent"/>
   <!-- A Req Handler for working with the tvComponent.  This is purely as an example.
   You will likely want to add the component to your already specified request handlers. -->

@@ -27,6 +27,7 @@ import java.util.Random;
 import java.util.Set;
 
 import lucandra.CassandraUtils;
+import lucandra.IndexReader;
 import lucandra.cluster.AbstractIndexManager;
 import lucandra.cluster.RedisIndexManager;
 
@@ -34,14 +35,14 @@ import org.apache.cassandra.dht.Token;
 import org.apache.cassandra.service.StorageService;
 import org.apache.log4j.Logger;
 import org.apache.lucene.document.FieldSelector;
-import org.apache.solr.core.SolrCore;
+import org.apache.solr.common.params.ShardParams;
 import org.apache.solr.handler.component.ResponseBuilder;
 import org.apache.solr.handler.component.SearchComponent;
 import org.apache.solr.highlight.SolrHighlighter;
-import org.apache.solr.request.LocalSolrQueryRequest;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.DocIterator;
 import org.apache.solr.search.DocList;
+import org.apache.solr.search.SolrIndexReader;
     
 public class SolandraReopenComponent extends SearchComponent {
 
@@ -73,18 +74,38 @@ public class SolandraReopenComponent extends SearchComponent {
     }
 
     public void prepare(ResponseBuilder rb) throws IOException {
-            
+        
+        //Only applies to my lucandra index readers
+        if(rb.req.getSearcher().getIndexReader().getVersion() != Long.MAX_VALUE)
+            return;
+        
         //Fixme: this is quite hacky, but the only way to make it work
-        //without altering solr. neeeds reopen!
+        //without altering solr. neeeds reopen!    
         rb.req.getSearcher().getIndexReader().directory();      
+        
+        //If this is a shard request then no need to do anything
+        if(rb.req.getParams().getBool(ShardParams.IS_SHARD, false)){
+            String indexName = (String)rb.req.getContext().get("solandra-index");
+            
+            if(indexName == null)
+                throw new IOException("Missing core name");
+            
+            IndexReader reader = (IndexReader)((SolrIndexReader)rb.req.getSearcher().getIndexReader()).getWrappedReader();
+            
+            reader.setIndexName(indexName);
+            
+            logger.debug(indexName);
+            
+            return;
+        }        
         
         String indexName = rb.req.getCore().getName();
         
-        if(indexName.equals(""))
-            return;
-        
-        //re-create new request object
-        // rb.req = new LocalSolrQueryRequest(newCore, rb.req.getParams());
+        if(indexName.equals("")){           
+            return; // 
+        }else{
+            logger.info("core: "+indexName);
+        }
         
         if(rb.shards == null){
         
@@ -107,14 +128,15 @@ public class SolandraReopenComponent extends SearchComponent {
                 
                 
                 InetAddress addr = addrs.get(random.nextInt(addrs.size())); 
-                String shard = addr.getHostAddress() + ":8983/solr";
+                String shard = addr.getHostAddress() + ":8983/solr/"+indexName+"~"+i;
 
                 logger.info("Adding shard("+indexName+"): "+shard);
+                
+                shards[i] = shard;
             }
             
             //assign to shards
-            rb.shards = shards;
-            
+            rb.shards = shards;           
         }
     }
 

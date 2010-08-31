@@ -94,7 +94,7 @@ public class IndexWriter {
         for (Fieldable field : (List<Fieldable>) doc.getFields()) {
 
             // Indexed field
-            if (field.isIndexed()) {
+            if (field.isIndexed() && field.isTokenized()) {
 
                 TokenStream tokens = field.tokenStreamValue();
 

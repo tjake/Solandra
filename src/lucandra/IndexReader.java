@@ -44,6 +44,7 @@ import org.apache.lucene.document.FieldSelector;
 import org.apache.lucene.document.Field.Index;
 import org.apache.lucene.document.Field.Store;
 import org.apache.lucene.index.CorruptIndexException;
+import org.apache.lucene.index.IndexCommit;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.TermDocs;
@@ -79,7 +80,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         }
     }
 
-    private final String indexName;
+    private String indexName;
 
     private final ThreadLocal<Map<Integer, Document>> documentCache = new ThreadLocal<Map<Integer, Document>>();
     private final ThreadLocal<Map<Term, LucandraTermEnum>> termEnumCache = new ThreadLocal<Map<Term, LucandraTermEnum>>();
@@ -96,6 +97,16 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         clearCache();
 
         return this;
+    }
+
+    @Override
+    public synchronized IndexReader reopen(boolean openReadOnly) throws CorruptIndexException, IOException {
+        return reopen();
+    }
+
+    @Override
+    public synchronized IndexReader reopen(IndexCommit commit) throws CorruptIndexException, IOException {
+        return reopen();
     }
 
     public void clearCache() {
@@ -410,25 +421,20 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
             if (norm == null)
                 norm = defaultNorm;
 
-            if (norms == null) {
+            if (norms == null) 
+                norms = new byte[1024];                         
 
-                norms = new byte[1024];
-
-                norms[idx] = norm; 
-            } else {
-
-                // extend array
-                if ((idx + 1) >= norms.length) {
-
-                    byte[] _norms = new byte[(norms.length * 2) < numDocs ? (norms.length * 2) : (numDocs + 1)];
-                    System.arraycopy(norms, 0, _norms, 0, norms.length);
-                    norms = _norms;
-                }
-
-                // find next empty position
-                norms[idx] = norm;
-
+            while(norms.length < idx && norms.length < numDocs ){
+                byte[] _norms = new byte[(norms.length * 2) < numDocs ? (norms.length * 2) : (numDocs + 1)];
+                System.arraycopy(norms, 0, _norms, 0, norms.length);
+                norms = _norms;           
             }
+
+            
+            // find next empty position
+            norms[idx] = norm;
+
+           
         }
         
         fieldNorms.put(field, norms);
@@ -436,6 +442,12 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     public String getIndexName() {
         return indexName;
+    }
+    
+    
+
+    public void setIndexName(String indexName) {
+        this.indexName = indexName;
     }
 
     public LucandraTermEnum checkTermCache(Term term) {
@@ -455,7 +467,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     @Override
     public long getVersion() {
-        return 1;
+        return Long.MAX_VALUE;
     }
 
     @Override

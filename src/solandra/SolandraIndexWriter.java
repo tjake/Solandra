@@ -24,17 +24,13 @@ import java.net.URL;
 import java.util.concurrent.atomic.AtomicLong;
 
 import lucandra.CassandraUtils;
+import lucandra.cluster.AbstractIndexManager;
 import lucandra.cluster.RedisIndexManager;
 
 import org.apache.lucene.index.Term;
-import org.apache.lucene.search.BooleanClause;
-import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.Query;
-import org.apache.lucene.search.TermQuery;
-import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.solr.common.SolrException;
-import org.apache.solr.common.SolrException.ErrorCode;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.core.SolrCore;
@@ -70,8 +66,6 @@ public class SolandraIndexWriter extends UpdateHandler {
     
     public SolandraIndexWriter(SolrCore core) {
         super(core);
-
-        CassandraUtils.startup();
          
         indexManager = new RedisIndexManager(CassandraUtils.service);
         
@@ -100,11 +94,16 @@ public class SolandraIndexWriter extends UpdateHandler {
 
         try {
 
-            Term updateTerm = null;
+            //Term updateTerm = null;
 
             int docId =  indexManager.getCurrentDocId(core.getName());
+                
+            int shard = AbstractIndexManager.getShardFromDocId(docId);
             
-            if (cmd.overwriteCommitted || cmd.overwritePending) {
+            String indexName = core.getName()+"~"+shard;
+            writer.setIndexName(indexName);
+            
+          /*  if (cmd.overwriteCommitted || cmd.overwritePending) {
                 if (cmd.indexedId == null) {
                     cmd.indexedId = getIndexedId(cmd.doc);
                 }
@@ -126,10 +125,10 @@ public class SolandraIndexWriter extends UpdateHandler {
                     bq.add(new BooleanClause(new TermQuery(idTerm), Occur.MUST));
                     writer.deleteDocuments(bq);
                 }
-            } else {
+            } else {*/
                 // allow duplicates
                 writer.addDocument(cmd.getLuceneDocument(schema), schema.getAnalyzer(), docId);
-            }
+            //}
 
             rc = 1;
         } finally {
