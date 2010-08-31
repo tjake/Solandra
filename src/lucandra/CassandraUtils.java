@@ -99,7 +99,7 @@ public class CassandraUtils {
         int database = 11;
         int connCnt = 7;
         
-        ConnectionSpec connectionSpec = DefaultConnectionSpec.newSpec("localhost", 6379, database, "jredis".getBytes());
+        ConnectionSpec connectionSpec = DefaultConnectionSpec.newSpec(System.getProperty("redis.host","localhost"), Integer.valueOf(System.getProperty("redis.port", "6379")), database, "jredis".getBytes());
         
         service = new JRedisService(connectionSpec, connCnt);
         

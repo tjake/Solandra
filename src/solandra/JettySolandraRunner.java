@@ -25,6 +25,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import lucandra.CassandraUtils;
+
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Handler;
 import org.mortbay.jetty.Server;
@@ -157,6 +159,8 @@ public class JettySolandraRunner
   public static void main( String[] args )
   {
     try {
+      CassandraUtils.startup();
+        
       JettySolandraRunner jetty = new JettySolandraRunner( "/solr", 3456 );
       jetty.start();
     }
