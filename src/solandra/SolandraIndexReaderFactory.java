@@ -33,7 +33,6 @@ public class SolandraIndexReaderFactory extends IndexReaderFactory {
         
     private String indexName;
     
-    
     public void init(NamedList args){
         super.init(args);
         
@@ -41,8 +40,7 @@ public class SolandraIndexReaderFactory extends IndexReaderFactory {
             
         if(indexName == null || indexName.length() == 0)
             throw new SolrException(ErrorCode.NOT_FOUND, "<str name=\"indexName\">example</str>  tag required");
-        
-        
+                
     }
     
     @Override

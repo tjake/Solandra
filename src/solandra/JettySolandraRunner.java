@@ -32,7 +32,6 @@ import org.mortbay.jetty.Handler;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.FilterHolder;
-import org.mortbay.log.Logger;
 
 /**
  * Run solr using jetty
