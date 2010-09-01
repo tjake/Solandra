@@ -51,8 +51,8 @@
 	<classpathentry kind="lib" path="lib/servlet-api-2.5-20081211.jar"/>
 	<classpathentry kind="lib" path="lib/slf4j-log4j12-1.5.8.jar"/>
 	<classpathentry kind="lib" path="lib/snakeyaml-1.6.jar"/>
-	<classpathentry kind="lib" path="lib/apache-cassandra-0.7.0-SNAPSHOT.jar" sourcepath="/cassandra-trunk"/>
 	<classpathentry kind="lib" path="lib/jredis-1.0-rc1.jar"/>
 	<classpathentry kind="lib" path="lib/zookeeper-3.3.1.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/cassandra-trunk"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

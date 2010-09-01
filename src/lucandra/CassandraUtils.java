@@ -172,7 +172,7 @@ public class CassandraUtils {
             // start server internals
             StorageService.instance.initServer();
             
-            /*if(!hasLucandra){
+            if(!hasLucandra){
                 StorageService.instance.loadSchemaFromYAML();
 
                 //reinit new tables
@@ -191,7 +191,7 @@ public class CassandraUtils {
                 if(!hasLucandra)
                     throw new RuntimeException("Cassandra.yaml missing schema for keyspace: "+keySpace);
             
-            }*/
+            }
             
         } catch (IOException e) {
             // TODO Auto-generated catch block
