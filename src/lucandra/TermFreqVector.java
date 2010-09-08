@@ -4,9 +4,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.cassandra.db.IColumn;
@@ -15,8 +13,6 @@ import org.apache.cassandra.db.Row;
 import org.apache.cassandra.db.SliceByNamesReadCommand;
 import org.apache.cassandra.db.SliceFromReadCommand;
 import org.apache.cassandra.service.StorageProxy;
-import org.apache.cassandra.thrift.Cassandra;
-import org.apache.cassandra.thrift.Column;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.InvalidRequestException;

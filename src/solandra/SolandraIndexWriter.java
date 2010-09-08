@@ -96,7 +96,7 @@ public class SolandraIndexWriter extends UpdateHandler {
 
             //Term updateTerm = null;
 
-            int docId =  indexManager.getCurrentDocId(core.getName());
+            int docId =  indexManager.incrementDocId(core.getName());
                 
             int shard = AbstractIndexManager.getShardFromDocId(docId);
             

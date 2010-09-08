@@ -22,7 +22,6 @@ package lucandra;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.cassandra.db.IColumn;
 import org.apache.lucene.index.IndexReader;
@@ -44,12 +43,13 @@ public class LucandraFilter extends Filter {
     public DocIdSet getDocIdSet(IndexReader reader) throws IOException {
         OpenBitSet result = new OpenBitSet(reader.maxDoc());
 
-        /*Map<Integer, byte[]> filterMap = ((lucandra.IndexReader) reader).getDocIndexToDocId();
+        OpenBitSet docsHit = ((lucandra.IndexReader) reader).getDocsHit();
         
        
         List<byte[]> filteredValues = new ArrayList<byte[]>();
-        for(Map.Entry<Integer, byte[]> entry : filterMap.entrySet()){          
-            filteredValues.add(entry.getValue());
+        for(int i=0; i<docsHit.capacity(); i++){          
+            if(docsHit.fastGet(i))
+                filteredValues.add(CassandraUtils.writeVInt(i));
         }
 
         if (filteredValues.size() == 0)
@@ -67,7 +67,8 @@ public class LucandraFilter extends Filter {
                 result.set(termDocs.doc());
             }
         }
-        termDocs.close();*/
+        
+        termDocs.close();
         return result;
     }
 }

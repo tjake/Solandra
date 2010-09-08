@@ -35,6 +35,9 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
+import lucandra.cluster.AbstractIndexManager;
+import lucandra.cluster.RedisIndexManager;
+
 import org.apache.cassandra.config.ConfigurationException;
 import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.db.CompactionManager;
@@ -92,7 +95,7 @@ public class CassandraUtils {
     public static final boolean indexHashingEnabled = Boolean.valueOf(System.getProperty("index.hashing", "true"));
 
     public static final JRedisService service;
-    
+    public static final AbstractIndexManager indexManager;
     public static final QueryPath metaColumnPath;
     static {
         
@@ -102,7 +105,8 @@ public class CassandraUtils {
         ConnectionSpec connectionSpec = DefaultConnectionSpec.newSpec(System.getProperty("redis.host","localhost"), Integer.valueOf(System.getProperty("redis.port", "6379")), database, "jredis".getBytes());
         
         service = new JRedisService(connectionSpec, connCnt);
-        
+        indexManager = new RedisIndexManager(service);
+
         try {
             delimeterBytes = delimeter.getBytes("UTF-8");
             documentMetaFieldBytes = documentMetaField.getBytes("UTF-8");
@@ -386,15 +390,12 @@ public class CassandraUtils {
     }
 
     
-    public static List<Row> robustGet(byte[] key, QueryPath qp, List<byte[]> columns, ConsistencyLevel cl){
-       
-        ReadCommand rc = new SliceByNamesReadCommand(CassandraUtils.keySpace, key, qp, columns);
-
+    public static List<Row> robustGet(List<ReadCommand> rc, ConsistencyLevel cl){
         List<Row> rows = null;
         int attempts = 0;
         while (attempts++ < 10) {
             try {
-                rows = StorageProxy.readProtocol(Arrays.asList(rc), cl);
+                rows = StorageProxy.readProtocol(rc, cl);
                 break;
             } catch (IOException e1) {
                 throw new RuntimeException(e1);
@@ -410,13 +411,21 @@ public class CassandraUtils {
                 Thread.sleep(100);
             } catch (InterruptedException e) {
 
-            }
+            }         
         }
-
-        if (attempts >= 10)
+        
+        if(attempts >= 10)
             throw new RuntimeException("Read command failed after 10 attempts");
-
+        
+        
         return rows;
+    }
+    
+    public static List<Row> robustGet(byte[] key, QueryPath qp, List<byte[]> columns, ConsistencyLevel cl){
+       
+        ReadCommand rc = new SliceByNamesReadCommand(CassandraUtils.keySpace, key, qp, columns);
+
+        return robustGet(Arrays.asList(rc), cl);
 
     }
     

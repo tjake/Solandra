@@ -15,7 +15,7 @@
 # limitations under the License.
 
 FILES=$*
-URL=http://localhost:8983/solr/example2/update
+URL=http://localhost:8983/solr/schema/example2
 
 for f in $FILES; do
   echo Posting file $f to $URL
@@ -23,6 +23,4 @@ for f in $FILES; do
   echo
 done
 
-#send the commit command to make sure all the changes are flushed and visible
-curl $URL --data-binary '<commit/>' -H 'Content-type:text/xml; charset=utf-8'
-echo
+

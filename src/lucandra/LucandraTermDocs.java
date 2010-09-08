@@ -99,6 +99,7 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
     }
 
     public void seek(Term term) throws IOException {
+              
         // on a new term so check cached
         LucandraTermEnum tmp = indexReader.checkTermCache(term);
         if (tmp == null) {

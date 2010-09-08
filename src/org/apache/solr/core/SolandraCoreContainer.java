@@ -3,6 +3,7 @@ package org.apache.solr.core;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -69,6 +70,22 @@ public class SolandraCoreContainer extends CoreContainer {
         return core;
     }
 
+    public static String  readSchemaXML(String indexName) throws IOException {
+        List<Row> rows = CassandraUtils.robustGet(indexName.getBytes(), queryPath, Arrays.asList(columnName.getBytes()), ConsistencyLevel.QUORUM);
+
+        if (rows.isEmpty())
+            throw new IOException("invalid index");
+
+        if (rows.size() > 1)
+            throw new IllegalStateException("More than one schema found for this index");
+
+        if(rows.get(0).cf == null)
+            throw new IOException("invalid index");
+        
+        return new String(rows.get(0).cf.getColumn(columnName.getBytes()).value(),"UTF-8");   
+    }
+    
+    
     public static SolrCore readSchema(String indexName, SolrConfig solrConfig) throws IOException {
 
         SolrCore core = cache.get(indexName);
@@ -105,7 +122,11 @@ public class SolandraCoreContainer extends CoreContainer {
     public static void writeSchema(String indexName, String schemaXml){
         RowMutation rm = new RowMutation(CassandraUtils.keySpace, indexName.getBytes());
         
-        rm.add(new QueryPath("SI",null, columnName.getBytes()), schemaXml.getBytes(), new TimestampClock(System.currentTimeMillis()));
+        try {
+            rm.add(new QueryPath("SI",null, columnName.getBytes()), schemaXml.getBytes("UTF-8"), new TimestampClock(System.currentTimeMillis()));
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
+        }
 
         CassandraUtils.robustInsert(Arrays.asList(rm), ConsistencyLevel.ONE);
         

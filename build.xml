@@ -30,6 +30,7 @@
         <property name="build.classes" location="${build}/classes"/>
         <property name="build.test.classes" location="${build}/test-classes"/>
         <property name="lib"           location="lib" />
+        <property name="cassandra.lib" location="../cassandra-trunk/lib"/>
         <property name="cassandra.host" value="127.0.0.1"/>
         <property name="cassandra.port" value="9160"/>
         <property name="cassandra.framed" value="false"/>
@@ -108,6 +109,9 @@
           <pathelement location="${build.test.classes}"/>
           <pathelement location="${config}"/>
           <fileset dir="${lib}">
+            <include name="**/*.jar" />
+          </fileset>
+          <fileset dir="${cassandra.lib}">
             <include name="**/*.jar" />
           </fileset>
           <path refid="autoivy.classpath" />

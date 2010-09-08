@@ -57,14 +57,14 @@ import org.apache.lucene.search.Similarity;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.LockObtainFailedException;
 import org.apache.lucene.store.RAMDirectory;
+import org.apache.lucene.util.OpenBitSet;
 
 import solandra.SolandraFieldSelector;
 
 public class IndexReader extends org.apache.lucene.index.IndexReader {
 
-    private final static int numDocs = 100000;
+    private final static int numDocs = CassandraUtils.maxDocsPerShard;
     private final static byte defaultNorm = Similarity.encodeNorm(1.0f);
-
     
     private final static Directory mockDirectory = new RAMDirectory();
     static {
@@ -85,7 +85,8 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     private final ThreadLocal<Map<Integer, Document>> documentCache = new ThreadLocal<Map<Integer, Document>>();
     private final ThreadLocal<Map<Term, LucandraTermEnum>> termEnumCache = new ThreadLocal<Map<Term, LucandraTermEnum>>();
     private final ThreadLocal<Map<String, byte[]>> fieldNorms = new ThreadLocal<Map<String, byte[]>>();
-
+    private final ThreadLocal<OpenBitSet>  docsHit = new ThreadLocal<OpenBitSet>();
+    
     private static final Logger logger = Logger.getLogger(IndexReader.class);
 
     public IndexReader(String name) {
@@ -117,6 +118,9 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
             documentCache.get().clear();
         if (fieldNorms.get() != null)
             fieldNorms.get().clear();
+        if (docsHit.get() != null)
+            docsHit.get().clear(0, numDocs);
+        
     }
 
     protected void doClose() throws IOException {
@@ -209,10 +213,10 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
             List<ReadCommand> readCommands = new ArrayList<ReadCommand>();
             for (byte[] key : keyMap.values()) {
 
-                if (fieldNames == null || fieldNames.size() == 0) {
+                if (fieldNames == null || fieldNames.size() == 0 ) {
                     // get all columns ( except this skips meta info )
                     readCommands.add(new SliceFromReadCommand(CassandraUtils.keySpace, key, columnParent, new byte[] {}, CassandraUtils.finalToken
-                            .getBytes("UTF-8"), false, 1024));
+                            .getBytes("UTF-8"), false, Integer.MAX_VALUE));
                 } else {
                     readCommands.add(new SliceByNamesReadCommand(CassandraUtils.keySpace, key, columnParent, fieldNames));
                 }
@@ -367,6 +371,15 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     }
 
     @Override
+    public TermDocs termDocs(Term term) throws IOException {
+       
+        if(term == null)
+            return new LucandraAllTermDocs(this);
+        
+        return super.termDocs(term);
+    }
+
+    @Override
     public TermDocs termDocs() throws IOException {
         return new LucandraTermDocs(this);
     }
@@ -409,6 +422,8 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
             if (idx > numDocs)
                 throw new IllegalStateException("numDocs reached");
 
+            getDocsHit().set(idx);
+            
             Byte norm = null;
             IColumn normCol = docInfo.getSubColumn(CassandraUtils.normsKeyBytes);
             if (normCol != null) {
@@ -512,5 +527,18 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
         return c;
     }
+    
+    public OpenBitSet getDocsHit(){
+        OpenBitSet h = docsHit.get();
+        
+        if(h == null){
+            h = new OpenBitSet(numDocs);
+            
+            docsHit.set(h);
+        }
+        
+        return h;
+    }
+    
 
 }

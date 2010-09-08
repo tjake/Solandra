@@ -351,35 +351,12 @@ public class LucandraTermEnum extends TermEnum {
             throw new RuntimeException("JVM doesn't support UTF-8",e2);
         }
         
-        List<Row> rows = null;
         
         ReadCommand rc = new SliceByNamesReadCommand(CassandraUtils.keySpace, key, parent, docNums);
 
-        int attempts = 0;
-        while (attempts++ < 10) {
-            try {
-                rows = StorageProxy.readProtocol(Arrays.asList(rc), ConsistencyLevel.ONE);
-                break;
-            } catch (IOException e1) {
-               throw new RuntimeException(e1);
-            } catch (UnavailableException e1) {
-                
-            } catch (TimeoutException e1) {
-               
-            } catch (InvalidRequestException e) {
-              
-            }
-            
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                
-            }
-        }
-
-        if(attempts >= 10)
-            throw new RuntimeException("Read command failed after 10 attempts");
         
+        List<Row> rows = CassandraUtils.robustGet(Arrays.asList(rc), ConsistencyLevel.ONE);
+       
         termBuffer = new Term[0];
 
         if (rows != null  && rows.size()>0 && rows.get(0) != null && rows.get(0).cf != null && rows.get(0).cf.getSortedColumns() != null && rows.get(0).cf.getSortedColumns().size() > 0){
