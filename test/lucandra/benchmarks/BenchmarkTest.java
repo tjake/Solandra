@@ -1,29 +1,18 @@
 package lucandra.benchmarks;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import lucandra.CassandraUtils;
-import lucandra.IndexReader;
-import lucandra.IndexWriter;
-import lucandra.cluster.RedisIndexManager;
 
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.document.Field.Index;
-import org.apache.lucene.document.Field.Store;
-import org.apache.lucene.document.Field.TermVector;
-import org.apache.lucene.index.CorruptIndexException;
-import org.apache.lucene.queryParser.ParseException;
-import org.apache.lucene.queryParser.QueryParser;
-import org.apache.lucene.search.IndexSearcher;
-import org.apache.lucene.search.Query;
-import org.apache.lucene.search.TopDocs;
-import org.apache.lucene.util.Version;
+import org.apache.solr.client.solrj.SolrQuery;
+import org.apache.solr.client.solrj.SolrServerException;
+import org.apache.solr.client.solrj.impl.CommonsHttpSolrServer;
+import org.apache.solr.client.solrj.response.QueryResponse;
+import org.apache.solr.common.SolrInputDocument;
 
 public class BenchmarkTest {
 
@@ -35,123 +24,113 @@ public class BenchmarkTest {
     private static int numLoops = 10;
     private static Type type = Type.both;
     private static String indexName = "bench";
+
     private static String text = "this is a benchmark of lucandra";
     private static String queryString = "text:benchmark";
-    private static Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_CURRENT);
     private static int threadId = 0;
-    private static final Query query;
-    private static final Document doc;
-    private static final RedisIndexManager indexManager = new RedisIndexManager(CassandraUtils.service);
-
-    static {
-
-        try {
-            query = new QueryParser(Version.LUCENE_CURRENT, "text", analyzer).parse(queryString);
-        } catch (ParseException e) {
-           throw new RuntimeException(e);
-        }
-        doc = new Document();
-        doc.add(new Field("text", text, Store.YES, Index.ANALYZED, TermVector.WITH_POSITIONS_OFFSETS ));
-
-    }
+    private static int port = 8983;
+    private static String url = "http://localhost";
+    
+    
 
     private static Runnable getRunnable() {
 
-        return new Runnable() {
+        try {
+            return new Runnable() {
 
-            private final IndexReader indexReader = new IndexReader(indexName);
-            private final IndexWriter indexWriter = new IndexWriter(indexName);
-            private final IndexSearcher indexSearcher = new IndexSearcher(indexReader);
-            private final int myThreadId = threadId++;
+                private final CommonsHttpSolrServer solrClient = new CommonsHttpSolrServer(url + ":" + port + "/solr/" + indexName);
+                private final SolrQuery q = new SolrQuery().setQuery(queryString);
 
-            public void run() {
+                private final int myThreadId = threadId++;
+                
+                private SolrInputDocument getDocument(){
+                    SolrInputDocument doc =  new SolrInputDocument();
+                    doc.addField("text", text);
+                    doc.addField("id", ""+System.nanoTime()+Math.random());
 
-                switch (type) {
-                case read:
-                    read();
-                    break;
-                case write:
-                    write();
-                    break;
-                default:
-                    both();
+                    return doc;
                 }
-
-            }
-
-            private void read() {
-
-                int total = 0;
-
-                try {
-                    for (int i = 0; i < numLoops; i++) {
-
-                        TopDocs td = indexSearcher.search(query, 10);
-
-                        total = td.totalHits;
-
-                        indexReader.reopen();
-
-                        //if (i % 1000 == 999)
-                            System.err.println("Thread " + myThreadId + ": total " + total);
-                    }
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }catch(Throwable t){
-                    t.printStackTrace();
-                }
-
-                if (myThreadId == 0)
-                    System.err.println("Documents found: " + total);
-            }
-
-            private void write() {
-
-                for (int i = 0; i < numLoops; i++) {
+                
+                public void run() {
+                    
                     try {
-                        indexWriter.addDocument(doc, analyzer, indexManager.incrementDocId(indexName));
-                    } catch (CorruptIndexException e) {
+                        switch (type) {
+                        case read:
+                            read();
+                            break;
+                        case write:
+                            write();
+                            break;
+                        default:
+                            both();
+                        }
+                    } catch (SolrServerException e) {
                         e.printStackTrace();
                         throw new RuntimeException(e);
                     } catch (IOException e) {
                         e.printStackTrace();
                         throw new RuntimeException(e);
-                    } catch(Throwable t){
-                        t.printStackTrace();
-                        throw new RuntimeException(t);
+                    } finally {
+
                     }
                 }
-            }
+                
+               
 
-            private void both() {
+                private void read() throws SolrServerException {
 
-                int total = 0;
+                    long total = 0;
 
-                for (int i = 0; i < numLoops; i++) {
-                    try {
+                    for (int i = 0; i < numLoops; i++) {
+
+                        QueryResponse r = solrClient.query(q);
+
+                        total = r.getResults().getNumFound();
+
+                        // if (i % 1000 == 999)
+                        System.err.println("Thread " + myThreadId + ": total " + total);
+                    }
+
+                    if (myThreadId == 0)
+                        System.err.println("Documents found: " + total);
+                }
+
+                private void write() throws SolrServerException, IOException {
+
+                    for (int i = 0; i < numLoops; i++) {
+                       
+                        solrClient.add(getDocument());
+                    }
+                }
+
+                private void both() throws SolrServerException, IOException {
+
+                    long total = 0;
+
+                    for (int i = 0; i < numLoops; i++) {
+
                         if (i % 2 == 1) {
-                            TopDocs td = indexSearcher.search(query, 10);
-                            total = td.totalHits;
-
-                            indexReader.reopen();
+                            QueryResponse r = solrClient.query(q);
+                            total = r.getResults().getNumFound();
 
                             if (i % 1000 == 999)
                                 System.err.println("Thread " + myThreadId + ": total " + total);
 
                         } else {
-                            indexWriter.addDocument(doc, analyzer, indexManager.incrementDocId(indexName));
+                            
+                            solrClient.add(getDocument());
                         }
-                    } catch (CorruptIndexException e) {
-                        throw new RuntimeException(e);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
 
-                if (myThreadId == 0)
-                    System.err.println("Documents found: " + total);
-            }
-        };
+                    }
+
+                    if (myThreadId == 0)
+                        System.err.println("Documents found: " + total);
+                }
+            };
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
     }
 
     private static void usage() {
@@ -195,24 +174,19 @@ public class BenchmarkTest {
                 }
             }
         }
-        
-        CassandraUtils.startup();
+
 
         ExecutorService threadPool = Executors.newFixedThreadPool(numClients);
         Runnable runners[] = new Runnable[numClients];
         for (int i = 0; i < numClients; i++)
             runners[i] = getRunnable();
 
-      
-        
         System.out.println("Starting Benchmark...");
         long startTime = System.currentTimeMillis();
 
         for (int i = 0; i < numClients; i++)
             threadPool.submit(runners[i]);
 
-     
-        
         threadPool.shutdown();
 
         try {
@@ -230,10 +204,8 @@ public class BenchmarkTest {
         System.out.println("\tclients:" + numClients + ", loops:" + numLoops + ", type:" + type + ", rate(ops/sec):"
                 + Math.ceil((double) ((numClients * numLoops * 1000) / (endTime - startTime))));
 
-        
         System.exit(0);
-        
-        
+
     }
 
 }

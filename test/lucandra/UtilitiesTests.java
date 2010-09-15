@@ -33,7 +33,7 @@ public class UtilitiesTests extends TestCase {
     }
 
     
-    public void testIndexManager(){
+    /*public void testIndexManager(){
         String indexName = String.valueOf(System.nanoTime());
         int database = 11;
         
@@ -74,7 +74,7 @@ public class UtilitiesTests extends TestCase {
         
         assertEquals(1977, CassandraUtils.readVInt(ibytes));
     }
-    
+    */
     public void testBitSetReconciler() throws UnavailableException, TimeoutException, IOException, InvalidRequestException{
                      
         CassandraUtils.startup();

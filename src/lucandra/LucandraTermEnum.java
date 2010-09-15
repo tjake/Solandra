@@ -35,6 +35,7 @@ import org.apache.cassandra.db.RangeSliceCommand;
 import org.apache.cassandra.db.ReadCommand;
 import org.apache.cassandra.db.Row;
 import org.apache.cassandra.db.SliceByNamesReadCommand;
+import org.apache.cassandra.db.SliceFromReadCommand;
 import org.apache.cassandra.dht.AbstractBounds;
 import org.apache.cassandra.dht.Bounds;
 import org.apache.cassandra.dht.IPartitioner;
@@ -235,7 +236,7 @@ public class LucandraTermEnum extends TermEnum {
         SliceRange sliceRange = new SliceRange(new byte[] {}, new byte[] {}, true, Integer.MAX_VALUE);
         slicePredicate.setSlice_range(sliceRange);
         
-        List<Row> rows;
+        List<Row> rows = null;
         try {
             
             IPartitioner        p = StorageService.getPartitioner();
@@ -244,8 +245,9 @@ public class LucandraTermEnum extends TermEnum {
 
             rows = StorageProxy.getRangeSlice(new RangeSliceCommand(CassandraUtils.keySpace, columnParent, slicePredicate, bounds, count), ConsistencyLevel.ONE);
 
-            //rows = StorageProxy.readProtocol(Arrays.asList((ReadCommand)new SliceFromReadCommand(CassandraUtils.keySpace, startTerm, columnParent, new byte[] {}, new byte[]{},
-            //               false, Integer.MAX_VALUE)), ConsistencyLevel.ONE);
+            //rows = StorageProxy.readProtocol(Arrays.asList((ReadCommand)new SliceFromReadCommand(CassandraUtils.keySpace, startTerm, columnParent, new byte[] {}, new byte[] {}, 
+            //            false, Integer.MAX_VALUE)), ConsistencyLevel.ONE);
+                                     
             
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -253,7 +255,7 @@ public class LucandraTermEnum extends TermEnum {
             throw new RuntimeException(e);
         } catch (TimeoutException e) {
             throw new RuntimeException(e);
-        }
+        } 
 
         // term to start with next time
         actualInitSize = rows.size();
@@ -268,6 +270,9 @@ public class LucandraTermEnum extends TermEnum {
         if (actualInitSize > 0) {
             for (Row row : rows) {
    
+                if(row.cf == null)
+                    continue;
+                
                 String key;
                 try {
                     key = new String(row.key.key,"UTF-8");

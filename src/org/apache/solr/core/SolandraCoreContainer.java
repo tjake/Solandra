@@ -86,7 +86,7 @@ public class SolandraCoreContainer extends CoreContainer {
     }
     
     
-    public static SolrCore readSchema(String indexName, SolrConfig solrConfig) throws IOException {
+    public static synchronized SolrCore readSchema(String indexName, SolrConfig solrConfig) throws IOException {
 
         SolrCore core = cache.get(indexName);
 

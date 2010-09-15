@@ -360,7 +360,7 @@
   <searchComponent name="reopenComponent" class="solandra.SolandraReopenComponent"/>
 
 
-  
+
   <searchComponent name="tvComponent" class="org.apache.solr.handler.component.TermVectorComponent"/>
   <!-- A Req Handler for working with the tvComponent.  This is purely as an example.
   You will likely want to add the component to your already specified request handlers. -->
@@ -571,9 +571,9 @@
      <str name="hidden">anotherfile.txt</str>
     </lst>
   </requestHandler>
-  -->
-  <requestHandler name="/admin/" class="org.apache.solr.handler.admin.AdminHandlers" />
 
+  <requestHandler name="/admin/" class="org.apache.solr.handler.admin.AdminHandlers" />
+-->
   <!-- ping/healthcheck -->
   <requestHandler name="/admin/ping" class="PingRequestHandler">
     <lst name="defaults">

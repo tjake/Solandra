@@ -1,4 +1,4 @@
-# Cassandra storage config YAML 
+# Cassandra storage config YAML
 # See http://wiki.apache.org/cassandra/StorageConfiguration for
 # explanations of configuration directives.
 
@@ -30,7 +30,7 @@ partitioner: org.apache.cassandra.dht.OrderPreservingPartitioner
 data_file_directories:
     - /tmp/cassandra/data
 
-# Addresses of hosts that are deemed contact points. 
+# Addresses of hosts that are deemed contact points.
 # Cassandra nodes use this list of hosts to find each other and learn
 # the topology of the ring.  You must change this if you are running
 # multiple nodes!
@@ -52,7 +52,7 @@ disk_access_mode: auto
 # concurrent reads per processor core.  Increase ConcurrentWrites to
 # the number of clients writing at once if you enable CommitLogSync +
 # CommitLogSyncDelay. -->
-concurrent_reads: 8
+concurrent_reads: 32
 concurrent_writes: 32
 
 # This sets the amount of memtable flush writer threads.  These will
@@ -62,7 +62,7 @@ concurrent_writes: 32
 # By default this will be set to the amount of data directories defined.
 #memtable_flush_writers: 1
 
-# Buffer size to use when performing contiguous column slices. 
+# Buffer size to use when performing contiguous column slices.
 # Increase this to the size of the column slices you typically perform
 sliced_buffer_size_in_kb: 64
 
@@ -79,7 +79,7 @@ rpc_address: localhost
 rpc_port: 9160
 
 # Frame size for thrift (maximum field length).
-# 0 disables TFramedTransport in favor of TSocket. 
+# 0 disables TFramedTransport in favor of TSocket.
 thrift_framed_transport_size_in_mb: 15
 
 # The max length of a thrift message, including all fields and
@@ -102,10 +102,10 @@ in_memory_compaction_limit_in_mb: 128
 # commit log
 commitlog_directory: /tmp/cassandra/commitlog
 
-# Size to allow commitlog to grow to before creating a new segment 
+# Size to allow commitlog to grow to before creating a new segment
 commitlog_rotation_threshold_in_mb: 128
 
-# commitlog_sync may be either "periodic" or "batch." 
+# commitlog_sync may be either "periodic" or "batch."
 # When in batch mode, Cassandra won't ack writes until the commit log
 # has been fsynced to disk.  It will wait up to
 # CommitLogSyncBatchWindowInMS milliseconds for other writes, before
@@ -117,7 +117,7 @@ commitlog_sync: periodic
 # milliseconds.
 commitlog_sync_period_in_ms: 10000
 
-# Time to wait for a reply from other nodes before failing the command 
+# Time to wait for a reply from other nodes before failing the command
 rpc_timeout_in_ms: 10000
 
 # phi value that must be reached for a host to be marked down.
@@ -136,18 +136,18 @@ rpc_timeout_in_ms: 10000
 # org.apache.cassandra.locator.PropertyFileSnitch.
 endpoint_snitch: org.apache.cassandra.locator.SimpleSnitch
 
-# A ColumnFamily is the Cassandra concept closest to a relational table. 
+# A ColumnFamily is the Cassandra concept closest to a relational table.
 #
 # Keyspaces are separate groups of ColumnFamilies.  Except in very
 # unusual circumstances you will have one Keyspace per application.
 #
 # Keyspace required parameters:
-# - name: name of the keyspace; "system" and "definitions" are 
+# - name: name of the keyspace; "system" and "definitions" are
 #   reserved for Cassandra Internals.
 # - replica_placement_strategy: the class that determines how replicas
 #   are distributed among nodes.  Must implement IReplicaPlacementStrategy.
-#   Out of the box, Cassandra provides 
-#     * org.apache.cassandra.locator.RackUnawareStrategy 
+#   Out of the box, Cassandra provides
+#     * org.apache.cassandra.locator.RackUnawareStrategy
 #     * org.apache.cassandra.locator.RackAwareStrategy
 #     * org.apache.cassandra.locator.DatacenterShardStrategy
 #
@@ -155,7 +155,7 @@ endpoint_snitch: org.apache.cassandra.locator.SimpleSnitch
 #   replica at the node whose token is closest to the key (as determined
 #   by the Partitioner), and additional replicas on subsequent nodes
 #   along the ring in increasing Token order.
-# 
+#
 #   RackAwareStrategy is special cased for replication_factor of 3.  It
 #   places one replica in each of two datacenters, and the third on a
 #   different rack in in the first.
@@ -164,7 +164,7 @@ endpoint_snitch: org.apache.cassandra.locator.SimpleSnitch
 #   For each datacenter, you can specify (in `datacenter.properties`)
 #   how many replicas you want on a per-keyspace basis.  Replicas are
 #   placed on different racks within each DC, if possible.
-# 
+#
 # - replication_factor: Number of replicas of each row
 # - column_families: column families associated with this keyspace
 #
@@ -188,7 +188,7 @@ endpoint_snitch: org.apache.cassandra.locator.SimpleSnitch
 #   or ColumnFamilies with high write:read ratios. Specify a fraction
 #   (value less than 1) or an absolute number of rows to cache.
 #   Defaults to 0. (i.e. row caching is off by default)
-# - comment: used to attach additional human-readable information about 
+# - comment: used to attach additional human-readable information about
 #   the column family to its definition.
 # - read_repair_chance: specifies the probability with which read
 #   repairs should be invoked on non-quorum reads.  must be between 0
@@ -204,10 +204,10 @@ keyspaces:
       replica_placement_strategy: org.apache.cassandra.locator.RackUnawareStrategy
       replication_factor: 1
       column_families:
-        - name: Docs 
+        - name: Docs
           compare_with: BytesType
           clock_type: Timestamp
-          reconciler: TimestampReconciler   
+          reconciler: TimestampReconciler
           keys_cached: .9
           preload_row_cache: true
 
@@ -218,17 +218,17 @@ keyspaces:
           keys_cached: .9
           rows_cached: .9
           clock_type: Timestamp
-          reconciler: TimestampReconciler   
+          reconciler: TimestampReconciler
           preload_row_cache: true
-          
+
         - name: SI
           compare_with: BytesType
-          
+
         - name: MI
           compare_with: BytesType
           clock_type: Timestamp
-          reconciler: lucandra.BitSetReconciler 
-         
-         
-         
-          
+          reconciler: lucandra.BitSetReconciler
+
+
+
+

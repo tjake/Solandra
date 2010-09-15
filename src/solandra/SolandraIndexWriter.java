@@ -27,13 +27,20 @@ import lucandra.CassandraUtils;
 import lucandra.cluster.AbstractIndexManager;
 import lucandra.cluster.RedisIndexManager;
 
-import org.apache.lucene.index.Term;
+import org.apache.lucene.document.Document;
+import org.apache.lucene.document.Field;
+import org.apache.lucene.document.Fieldable;
+import org.apache.lucene.document.Field.Index;
+import org.apache.lucene.document.Field.Store;
 import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.Query;
 import org.apache.solr.common.SolrException;
+import org.apache.solr.common.SolrInputDocument;
+import org.apache.solr.common.SolrInputField;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.core.SolrCore;
+import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.QueryParsing;
 import org.apache.solr.update.AddUpdateCommand;
 import org.apache.solr.update.CommitUpdateCommand;
@@ -101,6 +108,8 @@ public class SolandraIndexWriter extends UpdateHandler {
             int shard = AbstractIndexManager.getShardFromDocId(docId);
             
             String indexName = core.getName()+"~"+shard;
+            
+            
             writer.setIndexName(indexName);
             
           /*  if (cmd.overwriteCommitted || cmd.overwritePending) {
@@ -126,8 +135,15 @@ public class SolandraIndexWriter extends UpdateHandler {
                     writer.deleteDocuments(bq);
                 }
             } else {*/
-                // allow duplicates
-                writer.addDocument(cmd.getLuceneDocument(schema), schema.getAnalyzer(), docId);
+                // allow duplicates            
+                SchemaField uniqueField = core.getSchema().getUniqueKeyField();
+                
+                if(uniqueField == null)
+                    throw new IOException("Solandra requires a unique field");
+                
+                Document doc = cmd.getLuceneDocument(core.getSchema());
+                
+                writer.addDocument(doc, core.getSchema().getAnalyzer(), docId);
             //}
 
             rc = 1;

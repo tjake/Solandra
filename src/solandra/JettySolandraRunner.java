@@ -61,7 +61,7 @@ public class JettySolandraRunner
     this.context = context;
     server = new Server( port );    
     server.setStopAtShutdown( true );
-    
+
     // Initialize the servlets
     Context root = new Context( server, context, Context.SESSIONS );
     

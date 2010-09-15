@@ -215,8 +215,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
                 if (fieldNames == null || fieldNames.size() == 0 ) {
                     // get all columns ( except this skips meta info )
-                    readCommands.add(new SliceFromReadCommand(CassandraUtils.keySpace, key, columnParent, new byte[] {}, CassandraUtils.finalToken
-                            .getBytes("UTF-8"), false, Integer.MAX_VALUE));
+                    readCommands.add(new SliceFromReadCommand(CassandraUtils.keySpace, key, columnParent, new byte[] {}, CassandraUtils.finalTokenBytes, false, Integer.MAX_VALUE));
                 } else {
                     readCommands.add(new SliceByNamesReadCommand(CassandraUtils.keySpace, key, columnParent, fieldNames));
                 }
@@ -439,7 +438,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
             if (norms == null) 
                 norms = new byte[1024];                         
 
-            while(norms.length < idx && norms.length < numDocs ){
+            while(norms.length <= idx && norms.length < numDocs ){
                 byte[] _norms = new byte[(norms.length * 2) < numDocs ? (norms.length * 2) : (numDocs + 1)];
                 System.arraycopy(norms, 0, _norms, 0, norms.length);
                 norms = _norms;           
@@ -447,9 +446,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
             
             // find next empty position
-            norms[idx] = norm;
-
-           
+            norms[idx] = norm;          
         }
         
         fieldNorms.put(field, norms);
