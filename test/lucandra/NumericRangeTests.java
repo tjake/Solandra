@@ -36,9 +36,14 @@ import org.apache.lucene.document.Field.Index;
 import org.apache.lucene.document.Field.Store;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.Term;
+import org.apache.lucene.search.BooleanClause;
+import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.NumericRangeQuery;
 import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.Sort;
+import org.apache.lucene.search.SortField;
+import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
 import org.apache.thrift.transport.TTransportException;
 import org.junit.AfterClass;
@@ -53,8 +58,6 @@ import org.junit.Test;
  */
 public class NumericRangeTests {
 
-	
-	
 	private static IndexContext context;
 	private static Document first;
 	private static Document second;
@@ -63,47 +66,42 @@ public class NumericRangeTests {
 	private static long mid;
 	private static long high;
 
-
-	
 	@BeforeClass
-	public static void writeIndexes() throws TTransportException, CorruptIndexException, IOException {
-		
+	public static void writeIndexes() throws TTransportException,
+			CorruptIndexException, IOException {
+
 		Iface connection = CassandraUtils.createConnection();
 		context = new IndexContext(connection, "Lucandra", ConsistencyLevel.ONE);
-		//clean up indexes before we run our test
+		// clean up indexes before we run our test
 		cleanIndexes();
-		
+
 		low = 1277266160637L;
 		mid = low + 1000;
 		high = mid + 1000;
 
-		
-
 		first = new Document();
 		first.add(new Field("Id", "first", Store.YES, Index.ANALYZED));
-		
 
-		NumericField numeric = new NumericField("long", 
-				Store.YES, true);
+		NumericField numeric = new NumericField("long", Store.YES, true);
 		numeric.setLongValue(low);
 		first.add(numeric);
 
 		second = new Document();
 		second.add(new Field("Id", "second", Store.YES, Index.ANALYZED));
 
-		numeric = new NumericField("long",  Store.YES, true);
+		numeric = new NumericField("long", Store.YES, true);
 		numeric.setLongValue(mid);
 		second.add(numeric);
 
 		third = new Document();
 		third.add(new Field("Id", "third", Store.YES, Index.ANALYZED));
 
-		numeric = new NumericField("long",  Store.YES, true);
+		numeric = new NumericField("long", Store.YES, true);
 		numeric.setLongValue(high);
 		third.add(numeric);
-		
+
 		IndexWriter writer = new IndexWriter("longvals", context);
-		//writer.setAutoCommit(false);
+		// writer.setAutoCommit(false);
 
 		SimpleAnalyzer analyzer = new SimpleAnalyzer();
 
@@ -111,17 +109,14 @@ public class NumericRangeTests {
 		writer.addDocument(second, analyzer);
 		writer.addDocument(third, analyzer);
 
-		//writer.commit();
-		
-	
+		// writer.commit();
 
-		
 	}
 
 	@AfterClass
-	public static void cleanIndexes() throws CorruptIndexException, IOException, TTransportException {
-		
-		
+	public static void cleanIndexes() throws CorruptIndexException,
+			IOException, TTransportException {
+
 		IndexWriter writer = new IndexWriter("longvals", context);
 		writer.deleteDocuments(new Term("Id", "first"));
 		writer.deleteDocuments(new Term("Id", "second"));
@@ -129,11 +124,83 @@ public class NumericRangeTests {
 	}
 
 	@Test
+	public void testSortOrderAscending() throws IOException {
+
+		BooleanQuery query = new BooleanQuery();
+		query.add(new TermQuery(new Term("Id", "first")),
+				BooleanClause.Occur.SHOULD);
+		query.add(new TermQuery(new Term("Id", "second")),
+				BooleanClause.Occur.SHOULD);
+		query.add(new TermQuery(new Term("Id", "third")),
+				BooleanClause.Occur.SHOULD);
+
+		SortField sortField = new SortField("long", SortField.LONG, true);
+		Sort sort = new Sort(sortField);
+
+		IndexReader reader = new IndexReader("longvals", context);
+
+		IndexSearcher searcher = new IndexSearcher(reader);
+
+		TopDocs docs = searcher.search(query, null, 10000, sort);
+
+		assertEquals(3, docs.totalHits);
+
+		Document returned = searcher.doc(docs.scoreDocs[0].doc);
+
+		assertEquals("third", returned.get("Id"));
+
+		returned = searcher.doc(docs.scoreDocs[1].doc);
+
+		assertEquals("second", returned.get("Id"));
+
+		returned = searcher.doc(docs.scoreDocs[2].doc);
+
+		assertEquals("first", returned.get("Id"));
+
+	}
+	
+
+	@Test
+	public void testSortOrderDescending() throws IOException {
+
+		BooleanQuery query = new BooleanQuery();
+		query.add(new TermQuery(new Term("Id", "first")),
+				BooleanClause.Occur.SHOULD);
+		query.add(new TermQuery(new Term("Id", "second")),
+				BooleanClause.Occur.SHOULD);
+		query.add(new TermQuery(new Term("Id", "third")),
+				BooleanClause.Occur.SHOULD);
+
+		SortField sortField = new SortField("long", SortField.LONG, false);
+		Sort sort = new Sort(sortField);
+
+		IndexReader reader = new IndexReader("longvals", context);
+
+		IndexSearcher searcher = new IndexSearcher(reader);
+
+		TopDocs docs = searcher.search(query, null, 10000, sort);
+
+		assertEquals(3, docs.totalHits);
+
+		Document returned = searcher.doc(docs.scoreDocs[2].doc);
+
+		assertEquals("third", returned.get("Id"));
+
+		returned = searcher.doc(docs.scoreDocs[1].doc);
+
+		assertEquals("second", returned.get("Id"));
+
+		returned = searcher.doc(docs.scoreDocs[0].doc);
+
+		assertEquals("first", returned.get("Id"));
+
+	}
+
+	@Test
 	public void testLongRangeInclusive() throws Exception {
 
-
-		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
-				 mid, null, true, true);
+		NumericRangeQuery query = NumericRangeQuery.newLongRange("long", mid,
+				null, true, true);
 
 		IndexReader reader = new IndexReader("longvals", context);
 
@@ -142,7 +209,6 @@ public class NumericRangeTests {
 		TopDocs docs = searcher.search(query, 1000);
 
 		assertEquals(2, docs.totalHits);
-
 
 		Set<String> results = new HashSet<String>();
 
@@ -162,15 +228,14 @@ public class NumericRangeTests {
 
 		// now we'll query from the middle inclusive
 
-		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
-				 mid, null, false, true);
+		NumericRangeQuery query = NumericRangeQuery.newLongRange("long", mid,
+				null, false, true);
 
 		IndexReader reader = new IndexReader("longvals", context);
 
 		IndexSearcher searcher = new IndexSearcher(reader);
 
 		TopDocs docs = searcher.search(query, 1000);
-
 
 		assertEquals(1, docs.totalHits);
 
@@ -184,14 +249,14 @@ public class NumericRangeTests {
 		assertTrue(results.contains("third"));
 
 	}
-	
+
 	@Test
 	public void testLongRangeLessExclusive() throws Exception {
 
 		// now we'll query from the middle inclusive
 
-		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
-				 null, mid, true, false);
+		NumericRangeQuery query = NumericRangeQuery.newLongRange("long", null,
+				mid, true, false);
 
 		IndexReader reader = new IndexReader("longvals", context);
 
@@ -210,17 +275,15 @@ public class NumericRangeTests {
 
 		assertTrue(results.contains("first"));
 
-
 	}
 
-	
 	@Test
 	public void testLongRangeLessInclusive() throws Exception {
 
 		// now we'll query from the middle inclusive
 
-		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
-				 null, mid, true, true);
+		NumericRangeQuery query = NumericRangeQuery.newLongRange("long", null,
+				mid, true, true);
 
 		IndexReader reader = new IndexReader("longvals", context);
 
@@ -242,14 +305,13 @@ public class NumericRangeTests {
 
 	}
 
-	
 	@Test
 	public void testLongRangeMinValueAll() throws Exception {
 
 		// now we'll query from the middle inclusive
 
 		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
-				 Long.MIN_VALUE, null, true, true);
+				Long.MIN_VALUE, null, true, true);
 
 		IndexReader reader = new IndexReader("longvals", context);
 
@@ -270,16 +332,15 @@ public class NumericRangeTests {
 		assertTrue(results.contains("second"));
 		assertTrue(results.contains("third"));
 
-
 	}
-	
+
 	@Test
 	public void testLongRangeMaxAll() throws Exception {
 
 		// now we'll query from the middle inclusive
 
-		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
-				 null, Long.MAX_VALUE, true, true);
+		NumericRangeQuery query = NumericRangeQuery.newLongRange("long", null,
+				Long.MAX_VALUE, true, true);
 
 		IndexReader reader = new IndexReader("longvals", context);
 
@@ -301,14 +362,14 @@ public class NumericRangeTests {
 		assertTrue(results.contains("third"));
 
 	}
-	
 
 	@Test
 	public void testLongRangeZeroAll() throws Exception {
 
 		// now we'll query from the middle inclusive
 
-		NumericRangeQuery query = NumericRangeQuery.newLongRange("long",0L, Long.MAX_VALUE, true, true);
+		NumericRangeQuery query = NumericRangeQuery.newLongRange("long", 0L,
+				Long.MAX_VALUE, true, true);
 
 		IndexReader reader = new IndexReader("longvals", context);
 
@@ -328,7 +389,6 @@ public class NumericRangeTests {
 		assertTrue(results.contains("first"));
 		assertTrue(results.contains("second"));
 		assertTrue(results.contains("third"));
-
 
 	}
 
