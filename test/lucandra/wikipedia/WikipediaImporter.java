@@ -125,9 +125,9 @@ public class WikipediaImporter {
             if (line.contains("<abstract>")) {
 
                 if (line.contains("</abstract>")) {
-                    page.text = line.substring(line.indexOf("<abstract>") + 10, line.indexOf("</abstract>")).getBytes();
+                    page.text = line.substring(line.indexOf("<abstract>") + 10, line.indexOf("</abstract>")).getBytes("UTF-8");
                 } else {
-                    page.text = line.substring(line.indexOf("<abstract>" + 10)).getBytes();
+                    page.text = line.substring(line.indexOf("<abstract>" + 10)).getBytes("UTF-8");
                     inText = true;
                     continue;
                 }
@@ -142,7 +142,7 @@ public class WikipediaImporter {
                 byte[] newText = new byte[page.text.length + text.getBytes().length];
 
                 System.arraycopy(page.text, 0, newText, 0, page.text.length);
-                System.arraycopy(text.getBytes(), 0, newText, page.text.length, text.getBytes().length);
+                System.arraycopy(text.getBytes("UTF-8"), 0, newText, page.text.length, text.getBytes().length);
 
                 page.text = newText;
             }

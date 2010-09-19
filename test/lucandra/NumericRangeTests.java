@@ -43,7 +43,6 @@ import org.apache.lucene.search.TopDocs;
 import org.apache.thrift.transport.TTransportException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -52,7 +51,6 @@ import org.junit.Test;
  * @author Todd Nine
  * 
  */
-@Ignore("Ignored until this issue is fixed.  Numeric ranges won't work.  https://issues.apache.org/jira/browse/CASSANDRA-1235")
 public class NumericRangeTests {
 
 	

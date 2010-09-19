@@ -150,7 +150,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
             long end = System.currentTimeMillis();
 
-            logger.info("docFreq() took: " + (end - start) + "ms");
+            logger.debug("docFreq() took: " + (end - start) + "ms");
 
             getTermEnumCache().put(term, termEnum);
         }
@@ -435,17 +435,19 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
             
             byte[] norms = getFieldNorms().get(field);
             
-            if(norms == null)
-                norms = new byte[1];
-            
-            byte[] _norms = new byte[norms.length+1];
-            System.arraycopy(norms, 0, _norms, 0, norms.length);
-            
-            //last value is not used so we write to the -1
-            _norms[norms.length] = norm;
-            
-            getFieldNorms().put(field, _norms);
-            
+            if (norms == null) 
+                norms = new byte[1024];                         
+
+            while(norms.length < idx && norms.length < numDocs ){
+                byte[] _norms = new byte[(norms.length * 2) < numDocs ? (norms.length * 2) : (numDocs + 1)];
+                System.arraycopy(norms, 0, _norms, 0, norms.length);
+                norms = _norms;           
+            }
+
+            // find next empty position
+            norms[idx] = norm;
+
+            getFieldNorms().put(field, norms);            
         }
 
         return idx;

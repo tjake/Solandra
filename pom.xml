@@ -21,7 +21,7 @@
 		<dependency>
 			<groupId>org.apache.cassandra</groupId>
 			<artifactId>cassandra</artifactId>
-			<version>0.6.3</version>
+			<version>${cassandra.version}</version>
 		</dependency>
 
 		<!--  our lucene depencies -->
@@ -313,5 +313,6 @@
 		<lucene.version>2.9.3</lucene.version>
 		<solr.version>1.4.0</solr.version>
 		<slf4j.version>1.5.8</slf4j.version>
+		<cassandra.version>0.6.5</cassandra.version>
 	</properties>
 </project>
