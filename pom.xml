@@ -264,8 +264,8 @@
 							<packaging>jar</packaging>
 							<groupId>org.apache.cassandra</groupId>
 							<artifactId>cassandra</artifactId>
-							<version>0.6.3</version>
-							<file>${basedir}/lib/apache-cassandra-0.6.3.jar</file>
+							<version>${cassandra.version}</version>
+							<file>${basedir}/lib/apache-cassandra-${cassandra.version}.jar</file>
 						</configuration>
 					</execution>
 				</executions>
@@ -299,8 +299,8 @@
 						<packaging>jar</packaging>
 							<groupId>org.apache.cassandra</groupId>
 							<artifactId>cassandra</artifactId>
-							<version>0.6.3</version>
-							<file>${basedir}/lib/apache-cassandra-0.6.3.jar</file>
+							<version>${cassandra.version}</version>
+							<file>${basedir}/lib/apache-cassandra-${cassandra.version}.jar</file>
 						</configuration>
 					</execution>
 				</executions>
