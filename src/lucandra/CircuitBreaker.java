@@ -19,7 +19,8 @@
  */
 package lucandra;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Simple state machine which acts like household circuit breaker.
@@ -40,7 +41,7 @@ public class CircuitBreaker {
         OPEN
     }
 
-    private static final Logger logger = Logger.getLogger(CircuitBreaker.class);
+    private static final  Logger logger = LoggerFactory.getLogger(CircuitBreaker.class);
     private State state     = State.CLOSED;
     private long  nextCheck = 0;
 

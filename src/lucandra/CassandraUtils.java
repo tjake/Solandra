@@ -39,7 +39,6 @@ import java.util.UUID;
 import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.Column;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
-import org.apache.cassandra.thrift.ColumnPath;
 import org.apache.cassandra.thrift.Deletion;
 import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.Mutation;
@@ -48,7 +47,6 @@ import org.apache.cassandra.thrift.SliceRange;
 import org.apache.cassandra.thrift.SuperColumn;
 import org.apache.cassandra.thrift.TimedOutException;
 import org.apache.cassandra.thrift.UnavailableException;
-import org.apache.log4j.Logger;
 import org.apache.lucene.index.Term;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
@@ -57,6 +55,8 @@ import org.apache.thrift.transport.TFramedTransport;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CassandraUtils {
 
@@ -90,7 +90,7 @@ public class CassandraUtils {
     public static final BigInteger CHAR_MASK = new BigInteger("65535");
 
     
-    private static final Logger logger = Logger.getLogger(CassandraUtils.class);
+    private static final Logger logger = LoggerFactory.getLogger(CassandraUtils.class);
 
     /*This can be used to communicate without thrift transport, just POJOs
      * 

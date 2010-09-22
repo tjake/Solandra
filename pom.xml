@@ -1,4 +1,5 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<parent>
 		<artifactId>settings</artifactId>
 		<groupId>com.spidertracks.standards</groupId>
@@ -11,20 +12,20 @@
 
 	<dependencies>
 
-		<!--  thrift dependencies -->
+		<!-- thrift dependencies -->
 		<dependency>
 			<groupId>libthrift</groupId>
 			<artifactId>libthrift</artifactId>
 			<version>917130</version>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>org.apache.cassandra</groupId>
 			<artifactId>cassandra</artifactId>
 			<version>${cassandra.version}</version>
 		</dependency>
 
-		<!--  our lucene depencies -->
+		<!-- our lucene depencies -->
 
 		<dependency>
 			<groupId>org.apache.lucene</groupId>
@@ -91,7 +92,7 @@
 		</dependency>
 
 
-		<!--  test depencencies -->
+		<!-- test depencencies -->
 
 
 		<dependency>
@@ -111,21 +112,22 @@
 			<scope>test</scope>
 		</dependency>
 
-		<!--  we still use hector for testing -->
+		<!-- we still use hector for testing -->
 
-		<dependency>
-			<groupId>org.slf4j</groupId>
-			<artifactId>slf4j-log4j12</artifactId>
-			<version>${slf4j.version}</version>
-			<type>jar</type>
-			<scope>test</scope>
-		</dependency>
+
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-api</artifactId>
 			<version>${slf4j.version}</version>
 			<type>jar</type>
 			<scope>compile</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-log4j12</artifactId>
+			<version>${slf4j.version}</version>
+			<type>jar</type>
+			<scope>test</scope>
 		</dependency>
 	</dependencies>
 
@@ -206,7 +208,7 @@
 				</configuration>
 			</plugin>
 
-			<!--  add our second thrift source directory -->
+			<!-- add our second thrift source directory -->
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>build-helper-maven-plugin</artifactId>
@@ -228,7 +230,7 @@
 			</plugin>
 
 
-			<!--  install the thrift libraries -->
+			<!-- install the thrift libraries -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-install-plugin</artifactId>
@@ -263,7 +265,7 @@
 					</execution>
 				</executions>
 			</plugin>
-			<!--  deploy the thrift binarie -->
+			<!-- deploy the thrift binarie -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-deploy-plugin</artifactId>
@@ -289,7 +291,7 @@
 							<goal>deploy-file</goal>
 						</goals>
 						<configuration>
-						<packaging>jar</packaging>
+							<packaging>jar</packaging>
 							<groupId>org.apache.cassandra</groupId>
 							<artifactId>cassandra</artifactId>
 							<version>${cassandra.version}</version>

@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.log4j.Logger;
 import org.apache.lucene.document.FieldSelector;
 import org.apache.solr.handler.component.ResponseBuilder;
 import org.apache.solr.handler.component.SearchComponent;
@@ -32,10 +31,12 @@ import org.apache.solr.highlight.SolrHighlighter;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.DocIterator;
 import org.apache.solr.search.DocList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
     
 public class SolandraReopenComponent extends SearchComponent {
 
-    private static final Logger logger = Logger.getLogger(SolandraReopenComponent.class);
+    private static final  Logger logger = LoggerFactory.getLogger(SolandraReopenComponent.class);
     
     public String getDescription() {
        return "Reopens Lucandra readers";

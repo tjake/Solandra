@@ -37,7 +37,6 @@ import org.apache.cassandra.thrift.SlicePredicate;
 import org.apache.cassandra.thrift.SliceRange;
 import org.apache.cassandra.thrift.TimedOutException;
 import org.apache.cassandra.thrift.UnavailableException;
-import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
@@ -53,6 +52,8 @@ import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.Similarity;
 import org.apache.lucene.search.TopDocs;
 import org.apache.thrift.TException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class IndexWriter {
 
@@ -64,7 +65,7 @@ public class IndexWriter {
     
     private Similarity similarity = Similarity.getDefault(); // how to normalize;     
     
-    private static final Logger logger = Logger.getLogger(IndexWriter.class);
+    private static final  Logger logger = LoggerFactory.getLogger(IndexWriter.class);
 
     public IndexWriter(String indexName, IndexContext context) {
 

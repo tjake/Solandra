@@ -26,8 +26,8 @@ import junit.framework.TestCase;
 import lucandra.CassandraUtils;
 import lucandra.IndexContext;
 
-import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.Cassandra.Iface;
+import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.lucene.analysis.SimpleAnalyzer;
 import org.apache.lucene.index.ConcurrentMergeScheduler;
 import org.apache.lucene.search.FieldCache;

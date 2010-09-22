@@ -25,12 +25,11 @@ import java.util.List;
 import java.util.Random;
 
 import org.apache.cassandra.thrift.Cassandra;
-import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.TokenRange;
 import org.apache.cassandra.thrift.UnavailableException;
-import org.apache.log4j.Logger;
-import org.apache.thrift.TException;
 import org.apache.thrift.transport.TTransportException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This wraps the underlying Cassandra thrift client and attempts to handle
@@ -50,8 +49,7 @@ import org.apache.thrift.transport.TTransportException;
 public class CassandraProxyClient implements
 		java.lang.reflect.InvocationHandler {
 
-	private static final Logger logger = Logger
-			.getLogger(CassandraProxyClient.class);
+	private static final Logger logger = LoggerFactory.getLogger(CassandraProxyClient.class);
 	private String host;
 	private int port;
 	private final boolean framed;

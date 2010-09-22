@@ -22,9 +22,9 @@ package lucandra;
 import java.io.UnsupportedEncodingException;
 
 import org.apache.cassandra.thrift.Cassandra;
+import org.apache.cassandra.thrift.Cassandra.Iface;
 import org.apache.cassandra.thrift.ColumnPath;
 import org.apache.cassandra.thrift.ConsistencyLevel;
-import org.apache.cassandra.thrift.Cassandra.Iface;
 
 /**
  * This class is intended to encapsulate all Cassandra connection information.
