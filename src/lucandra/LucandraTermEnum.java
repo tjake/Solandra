@@ -21,6 +21,7 @@ package lucandra;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -31,21 +32,14 @@ import java.util.TreeMap;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.cassandra.db.IColumn;
-import org.apache.cassandra.db.RangeSliceCommand;
 import org.apache.cassandra.db.ReadCommand;
 import org.apache.cassandra.db.Row;
 import org.apache.cassandra.db.SliceByNamesReadCommand;
 import org.apache.cassandra.db.SliceFromReadCommand;
-import org.apache.cassandra.dht.AbstractBounds;
-import org.apache.cassandra.dht.Bounds;
-import org.apache.cassandra.dht.IPartitioner;
 import org.apache.cassandra.service.StorageProxy;
-import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.InvalidRequestException;
-import org.apache.cassandra.thrift.SlicePredicate;
-import org.apache.cassandra.thrift.SliceRange;
 import org.apache.cassandra.thrift.UnavailableException;
 import org.apache.log4j.Logger;
 import org.apache.lucene.index.Term;
@@ -153,12 +147,16 @@ public class LucandraTermEnum extends TermEnum {
         if(initTerm == null)
             initTerm = skipTo;
         
+        
+        byte[] fieldKey =  CassandraUtils.hashKeyBytes(
+                indexName.getBytes(), CassandraUtils.delimeterBytes, skipTo.field().getBytes()
+        );
+        
         // chose starting term
         byte[] startTerm;
         try {
-            startTerm = CassandraUtils.hashKeyBytes(
-                        indexName.getBytes(), CassandraUtils.delimeterBytes, skipTo.field().getBytes(), CassandraUtils.delimeterBytes, skipTo.text().getBytes("UTF-8")
-                    );
+            startTerm =  skipTo.text().getBytes("UTF-8");
+                    
         } catch (UnsupportedEncodingException e1) {
            throw new RuntimeException("JVM doesn't support UTF-8",e1);
         }
@@ -168,11 +166,8 @@ public class LucandraTermEnum extends TermEnum {
         byte[] endTerm = new byte[]{};
       
         //The boundary condition for this search. currently the field.
-        byte[] boundryTerm = CassandraUtils.hashKeyBytes(
-                indexName.getBytes(), CassandraUtils.delimeterBytes, 
-                skipTo.field().getBytes(), CassandraUtils.delimeterBytes, CassandraUtils.finalTokenBytes
-                );
-        
+        byte[] boundryTerm =  CassandraUtils.finalTokenBytes;
+                     
         
         if ((!skipTo.equals(chunkBoundryTerm) || termPosition == 0) && termCache != null) {
             termDocFreqBuffer = termCache.subMap(skipTo, termCache.lastKey());
@@ -210,9 +205,8 @@ public class LucandraTermEnum extends TermEnum {
         if (chunkBoundryTerm != null) {
             count = maxChunkSize;
             try {
-                startTerm = CassandraUtils.hashKeyBytes(
-                            indexName.getBytes(),  CassandraUtils.delimeterBytes, chunkBoundryTerm.field().getBytes(), CassandraUtils.delimeterBytes, chunkBoundryTerm.text().getBytes("UTF-8")
-                        );
+                startTerm =  chunkBoundryTerm.text().getBytes("UTF-8");
+                        
             } catch (UnsupportedEncodingException e) {
                 throw new RuntimeException("JVM doesn't support UTF-8",e);
             }
@@ -228,25 +222,13 @@ public class LucandraTermEnum extends TermEnum {
 
         termDocFreqBuffer = new TreeMap<Term, Collection<IColumn>>();
 
-        ColumnParent columnParent = new ColumnParent(CassandraUtils.termVecColumnFamily);        
-        SlicePredicate slicePredicate = new SlicePredicate();
-       
-
-        // Get all columns
-        SliceRange sliceRange = new SliceRange(new byte[] {}, new byte[] {}, true, Integer.MAX_VALUE);
-        slicePredicate.setSlice_range(sliceRange);
+        ColumnParent columnFamily = new ColumnParent(CassandraUtils.metaInfoColumnFamily);   
         
         List<Row> rows = null;
         try {
             
-            IPartitioner        p = StorageService.getPartitioner();
-            
-            AbstractBounds bounds = new Bounds(p.getToken(startTerm), p.getToken(endTerm));
-
-            rows = StorageProxy.getRangeSlice(new RangeSliceCommand(CassandraUtils.keySpace, columnParent, slicePredicate, bounds, count), ConsistencyLevel.ONE);
-
-            //rows = StorageProxy.readProtocol(Arrays.asList((ReadCommand)new SliceFromReadCommand(CassandraUtils.keySpace, startTerm, columnParent, new byte[] {}, new byte[] {}, 
-            //            false, Integer.MAX_VALUE)), ConsistencyLevel.ONE);
+            rows = StorageProxy.readProtocol(Arrays.asList((ReadCommand)new SliceFromReadCommand(CassandraUtils.keySpace, fieldKey, columnFamily, startTerm, endTerm, 
+                        false, count)), ConsistencyLevel.ONE);
                                      
             
         } catch (IOException e) {
@@ -255,8 +237,50 @@ public class LucandraTermEnum extends TermEnum {
             throw new RuntimeException(e);
         } catch (TimeoutException e) {
             throw new RuntimeException(e);
+        } catch (InvalidRequestException e) {
+            throw new RuntimeException(e);
         } 
 
+        ColumnParent columnParent = new ColumnParent(CassandraUtils.termVecColumnFamily);        
+
+        if(rows == null || rows.size() != 1)
+            throw new RuntimeException("Missing field meta info");
+        
+        
+        
+        //Collect read commands
+        Collection<IColumn> columns;
+        if(rows.get(0).cf == null)
+            columns = new ArrayList<IColumn>();
+        else
+            columns = rows.get(0).cf.getSortedColumns();
+        
+        List<ReadCommand> reads = new ArrayList<ReadCommand>(columns.size());
+        for(IColumn column : columns){
+            byte[] rowKey =  CassandraUtils.hashKeyBytes(
+                    indexName.getBytes(), CassandraUtils.delimeterBytes, skipTo.field().getBytes(),CassandraUtils.delimeterBytes, column.name()
+            );
+            
+            reads.add((ReadCommand)new SliceFromReadCommand(CassandraUtils.keySpace, rowKey, columnParent, CassandraUtils.emptyByteArray, CassandraUtils.emptyByteArray, 
+                        false, Integer.MAX_VALUE));
+        }
+        
+        try {
+                 
+            rows = StorageProxy.readProtocol(reads, ConsistencyLevel.ONE);                                    
+            
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        } catch (UnavailableException e) {
+            throw new RuntimeException(e);
+        } catch (TimeoutException e) {
+            throw new RuntimeException(e);
+        } catch (InvalidRequestException e) {
+            throw new RuntimeException(e);
+        } 
+        
+        
+        
         // term to start with next time
         actualInitSize = rows.size();
         if(logger.isDebugEnabled()){
@@ -284,7 +308,7 @@ public class LucandraTermEnum extends TermEnum {
                 String termStr = key.substring(key.indexOf(CassandraUtils.delimeter) + CassandraUtils.delimeter.length());
                 Term term = CassandraUtils.parseTerm(termStr);                 
                 
-                Collection<IColumn> columns = row.cf.getSortedColumns();
+                columns = row.cf.getSortedColumns();
                 
                 logger.debug(termStr + " has " + columns.size());
                 

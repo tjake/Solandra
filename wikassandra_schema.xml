@@ -15,7 +15,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 -->
-<schema name="bench" version="1.1">
+<schema name="wikassandra" version="1.1">
  <types>
   <fieldType name="string" class="solr.StrField"/>
   <fieldType name="text" class="solr.TextField">
@@ -23,12 +23,12 @@
   </fieldType>
  </types>
  <fields>
-    <field name="id"  type="string" indexed="true"  stored="true"/>
-    <field name="type"  type="string" indexed="true"  stored="true"/>
+    <field name="url"  type="string" indexed="true"  stored="true"/>
+    <field name="title"  type="text" indexed="true"  stored="true"/>
     <field name="text"  type="text" indexed="true"  stored="true"/>
  </fields>
 
-<defaultSearchField>text</defaultSearchField>
-<uniqueKey>id</uniqueKey>
+<defaultSearchField>title</defaultSearchField>
+<uniqueKey>url</uniqueKey>
 
 </schema>

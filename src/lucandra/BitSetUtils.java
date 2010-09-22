@@ -33,7 +33,7 @@ public class BitSetUtils {
     
     public static byte[] or(byte[] a, byte[] b){
         if(a.length != b.length)
-            throw new IllegalStateException("a != b");
+            throw new IllegalStateException("a("+a.length+") != b("+b.length+")");
         
         for(int i=0; i<a.length; i++){
             a[i] |= b[i];

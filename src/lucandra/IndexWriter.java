@@ -87,7 +87,8 @@ public class IndexWriter {
         //By default we don't handle indexSharding
         //We round robin replace the index      
         docNumber = docNumber % CassandraUtils.maxDocsPerShard;
-                
+        
+       
         byte[] docId = CassandraUtils.writeVInt(docNumber);
         int position = 0;
 
@@ -207,6 +208,8 @@ public class IndexWriter {
                     byte[] key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, term.getKey().field().getBytes(),
                             CassandraUtils.delimeterBytes, term.getKey().text().getBytes("UTF-8"));
 
+                    byte[] termkey = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, term.getKey().field().getBytes());
+                    
                     // Mix in the norm for this field alongside each term
                     // more writes but faster on read side.
                     if (!field.getOmitNorms()) {
@@ -214,7 +217,8 @@ public class IndexWriter {
                     }
 
                     CassandraUtils.addMutations(getMutationList(), CassandraUtils.termVecColumnFamily, docId, key, null, term.getValue());
-
+                    CassandraUtils.addMutations(getMutationList(), CassandraUtils.metaInfoColumnFamily, term.getKey().text().getBytes("UTF-8"), termkey, CassandraUtils.emptyByteArray, null);
+                    
                 }
             }
 
@@ -226,12 +230,15 @@ public class IndexWriter {
                 byte[] key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, field.name().getBytes(),
                         CassandraUtils.delimeterBytes, field.stringValue().getBytes("UTF-8"));
 
+                byte[] termkey = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, field.name().getBytes());
+                
+                
                 Map<byte[], List<Number>> termMap = new ConcurrentSkipListMap<byte[], List<Number>>(FBUtilities.byteArrayComparator);
                 termMap.put(CassandraUtils.termFrequencyKeyBytes, CassandraUtils.emptyArray);
                 termMap.put(CassandraUtils.positionVectorKeyBytes, CassandraUtils.emptyArray);
 
                 CassandraUtils.addMutations(getMutationList(), CassandraUtils.termVecColumnFamily, docId, key, null, termMap);
-
+                CassandraUtils.addMutations(getMutationList(), CassandraUtils.metaInfoColumnFamily, field.stringValue().getBytes("UTF-8"), termkey, CassandraUtils.emptyByteArray, null);
             }
 
             // Stores each field as a column under this doc key

@@ -35,6 +35,8 @@
         <property name="cassandra.port" value="9160"/>
         <property name="cassandra.framed" value="false"/>
 
+        <property name="solr.app"       location="solr-app"/>
+        <property name="solr.resources" location="solr-resources"/>
 
         <!-- ivy properties -->
         <property name="ivy.version" value="2.1.0" />
@@ -52,6 +54,7 @@
           <mkdir dir="${build.test.classes}"/>
           <mkdir dir="${ivy.dir}" />
           <mkdir dir="${ivy.lib.dir}" />
+          <mkdir dir="${solr.app}" />
           <!--
               Allow Ivy to be disabled with "-Dnoivy=".
               It is kind of a hack to pretend that we already found it,
@@ -164,8 +167,46 @@
 
         <target name="clean">
           <delete dir="${build}" />
+          <delete dir="${solr.app}" />
           <delete file="lucandra.jar" />
           <delete file="lucandra-tests.jar" />
         </target>
 
+        <!-- ============================= -->
+        <target name="war" depends="lucandra.jar">
+          <war destfile="solr.war"
+               webxml="${solr.resources}/web.xml">
+            <lib dir="${lib}">
+              <exclude name="jetty*.jar" />
+              <exclude name="servlet-api*.jar" />
+              <exclude name="easymock.jar" />
+            </lib>
+            <lib dir="${cassandra.lib}">
+              <include name="**/*.jar" />
+            </lib>
+            <lib file="lucandra.jar"/>
+          </war>
+        </target>
+        <target name="dist" depends="war">
+          <delete dir="${solr.app}" />
+          <mkdir dir="${solr.app}"/>
+          <mkdir dir="${solr.app}/logs" />
+          <mkdir dir="${solr.app}/etc" />
+          <copy todir="${solr.app}/lib">
+            <fileset dir="lib" includes="jetty*.jar,servlet*.jar"/>
+          </copy>
+          <copy todir="${solr.app}/etc">
+            <fileset dir="${solr.resources}" includes="jetty.xml,webdefault.xml"/>
+          </copy>
+          <copy file="solr.war" tofile="${solr.app}/webapps/solr.war"/>
+          <copy todir="${solr.app}/solr/conf" overwrite="false">
+            <fileset dir="${solr.resources}" includes="solrconfig.xml,schema.xml"/>
+          </copy>
+          <chmod dir="${solr.app}/solr/conf" perm="644" includes="**,*"/>
+          <copy file="${solr.resources}/start.jar" tofile="${solr.app}/start.jar"/>
+          <copy file="${solr.resources}/cassandra.yaml" tofile="${solr.app}/cassandra.yaml"/>
+          <echo>Solr successfully builded.</echo>
+          <echo>You can excute the following command to start the server:Solr successfully builded.</echo>
+          <echo>cd ${solr.app}; java -Xmx1G -jar start.jar</echo>
+        </target>
 </project>

@@ -13,6 +13,7 @@
 <body>
 
 <script type="text/javascript" charset="utf-8">//<![CDATA[
+
 jQuery(function($) {
 
     $("#query").bind("change", startsearch)
@@ -45,9 +46,9 @@ jQuery(function($) {
              offset = 0
              lastterms = terms
         }
-
+        
         $.ajax({
-            type: "GET"
+            type: "POST"
             ,
             data: {
                 q: terms,
@@ -60,7 +61,7 @@ jQuery(function($) {
             ,
             dataType: "json"
             ,
-            url: "/solr/select"
+            url: "http://localhost:8983/solr/wikassandra/select"
             ,
             cache: false
             ,

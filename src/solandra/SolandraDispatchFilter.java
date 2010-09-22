@@ -22,7 +22,6 @@ import org.apache.solr.servlet.SolrDispatchFilter;
 public class SolandraDispatchFilter extends SolrDispatchFilter {
 
     private static final String schemaPrefix = "/schema"; 
-
     
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {

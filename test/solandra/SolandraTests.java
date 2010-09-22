@@ -114,7 +114,6 @@ public class SolandraTests {
         
         //write
         try {
-//            InputStream stream = url.openStream();
             
             HttpURLConnection conn = (HttpURLConnection)url.openConnection();
             conn.setDoOutput(true);

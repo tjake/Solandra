@@ -63,7 +63,7 @@ import solandra.SolandraFieldSelector;
 
 public class IndexReader extends org.apache.lucene.index.IndexReader {
 
-    private final static int numDocs = CassandraUtils.maxDocsPerShard;
+    private final static int  numDocs     = CassandraUtils.maxDocsPerShard;
     private final static byte defaultNorm = Similarity.encodeNorm(1.0f);
     
     private final static Directory mockDirectory = new RAMDirectory();
@@ -82,10 +82,11 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     private String indexName;
 
-    private final ThreadLocal<Map<Integer, Document>> documentCache = new ThreadLocal<Map<Integer, Document>>();
+    private final ThreadLocal<Map<Integer, Document>>      documentCache = new ThreadLocal<Map<Integer, Document>>();
     private final ThreadLocal<Map<Term, LucandraTermEnum>> termEnumCache = new ThreadLocal<Map<Term, LucandraTermEnum>>();
-    private final ThreadLocal<Map<String, byte[]>> fieldNorms = new ThreadLocal<Map<String, byte[]>>();
-    private final ThreadLocal<OpenBitSet>  docsHit = new ThreadLocal<OpenBitSet>();
+    private final ThreadLocal<Map<String, byte[]>>            fieldNorms = new ThreadLocal<Map<String, byte[]>>();
+    private final ThreadLocal<OpenBitSet>                        docsHit = new ThreadLocal<OpenBitSet>();
+    private final ThreadLocal<Object>                    fieldCacheRefs  = new ThreadLocal<Object>();
     
     private static final Logger logger = Logger.getLogger(IndexReader.class);
 
@@ -110,16 +111,23 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         return reopen();
     }
 
-    public void clearCache() {
+    public synchronized void clearCache() {
 
         if (termEnumCache.get() != null)
             termEnumCache.get().clear();
+        
         if (documentCache.get() != null)
             documentCache.get().clear();
+        
         if (fieldNorms.get() != null)
             fieldNorms.get().clear();
+        
         if (docsHit.get() != null)
             docsHit.get().clear(0, numDocs);
+        
+        if (fieldCacheRefs.get() != null)
+            fieldCacheRefs.set(new Integer(1));
+        
         
     }
 
@@ -299,6 +307,19 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
             throw new IOException(e);
         }
 
+    }
+
+    @Override
+    public Object getFieldCacheKey() {
+        
+        Object ref = fieldCacheRefs.get();
+        
+        if(ref == null){           
+            ref = new Integer(1);
+            fieldCacheRefs.set(ref);     
+        }
+        
+        return ref;        
     }
 
     @Override

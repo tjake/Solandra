@@ -2,14 +2,14 @@ package lucandra.benchmarks;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import lucandra.CassandraUtils;
-
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrServerException;
+import org.apache.solr.client.solrj.SolrQuery.ORDER;
 import org.apache.solr.client.solrj.impl.CommonsHttpSolrServer;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.SolrInputDocument;
@@ -30,8 +30,8 @@ public class BenchmarkTest {
     private static int threadId = 0;
     private static int port = 8983;
     private static String url = "http://localhost";
-    
-    
+    private static String[] types = new String[]{"1","2","3","4","5","6","7","8","9","10"};
+    private static Random  random = new Random(System.currentTimeMillis()); 
 
     private static Runnable getRunnable() {
 
@@ -39,13 +39,14 @@ public class BenchmarkTest {
             return new Runnable() {
 
                 private final CommonsHttpSolrServer solrClient = new CommonsHttpSolrServer(url + ":" + port + "/solr/" + indexName);
-                private final SolrQuery q = new SolrQuery().setQuery(queryString);
+                private final SolrQuery q = new SolrQuery().setQuery(queryString).addFacetField("type").setSortField("id", ORDER.asc);
 
                 private final int myThreadId = threadId++;
                 
                 private SolrInputDocument getDocument(){
                     SolrInputDocument doc =  new SolrInputDocument();
                     doc.addField("text", text);
+                    doc.addField("type", types[random.nextInt(types.length-1)]);
                     doc.addField("id", ""+System.nanoTime()+Math.random());
 
                     return doc;
@@ -88,7 +89,7 @@ public class BenchmarkTest {
                         total = r.getResults().getNumFound();
 
                         // if (i % 1000 == 999)
-                        System.err.println("Thread " + myThreadId + ": total " + total);
+                        System.err.println("Thread " + myThreadId + ": total " + total + " vs "+r.getFacetFields());
                     }
 
                     if (myThreadId == 0)

@@ -19,43 +19,46 @@
  */
 package lucandra.wikipedia;
 
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import lucandra.CassandraUtils;
-import lucandra.IndexWriter;
-import lucandra.cluster.RedisIndexManager;
-
-import org.apache.cassandra.thrift.Cassandra;
-import org.apache.cassandra.thrift.TokenRange;
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.analysis.cjk.CJKAnalyzer;
-import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.document.Field.Index;
-import org.apache.lucene.document.Field.Store;
-import org.apache.lucene.document.Field.TermVector;
-import org.apache.lucene.util.Version;
-import org.apache.thrift.transport.TTransportException;
+import org.apache.solr.client.solrj.SolrServerException;
+import org.apache.solr.client.solrj.impl.CommonsHttpSolrServer;
+import org.apache.solr.common.SolrInputDocument;
 
 public class WikipediaIndexWorker implements Callable<Integer> {
 
     // each worker thread has a connection to cassandra
-    private static ConcurrentLinkedQueue<lucandra.IndexWriter> allClients = new ConcurrentLinkedQueue<IndexWriter>();
-    private static ThreadLocal<lucandra.IndexWriter> clientPool = new ThreadLocal<lucandra.IndexWriter>();
-    private static ThreadLocal<Integer> batchCount = new ThreadLocal<Integer>();   
-    private static RedisIndexManager indexManager = new RedisIndexManager(CassandraUtils.service);
+    private static ConcurrentLinkedQueue<List<SolrInputDocument>> allDocBuffers = new ConcurrentLinkedQueue<List<SolrInputDocument>>();
+    private static ThreadLocal<CommonsHttpSolrServer> clientPool = new ThreadLocal<CommonsHttpSolrServer>();
+    private static ThreadLocal<List<SolrInputDocument>> docBuffer = new ThreadLocal<List<SolrInputDocument>>();
+    private static CommonsHttpSolrServer oneClient;
+    
+    static int port = 8983;
+    static int batchSize = 64;
     
     //Add shutdown hook for batched commits to complete
     static {
         Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
-                lucandra.IndexWriter w;
-                while ((w = allClients.poll()) != null) {
-                    w.commit();
+                List<SolrInputDocument> docs;
+                while ((docs = allDocBuffers.poll()) != null) {
+                    try {
+                       
+                        if(!docs.isEmpty())
+                            oneClient.add(docs);
+                            
+                    } catch (SolrServerException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    } catch (IOException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
                 }
 
                 System.err.println("committed");
@@ -63,9 +66,6 @@ public class WikipediaIndexWorker implements Callable<Integer> {
         });
     }
     
-    // this is shared by all workers
-    private static Analyzer analyzer = new CJKAnalyzer(Version.LUCENE_CURRENT);
-
     // this is the article to index
     private Article article;
 
@@ -73,18 +73,19 @@ public class WikipediaIndexWorker implements Callable<Integer> {
         this.article = article;
     }
 
-    private lucandra.IndexWriter getIndexWriter() throws TTransportException {
-        lucandra.IndexWriter indexWriter = clientPool.get();
+    private CommonsHttpSolrServer getIndexWriter() throws MalformedURLException  {
+        CommonsHttpSolrServer indexWriter = clientPool.get();
 
         if (indexWriter == null) {
 
-           
-            indexWriter = new lucandra.IndexWriter("wikipedia");
+            indexWriter = new CommonsHttpSolrServer("http://localhost:" + port + "/solr/wikassandra");
+
             clientPool.set(indexWriter);
 
-            indexWriter.setAutoCommit(false);
-
-            batchCount.set(0);
+            List<SolrInputDocument> docs = new ArrayList<SolrInputDocument>(batchSize);
+            
+            docBuffer.set(docs);
+            allDocBuffers.add(docs);
         }
 
         return indexWriter;
@@ -92,26 +93,25 @@ public class WikipediaIndexWorker implements Callable<Integer> {
 
     public Integer call() throws Exception {
 
-        lucandra.IndexWriter indexWriter = getIndexWriter();
+        CommonsHttpSolrServer indexWriter = getIndexWriter();
 
-        Document d = new Document();
-
-        d.add(new Field("title", article.title, Store.YES, Index.ANALYZED,TermVector.WITH_POSITIONS));
-
-        if (article.text != null)
-            d.add(new Field("text", new String(article.text,"UTF-8"), Store.YES, Index.ANALYZED,TermVector.WITH_POSITIONS_OFFSETS));
-
-        d.add(new Field("url", article.url, Store.YES, Index.NOT_ANALYZED));
-
-        indexWriter.addDocument(d, analyzer, indexManager.incrementDocId("wikipedia"));
-
-        Integer c = batchCount.get();
-        if ((c + 1) % 64 == 0) {
-            indexWriter.commit();
+        SolrInputDocument doc = new SolrInputDocument();
+        
+        doc.addField("title", article.title);
+        
+        if(article.text != null)
+            doc.addField("text", new String(article.text,"UTF-8"));
+        
+        doc.addField("url", article.url);
+        
+        List<SolrInputDocument> docs = docBuffer.get();
+        docs.add(doc);
+        
+        if (docs.size() == batchSize) {
+            indexWriter.add(docs);
+            docs.clear();
         }
-
-        batchCount.set(c + 1);
-
+        
         return article.getSize();
     }
 

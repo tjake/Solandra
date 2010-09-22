@@ -199,6 +199,9 @@ endpoint_snitch: org.apache.cassandra.locator.SimpleSnitch
 # NOTE: this keyspace definition is for demonstration purposes only.
 #       Cassandra will not load these definitions during startup. See
 #       http://wiki.apache.org/cassandra/FAQ#no_keyspaces for an explanation.
+
+
+
 keyspaces:
     - name: L
       replica_placement_strategy: org.apache.cassandra.locator.RackUnawareStrategy
@@ -220,15 +223,20 @@ keyspaces:
           clock_type: Timestamp
           reconciler: TimestampReconciler
           preload_row_cache: true
-
-        - name: SI
+     
+        - name: SI #schema info
+          keys_cached: .9
           compare_with: BytesType
 
-        - name: MI
+        - name: TL #Term lists
+          keys_cached: .9
+          compare_with: BytesType
+          
+        - name: MI 
+          keys_cached: .9 
           compare_with: BytesType
           clock_type: Timestamp
           reconciler: lucandra.BitSetReconciler
-
 
 
 

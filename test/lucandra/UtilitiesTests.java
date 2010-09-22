@@ -1,14 +1,12 @@
 package lucandra;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import junit.framework.TestCase;
-import lucandra.cluster.AbstractIndexManager;
-import lucandra.cluster.RedisIndexManager;
 
 import org.apache.cassandra.db.ReadCommand;
 import org.apache.cassandra.db.Row;
@@ -21,9 +19,6 @@ import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.UnavailableException;
-import org.jredis.connector.ConnectionSpec;
-import org.jredis.ri.alphazero.JRedisService;
-import org.jredis.ri.alphazero.connection.DefaultConnectionSpec;
 
 
 public class UtilitiesTests extends TestCase {
@@ -80,22 +75,31 @@ public class UtilitiesTests extends TestCase {
         CassandraUtils.startup();
 
         
-        int size = CassandraUtils.maxDocsPerShard;
+        int size = 1000; //CassandraUtils.maxDocsPerShard;
        
         byte[] key = "index1".getBytes();
         byte[] col = "term1".getBytes();
         
-        byte[] bytes1 = BitSetUtils.create(size);
-         
+        List<RowMutation> rlist = new ArrayList<RowMutation>();
+        
+        
         for(int i=0; i<size/2; i++){
+            byte[] bytes1 = BitSetUtils.create(size);          
+            
             BitSetUtils.set(bytes1, i);
+            
+            
+            RowMutation rm1 = new RowMutation(CassandraUtils.keySpace,key);
+            rm1.add(new QueryPath("MI",null, col), bytes1, new TimestampClock(System.currentTimeMillis()));
+            
+            rlist.add(rm1);
+            
         }      
                   
-        RowMutation rm1 = new RowMutation(CassandraUtils.keySpace,key);
+      
         
        
-        rm1.add(new QueryPath("MI",null, col), bytes1, new TimestampClock(System.currentTimeMillis()));
-        StorageProxy.mutateBlocking(Arrays.asList(rm1),ConsistencyLevel.ALL);
+        StorageProxy.mutateBlocking(rlist,ConsistencyLevel.ONE);
         
         ////////Second half
         byte[] bytes2 = BitSetUtils.create(size);

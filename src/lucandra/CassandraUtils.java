@@ -68,6 +68,7 @@ public class CassandraUtils {
     public static final String keySpace = System.getProperty("lucandra.keyspace", "L");
     public static final String termVecColumnFamily = "TI";
     public static final String docColumnFamily = "Docs";
+    public static final String metaInfoColumnFamily = "TL";
 
     public static final String positionVectorKey = "P";
     public static final String offsetVectorKey = "O";

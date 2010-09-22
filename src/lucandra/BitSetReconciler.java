@@ -14,9 +14,7 @@ public class BitSetReconciler extends AbstractReconciler {
         byte[] leftBytes  = left.value();
         byte[] rightBytes = right.value();
      
-        //Sometimes a client will send us a
-        //Single set of 
-        //byte[] 
+        
         
         //this puts both into leftBytes
         BitSetUtils.or(leftBytes, rightBytes);  

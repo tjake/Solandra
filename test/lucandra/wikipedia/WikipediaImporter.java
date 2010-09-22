@@ -183,7 +183,7 @@ public class WikipediaImporter {
     }
 
     public void indexPage(Article page) {
-
+        
         Future<Integer> result = threadPool.submit(new WikipediaIndexWorker(page));
         resultSet.add(result);
 
