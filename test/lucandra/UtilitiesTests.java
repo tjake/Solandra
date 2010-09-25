@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.concurrent.TimeoutException;
 
 import junit.framework.TestCase;
+import lucandra.cluster.AbstractIndexManager;
+import lucandra.cluster.RedisIndexManager;
 
 import org.apache.cassandra.db.ReadCommand;
 import org.apache.cassandra.db.Row;
@@ -19,6 +21,9 @@ import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.UnavailableException;
+import org.jredis.connector.ConnectionSpec;
+import org.jredis.ri.alphazero.JRedisService;
+import org.jredis.ri.alphazero.connection.DefaultConnectionSpec;
 
 
 public class UtilitiesTests extends TestCase {
@@ -28,7 +33,7 @@ public class UtilitiesTests extends TestCase {
     }
 
     
-    /*public void testIndexManager(){
+    public void testIndexManager(){
         String indexName = String.valueOf(System.nanoTime());
         int database = 11;
         
@@ -43,14 +48,17 @@ public class UtilitiesTests extends TestCase {
         
         AbstractIndexManager docCounter = new RedisIndexManager(service);
        
+        
+        //AbstractIndexManager docCounter = new ZkIndexManager(Arrays.asList("127.0.0.1"), "2181");
+        
         int id = 0;
-        for(int i=0; i<1000000; i++){
+        for(int i=0; i<=10000; i++){
             id = docCounter.incrementDocId(indexName);
             if(i % 100 == 0)
                 System.err.println(id);
         }
         
-        assertEquals(1000000, id);
+        assertEquals(10000, id);
     }
     
     public void testBitSetUtil(){
@@ -69,7 +77,7 @@ public class UtilitiesTests extends TestCase {
         
         assertEquals(1977, CassandraUtils.readVInt(ibytes));
     }
-    */
+    
     public void testBitSetReconciler() throws UnavailableException, TimeoutException, IOException, InvalidRequestException{
                      
         CassandraUtils.startup();

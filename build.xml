@@ -203,6 +203,8 @@
             <fileset dir="${solr.resources}" includes="solrconfig.xml,schema.xml"/>
           </copy>
           <chmod dir="${solr.app}/solr/conf" perm="644" includes="**,*"/>
+          <copy file="${solr.resources}/run_server.sh" tofile="${solr.app}/run_server.sh"/>
+          <chmod dir="${solr.app}" perm="755" includes="run_server.sh"/>
           <copy file="${solr.resources}/start.jar" tofile="${solr.app}/start.jar"/>
           <copy file="${solr.resources}/cassandra.yaml" tofile="${solr.app}/cassandra.yaml"/>
           <echo>Solr successfully builded.</echo>
