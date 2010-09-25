@@ -27,6 +27,8 @@
     <dependency org="commons-lang" name="commons-lang" rev="2.4" conf="* -> *,!sources,!javadoc"/>
     <dependency org="org.apache.lucene" name="lucene-core" rev="2.9.1" conf="*"/>
     <dependency org="org.apache.solr" name="solr-core" rev="1.4.0" conf="* -> *,!javadoc"/>
+    <dependency org="org.mortbay.jetty" name="jetty" rev="6.1.6" conf="* -> *,!sources,!javadoc" />
+    <dependency org="org.mortbay.jetty" name="jetty-util" rev="6.1.6" conf="* -> *,!sources,!javadoc" />
   </dependencies>
 </ivy-module>
 

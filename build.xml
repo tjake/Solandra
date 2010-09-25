@@ -30,7 +30,7 @@
         <property name="build.classes" location="${build}/classes"/>
         <property name="build.test.classes" location="${build}/test-classes"/>
         <property name="lib"           location="lib" />
-        <property name="cassandra.lib" location="../cassandra-trunk/lib"/>
+        <property name="cassandra.lib" location="../apache-cassandra-0.7.0-beta1/lib"/>
         <property name="cassandra.host" value="127.0.0.1"/>
         <property name="cassandra.port" value="9160"/>
         <property name="cassandra.framed" value="false"/>
@@ -192,6 +192,7 @@
           <mkdir dir="${solr.app}"/>
           <mkdir dir="${solr.app}/logs" />
           <mkdir dir="${solr.app}/etc" />
+          <mkdir dir="${solr.app}/lib" />
           <copy todir="${solr.app}/lib">
             <fileset dir="lib" includes="jetty*.jar,servlet*.jar"/>
           </copy>
