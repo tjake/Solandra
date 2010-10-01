@@ -533,40 +533,7 @@ public class CassandraUtils {
         return hashedKey;
     }
     
-    public static String hashKey(String key) {
-
-        if (!indexHashingEnabled)
-            return key;
-
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA");
-
-            // Please fixme: this is so hard to read
-            // should have separte hashing functions for terms and docs
-            // terms look like: indexname/field/term
-            // docs look like: indexname/docid
-            int indexPoint = key.indexOf(delimeter);
-            int breakPoint = key.lastIndexOf(delimeter);
-
-            if (breakPoint == -1)
-                throw new IllegalStateException("key does not contain delimiter");
-
-            String salt = key.substring(0, breakPoint);
-
-            try {
-                md.update(salt.getBytes("UTF-8"));
-            } catch (UnsupportedEncodingException e) {
-                throw new RuntimeException("UTF-8 not supported by this JVM");
-            }
-
-            return bytesForBig(new BigInteger(1, md.digest()), 8) + key.substring(indexPoint);
-
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException(e);
-        }
-
-    }
-
+    
     // based on cassandra source
     private static byte[] bytesForBig(BigInteger big, int sigchars) {
         byte[] chars = new byte[sigchars];
@@ -576,6 +543,7 @@ public class CassandraUtils {
             // apply bitmask and get char value
             chars[i] = (byte)hashChars.charAt(big.and(CHAR_MASK.shiftLeft(maskpos)).shiftRight(maskpos).intValue() % hashChars.length());
         }
+        
         return chars;
     }
 

@@ -25,6 +25,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.Arrays;
 import java.util.Queue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -43,19 +44,21 @@ public class WikipediaImporter {
     private long startTime;
     private long lastTime;
 
-    public WikipediaImporter() {
+    public WikipediaImporter(String hosts) {
         threadPool = Executors.newFixedThreadPool(64);
         resultSet = new LinkedBlockingQueue<Future<Integer>>();
         pageCount = 0;
         loadCount = 0;
         size = 0;
 
+        WikipediaIndexWorker.hosts.addAll(Arrays.asList(hosts.split(",")));
+        
         startTime = System.currentTimeMillis();
         lastTime = System.currentTimeMillis();
     }
 
     private static void usage() {
-        System.err.println("WikipediaImporter file.xml");
+        System.err.println("WikipediaImporter file.xml host1,host2,host3");
         System.exit(0);
     }
 
@@ -194,7 +197,7 @@ public class WikipediaImporter {
         try {
 
             if (args.length > 0)
-                new WikipediaImporter().readFile(args[0]);
+                new WikipediaImporter(args[1]).readFile(args[0]);
             else
                 WikipediaImporter.usage();
 

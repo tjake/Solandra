@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -37,6 +38,8 @@ public class WikipediaIndexWorker implements Callable<Integer> {
     private static ThreadLocal<CommonsHttpSolrServer> clientPool = new ThreadLocal<CommonsHttpSolrServer>();
     private static ThreadLocal<List<SolrInputDocument>> docBuffer = new ThreadLocal<List<SolrInputDocument>>();
     private static CommonsHttpSolrServer oneClient;
+    public  static final ArrayList<String> hosts = new ArrayList<String>();
+    private static final Random r = new Random();
     
     static int port = 8983;
     static int batchSize = 64;
@@ -77,8 +80,11 @@ public class WikipediaIndexWorker implements Callable<Integer> {
         CommonsHttpSolrServer indexWriter = clientPool.get();
 
         if (indexWriter == null) {
-
-            indexWriter = new CommonsHttpSolrServer("http://localhost:" + port + "/solr/wikassandra");
+            
+            if(hosts.size() == 0)
+                throw new RuntimeException("no hosts defined");   
+            
+            indexWriter = new CommonsHttpSolrServer("http://"+hosts.get(r.nextInt(hosts.size()))+":" + port + "/solr/wikassandra");
 
             clientPool.set(indexWriter);
 

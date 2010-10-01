@@ -27,9 +27,13 @@ import org.jredis.ri.alphazero.connection.DefaultConnectionSpec;
 
 
 public class UtilitiesTests extends TestCase {
-
-    
-    static{
+ 
+    public void testRandomToken() throws Exception{
+        
+        for(int i=0; i<100; i++){
+            System.err.println(new String(CassandraUtils.hashKeyBytes(("index"+i).getBytes(),CassandraUtils.delimeterBytes,"foo".getBytes()),"UTF-8"));
+        }
+        
     }
 
     
