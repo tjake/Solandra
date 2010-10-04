@@ -30,7 +30,7 @@
         <property name="build.classes" location="${build}/classes"/>
         <property name="build.test.classes" location="${build}/test-classes"/>
         <property name="lib"           location="lib" />
-        <property name="cassandra.lib" location="../apache-cassandra-0.7.0-beta1/lib"/>
+        <property name="cassandra.lib" location="../apache-cassandra-0.7.0-beta2/lib"/>
         <property name="cassandra.host" value="127.0.0.1"/>
         <property name="cassandra.port" value="9160"/>
         <property name="cassandra.framed" value="false"/>
@@ -145,11 +145,10 @@
             <formatter type="brief" usefile="false"/>
 
             <batchtest todir="${build}/output">
-              <fileset dir="${build.test.classes}" includes="**/UtilitiesTest*" />
+              <fileset dir="${build.test.classes}" includes="**/SolandraTest*" />
             </batchtest>
-            <jvmarg value="-Dcassandra.host=${cassandra.host}"/>
-            <jvmarg value="-Dcassandra.port=${cassandra.port}"/>
-            <jvmarg value="-Dcassandra.framed=${cassandra.framed}"/>
+            <jvmarg value="-Dsolr.solr.home=solr-example/solr"/>
+            <jvmarg value="-Xmx1G"/>
           </junit>
           <fail if="testfailed" message="Some test(s) failed."/>
         </target>

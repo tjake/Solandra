@@ -209,8 +209,6 @@ keyspaces:
       column_families:
         - name: Docs
           compare_with: BytesType
-          clock_type: Timestamp
-          reconciler: TimestampReconciler
           keys_cached: .9
           preload_row_cache: true
 
@@ -219,9 +217,7 @@ keyspaces:
           compare_with: lucandra.VIntType
           read_repair_chance: 0.1
           keys_cached: .9
-          rows_cached: .9
-          clock_type: Timestamp
-          reconciler: TimestampReconciler
+          rows_cached: .1
           preload_row_cache: true
      
         - name: SI #schema info
@@ -232,11 +228,5 @@ keyspaces:
           keys_cached: .9
           compare_with: BytesType
           
-        - name: MI 
-          keys_cached: .9 
-          compare_with: BytesType
-          clock_type: Timestamp
-          reconciler: lucandra.BitSetReconciler
-
 
 
