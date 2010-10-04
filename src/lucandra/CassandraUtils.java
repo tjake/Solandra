@@ -70,10 +70,10 @@ public class CassandraUtils {
     public static final String termFrequencyKey = "F";
     public static final String normsKey = "N";
     public static final byte[] positionVectorKeyBytes = positionVectorKey.getBytes();
-    public static final byte[] offsetVectorKeyBytes   = offsetVectorKey.getBytes();
-    public static final byte[] termFrequencyKeyBytes  = termFrequencyKey.getBytes();
+    public static final byte[] offsetVectorKeyBytes = offsetVectorKey.getBytes();
+    public static final byte[] termFrequencyKeyBytes = termFrequencyKey.getBytes();
     public static final byte[] normsKeyBytes = normsKey.getBytes();
-    
+
     public static final int maxDocsPerShard = 100000;
 
     public static final byte[] emptyByteArray = new byte[] {};
@@ -82,24 +82,25 @@ public class CassandraUtils {
     public static final byte[] delimeterBytes;
 
     public static final String finalToken = new String("\ufffe\ufffe");
-    public static final byte[] finalTokenBytes; 
+    public static final byte[] finalTokenBytes;
 
     public static final String documentIdField = System.getProperty("lucandra.id.field", delimeter + "KEY" + delimeter);
     public static final String documentMetaField = delimeter + "META" + delimeter;
     public static final byte[] documentMetaFieldBytes;
-    
+
     public static final boolean indexHashingEnabled = Boolean.valueOf(System.getProperty("index.hashing", "true"));
 
     public static final JRedisService service;
     public static final AbstractIndexManager indexManager;
     public static final QueryPath metaColumnPath;
     static {
-        
+
         int database = 11;
         int connCnt = 7;
-        
-        ConnectionSpec connectionSpec = DefaultConnectionSpec.newSpec(System.getProperty("redis.host","localhost"), Integer.valueOf(System.getProperty("redis.port", "6379")), database, "jredis".getBytes());
-        
+
+        ConnectionSpec connectionSpec = DefaultConnectionSpec.newSpec(System.getProperty("redis.host", "localhost"), Integer.valueOf(System.getProperty(
+                "redis.port", "6379")), database, "jredis".getBytes());
+
         service = new JRedisService(connectionSpec, connCnt);
         indexManager = new RedisIndexManager(service);
 
@@ -119,140 +120,55 @@ public class CassandraUtils {
     private static final Logger logger = Logger.getLogger(CassandraUtils.class);
 
     private static boolean cassandraStarted = false;
-    
-    //Start Cassandra up!!!
-    public static synchronized void startup() {   
-        
-            if(cassandraStarted)
-                return;
-        
-            cassandraStarted = true;
-            
-           AbstractCassandraDaemon daemon = new AbstractCassandraDaemon() {
-                
-                @Override
-                public void stop() {
-                    // TODO Auto-generated method stub
-                    
-                }
-                
-                @Override
-                public void start() throws IOException {
-                    // TODO Auto-generated method stub
-                    
-                }
-            };
-            
-            try {
-                daemon.init(new String[]{});
-            } catch (IOException e) {
-               
-                e.printStackTrace();
-                System.exit(2);
+
+    // Start Cassandra up!!!
+    public static synchronized void startup() {
+
+        if (cassandraStarted)
+            return;
+
+        cassandraStarted = true;
+
+        AbstractCassandraDaemon daemon = new AbstractCassandraDaemon() {
+
+            @Override
+            public void stop() {
+                // TODO Auto-generated method stub
+
             }
 
-       
-            //Check for Lucandra schema 
-            //if not there then load from yaml
-            if(DatabaseDescriptor.getTableDefinition(keySpace) == null)
-                try {
-                    StorageService.instance.loadSchemaFromYAML();
-                } catch (ConfigurationException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                    System.exit(3);
-                } catch (IOException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                    System.exit(4);
-                }
+            @Override
+            public void start() throws IOException {
+                // TODO Auto-generated method stub
 
-            
-        
-        /*try {
-            
-            
-            Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler()
-            {
-                public void uncaughtException(Thread t, Throwable e)
-                {
-                    logger.error("Uncaught exception in thread " + t, e);
-                    if (e instanceof OutOfMemoryError)
-                    {
-                        System.exit(100);
-                    }
-                }
-            });
-            
-            SystemTable.checkHealth();
-            
-            // initialize keyspaces
-            DatabaseDescriptor.loadSchemas();
-            
-            // initialize keyspaces
-            boolean hasLucandra = false;
-            for (String table : DatabaseDescriptor.getTables())
-            {
-                if (logger.isDebugEnabled())
-                    logger.debug("opening keyspace " + table);
-                Table.open(table);
-            
-                if(table.equalsIgnoreCase(CassandraUtils.keySpace))
-                    hasLucandra = true;
             }
-            
+        };
 
-            // replay the log if necessary and check for compaction candidates
-            CommitLog.recover();
-            CompactionManager.instance.checkAllColumnFamilies();
-
-            // check to see if CL.recovery modified the lastMigrationId. if it did, we need to re apply migrations. this isn't
-            // the same as merely reloading the schema (which wouldn't perform file deletion after a DROP). The solution
-            // is to read those migrations from disk and apply them.
-            UUID currentMigration = DatabaseDescriptor.getDefsVersion();
-            UUID lastMigration = Migration.getLastMigrationId();
-            if ((lastMigration != null) && (lastMigration.timestamp() > currentMigration.timestamp()))
-            {
-                MigrationManager.applyMigrations(currentMigration, lastMigration);
-            }
-            
-            
-            // start server internals
-            StorageService.instance.initServer();
-            
-            if(!hasLucandra){
-                StorageService.instance.loadSchemaFromYAML();
-
-                //reinit new tables
-                for (String table : DatabaseDescriptor.getTables())
-                {
-                    if (logger.isDebugEnabled())
-                        logger.debug("opening keyspace " + table);
-                    Table.open(table);
-                
-                    if(table.equalsIgnoreCase(CassandraUtils.keySpace))
-                        hasLucandra = true;
-                }
-                
-                
-                
-                if(!hasLucandra)
-                    throw new RuntimeException("Cassandra.yaml missing schema for keyspace: "+keySpace);
-            
-            }
-            
+        try {
+            daemon.init(new String[] {});
         } catch (IOException e) {
-            // TODO Auto-generated catch block
+
             e.printStackTrace();
-        } catch (ConfigurationException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } 
-      */
-        
+            System.exit(2);
+        }
+
+        // Check for Lucandra schema
+        // if not there then load from yaml
+        if (DatabaseDescriptor.getTableDefinition(keySpace) == null)
+            try {
+                StorageService.instance.loadSchemaFromYAML();
+            } catch (ConfigurationException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+                System.exit(3);
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+                System.exit(4);
+            }
+
     }
-    
-    
+
     public static byte[] createColumnName(Term term) {
 
         return createColumnName(term.field(), term.text());
@@ -267,7 +183,7 @@ public class CassandraUtils {
         try {
             return (field + delimeter + text).getBytes("UTF-8");
         } catch (UnsupportedEncodingException e) {
-           throw new RuntimeException("JVM doesn't support UTF-8",e);
+            throw new RuntimeException("JVM doesn't support UTF-8", e);
         }
     }
 
@@ -372,20 +288,18 @@ public class CassandraUtils {
 
     }
 
-   
-    
-    public static void addMutations(Map<byte[],RowMutation> mutationList, String columnFamily, byte[] column, byte[] key, byte[] value,
+    public static void addMutations(Map<byte[], RowMutation> mutationList, String columnFamily, byte[] column, byte[] key, byte[] value,
             Map<byte[], List<Number>> superColumns) {
 
-        //Find or create row mutation
-        RowMutation rm = mutationList.get(key); 
-        if(rm == null){
-           
+        // Find or create row mutation
+        RowMutation rm = mutationList.get(key);
+        if (rm == null) {
+
             rm = new RowMutation(CassandraUtils.keySpace, key);
-           
+
             mutationList.put(key, rm);
         }
-        
+
         if (value == null && superColumns == null) { // remove
 
             if (column != null) {
@@ -398,12 +312,12 @@ public class CassandraUtils {
 
             if (superColumns == null) {
 
-                rm.add(new QueryPath(columnFamily,null, column), value, new TimestampClock(System.currentTimeMillis()));
+                rm.add(new QueryPath(columnFamily, null, column), value, new TimestampClock(System.currentTimeMillis()));
 
             } else {
 
                 for (Map.Entry<byte[], List<Number>> e : superColumns.entrySet()) {
-                    rm.add(new QueryPath(columnFamily,column,e.getKey()), intVectorToByteArray(e.getValue()), new TimestampClock(System.currentTimeMillis()));                  
+                    rm.add(new QueryPath(columnFamily, column, e.getKey()), intVectorToByteArray(e.getValue()), new TimestampClock(System.currentTimeMillis()));
                 }
             }
         }
@@ -418,23 +332,22 @@ public class CassandraUtils {
                 StorageProxy.mutate(mutations, cl);
                 return;
             } catch (UnavailableException e) {
-                
+
             } catch (TimeoutException e) {
-               
+
             }
-            
+
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
-               
-            }           
-        }      
-        
+
+            }
+        }
+
         throw new RuntimeException("insert failed after 10 attempts");
     }
 
-    
-    public static List<Row> robustGet(List<ReadCommand> rc, ConsistencyLevel cl){
+    public static List<Row> robustGet(List<ReadCommand> rc, ConsistencyLevel cl) {
         List<Row> rows = null;
         int attempts = 0;
         while (attempts++ < 10) {
@@ -455,24 +368,23 @@ public class CassandraUtils {
                 Thread.sleep(100);
             } catch (InterruptedException e) {
 
-            }         
+            }
         }
-        
-        if(attempts >= 10)
+
+        if (attempts >= 10)
             throw new RuntimeException("Read command failed after 10 attempts");
-        
-        
+
         return rows;
     }
-    
-    public static List<Row> robustGet(byte[] key, QueryPath qp, List<byte[]> columns, ConsistencyLevel cl){
-       
+
+    public static List<Row> robustGet(byte[] key, QueryPath qp, List<byte[]> columns, ConsistencyLevel cl) {
+
         ReadCommand rc = new SliceByNamesReadCommand(CassandraUtils.keySpace, key, qp, columns);
 
         return robustGet(Arrays.asList(rc), cl);
 
     }
-    
+
     /** Read the object from bytes string. */
     public static Object fromBytes(byte[] data) throws IOException, ClassNotFoundException {
 
@@ -491,92 +403,90 @@ public class CassandraUtils {
         return baos.toByteArray();
     }
 
-    public static byte[] hashKeyBytes(byte[]... keys){
+    public static byte[] hashKeyBytes(byte[]... keys) {
         byte hashedKey[] = null;
-        
-        if(keys.length <= 1 || !Arrays.equals(keys[keys.length-2], delimeterBytes))
+
+        if (keys.length <= 1 || !Arrays.equals(keys[keys.length - 2], delimeterBytes))
             throw new IllegalStateException("malformed key");
 
-        if(indexHashingEnabled){
+        if (indexHashingEnabled) {
             MessageDigest md;
             try {
                 md = MessageDigest.getInstance("SHA");
             } catch (NoSuchAlgorithmException e) {
-               throw new RuntimeException(e);
+                throw new RuntimeException(e);
             }
-            
+
             int saltSize = 0;
             int delimiterCount = 1;
-            for(int i=0; i<keys.length-2; i++){
-                
-                if(Arrays.equals(keys[i], delimeterBytes)){
+            for (int i = 0; i < keys.length - 2; i++) {
+
+                if (Arrays.equals(keys[i], delimeterBytes)) {
                     delimiterCount++;
                 }
-                
-                saltSize += keys[i].length;                
+
+                saltSize += keys[i].length;
             }
-            
-            if(delimiterCount > 2)
+
+            if (delimiterCount > 2)
                 throw new IllegalStateException("key contains too many delimiters");
 
             byte[] salt = new byte[saltSize];
             int currentLen = 0;
-            for(int i=0; i<keys.length-2;  i++){
-                    System.arraycopy(keys[i], 0, salt, currentLen, keys[i].length);
-                    currentLen += keys[i].length;            
+            for (int i = 0; i < keys.length - 2; i++) {
+                System.arraycopy(keys[i], 0, salt, currentLen, keys[i].length);
+                currentLen += keys[i].length;
             }
-                
+
             md.update(salt);
-           
-            byte[] hashPart  = bytesForBig(new BigInteger(1, md.digest()), 8);            
+
+            byte[] hashPart = bytesForBig(new BigInteger(1, md.digest()), 8);
             byte[] otherPart = null;
-            
-            if(delimiterCount == 2){
-                otherPart = new byte[ keys[keys.length-3].length + delimeterBytes.length + keys[keys.length-1].length];
+
+            if (delimiterCount == 2) {
+                otherPart = new byte[keys[keys.length - 3].length + delimeterBytes.length + keys[keys.length - 1].length];
 
                 int len = 0;
-  
-                System.arraycopy(keys[keys.length-3], 0, otherPart, len, keys[keys.length-3].length);
-                
-                len += keys[keys.length-3].length;
-                
+
+                System.arraycopy(keys[keys.length - 3], 0, otherPart, len, keys[keys.length - 3].length);
+
+                len += keys[keys.length - 3].length;
+
                 System.arraycopy(delimeterBytes, 0, otherPart, len, delimeterBytes.length);
-                
+
                 len += delimeterBytes.length;
-                
-                System.arraycopy(keys[keys.length-1], 0, otherPart, len, keys[keys.length-1].length);
-            }else{
-                otherPart = keys[keys.length-1];
+
+                System.arraycopy(keys[keys.length - 1], 0, otherPart, len, keys[keys.length - 1].length);
+            } else {
+                otherPart = keys[keys.length - 1];
             }
-            
+
             hashedKey = new byte[hashPart.length + delimeterBytes.length + otherPart.length];
-            
-            
-            //combine the 3 parts
-            System.arraycopy(hashPart, 0, hashedKey, 0, hashPart.length);            
+
+            // combine the 3 parts
+            System.arraycopy(hashPart, 0, hashedKey, 0, hashPart.length);
             System.arraycopy(delimeterBytes, 0, hashedKey, hashPart.length, delimeterBytes.length);
-            System.arraycopy(otherPart, 0, hashedKey, hashPart.length+delimeterBytes.length, otherPart.length);
-                 
+            System.arraycopy(otherPart, 0, hashedKey, hashPart.length + delimeterBytes.length, otherPart.length);
+
         } else {
-            
-            //no hashing, just combine the arrays together
-            
+
+            // no hashing, just combine the arrays together
+
             int totalBytes = 0;
-            for(int i=0; i<keys.length; i++)
+            for (int i = 0; i < keys.length; i++)
                 totalBytes += keys[i].length;
-            
+
             hashedKey = new byte[totalBytes];
             int currentLen = 0;
-            for(int i=0; i<keys.length; i++){
+            for (int i = 0; i < keys.length; i++) {
                 System.arraycopy(keys[i], 0, hashedKey, currentLen, keys[i].length);
                 currentLen += keys[i].length;
             }
         }
-        
+
         return hashedKey;
     }
-    
-    
+
     // based on cassandra source
     private static byte[] bytesForBig(BigInteger big, int sigchars) {
         byte[] chars = new byte[sigchars];
@@ -584,44 +494,44 @@ public class CassandraUtils {
         for (int i = 0; i < sigchars; i++) {
             int maskpos = 16 * (sigchars - (i + 1));
             // apply bitmask and get char value
-            chars[i] = (byte)hashChars.charAt(big.and(CHAR_MASK.shiftLeft(maskpos)).shiftRight(maskpos).intValue() % hashChars.length());
+            chars[i] = (byte) hashChars.charAt(big.and(CHAR_MASK.shiftLeft(maskpos)).shiftRight(maskpos).intValue() % hashChars.length());
         }
-        
+
         return chars;
     }
 
     public static int readVInt(byte[] buf) {
         int length = buf.length;
-        
+
         byte b = buf[0];
         int i = b & 0x7F;
-        for (int pos = 1, shift = 7; (b & 0x80) != 0 && pos<length; shift += 7,pos++) {
-          b = buf[pos];
-          i |= (b & 0x7F) << shift;
+        for (int pos = 1, shift = 7; (b & 0x80) != 0 && pos < length; shift += 7, pos++) {
+            b = buf[pos];
+            i |= (b & 0x7F) << shift;
         }
-        
+
         return i;
     }
-    
-    public static byte[] writeVInt(int i)  {
+
+    public static byte[] writeVInt(int i) {
         int length = 0;
-        int p      = i;
-        
+        int p = i;
+
         while ((p & ~0x7F) != 0) {
             p >>>= 7;
             length++;
         }
         length++;
-        
+
         byte[] buf = new byte[length];
-        int    pos = 0;
+        int pos = 0;
         while ((i & ~0x7F) != 0) {
-          buf[pos] = ((byte)((i & 0x7f) | 0x80));
-          i >>>= 7;
-          pos++;
+            buf[pos] = ((byte) ((i & 0x7f) | 0x80));
+            i >>>= 7;
+            pos++;
         }
-        buf[pos] = (byte)i;
- 
+        buf[pos] = (byte) i;
+
         return buf;
     }
 }

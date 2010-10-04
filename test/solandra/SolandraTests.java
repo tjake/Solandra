@@ -34,23 +34,14 @@ public class SolandraTests {
     static String indexName = String.valueOf(System.nanoTime());
 
     // Set test schema
-    String schemaXml = "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n" 
-    + "<schema name=\"wikipedia\" version=\"1.1\">\n" 
-    + "<types>\n"
-    + "<fieldType name=\"text\" class=\"solr.TextField\">\n"
-    + "<analyzer><tokenizer class=\"solr.StandardTokenizerFactory\"/></analyzer>\n"
-    + "</fieldType>\n"
-    + "<fieldType name=\"string\" class=\"solr.StrField\"/>\n" 
-    + "</types>\n"
-    + "<fields>\n" 
-    + "<field name=\"url\" type=\"string\" indexed=\"true\" stored=\"true\"/>\n"
-    + "<field name=\"title\" type=\"text\" indexed=\"true\"  stored=\"true\"/>\n"
-    + "<field name=\"text\"  type=\"text\" indexed=\"true\"  stored=\"true\" termVectors=\"true\" termPositions=\"true\" termOffsets=\"true\" />\n" + "</fields>\n" + "<uniqueKey>url</uniqueKey>\n"
-    + "<defaultSearchField>title</defaultSearchField>\n" + "</schema>\n";
+    String schemaXml = "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n" + "<schema name=\"wikipedia\" version=\"1.1\">\n" + "<types>\n"
+            + "<fieldType name=\"text\" class=\"solr.TextField\">\n" + "<analyzer><tokenizer class=\"solr.StandardTokenizerFactory\"/></analyzer>\n"
+            + "</fieldType>\n" + "<fieldType name=\"string\" class=\"solr.StrField\"/>\n" + "</types>\n" + "<fields>\n"
+            + "<field name=\"url\" type=\"string\" indexed=\"true\" stored=\"true\"/>\n"
+            + "<field name=\"title\" type=\"text\" indexed=\"true\"  stored=\"true\"/>\n"
+            + "<field name=\"text\"  type=\"text\" indexed=\"true\"  stored=\"true\" termVectors=\"true\" termPositions=\"true\" termOffsets=\"true\" />\n"
+            + "</fields>\n" + "<uniqueKey>url</uniqueKey>\n" + "<defaultSearchField>title</defaultSearchField>\n" + "</schema>\n";
 
-   
-    
-    
     @BeforeClass
     public static void setUpBeforeClass() {
 
@@ -58,7 +49,6 @@ public class SolandraTests {
             // start cassandra
             CassandraUtils.startup();
 
-            
             // Start Jetty Solandra Instance
             eservice = Executors.newSingleThreadExecutor();
             eservice.execute(new Runnable() {
@@ -91,7 +81,7 @@ public class SolandraTests {
                     Thread.sleep(1000);
 
                     continue;
-                  }
+                }
 
                 solrClient = new CommonsHttpSolrServer("http://localhost:" + port + "/solr/" + indexName);
                 return;
@@ -109,48 +99,47 @@ public class SolandraTests {
 
     @Test
     public void setAddSchema() throws Exception {
-        
+
         URL url = new URL("http://localhost:" + port + "/solr/schema/" + indexName);
-        
-        //write
+
+        // write
         try {
-            
-            HttpURLConnection conn = (HttpURLConnection)url.openConnection();
+
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setDoOutput(true);
             OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream());
             wr.write(schemaXml);
             wr.flush();
             wr.close();
-            
-            assertEquals(200,conn.getResponseCode());
-            
-           
+
+            assertEquals(200, conn.getResponseCode());
+
         } catch (IOException e) {
             e.printStackTrace();
             fail();
         }
-        
-        //verify
+
+        // verify
         try {
             InputStream stream = url.openStream();
-            
+
             BufferedReader rd = new BufferedReader(new InputStreamReader(stream));
             String line;
             String xml = "";
             while ((line = rd.readLine()) != null) {
-                xml += line+"\n";
+                xml += line + "\n";
             }
-            
+
             stream.close();
-            
+
             assertEquals(schemaXml, xml);
         } catch (IOException e) {
             e.printStackTrace();
             fail();
         }
-        
+
     }
-    
+
     @Test
     public void testAddData() throws Exception {
 
@@ -160,73 +149,68 @@ public class SolandraTests {
         doc.addField("url", "http://www.test.com");
         doc.addField("text", "this is a test of Solandra");
 
-        solrClient.add(doc); 
+        solrClient.add(doc);
 
-        
         doc = new SolrInputDocument();
 
         doc.addField("title", "test2");
         doc.addField("url", "http://www.test2.com");
         doc.addField("text", "this is a test2 of Solandra");
 
-        solrClient.add(doc); 
+        solrClient.add(doc);
 
-        
         doc = new SolrInputDocument();
 
         doc.addField("title", "test3");
         doc.addField("url", "http://www.test3.com");
         doc.addField("text", "this is a test3 of Solandra");
 
-        solrClient.add(doc); 
+        solrClient.add(doc);
 
-        
         doc = new SolrInputDocument();
 
         doc.addField("title", "test4");
         doc.addField("url", "http://www.test4.com");
         doc.addField("text", "this is a test4 of Solandra");
 
-        solrClient.add(doc);         
+        solrClient.add(doc);
     }
-    
+
     @Test
     public void testSearch() throws Exception {
-        
+
         SolrQuery q = new SolrQuery().setQuery("*:*").addField("*").addField("score");
-        
+
         QueryResponse r = solrClient.query(q);
-        assertEquals(4,r.getResults().getNumFound());
+        assertEquals(4, r.getResults().getNumFound());
     }
-    
+
     @Test
     public void testHighlight() throws Exception {
         SolrQuery q = new SolrQuery().setQuery("text:Solandra").addHighlightField("text");
-        
+
         QueryResponse r = solrClient.query(q);
-        
+
         SolrDocumentList resultList = r.getResults();
-        
-        assertEquals(4,resultList.getNumFound());
-        
+
+        assertEquals(4, resultList.getNumFound());
+
         Map<String, Map<String, List<String>>> map = r.getHighlighting();
-        
-        assertEquals(1,map.get("http://www.test.com").get("text").size());      
+
+        assertEquals(1, map.get("http://www.test.com").get("text").size());
     }
-    
+
     @Test
     public void testFacets() throws Exception {
         SolrQuery q = new SolrQuery().setQuery("text:Solandra").addFacetField("title");
-        
+
         QueryResponse r = solrClient.query(q);
-        
+
         SolrDocumentList resultList = r.getResults();
-        
-        assertEquals(4,resultList.getNumFound());
-        
+
+        assertEquals(4, resultList.getNumFound());
+
         assertEquals(1, r.getFacetFields().size());
     }
-    
-    
-    
+
 }
