@@ -42,7 +42,6 @@ import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.util.NumericUtils;
 import org.junit.Ignore;
 
-@Ignore("Ignored until this issue is fixed.  Numeric ranges won't work.  https://issues.apache.org/jira/browse/CASSANDRA-1235")
 public class TestNumericRangeQuery32 extends LucandraTestCase {
 	// distance of entries
 	private static final int distance = 6666;
