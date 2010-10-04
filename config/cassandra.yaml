@@ -14,7 +14,7 @@ cluster_name: 'Lucandra Cluster'
 auto_bootstrap: false
 
 # See http://wiki.apache.org/cassandra/HintedHandoff
-hinted_handoff_enabled: true
+hinted_handoff_enabled: false
 
 # authentication backend, implementing IAuthenticator; used to limit keyspace access
 authenticator: org.apache.cassandra.auth.AllowAllAuthenticator
@@ -52,7 +52,7 @@ disk_access_mode: auto
 # concurrent reads per processor core.  Increase ConcurrentWrites to
 # the number of clients writing at once if you enable CommitLogSync +
 # CommitLogSyncDelay. -->
-concurrent_reads: 32
+concurrent_reads: 8
 concurrent_writes: 32
 
 # This sets the amount of memtable flush writer threads.  These will
@@ -199,44 +199,25 @@ endpoint_snitch: org.apache.cassandra.locator.SimpleSnitch
 # NOTE: this keyspace definition is for demonstration purposes only.
 #       Cassandra will not load these definitions during startup. See
 #       http://wiki.apache.org/cassandra/FAQ#no_keyspaces for an explanation.
-
-
-
 keyspaces:
     - name: L
-      replica_placement_strategy: org.apache.cassandra.locator.RackUnawareStrategy
+      replica_placement_strategy: org.apache.cassandra.locator.SimpleStrategy
       replication_factor: 1
       column_families:
         - name: Docs
           compare_with: BytesType
-          clock_type: Timestamp
-          reconciler: TimestampReconciler
           keys_cached: .9
           preload_row_cache: true
-
         - name: TI
           column_type: Super
           compare_with: lucandra.VIntType
           read_repair_chance: 0.1
           keys_cached: .9
-          rows_cached: .9
-          clock_type: Timestamp
-          reconciler: TimestampReconciler
-          preload_row_cache: true
-     
+          rows_cached: .1
+          preload_row_cache: true     
         - name: SI #schema info
           keys_cached: .9
           compare_with: BytesType
-
         - name: TL #Term lists
           keys_cached: .9
           compare_with: BytesType
-          
-        - name: MI 
-          keys_cached: .9 
-          compare_with: BytesType
-          clock_type: Timestamp
-          reconciler: lucandra.BitSetReconciler
-
-
-

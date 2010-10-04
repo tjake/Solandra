@@ -39,7 +39,6 @@ import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.NumericRangeQuery;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
-import org.apache.thrift.transport.TTransportException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -68,7 +67,7 @@ public class NumericRangeTests {
     }
     
     @BeforeClass
-    public static void writeIndexes() throws TTransportException, CorruptIndexException, IOException {
+    public static void writeIndexes() throws CorruptIndexException, IOException {
         
         //clean up indexes before we run our test
         cleanIndexes();
@@ -119,7 +118,7 @@ public class NumericRangeTests {
     }
 
     @AfterClass
-    public static void cleanIndexes() throws CorruptIndexException, IOException, TTransportException {
+    public static void cleanIndexes() throws CorruptIndexException, IOException {
         
         
         IndexWriter writer = new IndexWriter(indexName);

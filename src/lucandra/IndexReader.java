@@ -242,7 +242,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
                 Row row = rowMap.get(new String(key.getValue(), "UTF-8"));
 
-                if (row == null) {
+                if (row == null || row.cf == null) {
                     logger.warn("Missing document in multiget_slice for: " + key.getValue());
                     continue;
                 }

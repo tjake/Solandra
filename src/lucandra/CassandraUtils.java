@@ -40,18 +40,13 @@ import lucandra.cluster.RedisIndexManager;
 
 import org.apache.cassandra.config.ConfigurationException;
 import org.apache.cassandra.config.DatabaseDescriptor;
-import org.apache.cassandra.db.CompactionManager;
 import org.apache.cassandra.db.ReadCommand;
 import org.apache.cassandra.db.Row;
 import org.apache.cassandra.db.RowMutation;
 import org.apache.cassandra.db.SliceByNamesReadCommand;
-import org.apache.cassandra.db.SystemTable;
-import org.apache.cassandra.db.Table;
 import org.apache.cassandra.db.TimestampClock;
-import org.apache.cassandra.db.commitlog.CommitLog;
 import org.apache.cassandra.db.filter.QueryPath;
-import org.apache.cassandra.db.migration.Migration;
-import org.apache.cassandra.service.MigrationManager;
+import org.apache.cassandra.service.AbstractCassandraDaemon;
 import org.apache.cassandra.service.StorageProxy;
 import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.thrift.ConsistencyLevel;
@@ -123,10 +118,58 @@ public class CassandraUtils {
 
     private static final Logger logger = Logger.getLogger(CassandraUtils.class);
 
+    private static boolean cassandraStarted = false;
+    
     //Start Cassandra up!!!
-    public static void startup(){   
+    public static synchronized void startup() {   
         
-        try {
+            if(cassandraStarted)
+                return;
+        
+            cassandraStarted = true;
+            
+           AbstractCassandraDaemon daemon = new AbstractCassandraDaemon() {
+                
+                @Override
+                public void stop() {
+                    // TODO Auto-generated method stub
+                    
+                }
+                
+                @Override
+                public void start() throws IOException {
+                    // TODO Auto-generated method stub
+                    
+                }
+            };
+            
+            try {
+                daemon.init(new String[]{});
+            } catch (IOException e) {
+               
+                e.printStackTrace();
+                System.exit(2);
+            }
+
+       
+            //Check for Lucandra schema 
+            //if not there then load from yaml
+            if(DatabaseDescriptor.getTableDefinition(keySpace) == null)
+                try {
+                    StorageService.instance.loadSchemaFromYAML();
+                } catch (ConfigurationException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                    System.exit(3);
+                } catch (IOException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                    System.exit(4);
+                }
+
+            
+        
+        /*try {
             
             
             Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler()
@@ -205,7 +248,7 @@ public class CassandraUtils {
             // TODO Auto-generated catch block
             e.printStackTrace();
         } 
-    
+      */
         
     }
     
@@ -372,7 +415,7 @@ public class CassandraUtils {
         while (attempts++ < 10) {
 
             try {
-                StorageProxy.mutateBlocking(mutations, cl);
+                StorageProxy.mutate(mutations, cl);
                 return;
             } catch (UnavailableException e) {
                 

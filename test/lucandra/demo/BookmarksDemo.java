@@ -25,11 +25,9 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import lucandra.CassandraUtils;
 import lucandra.IndexReader;
 import lucandra.IndexWriter;
 
-import org.apache.cassandra.thrift.Cassandra;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.SimpleAnalyzer;
 import org.apache.lucene.document.Document;
@@ -42,7 +40,6 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.util.Version;
-import org.apache.thrift.transport.TTransportException;
 
 /**
  * Simple demo showing Lucandra in action

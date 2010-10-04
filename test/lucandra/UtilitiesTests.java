@@ -111,7 +111,7 @@ public class UtilitiesTests extends TestCase {
       
         
        
-        StorageProxy.mutateBlocking(rlist,ConsistencyLevel.ONE);
+        StorageProxy.mutate(rlist,ConsistencyLevel.ONE);
         
         ////////Second half
         byte[] bytes2 = BitSetUtils.create(size);
@@ -123,7 +123,7 @@ public class UtilitiesTests extends TestCase {
         RowMutation rm2 = new RowMutation(CassandraUtils.keySpace,key);
        
         rm2.add(new QueryPath("MI",null, col), bytes2, new TimestampClock(System.currentTimeMillis()));
-        StorageProxy.mutateBlocking(Arrays.asList(rm2),ConsistencyLevel.ALL);
+        StorageProxy.mutate(Arrays.asList(rm2),ConsistencyLevel.ALL);
      
         ColumnParent columnParent = new ColumnParent("MI");
         //Check for merged version

@@ -158,7 +158,7 @@ public class SolandraReopenComponent extends SearchComponent {
                 // copy return fields list
                 fieldFilter = new ArrayList<byte[]>(returnFields.size());
                 for (String field : returnFields) {
-                    fieldFilter.add(field.getBytes());
+                    fieldFilter.add(field.getBytes("UTF-8"));
                 }
 
                 // add highlight fields
