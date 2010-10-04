@@ -32,6 +32,7 @@ import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.ColumnPath;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.InvalidRequestException;
+import org.apache.cassandra.thrift.KeyRange;
 import org.apache.cassandra.thrift.KeySlice;
 import org.apache.cassandra.thrift.Mutation;
 import org.apache.cassandra.thrift.NotFoundException;
@@ -49,11 +50,11 @@ import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Fieldable;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.Term;
+import org.apache.lucene.search.Collector;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
-import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.Scorer;
 import org.apache.lucene.search.Similarity;
-import org.apache.lucene.search.TopDocs;
 import org.apache.thrift.TException;
 
 public class IndexWriter {
@@ -265,29 +266,74 @@ public class IndexWriter {
         IndexReader   reader   = new IndexReader(indexName,client);
         IndexSearcher searcher = new IndexSearcher(reader);
        
-        TopDocs results = searcher.search(query,1000);
+        Collector collector= new Collector() {
+			
+			private IndexReader reader;
+			private int docBase;
+
+			@Override
+			public void setScorer(Scorer scorer) throws IOException {
+				
+			}
+			
+			@Override
+			public void setNextReader(org.apache.lucene.index.IndexReader reader, int docBase) throws IOException {
+				this.reader = (IndexReader) reader;
+				this.docBase = docBase;
+				
+			}
+			
+			@Override
+			public void collect(int docId) throws IOException {
+	            String lucandraDocId = reader.getDocumentId(docId);
+	            try {
+	                deleteLucandraDocument(lucandraDocId.getBytes("UTF-8"));
+	            } catch (InvalidRequestException e) {
+	                throw new RuntimeException(e);
+	            } catch (NotFoundException e) {
+	                throw new RuntimeException(e);
+	            } catch (UnavailableException e) {
+	                throw new RuntimeException(e);
+	            } catch (TimedOutException e) {
+	                throw new RuntimeException(e);
+	            } catch (TException e) {
+	                throw new RuntimeException(e);
+	            } catch (ClassNotFoundException e) {
+	                throw new RuntimeException(e);       
+	            }
+				
+			}
+			
+			@Override
+			public boolean acceptsDocsOutOfOrder() {
+				// TODO Auto-generated method stub
+				return false;
+			}
+		};
+		
+        searcher.search(query,collector);
     
-        for(int i=0; i<results.totalHits; i++){
-            ScoreDoc doc = results.scoreDocs[i];
-            
-            
-            String docId = reader.getDocumentId(doc.doc);
-            try {
-                deleteLucandraDocument(docId.getBytes("UTF-8"));
-            } catch (InvalidRequestException e) {
-                throw new RuntimeException(e);
-            } catch (NotFoundException e) {
-                throw new RuntimeException(e);
-            } catch (UnavailableException e) {
-                throw new RuntimeException(e);
-            } catch (TimedOutException e) {
-                throw new RuntimeException(e);
-            } catch (TException e) {
-                throw new RuntimeException(e);
-            } catch (ClassNotFoundException e) {
-                throw new RuntimeException(e);       
-            }
-        }
+//        for(int i=0; i<results.totalHits; i++){
+//            ScoreDoc doc = results.scoreDocs[i];
+//            
+//            
+//            String docId = reader.getDocumentId(doc.doc);
+//            try {
+//                deleteLucandraDocument(docId.getBytes("UTF-8"));
+//            } catch (InvalidRequestException e) {
+//                throw new RuntimeException(e);
+//            } catch (NotFoundException e) {
+//                throw new RuntimeException(e);
+//            } catch (UnavailableException e) {
+//                throw new RuntimeException(e);
+//            } catch (TimedOutException e) {
+//                throw new RuntimeException(e);
+//            } catch (TException e) {
+//                throw new RuntimeException(e);
+//            } catch (ClassNotFoundException e) {
+//                throw new RuntimeException(e);       
+//            }
+//        }
         
     }
     
@@ -364,14 +410,23 @@ public class IndexWriter {
             String finish = start+CassandraUtils.delimeter;
 
             ColumnParent columnParent = new ColumnParent(CassandraUtils.docColumnFamily);
+            
             SlicePredicate slicePredicate = new SlicePredicate();
 
             // Get all columns
-            SliceRange sliceRange = new SliceRange(new byte[] {}, new byte[] {}, true, Integer.MAX_VALUE);
+            SliceRange sliceRange = new SliceRange(new byte[] {}, new byte[] {}, true, Integer.MAX_VALUE);            
             slicePredicate.setSlice_range(sliceRange);
+            
+//            List<KeySlice> columns  = client.get_range_slice(CassandraUtils.keySpace, columnParent, slicePredicate, start, finish, 5000, ConsistencyLevel.ONE);
+            
+            
+            KeyRange keyRange = new KeyRange();
+            keyRange.setStart_key(start);
+            
+            keyRange.setEnd_key(finish);
 
-            List<KeySlice> columns  = client.get_range_slice(CassandraUtils.keySpace, columnParent, slicePredicate, start, finish, 5000, ConsistencyLevel.ONE);
-        
+            List<KeySlice> columns  = client.get_range_slices(CassandraUtils.keySpace, columnParent, slicePredicate, keyRange, ConsistencyLevel.ONE);
+
             return columns.size();
             
         }catch(Exception e){
