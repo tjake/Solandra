@@ -40,7 +40,6 @@ import org.apache.lucene.search.SortField;
 import org.apache.lucene.search.TermRangeQuery;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.util.NumericUtils;
-import org.junit.Ignore;
 
 public class TestNumericRangeQuery32 extends LucandraTestCase {
 	// distance of entries
@@ -393,21 +392,21 @@ public class TestNumericRangeQuery32 extends LucandraTestCase {
 		}
 	}
 
-	public void testRandomTrieAndClassicRangeQuery_8bit() throws Exception {
-		testRandomTrieAndClassicRangeQuery(8);
-	}
-
-	public void testRandomTrieAndClassicRangeQuery_4bit() throws Exception {
-		testRandomTrieAndClassicRangeQuery(4);
-	}
-
-	public void testRandomTrieAndClassicRangeQuery_2bit() throws Exception {
-		testRandomTrieAndClassicRangeQuery(2);
-	}
-
-	public void testRandomTrieAndClassicRangeQuery_NoTrie() throws Exception {
-		testRandomTrieAndClassicRangeQuery(Integer.MAX_VALUE);
-	}
+//	public void testRandomTrieAndClassicRangeQuery_8bit() throws Exception {
+//		testRandomTrieAndClassicRangeQuery(8);
+//	}
+//
+//	public void testRandomTrieAndClassicRangeQuery_4bit() throws Exception {
+//		testRandomTrieAndClassicRangeQuery(4);
+//	}
+//
+//	public void testRandomTrieAndClassicRangeQuery_2bit() throws Exception {
+//		testRandomTrieAndClassicRangeQuery(2);
+//	}
+//
+//	public void testRandomTrieAndClassicRangeQuery_NoTrie() throws Exception {
+//		testRandomTrieAndClassicRangeQuery(Integer.MAX_VALUE);
+//	}
 
 	private void testRangeSplit(int precisionStep) throws Exception {
 		final Random rnd = newRandom();

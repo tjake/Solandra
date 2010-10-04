@@ -52,7 +52,7 @@ import org.apache.thrift.transport.TTransportException;
 public abstract class LucandraTestCase extends TestCase {
 
 	protected static IndexContext context;
-	protected static String indexName;
+	protected static String indexName = "numericindex";
 	protected static SimpleAnalyzer analyzer = new SimpleAnalyzer();
 
 	
