@@ -17,11 +17,24 @@ package lucandra.search;
  * limitations under the License.
  */
 
+import java.util.List;
 import java.util.Random;
 
 import lucandra.IndexReader;
 import lucandra.IndexWriter;
 
+import org.apache.cassandra.thrift.ColumnOrSuperColumn;
+import org.apache.cassandra.thrift.ColumnPath;
+import org.apache.cassandra.thrift.ConsistencyLevel;
+import org.apache.cassandra.thrift.InvalidRequestException;
+import org.apache.cassandra.thrift.KeyRange;
+import org.apache.cassandra.thrift.KeySlice;
+import org.apache.cassandra.thrift.SlicePredicate;
+import org.apache.cassandra.thrift.SliceRange;
+import org.apache.cassandra.thrift.Cassandra.Iface;
+import org.apache.cassandra.thrift.ColumnParent;
+import org.apache.cassandra.thrift.TimedOutException;
+import org.apache.cassandra.thrift.UnavailableException;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.NumericField;
@@ -40,6 +53,7 @@ import org.apache.lucene.search.SortField;
 import org.apache.lucene.search.TermRangeQuery;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.util.NumericUtils;
+import org.apache.thrift.TException;
 
 public class TestNumericRangeQuery32 extends LucandraTestCase {
 	// distance of entries
@@ -53,11 +67,20 @@ public class TestNumericRangeQuery32 extends LucandraTestCase {
 	private static IndexSearcher searcher;
 
 	static {
+
 		// set the theoretical maximum term count for 8bit (see docs for the
 		// number)
 		BooleanQuery.setMaxClauseCount(3 * 255 * 2 + 255);
 
 		// remove everything from our CFs before our test
+
+		// do{
+		//
+		// client.get_range_slices(arg0, arg1, arg2, arg3, arg4)
+		//
+		// break;
+		// }while(true);
+		//
 
 		// remove all the test data
 
@@ -109,6 +132,8 @@ public class TestNumericRangeQuery32 extends LucandraTestCase {
 
 	}
 
+
+
 	// private void clearData(String cfName) throws InvalidRequestException,
 	// UnavailableException, TimedOutException, TException {
 	//
@@ -159,15 +184,13 @@ public class TestNumericRangeQuery32 extends LucandraTestCase {
 			switch (i) {
 			case 0:
 				type = " (constant score filter rewrite)";
-				q
-						.setRewriteMethod(MultiTermQuery.CONSTANT_SCORE_FILTER_REWRITE);
+				q.setRewriteMethod(MultiTermQuery.CONSTANT_SCORE_FILTER_REWRITE);
 				topDocs = searcher.search(q, null, noDocs, Sort.INDEXORDER);
 				terms = q.getTotalNumberOfTerms();
 				break;
 			case 1:
 				type = " (constant score boolean rewrite)";
-				q
-						.setRewriteMethod(MultiTermQuery.CONSTANT_SCORE_BOOLEAN_QUERY_REWRITE);
+				q.setRewriteMethod(MultiTermQuery.CONSTANT_SCORE_BOOLEAN_QUERY_REWRITE);
 				topDocs = searcher.search(q, null, noDocs, Sort.INDEXORDER);
 				terms = q.getTotalNumberOfTerms();
 				break;
@@ -190,8 +213,10 @@ public class TestNumericRangeQuery32 extends LucandraTestCase {
 			assertEquals("First doc" + type, 2 * distance + startOffset,
 					Integer.parseInt(doc.get(field)));
 			doc = searcher.doc(sd[sd.length - 1].doc);
-			assertEquals("Last doc" + type, (1 + count) * distance
-					+ startOffset, Integer.parseInt(doc.get(field)));
+			
+			int expected = (1 + count) * distance+ startOffset;
+			int current = Integer.parseInt(doc.get(field));
+			assertEquals("Last doc" + type, expected, current );
 			if (i > 0) {
 				assertEquals(
 						"Distinct term number is equal for all query types",
@@ -217,27 +242,27 @@ public class TestNumericRangeQuery32 extends LucandraTestCase {
 		NumericRangeFilter f = NumericRangeFilter.newIntRange("field8", 8,
 				1000, -1000, true, true);
 		assertSame("A inverse range should return the EMPTY_DOCIDSET instance",
-				DocIdSet.EMPTY_DOCIDSET, f.getDocIdSet(searcher
-						.getIndexReader()));
+				DocIdSet.EMPTY_DOCIDSET,
+				f.getDocIdSet(searcher.getIndexReader()));
 		f = NumericRangeFilter.newIntRange("field8", 8, Integer.MAX_VALUE,
 				null, false, false);
 		assertSame(
 				"A exclusive range starting with Integer.MAX_VALUE should return the EMPTY_DOCIDSET instance",
-				DocIdSet.EMPTY_DOCIDSET, f.getDocIdSet(searcher
-						.getIndexReader()));
+				DocIdSet.EMPTY_DOCIDSET,
+				f.getDocIdSet(searcher.getIndexReader()));
 		f = NumericRangeFilter.newIntRange("field8", 8, null,
 				Integer.MIN_VALUE, false, false);
 		assertSame(
 				"A exclusive range ending with Integer.MIN_VALUE should return the EMPTY_DOCIDSET instance",
-				DocIdSet.EMPTY_DOCIDSET, f.getDocIdSet(searcher
-						.getIndexReader()));
+				DocIdSet.EMPTY_DOCIDSET,
+				f.getDocIdSet(searcher.getIndexReader()));
 	}
 
 	public void testOneMatchQuery() throws Exception {
 		NumericRangeQuery q = NumericRangeQuery.newIntRange("ascfield8", 8,
 				1000, 1000, true, true);
-		assertSame(MultiTermQuery.CONSTANT_SCORE_BOOLEAN_QUERY_REWRITE, q
-				.getRewriteMethod());
+		assertSame(MultiTermQuery.CONSTANT_SCORE_BOOLEAN_QUERY_REWRITE,
+				q.getRewriteMethod());
 		TopDocs topDocs = searcher.search(q, noDocs);
 		ScoreDoc[] sd = topDocs.scoreDocs;
 		assertNotNull(sd);
@@ -260,8 +285,8 @@ public class TestNumericRangeQuery32 extends LucandraTestCase {
 		Document doc = searcher.doc(sd[0].doc);
 		assertEquals("First doc", startOffset, Integer.parseInt(doc.get(field)));
 		doc = searcher.doc(sd[sd.length - 1].doc);
-		assertEquals("Last doc", (count - 1) * distance + startOffset, Integer
-				.parseInt(doc.get(field)));
+		assertEquals("Last doc", (count - 1) * distance + startOffset,
+				Integer.parseInt(doc.get(field)));
 	}
 
 	public void testLeftOpenRange_8bit() throws Exception {
@@ -290,11 +315,11 @@ public class TestNumericRangeQuery32 extends LucandraTestCase {
 		assertNotNull(sd);
 		assertEquals("Score doc count", noDocs - count, sd.length);
 		Document doc = searcher.doc(sd[0].doc);
-		assertEquals("First doc", count * distance + startOffset, Integer
-				.parseInt(doc.get(field)));
+		assertEquals("First doc", count * distance + startOffset,
+				Integer.parseInt(doc.get(field)));
 		doc = searcher.doc(sd[sd.length - 1].doc);
-		assertEquals("Last doc", (noDocs - 1) * distance + startOffset, Integer
-				.parseInt(doc.get(field)));
+		assertEquals("Last doc", (noDocs - 1) * distance + startOffset,
+				Integer.parseInt(doc.get(field)));
 	}
 
 	public void testRightOpenRange_8bit() throws Exception {
@@ -327,9 +352,9 @@ public class TestNumericRangeQuery32 extends LucandraTestCase {
 			// test inclusive range
 			NumericRangeQuery tq = NumericRangeQuery.newIntRange(field,
 					precisionStep, lower, upper, true, true);
-			TermRangeQuery cq = new TermRangeQuery(field, NumericUtils
-					.intToPrefixCoded(lower), NumericUtils
-					.intToPrefixCoded(upper), true, true);
+			TermRangeQuery cq = new TermRangeQuery(field,
+					NumericUtils.intToPrefixCoded(lower),
+					NumericUtils.intToPrefixCoded(upper), true, true);
 			TopDocs tTopDocs = searcher.search(tq, 1);
 			TopDocs cTopDocs = searcher.search(cq, 1);
 			assertEquals(
@@ -341,8 +366,8 @@ public class TestNumericRangeQuery32 extends LucandraTestCase {
 			tq = NumericRangeQuery.newIntRange(field, precisionStep, lower,
 					upper, false, false);
 			cq = new TermRangeQuery(field,
-					NumericUtils.intToPrefixCoded(lower), NumericUtils
-							.intToPrefixCoded(upper), false, false);
+					NumericUtils.intToPrefixCoded(lower),
+					NumericUtils.intToPrefixCoded(upper), false, false);
 			tTopDocs = searcher.search(tq, 1);
 			cTopDocs = searcher.search(cq, 1);
 			assertEquals(
@@ -354,8 +379,8 @@ public class TestNumericRangeQuery32 extends LucandraTestCase {
 			tq = NumericRangeQuery.newIntRange(field, precisionStep, lower,
 					upper, false, true);
 			cq = new TermRangeQuery(field,
-					NumericUtils.intToPrefixCoded(lower), NumericUtils
-							.intToPrefixCoded(upper), false, true);
+					NumericUtils.intToPrefixCoded(lower),
+					NumericUtils.intToPrefixCoded(upper), false, true);
 			tTopDocs = searcher.search(tq, 1);
 			cTopDocs = searcher.search(cq, 1);
 			assertEquals(
@@ -367,8 +392,8 @@ public class TestNumericRangeQuery32 extends LucandraTestCase {
 			tq = NumericRangeQuery.newIntRange(field, precisionStep, lower,
 					upper, true, false);
 			cq = new TermRangeQuery(field,
-					NumericUtils.intToPrefixCoded(lower), NumericUtils
-							.intToPrefixCoded(upper), true, false);
+					NumericUtils.intToPrefixCoded(lower),
+					NumericUtils.intToPrefixCoded(upper), true, false);
 			tTopDocs = searcher.search(tq, 1);
 			cTopDocs = searcher.search(cq, 1);
 			assertEquals(
@@ -392,21 +417,21 @@ public class TestNumericRangeQuery32 extends LucandraTestCase {
 		}
 	}
 
-//	public void testRandomTrieAndClassicRangeQuery_8bit() throws Exception {
-//		testRandomTrieAndClassicRangeQuery(8);
-//	}
-//
-//	public void testRandomTrieAndClassicRangeQuery_4bit() throws Exception {
-//		testRandomTrieAndClassicRangeQuery(4);
-//	}
-//
-//	public void testRandomTrieAndClassicRangeQuery_2bit() throws Exception {
-//		testRandomTrieAndClassicRangeQuery(2);
-//	}
-//
-//	public void testRandomTrieAndClassicRangeQuery_NoTrie() throws Exception {
-//		testRandomTrieAndClassicRangeQuery(Integer.MAX_VALUE);
-//	}
+	public void testRandomTrieAndClassicRangeQuery_8bit() throws Exception {
+		testRandomTrieAndClassicRangeQuery(8);
+	}
+
+	public void testRandomTrieAndClassicRangeQuery_4bit() throws Exception {
+		testRandomTrieAndClassicRangeQuery(4);
+	}
+
+	public void testRandomTrieAndClassicRangeQuery_2bit() throws Exception {
+		testRandomTrieAndClassicRangeQuery(2);
+	}
+
+	public void testRandomTrieAndClassicRangeQuery_NoTrie() throws Exception {
+		testRandomTrieAndClassicRangeQuery(Integer.MAX_VALUE);
+	}
 
 	private void testRangeSplit(int precisionStep) throws Exception {
 		final Random rnd = newRandom();
@@ -470,16 +495,16 @@ public class TestNumericRangeQuery32 extends LucandraTestCase {
 		final int lower = -1000, upper = +2000;
 
 		Query tq = NumericRangeQuery.newFloatRange(field, precisionStep,
-				NumericUtils.sortableIntToFloat(lower), NumericUtils
-						.sortableIntToFloat(upper), true, true);
+				NumericUtils.sortableIntToFloat(lower),
+				NumericUtils.sortableIntToFloat(upper), true, true);
 		TopDocs tTopDocs = searcher.search(tq, 1);
 		assertEquals(
 				"Returned count of range query must be equal to inclusive range length",
 				upper - lower + 1, tTopDocs.totalHits);
 
 		Filter tf = NumericRangeFilter.newFloatRange(field, precisionStep,
-				NumericUtils.sortableIntToFloat(lower), NumericUtils
-						.sortableIntToFloat(upper), true, true);
+				NumericUtils.sortableIntToFloat(lower),
+				NumericUtils.sortableIntToFloat(upper), true, true);
 		tTopDocs = searcher.search(new MatchAllDocsQuery(), tf, 1);
 		assertEquals(
 				"Returned count of range filter must be equal to inclusive range length",
@@ -557,21 +582,23 @@ public class TestNumericRangeQuery32 extends LucandraTestCase {
 				null, 20, true, true));
 		QueryUtils.checkHashEquals(NumericRangeQuery.newIntRange("test7", 4,
 				null, null, true, true));
-		QueryUtils.checkEqual(NumericRangeQuery.newIntRange("test8", 4, 10, 20,
-				true, true), NumericRangeQuery.newIntRange("test8", 4, 10, 20,
-				true, true));
-		QueryUtils.checkUnequal(NumericRangeQuery.newIntRange("test9", 4, 10,
-				20, true, true), NumericRangeQuery.newIntRange("test9", 8, 10,
-				20, true, true));
-		QueryUtils.checkUnequal(NumericRangeQuery.newIntRange("test10a", 4, 10,
-				20, true, true), NumericRangeQuery.newIntRange("test10b", 4,
-				10, 20, true, true));
-		QueryUtils.checkUnequal(NumericRangeQuery.newIntRange("test11", 4, 10,
-				20, true, true), NumericRangeQuery.newIntRange("test11", 4, 20,
-				10, true, true));
-		QueryUtils.checkUnequal(NumericRangeQuery.newIntRange("test12", 4, 10,
-				20, true, true), NumericRangeQuery.newIntRange("test12", 4, 10,
-				20, false, true));
+		QueryUtils.checkEqual(
+				NumericRangeQuery.newIntRange("test8", 4, 10, 20, true, true),
+				NumericRangeQuery.newIntRange("test8", 4, 10, 20, true, true));
+		QueryUtils.checkUnequal(
+				NumericRangeQuery.newIntRange("test9", 4, 10, 20, true, true),
+				NumericRangeQuery.newIntRange("test9", 8, 10, 20, true, true));
+		QueryUtils
+				.checkUnequal(NumericRangeQuery.newIntRange("test10a", 4, 10,
+						20, true, true), NumericRangeQuery.newIntRange(
+						"test10b", 4, 10, 20, true, true));
+		QueryUtils.checkUnequal(
+				NumericRangeQuery.newIntRange("test11", 4, 10, 20, true, true),
+				NumericRangeQuery.newIntRange("test11", 4, 20, 10, true, true));
+		QueryUtils
+				.checkUnequal(NumericRangeQuery.newIntRange("test12", 4, 10,
+						20, true, true), NumericRangeQuery.newIntRange(
+						"test12", 4, 10, 20, false, true));
 		QueryUtils.checkUnequal(NumericRangeQuery.newIntRange("test13", 4, 10,
 				20, true, true), NumericRangeQuery.newFloatRange("test13", 4,
 				10f, 20f, true, true));
@@ -588,7 +615,7 @@ public class TestNumericRangeQuery32 extends LucandraTestCase {
 	// private void testEnum(int lower, int upper) throws Exception {
 	// NumericRangeQuery q = NumericRangeQuery.newIntRange("field4", 4, lower,
 	// upper, true, true);
-	//    
+	//
 	// FilteredTermEnum termEnum = q.getField();
 	// try {
 	// int count = 0;
@@ -607,8 +634,8 @@ public class TestNumericRangeQuery32 extends LucandraTestCase {
 	// termEnum.close();
 	// }
 	// }
-	//  
-	//  
+	//
+	//
 	// public void testEnum() throws Exception {
 	// int count=3000;
 	// int lower=(distance*3/2)+startOffset, upper=lower + count*distance +

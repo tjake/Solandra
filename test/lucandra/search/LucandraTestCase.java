@@ -20,6 +20,7 @@ package lucandra.search;
 import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Random;
 
 import junit.framework.TestCase;
@@ -27,7 +28,13 @@ import lucandra.CassandraUtils;
 import lucandra.IndexContext;
 
 import org.apache.cassandra.thrift.Cassandra.Iface;
+import org.apache.cassandra.thrift.ColumnParent;
+import org.apache.cassandra.thrift.ColumnPath;
 import org.apache.cassandra.thrift.ConsistencyLevel;
+import org.apache.cassandra.thrift.KeyRange;
+import org.apache.cassandra.thrift.KeySlice;
+import org.apache.cassandra.thrift.SlicePredicate;
+import org.apache.cassandra.thrift.SliceRange;
 import org.apache.lucene.analysis.SimpleAnalyzer;
 import org.apache.lucene.index.ConcurrentMergeScheduler;
 import org.apache.lucene.search.FieldCache;
@@ -63,10 +70,69 @@ public abstract class LucandraTestCase extends TestCase {
 			Iface connection = CassandraUtils.createConnection();
 			context = new IndexContext(connection, "Lucandra",
 					ConsistencyLevel.ONE);
+			
+
+			cleanCf(context.getDocumentColumnFamily());
+			cleanCf(context.getTermColumnFamily());
+			
 		} catch (TTransportException e) {
 			throw new RuntimeException(e);
 		}
 
+	}
+	
+	
+	private static void cleanCf(String cfName) {
+		Iface conn = context.getClient();
+
+		ColumnParent parent = new ColumnParent();
+		parent.setColumn_family(cfName);
+
+		SlicePredicate slice = new SlicePredicate();
+
+		SliceRange sliceRange = new SliceRange();
+		sliceRange.setStart(new byte[] {});
+		sliceRange.setFinish(new byte[] {});
+
+		slice.setSlice_range(sliceRange);
+
+		KeyRange range = new KeyRange();
+		range.setStart_key("");
+		range.setEnd_key("");
+		range.setCount(10000);
+
+		try {
+			while (true) {
+
+				List<KeySlice> apiResult = conn.get_range_slices(
+						context.getKeySpace(), parent, slice, range,
+						ConsistencyLevel.ONE);
+
+				
+
+				String key = null;
+
+				for (KeySlice keySlice : apiResult) {
+					key = keySlice.getKey();
+
+					range.setStart_key(key);
+
+					if (keySlice.getColumns().size() > 0) {
+						ColumnPath path = new ColumnPath(cfName);
+						conn.remove(context.getKeySpace(), key, path,
+								System.currentTimeMillis(),
+								ConsistencyLevel.ONE);
+					}
+				}
+				
+				if (apiResult.size() <= 1) {
+					break;
+				}
+
+			}
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	public LucandraTestCase() {
