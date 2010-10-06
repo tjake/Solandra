@@ -16,7 +16,7 @@ initial_token:
 auto_bootstrap: false
 
 # See http://wiki.apache.org/cassandra/HintedHandoff
-hinted_handoff_enabled: true
+hinted_handoff_enabled: false
 
 # authentication backend, implementing IAuthenticator; used to limit keyspace access
 authenticator: org.apache.cassandra.auth.AllowAllAuthenticator
