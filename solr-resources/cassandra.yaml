@@ -5,6 +5,8 @@
 # name of the cluster
 cluster_name: 'Lucandra Cluster'
 
+initial_token:
+
 # Set to true to make new [non-seed] nodes automatically migrate data
 # to themselves from the pre-existing nodes in the cluster.  Defaults
 # to false because you can only bootstrap N machines at a time from
