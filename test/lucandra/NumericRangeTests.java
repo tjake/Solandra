@@ -51,7 +51,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
- * Tests persistence and query ranges on numeric types
+ * Tests persistence and query ranges on numeric types.  This is a very basic test.  More accurate tests
+ * are performed with the numeric range query 32 and the numeric query 64
  * 
  * @author Todd Nine
  * 
@@ -70,6 +71,7 @@ public class NumericRangeTests {
 	public static void writeIndexes() throws TTransportException,
 			CorruptIndexException, IOException {
 
+	
 		Iface connection = CassandraUtils.createConnection();
 		context = new IndexContext(connection, "Lucandra", ConsistencyLevel.ONE);
 		// clean up indexes before we run our test
@@ -85,6 +87,7 @@ public class NumericRangeTests {
 		NumericField numeric = new NumericField("long", Store.YES, true);
 		numeric.setLongValue(low);
 		first.add(numeric);
+		first.add(new Field("index", "1", Store.YES, Index.NOT_ANALYZED));
 
 		second = new Document();
 		second.add(new Field("Id", "second", Store.YES, Index.ANALYZED));
@@ -92,6 +95,8 @@ public class NumericRangeTests {
 		numeric = new NumericField("long", Store.YES, true);
 		numeric.setLongValue(mid);
 		second.add(numeric);
+		second.add(new Field("index", "2", Store.YES, Index.NOT_ANALYZED));
+
 
 		third = new Document();
 		third.add(new Field("Id", "third", Store.YES, Index.ANALYZED));
@@ -99,6 +104,8 @@ public class NumericRangeTests {
 		numeric = new NumericField("long", Store.YES, true);
 		numeric.setLongValue(high);
 		third.add(numeric);
+		third.add(new Field("index", "3", Store.YES, Index.NOT_ANALYZED));
+
 
 		IndexWriter writer = new IndexWriter("longvals", context);
 		// writer.setAutoCommit(false);
@@ -193,6 +200,39 @@ public class NumericRangeTests {
 		returned = searcher.doc(docs.scoreDocs[0].doc);
 
 		assertEquals("first", returned.get("Id"));
+
+	}
+	
+	@Test
+	public void testSortOrderDefault() throws IOException {
+
+		NumericRangeQuery query = NumericRangeQuery.newLongRange("long", low,
+				high, true, true);
+
+
+
+		IndexReader reader = new IndexReader("longvals", context);
+
+		IndexSearcher searcher = new IndexSearcher(reader);
+		
+		TopDocs docs = searcher.search(query, null, 10000,  Sort.INDEXORDER);
+
+		assertEquals(3, docs.totalHits);
+
+		Document returned = searcher.doc(docs.scoreDocs[0].doc);
+
+		assertEquals("first", returned.get("Id"));
+		assertEquals("1", returned.get("index"));
+
+		returned = searcher.doc(docs.scoreDocs[1].doc);
+
+		assertEquals("second", returned.get("Id"));
+		assertEquals("2", returned.get("index"));
+
+		returned = searcher.doc(docs.scoreDocs[2].doc);
+
+		assertEquals("third", returned.get("Id"));
+		assertEquals("3", returned.get("index"));
 
 	}
 
