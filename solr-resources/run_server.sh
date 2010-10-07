@@ -1,6 +1,6 @@
 #!/bin/bash 
 
-REDIS_HOST="67.23.43.19"
+REDIS_HOST="localhost"
 MAX_HEAP_SIZE="2G" 
 
 
