@@ -24,6 +24,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
@@ -205,7 +206,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         }
         
         ColumnParent columnParent = new ColumnParent();
-        columnParent.setColumn_family(context.getDocumentColumnFamily());
+         columnParent.setColumn_family(context.getDocumentColumnFamily());
 
         SlicePredicate slicePredicate = new SlicePredicate();
         
@@ -404,6 +405,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         String id;
         try {
             id = new String(docInfo.name, "UTF-8");
+            logger.debug("retrieved document with id : {}", id);
         } catch (UnsupportedEncodingException e) {
             throw new IllegalStateException("Cant make docId a string");
         }
@@ -519,8 +521,9 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     private Map<String,Integer> getDocIdToDocIndex(){
         Map<String, Integer> c = docIdToDocIndex.get();
         
+        //we need to preserve the order we add documents in 
         if(c == null){
-            c = new HashMap<String,Integer>();
+            c = new LinkedHashMap<String,Integer>();
             docIdToDocIndex.set(c);
         }
         

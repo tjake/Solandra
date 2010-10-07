@@ -20,6 +20,7 @@
 package lucandra;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -37,6 +38,7 @@ import org.apache.cassandra.thrift.SlicePredicate;
 import org.apache.cassandra.thrift.SliceRange;
 import org.apache.cassandra.thrift.TimedOutException;
 import org.apache.cassandra.thrift.UnavailableException;
+import org.apache.commons.codec.binary.Hex;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.TermEnum;
 import org.apache.thrift.TException;
@@ -81,8 +83,9 @@ public class LucandraTermEnum extends TermEnum {
 
     public boolean skipTo(Term term) throws IOException {
 
-        if (term == null)
+        if (term == null){
             return false;
+        }
 
         loadTerms(term);
         
@@ -137,13 +140,40 @@ public class LucandraTermEnum extends TermEnum {
 
     @Override
     public Term term() {
-        return termBuffer[termPosition];
+        Term term =  termBuffer[termPosition];
+        
+        if(logger.isDebugEnabled()){
+			
+			try {
+				String hex = new String(Hex.encodeHex(term.text().getBytes("UTF-8")));
+				logger.debug(String.format("Returning term for field '%s' hex value is : %s", term.field(), hex));
+			} catch (UnsupportedEncodingException e) {
+				/*SWALLOW*/
+			}
+			
+		}
+        
+        return term;
     }
 
     private void loadTerms(Term skipTo) {
 
-        if(initTerm == null)
+        if(initTerm == null){
             initTerm = skipTo;
+        }
+        
+        if(logger.isDebugEnabled()){
+			
+			try {
+				String hex = new String(Hex.encodeHex(initTerm.text().getBytes("UTF-8")));
+				logger.debug(String.format("Seeking term for field '%s' with hex value greater or equal : %s", initTerm.field(), hex));
+			} catch (UnsupportedEncodingException e) {
+				/*SWALLOW*/
+			}
+			
+		}
+        
+        
         
         // chose starting term
         String startTerm = CassandraUtils.hashKey(
@@ -234,9 +264,11 @@ public class LucandraTermEnum extends TermEnum {
         // term to start with next time
         actualInitSize = columns.size();
         logger.debug("Found " + columns.size() + " keys in range:" + startTerm + " to " + endTerm + " in " + (System.currentTimeMillis() - start) + "ms");
+        
 
         if (actualInitSize > 0) {
-            for (KeySlice entry : columns) {
+           
+        	for (KeySlice entry : columns) {
    
                 // term keys look like wikipedia/body/wiki
                 String termStr = entry.getKey().substring(entry.getKey().indexOf(CassandraUtils.delimeter) + CassandraUtils.delimeter.length());
@@ -247,9 +279,21 @@ public class LucandraTermEnum extends TermEnum {
                 //check for tombstone keys or incorrect keys (from RP)
                 if(entry.getColumns().size() > 0 && term.field().equals(skipTo.field()) &&
                         //from this index
-                        entry.getKey().equals(CassandraUtils.hashKey(indexName+CassandraUtils.delimeter+term.field()+CassandraUtils.delimeter+term.text())))
-                    
+                        entry.getKey().equals(CassandraUtils.hashKey(indexName+CassandraUtils.delimeter+term.field()+CassandraUtils.delimeter+term.text()))){
+                
+                	if(logger.isDebugEnabled()){
+            			
+            			try {
+            				String hex = new String(Hex.encodeHex(term.text().getBytes("UTF-8")));
+            				logger.debug(String.format("Adding term for field '%s' with hex to term buffer: %s", term.field(), hex));
+            			} catch (UnsupportedEncodingException e) {
+            				/*SWALLOW*/
+            			}
+            			
+            		}
+                	
                     termDocFreqBuffer.put(term, entry.getColumns());
+                }
             }
 
             if(!termDocFreqBuffer.isEmpty()){
@@ -259,16 +303,17 @@ public class LucandraTermEnum extends TermEnum {
 
         // add a final key (excluded in submap below)
         termDocFreqBuffer.put(finalTerm, null);
+        
+        //shouldn't be in the loop, can be done in a single op
+        if (termCache == null) {
+            termCache = termDocFreqBuffer;
+        } else {
+            termCache.putAll(termDocFreqBuffer);
+        }
+
 
         // put in cache
         for (Term termKey : termDocFreqBuffer.keySet()) {
-
-            if (termCache == null) {
-                termCache = termDocFreqBuffer;
-            } else {
-                termCache.putAll(termDocFreqBuffer);
-            }
-
             indexReader.addTermEnumCache(termKey, this);
         }
 
