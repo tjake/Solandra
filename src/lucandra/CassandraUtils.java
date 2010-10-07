@@ -409,6 +409,8 @@ public class CassandraUtils {
         if (keys.length <= 1 || !Arrays.equals(keys[keys.length - 2], delimeterBytes))
             throw new IllegalStateException("malformed key");
 
+        byte[] indexName = keys[0];
+
         if (indexHashingEnabled) {
             MessageDigest md;
             try {
@@ -417,71 +419,39 @@ public class CassandraUtils {
                 throw new RuntimeException(e);
             }
 
-            int saltSize = 0;
+            int saltSize = indexName.length; // Only hash the indexName
             int delimiterCount = 1;
             for (int i = 0; i < keys.length - 2; i++) {
 
                 if (Arrays.equals(keys[i], delimeterBytes)) {
                     delimiterCount++;
                 }
-
-                saltSize += keys[i].length;
             }
 
             if (delimiterCount > 2)
                 throw new IllegalStateException("key contains too many delimiters");
 
             byte[] salt = new byte[saltSize];
-            int currentLen = 0;
-            for (int i = 0; i < keys.length - 2; i++) {
-                System.arraycopy(keys[i], 0, salt, currentLen, keys[i].length);
-                currentLen += keys[i].length;
-            }
+            System.arraycopy(indexName, 0, salt, 0, indexName.length);
 
             md.update(salt);
 
-            byte[] hashPart = bytesForBig(new BigInteger(1, md.digest()), 8);
-            byte[] otherPart = null;
+            indexName = bytesForBig(new BigInteger(1, md.digest()), 8);
+        }
 
-            if (delimiterCount == 2) {
-                otherPart = new byte[keys[keys.length - 3].length + delimeterBytes.length + keys[keys.length - 1].length];
+        // no hashing, just combine the arrays together
 
-                int len = 0;
+        int totalBytes = indexName.length;
+        for (int i = 1; i < keys.length; i++)
+            totalBytes += keys[i].length;
 
-                System.arraycopy(keys[keys.length - 3], 0, otherPart, len, keys[keys.length - 3].length);
+        hashedKey = new byte[totalBytes];
+        System.arraycopy(indexName, 0, hashedKey, 0, indexName.length);
+        int currentLen = indexName.length;
 
-                len += keys[keys.length - 3].length;
-
-                System.arraycopy(delimeterBytes, 0, otherPart, len, delimeterBytes.length);
-
-                len += delimeterBytes.length;
-
-                System.arraycopy(keys[keys.length - 1], 0, otherPart, len, keys[keys.length - 1].length);
-            } else {
-                otherPart = keys[keys.length - 1];
-            }
-
-            hashedKey = new byte[hashPart.length + delimeterBytes.length + otherPart.length];
-
-            // combine the 3 parts
-            System.arraycopy(hashPart, 0, hashedKey, 0, hashPart.length);
-            System.arraycopy(delimeterBytes, 0, hashedKey, hashPart.length, delimeterBytes.length);
-            System.arraycopy(otherPart, 0, hashedKey, hashPart.length + delimeterBytes.length, otherPart.length);
-
-        } else {
-
-            // no hashing, just combine the arrays together
-
-            int totalBytes = 0;
-            for (int i = 0; i < keys.length; i++)
-                totalBytes += keys[i].length;
-
-            hashedKey = new byte[totalBytes];
-            int currentLen = 0;
-            for (int i = 0; i < keys.length; i++) {
-                System.arraycopy(keys[i], 0, hashedKey, currentLen, keys[i].length);
-                currentLen += keys[i].length;
-            }
+        for (int i = 1; i < keys.length; i++) {
+            System.arraycopy(keys[i], 0, hashedKey, currentLen, keys[i].length);
+            currentLen += keys[i].length;
         }
 
         return hashedKey;

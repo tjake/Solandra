@@ -17,7 +17,7 @@
 	<classpathentry kind="lib" path="lib/lucene-snowball-2.9.1.jar"/>
 	<classpathentry kind="lib" path="lib/lucene-spellchecker-2.9.1.jar"/>
 	<classpathentry kind="lib" path="lib/solr-commons-csv-1.4.0.jar"/>
-	<classpathentry kind="lib" path="lib/solr-core-1.4.0.jar"/>
+	<classpathentry kind="lib" path="lib/solr-core-1.4.0.jar" sourcepath="/Users/jake/workspace/lucandra/lib/solr-core-1.4.0-sources.jar"/>
 	<classpathentry kind="lib" path="lib/solr-solrj-1.4.0.jar"/>
 	<classpathentry kind="lib" path="lib/slf4j-api-1.5.8.jar"/>
 	<classpathentry kind="lib" path="lib/slf4j-log4j12-1.5.8.jar"/>
