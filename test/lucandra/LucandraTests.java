@@ -19,7 +19,6 @@
  */
 package lucandra;
 
-import java.util.Arrays;
 import java.util.List;
 
 import junit.framework.TestCase;
@@ -38,6 +37,8 @@ import org.apache.lucene.document.Field;
 import org.apache.lucene.document.Field.TermVector;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queryParser.QueryParser;
+import org.apache.lucene.search.BooleanClause;
+import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Sort;
@@ -422,5 +423,42 @@ public class LucandraTests extends TestCase {
               fail(e.toString());
         }
 
+    }
+    
+    public void testLucandraTermDocs() throws Exception {
+       
+        IndexWriter indexWriter = new IndexWriter(indexName, client);
+ 
+        int docSize = 100;
+        for (int i = 0; i < docSize; i++) {
+            Document doc1 = new Document();
+            Field f1 = new Field("UUID", "UUID" + i,
+                    Field.Store.NO,
+                    Field.Index.NOT_ANALYZED_NO_NORMS);
+ 
+            Field f2 = new Field("parent", "parenta",
+                    Field.Store.NO,
+                    Field.Index.NOT_ANALYZED_NO_NORMS);
+ 
+            Field f3 = new Field("nodeType", "item",
+                    Field.Store.NO,
+                    Field.Index.NOT_ANALYZED_NO_NORMS);
+            doc1.add(f1);
+            doc1.add(f2);
+            doc1.add(f3);
+ 
+            indexWriter.addDocument(doc1, analyzer);
+        }
+ 
+        TermQuery tq = new TermQuery(new Term("parent", "parenta"));
+        TermQuery tq1 = new TermQuery(new Term("nodeType", "item"));
+        BooleanQuery query = new BooleanQuery();
+        query.add(tq, BooleanClause.Occur.MUST);
+        query.add(tq1, BooleanClause.Occur.MUST);
+        IndexReader indexReader = new IndexReader(indexName, client);
+        IndexSearcher searcher = new IndexSearcher(indexReader);
+ 
+        TopDocs topDocs = searcher.search(query, 1000);
+        assertEquals(topDocs.totalHits, docSize);
     }
 }
