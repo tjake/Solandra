@@ -122,7 +122,7 @@ public class CassandraUtils {
 
         return createRobustConnection( System.getProperty("cassandra.host","localhost"),
                                  Integer.valueOf(System.getProperty("cassandra.port","9160")),
-                                 Boolean.valueOf(System.getProperty("cassandra.framed", "false")),
+                                 Boolean.valueOf(System.getProperty("cassandra.framed", "true")),
                                  System.getProperty("cassandra.keyspace","Lucandra"),
                                  true);
     }
