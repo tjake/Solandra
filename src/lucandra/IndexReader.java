@@ -19,8 +19,10 @@
  */
 package lucandra;
 
+import static lucandra.ByteHelper.*;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -60,6 +62,12 @@ import org.slf4j.LoggerFactory;
 
 import solandra.SolandraFieldSelector;
 
+
+/**
+ * @author jake
+ * @author Todd Nine
+ *
+ */
 public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     private final static int numDocs = 1000000;
@@ -170,10 +178,11 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
         String docId = getDocIndexToDocId().get(docNum);
 
-        if (docId == null)
+        if (docId == null){
             return null;
+        }
 
-        Map<Integer, String> keyMap = new HashMap<Integer, String>();
+        Map<Integer, byte[]> keyMap = new HashMap<Integer, byte[]>();
 
         keyMap.put(docNum, CassandraUtils.hashKey(indexName + CassandraUtils.delimeter + docId));
 
@@ -222,10 +231,14 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         long start = System.currentTimeMillis();
 
         try {
-            Map<String, List<ColumnOrSuperColumn>> docMap = context.getClient().multiget_slice(context.getKeySpace(), Arrays.asList(keyMap.values().toArray(
-                    new String[] {})), columnParent, slicePredicate, context.getConsistencyLevel());
+        	List<byte[]> keys = new ArrayList<byte[]>();
+        	
+        	keys.addAll(keyMap.values());
+        	        
+        	
+            Map<byte[], List<ColumnOrSuperColumn>> docMap = context.getClient().multiget_slice(keys , columnParent, slicePredicate, context.getConsistencyLevel());
 
-            for (Map.Entry<Integer, String> key : keyMap.entrySet()) {
+            for (Map.Entry<Integer, byte[]> key : keyMap.entrySet()) {
 
                 List<ColumnOrSuperColumn> cols = docMap.get(key.getValue());
 

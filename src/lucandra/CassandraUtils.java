@@ -19,6 +19,7 @@
  */
 package lucandra;
 
+import static lucandra.ByteHelper.*;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -58,6 +59,11 @@ import org.apache.thrift.transport.TTransportException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * @author jake
+ * @author Todd Nine
+ *
+ */
 public class CassandraUtils {
 
      
@@ -69,7 +75,7 @@ public class CassandraUtils {
     public static final byte[] emptyByteArray      = new byte[]{}; 
     public static final List<Number> emptyArray    = Arrays.asList( new Number[]{0} );
     public static final String delimeter           = new String("\uffff");
-    public static final byte[] delimeterBytes;
+    public static final byte[] delimeterBytes 	   = getBytes(delimeter);
     
     public static final String finalToken          = new String("\ufffe\ufffe");
     
@@ -78,14 +84,7 @@ public class CassandraUtils {
     
     public static final boolean indexHashingEnabled = Boolean.valueOf(System.getProperty("index.hashing","true"));
     
-    static{
-        try {
-            delimeterBytes = delimeter.getBytes("UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException("UTF-8 not supported by this JVM");
-        }
-    }
-
+    
     public static final String hashChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     public static final BigInteger CHAR_MASK = new BigInteger("65535");
 
@@ -267,7 +266,7 @@ public class CassandraUtils {
 
     }
 
-    public static void addToMutationMap(Map<String,Map<String,List<Mutation>>> mutationMap, String columnFamily, byte[] column, String key, byte[] value, Map<String,List<Number>> superColumns){
+    public static void addToMutationMap(Map<byte[],Map<String,List<Mutation>>> mutationMap, String columnFamily, byte[] column, byte[] key, byte[] value, Map<String,List<Number>> superColumns){
         
         
         
@@ -353,7 +352,7 @@ public class CassandraUtils {
         mutationList.add(mutation);       
     }
     
-    public static void robustBatchInsert(IndexContext context, Map<String,Map<String,List<Mutation>>> mutationMap) {
+    public static void robustBatchInsert(IndexContext context, Map<byte[],Map<String,List<Mutation>>> mutationMap) {
 
         // Should use a circut breaker here
         boolean try_again = false;
@@ -363,7 +362,7 @@ public class CassandraUtils {
             try {
                 attempts++;
                 try_again = false;
-                context.getClient().batch_mutate(context.getKeySpace(), mutationMap, context.getConsistencyLevel());
+                context.getClient().batch_mutate(mutationMap, context.getConsistencyLevel());
                 
                 mutationMap.clear();
                 //if(logger.isDebugEnabled())
@@ -404,10 +403,10 @@ public class CassandraUtils {
         return baos.toByteArray();
     }
     
-    public static String hashKey(String key) {
+    public static byte[] hashKey(String key) {
         
         if(!indexHashingEnabled)
-            return key;
+            return getBytes(key);
         
         try {
             MessageDigest md = MessageDigest.getInstance("SHA");
@@ -431,7 +430,7 @@ public class CassandraUtils {
                 throw new RuntimeException("UTF-8 not supported by this JVM");
             }
             
-            return stringForBig( new BigInteger(1,md.digest()),8)+key.substring(indexPoint);
+            return getBytes(stringForBig( new BigInteger(1,md.digest()),8)+key.substring(indexPoint));
             
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException(e);

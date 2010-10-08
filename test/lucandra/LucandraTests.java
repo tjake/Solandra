@@ -19,6 +19,7 @@
  */
 package lucandra;
 
+import static lucandra.ByteHelper.*;
 import java.util.List;
 
 import junit.framework.TestCase;
@@ -26,6 +27,7 @@ import junit.framework.TestCase;
 import org.apache.cassandra.thrift.Cassandra.Iface;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.ConsistencyLevel;
+import org.apache.cassandra.thrift.KeyRange;
 import org.apache.cassandra.thrift.KeySlice;
 import org.apache.cassandra.thrift.SlicePredicate;
 import org.apache.cassandra.thrift.SliceRange;
@@ -85,8 +87,8 @@ public class LucandraTests extends TestCase {
         doc2.add(f2);
         indexWriter.addDocument(doc2, analyzer);
 
-        String start = CassandraUtils.hashKey(indexName + CassandraUtils.delimeter + "key" + CassandraUtils.delimeter);
-        String finish = "";
+        byte[] start = CassandraUtils.hashKey(indexName + CassandraUtils.delimeter + "key" + CassandraUtils.delimeter);
+        byte[] finish = new byte[]{};
         
         ColumnParent columnParent = new ColumnParent(context.getTermColumnFamily());
         SlicePredicate slicePredicate = new SlicePredicate();
@@ -95,11 +97,18 @@ public class LucandraTests extends TestCase {
         SliceRange sliceRange = new SliceRange(new byte[] {}, new byte[] {}, true, Integer.MAX_VALUE);
         slicePredicate.setSlice_range(sliceRange);
 
-        List<KeySlice> columns = context.getClient().get_range_slice(context.getKeySpace(), columnParent, slicePredicate, start, finish, 5000, context.getConsistencyLevel());
+        KeyRange range = new KeyRange();
+        range.setStart_key(start);
+        range.setEnd_key(finish);
+        range.setCount(5000);
+        
+        List<KeySlice> columns = context.getClient().get_range_slices(columnParent, slicePredicate, range, context.getConsistencyLevel());
 
         int matchingColumns = 0;
         for(KeySlice ks : columns){
-            String termStr = ks.getKey().substring(ks.getKey().indexOf(CassandraUtils.delimeter) + CassandraUtils.delimeter.length());
+        	String stringKey = getString(ks.getKey());
+        	
+            String termStr = stringKey.substring(stringKey.indexOf(CassandraUtils.delimeter) + CassandraUtils.delimeter.length());
             Term term = CassandraUtils.parseTerm(termStr);
             
             if(term.field().equals("key") && ks.getKey().equals(CassandraUtils.hashKey(indexName+CassandraUtils.delimeter+term.field()+CassandraUtils.delimeter+term.text())))

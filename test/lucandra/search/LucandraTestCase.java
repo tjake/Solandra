@@ -97,20 +97,19 @@ public abstract class LucandraTestCase extends TestCase {
 		slice.setSlice_range(sliceRange);
 
 		KeyRange range = new KeyRange();
-		range.setStart_key("");
-		range.setEnd_key("");
+		range.setStart_key(new byte[]{});
+		range.setEnd_key(new byte[]{});
 		range.setCount(10000);
 
 		try {
 			while (true) {
 
-				List<KeySlice> apiResult = conn.get_range_slices(
-						context.getKeySpace(), parent, slice, range,
+				List<KeySlice> apiResult = conn.get_range_slices(parent, slice, range,
 						ConsistencyLevel.ONE);
 
 				
 
-				String key = null;
+				byte[] key = null;
 
 				for (KeySlice keySlice : apiResult) {
 					key = keySlice.getKey();
@@ -119,7 +118,7 @@ public abstract class LucandraTestCase extends TestCase {
 
 					if (keySlice.getColumns().size() > 0) {
 						ColumnPath path = new ColumnPath(cfName);
-						conn.remove(context.getKeySpace(), key, path,
+						conn.remove(key, path,
 								System.currentTimeMillis(),
 								ConsistencyLevel.ONE);
 					}

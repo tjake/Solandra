@@ -19,6 +19,7 @@
  */
 package lucandra;
 
+import static lucandra.ByteHelper.*;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
@@ -33,6 +34,7 @@ import java.util.TreeMap;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.InvalidRequestException;
+import org.apache.cassandra.thrift.KeyRange;
 import org.apache.cassandra.thrift.KeySlice;
 import org.apache.cassandra.thrift.SlicePredicate;
 import org.apache.cassandra.thrift.SliceRange;
@@ -47,7 +49,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * 
- * @author jake
+ * @author jtake
+ * @author Todd Nine
  * 
  */
 public class LucandraTermEnum extends TermEnum {
@@ -176,16 +179,16 @@ public class LucandraTermEnum extends TermEnum {
         
         
         // chose starting term
-        String startTerm = CassandraUtils.hashKey(
+        byte[] startTerm = CassandraUtils.hashKey(
                     indexName + CassandraUtils.delimeter + CassandraUtils.createColumnName(skipTo)
                 );
                 
         // ending term. the initial query we don't care since
         // we only pull 2 terms, also we don't
-        String endTerm = "";
+        byte[] endTerm = new byte[]{};
       
         //The boundary condition for this search. currently the field.
-        String boundryTerm = CassandraUtils.hashKey(
+        byte[] boundryTerm = CassandraUtils.hashKey(
                 indexName + CassandraUtils.delimeter + 
                 CassandraUtils.createColumnName(skipTo.field(), CassandraUtils.finalToken)
                 );
@@ -248,9 +251,17 @@ public class LucandraTermEnum extends TermEnum {
         SliceRange sliceRange = new SliceRange(new byte[] {}, new byte[] {}, true, Integer.MAX_VALUE);
         slicePredicate.setSlice_range(sliceRange);
         
+        
+        KeyRange range = new KeyRange();
+        range.setStart_key(startTerm);
+        range.setEnd_key(endTerm);
+        range.setCount(count);
+        
         List<KeySlice> columns;
+        
+        
         try {
-            columns = context.getClient().get_range_slice(context.getKeySpace(), columnParent, slicePredicate, startTerm, endTerm, count, context.getConsistencyLevel());
+            columns = context.getClient().get_range_slices(columnParent, slicePredicate, range, context.getConsistencyLevel());
         } catch (InvalidRequestException e) {
             throw new RuntimeException(e);
         } catch (TException e) {
@@ -271,7 +282,10 @@ public class LucandraTermEnum extends TermEnum {
         	for (KeySlice entry : columns) {
    
                 // term keys look like wikipedia/body/wiki
-                String termStr = entry.getKey().substring(entry.getKey().indexOf(CassandraUtils.delimeter) + CassandraUtils.delimeter.length());
+        		
+        		String keyAsString = getString(entry.getKey());
+        		
+                String termStr = keyAsString.substring(keyAsString.indexOf(CassandraUtils.delimeter) + CassandraUtils.delimeter.length());
                 Term term = CassandraUtils.parseTerm(termStr);                 
                 
                 logger.debug(termStr + " has " + entry.getColumns().size());
@@ -335,7 +349,7 @@ public class LucandraTermEnum extends TermEnum {
         ColumnParent parent = new ColumnParent();
         parent.setColumn_family(context.getTermColumnFamily());
 
-        String key = CassandraUtils.hashKey(
+        byte[] key = CassandraUtils.hashKey(
                 indexName + CassandraUtils.delimeter + CassandraUtils.createColumnName(term)
             );
 
@@ -350,7 +364,7 @@ public class LucandraTermEnum extends TermEnum {
 
         List<ColumnOrSuperColumn> columsList = null;
         try {
-            columsList = context.getClient().get_slice(context.getKeySpace(), key, parent, slicePredicate, context.getConsistencyLevel());
+            columsList = context.getClient().get_slice(key, parent, slicePredicate, context.getConsistencyLevel());
         } catch (InvalidRequestException e) {
             throw new RuntimeException(e);
         } catch (UnavailableException e) {

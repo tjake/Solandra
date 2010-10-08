@@ -1,4 +1,5 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<parent>
 		<artifactId>settings</artifactId>
 		<groupId>com.spidertracks.standards</groupId>
@@ -9,13 +10,33 @@
 	<artifactId>lucandra</artifactId>
 	<version>0.0.6-SNAPSHOT</version>
 
+	<repositories>
+
+		<repository>
+
+			<id>eaio.com</id>
+			<name>eaio.com repository</name>
+			<url>http://eaio.com/maven2</url>
+			<releases>
+				<enabled>true</enabled>
+				<updatePolicy>daily</updatePolicy>
+				<checksumPolicy>fail</checksumPolicy>
+			</releases>
+			<snapshots>
+				<enabled>false</enabled>
+				<updatePolicy>daily</updatePolicy>
+				<checksumPolicy>fail</checksumPolicy>
+			</snapshots>
+		</repository>
+	</repositories>
+
 	<dependencies>
 
 		<!-- thrift dependencies -->
 		<dependency>
 			<groupId>libthrift</groupId>
 			<artifactId>libthrift</artifactId>
-			<version>917130</version>
+			<version>${thrift.version}</version>
 		</dependency>
 
 		<dependency>
@@ -88,6 +109,12 @@
 			<groupId>org.apache.solr</groupId>
 			<artifactId>solr-solrj</artifactId>
 			<version>${solr.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.eaio.uuid</groupId>
+			<artifactId>uuid</artifactId>
+			<version>3.2</version>
 		</dependency>
 
 
@@ -207,26 +234,7 @@
 				</configuration>
 			</plugin>
 
-			<!-- add our second thrift source directory -->
-			<plugin>
-				<groupId>org.codehaus.mojo</groupId>
-				<artifactId>build-helper-maven-plugin</artifactId>
-				<version>1.5</version>
-				<executions>
-					<execution>
-						<id>add-thrift-sources</id>
-						<phase>generate-sources</phase>
-						<goals>
-							<goal>add-source</goal>
-						</goals>
-						<configuration>
-							<sources>
-								<source>${basedir}/thrift</source>
-							</sources>
-						</configuration>
-					</execution>
-				</executions>
-			</plugin>
+			
 
 
 			<!-- install the thrift libraries -->
@@ -244,8 +252,8 @@
 							<packaging>jar</packaging>
 							<groupId>libthrift</groupId>
 							<artifactId>libthrift</artifactId>
-							<version>917130</version>
-							<file>${basedir}/lib/libthrift-r917130.jar</file>
+							<version>${thrift.version}</version>
+							<file>${basedir}/lib/libthrift-r${thrift.version}.jar</file>
 						</configuration>
 					</execution>
 					<execution>
@@ -279,8 +287,8 @@
 							<packaging>jar</packaging>
 							<groupId>libthrift</groupId>
 							<artifactId>libthrift</artifactId>
-							<version>917130</version>
-							<file>${basedir}/lib/libthrift-r917130.jar</file>
+							<version>${thrift.version}</version>
+							<file>${basedir}/lib/libthrift-r${thrift.version}.jar</file>
 						</configuration>
 					</execution>
 					<execution>
@@ -307,6 +315,7 @@
 		<lucene.version>2.9.3</lucene.version>
 		<solr.version>1.4.0</solr.version>
 		<slf4j.version>1.6.1</slf4j.version>
-		<cassandra.version>0.6.5</cassandra.version>
+		<cassandra.version>0.7.0-beta2</cassandra.version>
+		<thrift.version>959516</thrift.version>
 	</properties>
 </project>
