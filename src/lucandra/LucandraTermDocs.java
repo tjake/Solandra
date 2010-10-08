@@ -41,6 +41,9 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
     private int termPosition;
     private static final Logger logger = Logger.getLogger(LucandraTermDocs.class);
 
+    private int doc;
+    private int freq;
+    
     public LucandraTermDocs(IndexReader indexReader) {
         this.indexReader = indexReader;
         termEnum = new LucandraTermEnum(indexReader);
@@ -52,61 +55,80 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
     }
 
     public int doc() {
+        return doc;
+    }
+ 
+    private int getNextDoc() {
         if (docPosition < 0)
             docPosition = 0;
-
-        int docid = indexReader.getDocumentNumber(termDocs.get(docPosition).getSuper_column().getName()); 
-
+ 
+        int docid = indexReader.getDocumentNumber(termDocs.get(docPosition).getSuper_column().getName());
+ 
         return docid;
     }
-
+ 
     public int freq() {
-
+        return freq;
+    }
+ 
+    private int getNextFreq() {
+ 
         //Find the termFrequency
         List<Column> columns  = termDocs.get(docPosition).getSuper_column().getColumns();
         Column termFrequency = null;
         Column positionVector = null;
-        
+ 
         for(Column c : columns){
             if(Arrays.equals(CassandraUtils.termFrequencyKey.getBytes(), c.getName())){
                 termFrequency = c;
             }
-            
+ 
             if(Arrays.equals(CassandraUtils.positionVectorKey.getBytes(), c.getName())){
                 positionVector = c;
             }
         }
-        
+ 
         if(termFrequency == null){
             throw new RuntimeException("termFrequency is missing from supercolumn");
         }
-        
-        
+ 
+ 
         Integer freq      = CassandraUtils.byteArrayToInt(termFrequency.getValue());
         termPositionArray =  positionVector == null ? null : CassandraUtils.byteArrayToIntArray(positionVector.getValue());
         termPosition      = 0;
-
+ 
         return freq;
     }
-
+    
+   
     public boolean next() throws IOException {
-
+        
         if (termDocs == null)
             return false;
-
-        return ++docPosition < termDocs.size();
+ 
+        if (docPosition == termDocs.size()) {
+            return false;
+        } else {
+            doc = getNextDoc();
+            freq = getNextFreq();
+            docPosition++;
+            return true;
+        }
     }
-
+ 
     public int read(int[] docs, int[] freqs) throws IOException {
-
+ 
         int i = 0;
         for (; (termDocs != null && docPosition < termDocs.size() && i < docs.length); i++, docPosition++) {
+            doc = getNextDoc();
+            freq = getNextFreq();
             docs[i] = doc();
             freqs[i] = freq();
         }
-
+ 
         return i;
     }
+    
 
     public void seek(Term term) throws IOException {
         // on a new term so check cached

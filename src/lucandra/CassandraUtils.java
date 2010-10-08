@@ -38,7 +38,6 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.apache.cassandra.thrift.Cassandra;
-import org.apache.cassandra.thrift.Clock;
 import org.apache.cassandra.thrift.Column;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.cassandra.thrift.ColumnPath;
@@ -294,7 +293,7 @@ public class CassandraUtils {
 
     public static void addToMutationMap(Map<byte[],Map<String,List<Mutation>>> mutationMap, String columnFamily, byte[] column, byte[] key, byte[] value, Map<String,List<Number>> superColumns){
         
-        Clock clock = new Clock(System.currentTimeMillis());
+        Long clock = System.currentTimeMillis();
         
         Map<String,List<Mutation>> cfMutation = mutationMap.get(key);
         
@@ -316,7 +315,7 @@ public class CassandraUtils {
             
             Deletion d = new Deletion();
             
-            d.setClock(clock);
+            d.setTimestamp(clock);
             
             if(column != null){
                 try {

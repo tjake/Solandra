@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.cassandra.thrift.Cassandra;
-import org.apache.cassandra.thrift.Clock;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.ColumnPath;
@@ -356,7 +355,7 @@ public class IndexWriter {
         
         
         //FIXME: once cassandra batch mutation supports slice predicates in deletions
-        client.remove(selfKey, docAllColumnPath, new Clock(System.currentTimeMillis()), ConsistencyLevel.ONE);
+        client.remove(selfKey, docAllColumnPath, System.currentTimeMillis(), ConsistencyLevel.ONE);
 
         
     }
