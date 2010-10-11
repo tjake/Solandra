@@ -403,6 +403,24 @@ public class CassandraUtils {
         return baos.toByteArray();
     }
 
+    public static byte[] hashBytes(byte[] key) {
+        MessageDigest md;
+        try {
+            md = MessageDigest.getInstance("SHA");
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+
+        int saltSize = key.length; // Only hash the indexName
+
+        byte[] salt = new byte[saltSize];
+        System.arraycopy(key, 0, salt, 0, key.length);
+
+        md.update(salt);
+
+        return bytesForBig(new BigInteger(1, md.digest()), 8);
+    }
+
     public static byte[] hashKeyBytes(byte[]... keys) {
         byte hashedKey[] = null;
 
@@ -412,14 +430,6 @@ public class CassandraUtils {
         byte[] indexName = keys[0];
 
         if (indexHashingEnabled) {
-            MessageDigest md;
-            try {
-                md = MessageDigest.getInstance("SHA");
-            } catch (NoSuchAlgorithmException e) {
-                throw new RuntimeException(e);
-            }
-
-            int saltSize = indexName.length; // Only hash the indexName
             int delimiterCount = 1;
             for (int i = 0; i < keys.length - 2; i++) {
 
@@ -431,14 +441,8 @@ public class CassandraUtils {
             if (delimiterCount > 2)
                 throw new IllegalStateException("key contains too many delimiters");
 
-            byte[] salt = new byte[saltSize];
-            System.arraycopy(indexName, 0, salt, 0, indexName.length);
-
-            md.update(salt);
-
-            indexName = bytesForBig(new BigInteger(1, md.digest()), 8);
+            indexName = hashBytes(indexName);
         }
-
         // no hashing, just combine the arrays together
 
         int totalBytes = indexName.length;

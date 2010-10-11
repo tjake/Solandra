@@ -116,8 +116,8 @@ public class SolandraReopenComponent extends SearchComponent {
             String[] shards = new String[numShards + 1];
 
             for (int i = 0; i <= numShards; i++) {
-                String subIndex = indexName + i;
-                Token t = StorageService.getPartitioner().getToken(subIndex.getBytes());
+                byte[] subIndex = CassandraUtils.hashBytes((indexName +"~"+ i).getBytes());
+                Token t = StorageService.getPartitioner().getToken(subIndex);
                 List<InetAddress> addrs = StorageService.instance.getReplicationStrategy(CassandraUtils.keySpace).getNaturalEndpoints(t);
 
                 // pick a replica at random

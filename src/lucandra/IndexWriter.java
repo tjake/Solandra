@@ -94,6 +94,7 @@ public class IndexWriter {
 
         for (Fieldable field : (List<Fieldable>) doc.getFields()) {
 
+            
             // Indexed field
             if (field.isIndexed() && field.isTokenized()) {
 
