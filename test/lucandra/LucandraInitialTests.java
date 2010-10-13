@@ -123,7 +123,7 @@ public class LucandraInitialTests {
 	
 		long start = System.currentTimeMillis();
 
-		int docs = 10000;
+		int docs = 1000;
 		loadIndex("testIndex1", conn, docs);
 		loadIndex("testIndex2", conn, docs);
 		loadIndex("testIndex3", conn, docs);
@@ -140,6 +140,8 @@ public class LucandraInitialTests {
 		QueryParser qp = new QueryParser(Version.LUCENE_29, "key", analyzer);
 
 		TopDocs search = indexSearcher.search(qp.parse("chiave"), docs);
+		
+		reader.numDocs();
 		assertEquals(docs * 3, search.totalHits);
 
 		cleanIndex("testIndex1");
