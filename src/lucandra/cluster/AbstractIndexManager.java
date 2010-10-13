@@ -37,6 +37,7 @@ public abstract class AbstractIndexManager {
 
     }
     
+    public abstract void resetCounter(String indexName);
      
     public abstract long internalIncrement(String indexName);
     

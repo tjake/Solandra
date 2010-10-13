@@ -43,4 +43,15 @@ public class RedisIndexManager extends AbstractIndexManager {
         return id-1;
     }
 
+
+    @Override
+    public void resetCounter(String indexName) {      
+        String key = root + "/" + indexName;
+        try {
+            redisService.set(key, 0);
+        } catch (RedisException e) {
+            throw new RuntimeException(e);
+        }    
+    }
+
 }

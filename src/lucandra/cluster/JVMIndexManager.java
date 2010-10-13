@@ -21,5 +21,10 @@ public class JVMIndexManager extends AbstractIndexManager {
     public long internalIncrement(String indexName) {
         return counter.incrementAndGet();
     }
+
+    @Override
+    public void resetCounter(String indexName) {
+        counter.set(-1);
+    }
     
 }
