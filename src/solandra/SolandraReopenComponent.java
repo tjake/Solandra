@@ -47,11 +47,9 @@ import org.apache.solr.search.SolrIndexReader;
 public class SolandraReopenComponent extends SearchComponent {
 
     private static final Logger logger = Logger.getLogger(SolandraReopenComponent.class);
-    private final RedisIndexManager indexManager;
     private final Random random;
 
     public SolandraReopenComponent() {
-        indexManager = new RedisIndexManager(CassandraUtils.service);
         random = new Random(System.currentTimeMillis());
     }
 
@@ -108,7 +106,7 @@ public class SolandraReopenComponent extends SearchComponent {
         if (rb.shards == null) {
 
             // find number of shards
-            int docId = indexManager.getCurrentDocId(indexName);
+            long docId = CassandraUtils.indexManager.getCurrentDocId(indexName);
 
             int numShards = AbstractIndexManager.getShardFromDocId(docId);
 

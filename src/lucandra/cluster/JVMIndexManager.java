@@ -1,30 +1,25 @@
 package lucandra.cluster;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 
 public class JVMIndexManager extends AbstractIndexManager {
 
-    //private final AtomicInteger docId      = new AtomicInteger(0);
+    private final AtomicLong counter      = new AtomicLong(-1);
     
-    public JVMIndexManager(){
-        super();
+    public JVMIndexManager(int shardsAtOnce){
+        super(shardsAtOnce);
     }
-    
-   
-   
 
     @Override
-    public int getCurrentDocId(String indexName) {
-        // TODO Auto-generated method stub
-        return 0;
+    public long internalFetch(String indexName) {
+       return counter.get();
     }
-
 
     @Override
-    public int incrementDocId(String indexName) {
-        // TODO Auto-generated method stub
-        return 0;
+    public long internalIncrement(String indexName) {
+        return counter.incrementAndGet();
     }
-
+    
 }

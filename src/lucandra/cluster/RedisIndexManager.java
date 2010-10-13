@@ -9,38 +9,38 @@ public class RedisIndexManager extends AbstractIndexManager {
     private static final String root = "/Ctrs";
     
     
-    public RedisIndexManager(JRedisService redisService){
-        super();
+    public RedisIndexManager(JRedisService redisService, int shardsAtOnce){
+        super(shardsAtOnce);
         this.redisService = redisService;
         
     }
     
    
     @Override
-    public int incrementDocId(String indexName) {
-        int id;
+    public long internalIncrement(String indexName) {
+        long id;
         String key = root + "/" + indexName;
         try {
-            id = (int) redisService.incr(key);
+            id = redisService.incr(key);
         } catch (RedisException e) {
             throw new RuntimeException(e);
         }
         
-        return id;  
+        return id-1;  
     }
 
 
     @Override
-    public int getCurrentDocId(String indexName) {
-        int id;
+    public long internalFetch(String indexName) {
+        long id;
         String key = root + "/" + indexName;
         try {
-            id = (int) redisService.incrby(key, 0);
+            id = redisService.incrby(key, 0);
         } catch (RedisException e) {
             throw new RuntimeException(e);
         }
         
-        return id;
+        return id-1;
     }
 
 }

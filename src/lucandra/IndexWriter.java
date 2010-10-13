@@ -60,27 +60,34 @@ import org.apache.lucene.search.TopDocs;
 
 public class IndexWriter {
 
-    private String indexName;
 
     private boolean autoCommit;
     private static final ThreadLocal<Map<byte[], RowMutation>> mutationList = new ThreadLocal<Map<byte[], RowMutation>>();
-
+    private static final InheritableThreadLocal<String> indexName = new InheritableThreadLocal<String>();
+    
     private Similarity similarity = Similarity.getDefault(); // how to normalize;
     private static final Logger logger = Logger.getLogger(IndexWriter.class);
     
+    public IndexWriter() {
+      
+        autoCommit = true;
+    }
+    
     public IndexWriter(String indexName) {
-        this.indexName = indexName;
+        setIndexName(indexName);
         autoCommit = true;
     }
 
-    public void addDocument(Document doc, Analyzer analyzer, int docNumber, String indexName) throws CorruptIndexException, IOException{
-        this.indexName = indexName;      
-        addDocument(doc, analyzer, docNumber);
+    public void addDocument(Document doc, Analyzer analyzer, int docNumber) throws CorruptIndexException, IOException{
+             
+        addDocument(doc, analyzer, getIndexName(), docNumber);
     }
     
     @SuppressWarnings("unchecked")
-    public void addDocument(Document doc, Analyzer analyzer, int docNumber) throws CorruptIndexException, IOException {
+    public void addDocument(Document doc, Analyzer analyzer, String indexName, int docNumber) throws CorruptIndexException, IOException {
 
+       
+        
         List<Term> allIndexedTerms = new ArrayList<Term>();
         Map<String, byte[]> fieldCache = new HashMap<String, byte[]>(1024);
 
@@ -289,7 +296,7 @@ public class IndexWriter {
 
     public void deleteDocuments(Query query) throws CorruptIndexException, IOException {
 
-        IndexReader reader = new IndexReader(indexName);
+        IndexReader reader = new IndexReader(getIndexName());
         IndexSearcher searcher = new IndexSearcher(reader);
 
         TopDocs results = searcher.search(query, 1000);
@@ -310,7 +317,7 @@ public class IndexWriter {
 
             ColumnParent cp = new ColumnParent(CassandraUtils.termVecColumnFamily);
 
-            byte[] key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, term.field().getBytes(),
+            byte[] key = CassandraUtils.hashKeyBytes(getIndexName().getBytes(), CassandraUtils.delimeterBytes, term.field().getBytes(),
                     CassandraUtils.delimeterBytes, term.text().getBytes("UTF-8"));
 
             ReadCommand rc = new SliceFromReadCommand(CassandraUtils.keySpace, key, cp, new byte[] {}, new byte[] {}, false, Integer.MAX_VALUE);
@@ -339,7 +346,7 @@ public class IndexWriter {
 
     private void deleteLucandraDocument(byte[] docId) {
 
-        byte[] key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, docId);
+        byte[] key = CassandraUtils.hashKeyBytes(getIndexName().getBytes(), CassandraUtils.delimeterBytes, docId);
 
         List<Row> rows = CassandraUtils.robustGet(key, CassandraUtils.metaColumnPath, Arrays.asList(CassandraUtils.documentMetaFieldBytes), ConsistencyLevel.ONE);
         
@@ -358,7 +365,7 @@ public class IndexWriter {
         for (Term term : terms) {
 
             try {
-                key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, term.field().getBytes(), CassandraUtils.delimeterBytes,
+                key = CassandraUtils.hashKeyBytes(getIndexName().getBytes(), CassandraUtils.delimeterBytes, term.field().getBytes(), CassandraUtils.delimeterBytes,
                         term.text().getBytes("UTF-8"));
             } catch (UnsupportedEncodingException e) {
                 throw new RuntimeException("JVM doesn't support UTF-8", e);
@@ -368,7 +375,7 @@ public class IndexWriter {
         }
 
         // finally delete ourselves
-        byte[] selfKey = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, docId);
+        byte[] selfKey = CassandraUtils.hashKeyBytes(getIndexName().getBytes(), CassandraUtils.delimeterBytes, docId);
         CassandraUtils.addMutations(getMutationList(), CassandraUtils.docColumnFamily, null, selfKey, null, null);
 
         if (autoCommit){
@@ -418,11 +425,11 @@ public class IndexWriter {
     }
 
     public String getIndexName() {
-        return indexName;
+        return indexName.get();
     }
 
     public void setIndexName(String indexName) {
-        this.indexName = indexName;
+        this.indexName.set(indexName);
     }
 
 }

@@ -80,19 +80,20 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         }
     }
 
-    private String indexName;
+    private final static InheritableThreadLocal<String>               indexName = new InheritableThreadLocal<String>();
 
-    private final ThreadLocal<Map<Integer, Document>>      documentCache = new ThreadLocal<Map<Integer, Document>>();
-    private final ThreadLocal<Map<Term, LucandraTermEnum>> termEnumCache = new ThreadLocal<Map<Term, LucandraTermEnum>>();
-    private final ThreadLocal<Map<String, byte[]>>            fieldNorms = new ThreadLocal<Map<String, byte[]>>();
-    private final ThreadLocal<OpenBitSet>                        docsHit = new ThreadLocal<OpenBitSet>();
-    private final ThreadLocal<Object>                    fieldCacheRefs  = new ThreadLocal<Object>();
+    private final static ThreadLocal<Map<Integer, Document>>      documentCache = new ThreadLocal<Map<Integer, Document>>();
+    private final static ThreadLocal<Map<Term, LucandraTermEnum>> termEnumCache = new ThreadLocal<Map<Term, LucandraTermEnum>>();
+    private final static ThreadLocal<Map<String, byte[]>>            fieldNorms = new ThreadLocal<Map<String, byte[]>>();
+    private final static ThreadLocal<OpenBitSet>                        docsHit = new ThreadLocal<OpenBitSet>();
+    private final static ThreadLocal<Object>                    fieldCacheRefs  = new ThreadLocal<Object>();
+    
     
     private static final Logger logger = Logger.getLogger(IndexReader.class);
 
     public IndexReader(String name) {
         super();
-        this.indexName = name;
+        setIndexName(name);
     }
 
     public synchronized IndexReader reopen() throws CorruptIndexException, IOException {
@@ -173,6 +174,8 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     public Document document(int docNum, FieldSelector selector) throws CorruptIndexException, IOException {
 
+        String indexName = getIndexName();
+        
         Document doc = getDocumentCache().get(docNum);
 
         if (doc != null) {
@@ -330,7 +333,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     @Override
     public TermFreqVector getTermFreqVector(int docNum, String field) throws IOException {
 
-        TermFreqVector termVector = new lucandra.TermFreqVector(indexName, field, docNum);
+        TermFreqVector termVector = new lucandra.TermFreqVector(getIndexName(), field, docNum);
 
         return termVector;
     }
@@ -474,13 +477,15 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     }
 
     public String getIndexName() {
-        return indexName;
+        String name = indexName.get();
+        
+        return name == null ? "" : name;
     }
     
     
 
-    public void setIndexName(String indexName) {
-        this.indexName = indexName;
+    public void setIndexName(String name) {
+        indexName.set(name);
     }
 
     public LucandraTermEnum checkTermCache(Term term) {

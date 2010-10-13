@@ -8,6 +8,7 @@ import java.util.concurrent.TimeoutException;
 
 import junit.framework.TestCase;
 import lucandra.cluster.AbstractIndexManager;
+import lucandra.cluster.JVMIndexManager;
 import lucandra.cluster.RedisIndexManager;
 
 import org.apache.cassandra.db.ReadCommand;
@@ -39,30 +40,20 @@ public class UtilitiesTests extends TestCase {
     
     public void testIndexManager(){
         String indexName = String.valueOf(System.nanoTime());
-        int database = 11;
+        int shardsAtOnce = 4;       
         
-        ConnectionSpec connectionSpec = DefaultConnectionSpec.newSpec("localhost", 6379, database, "jredis".getBytes());
-        int connCnt = 7;
-     
-        // create the service -- well this is it as far as usage goes:  set the number of connections for the service pool
-        // You can use this anywhere you would use JRedis instances and it is thread safe.
-        // 
-        JRedisService service = new JRedisService(connectionSpec, connCnt);
-        
-        
-        AbstractIndexManager docCounter = new RedisIndexManager(service);
+        AbstractIndexManager docCounter = new JVMIndexManager(shardsAtOnce);
        
-        
-        //AbstractIndexManager docCounter = new ZkIndexManager(Arrays.asList("127.0.0.1"), "2181");
-        
-        int id = 0;
-        for(int i=0; i<=10000; i++){
+               
+        long id = 0;
+        for(int i=0; i<CassandraUtils.maxDocsPerShard*shardsAtOnce+1; i++){
             id = docCounter.incrementDocId(indexName);
-            if(i % 100 == 0)
+            
+            if(id < 1000)
                 System.err.println(id);
         }
         
-        assertEquals(10000, id);
+        assertEquals(CassandraUtils.maxDocsPerShard, id);
     }
     
     public void testBitSetUtil(){

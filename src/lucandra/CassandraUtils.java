@@ -102,7 +102,7 @@ public class CassandraUtils {
                 "redis.port", "6379")), database, "jredis".getBytes());
 
         service = new JRedisService(connectionSpec, connCnt);
-        indexManager = new RedisIndexManager(service);
+        indexManager = new RedisIndexManager(service,Integer.valueOf(System.getProperty("shads.at.once","4")));
 
         try {
             delimeterBytes = delimeter.getBytes("UTF-8");

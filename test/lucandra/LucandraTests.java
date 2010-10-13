@@ -60,7 +60,6 @@ public class LucandraTests extends TestCase {
     }
 
     private static final IndexWriter indexWriter = new IndexWriter(indexName);
-    private static final RedisIndexManager indexManager = new RedisIndexManager(CassandraUtils.service);
     private static final AtomicInteger docId = new AtomicInteger(0);
     
     public void testWriter() throws Exception {

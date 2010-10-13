@@ -24,7 +24,7 @@ public class LucandraAllTermDocs implements TermDocs {
     private int idx;      //tracks how where we are in the doc buffer
     private int fillSize; //tracks how much the buffer was filled with docs from cassandra
     private int[] docBuffer = new int[128]; //max number of docs we pull
-    private int doc;
+    private int doc = -1;
     private int maxDoc;
     
     public LucandraAllTermDocs(IndexReader indexReader){
@@ -61,13 +61,13 @@ public class LucandraAllTermDocs implements TermDocs {
       public int read(int[] docs, int[] freqs) throws IOException {
         final int length = docs.length;
         int i = 0;
-        while (i < length && doc < maxDoc) {
+        while (i < length && doc < maxDoc && fillSize > 0) {
          
             docs[i] = doc;
             freqs[i] = 1;
             ++i;
           
-            next();
+            next();         
         }
         return i;
       }
@@ -98,16 +98,19 @@ public class LucandraAllTermDocs implements TermDocs {
           ColumnParent columnParent = new ColumnParent();
           columnParent.setColumn_family(CassandraUtils.docColumnFamily);
 
-          fillSize = 0;
           idx      = 0;
-          
-          logger.debug("Getting more docs");
+          fillSize = 0;
+          logger.info("Getting more docs for "+indexName);
           
           
           do{
           
+              readCommands.clear();
+              
               for(int i=doc; i<(doc+docBuffer.length) && i < maxDoc; i++){              
                   String docHex = Integer.toHexString(i);
+                  logger.debug("Scanning index "+indexName+ " "+i);
+                  
                   byte[] key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, docHex.getBytes());
                     
                   try {
@@ -126,14 +129,14 @@ public class LucandraAllTermDocs implements TermDocs {
               if(rows.isEmpty())
                   return;
               
+              int numNulls = 0;
+              
               for(Row row : rows){
                  
-                  if(row.cf == null)
-                      return;
-                  
-                  //skipover deletes                 
-                  if(row.cf.isMarkedForDelete())
+                  if(row.cf == null || row.cf.isMarkedForDelete()){
+                      numNulls++;
                       continue;
+                  }
               
                   String key;
                   try {
@@ -149,6 +152,10 @@ public class LucandraAllTermDocs implements TermDocs {
                   docBuffer[fillSize] = docNum;
                   fillSize++;           
               }
+              
+              if(fillSize == 0 && numNulls >= readCommands.size())
+                  return;
+                  
               
           }while(fillSize == 0);
       }

@@ -25,18 +25,12 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import lucandra.CassandraUtils;
 import lucandra.cluster.AbstractIndexManager;
-import lucandra.cluster.RedisIndexManager;
 
+import org.apache.log4j.Logger;
 import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.document.Fieldable;
-import org.apache.lucene.document.Field.Index;
-import org.apache.lucene.document.Field.Store;
 import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.Query;
 import org.apache.solr.common.SolrException;
-import org.apache.solr.common.SolrInputDocument;
-import org.apache.solr.common.SolrInputField;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.core.SolrCore;
@@ -52,7 +46,7 @@ import org.apache.solr.update.UpdateHandler;
 public class SolandraIndexWriter extends UpdateHandler {
 
     private final lucandra.IndexWriter writer;
-    private final RedisIndexManager    indexManager;
+    private final static Logger logger = Logger.getLogger(SolandraIndexWriter.class);
     
     // stats
     AtomicLong addCommands = new AtomicLong();
@@ -74,11 +68,10 @@ public class SolandraIndexWriter extends UpdateHandler {
     public SolandraIndexWriter(SolrCore core) {
         super(core);
          
-        indexManager = new RedisIndexManager(CassandraUtils.service);
         
         try {
             
-            writer = new lucandra.IndexWriter("");
+            writer = new lucandra.IndexWriter();
             
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -102,13 +95,13 @@ public class SolandraIndexWriter extends UpdateHandler {
         try {
 
             //Term updateTerm = null;
-
-            int docId =  indexManager.incrementDocId(core.getName());
+            long docId =  CassandraUtils.indexManager.incrementDocId(core.getName());
                 
-            int shard = AbstractIndexManager.getShardFromDocId(docId);
-            
+            int shard     = AbstractIndexManager.getShardFromDocId(docId);
+            int shardedId = AbstractIndexManager.getShardedDocId(docId);
             String indexName = core.getName()+"~"+shard;
             
+            logger.info("Adding "+shardedId+" to "+indexName);
             
             writer.setIndexName(indexName);
             
@@ -143,7 +136,7 @@ public class SolandraIndexWriter extends UpdateHandler {
                 
                 Document doc = cmd.getLuceneDocument(core.getSchema());
                 
-                writer.addDocument(doc, core.getSchema().getAnalyzer(), docId);
+                writer.addDocument(doc, core.getSchema().getAnalyzer(), shardedId);
             //}
 
             rc = 1;
