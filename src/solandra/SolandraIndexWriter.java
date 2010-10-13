@@ -101,7 +101,7 @@ public class SolandraIndexWriter extends UpdateHandler {
             int shardedId = AbstractIndexManager.getShardedDocId(docId);
             String indexName = core.getName()+"~"+shard;
             
-            logger.info("Adding "+shardedId+" to "+indexName);
+            logger.debug("Adding "+shardedId+" to "+indexName);
             
             writer.setIndexName(indexName);
             
