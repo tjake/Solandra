@@ -44,7 +44,6 @@ import org.apache.cassandra.db.ReadCommand;
 import org.apache.cassandra.db.Row;
 import org.apache.cassandra.db.RowMutation;
 import org.apache.cassandra.db.SliceByNamesReadCommand;
-import org.apache.cassandra.db.TimestampClock;
 import org.apache.cassandra.db.filter.QueryPath;
 import org.apache.cassandra.service.AbstractCassandraDaemon;
 import org.apache.cassandra.service.StorageProxy;
@@ -93,6 +92,9 @@ public class CassandraUtils {
     public static final JRedisService service;
     public static final AbstractIndexManager indexManager;
     public static final QueryPath metaColumnPath;
+    
+    public static final Integer shardsAtOnce = Integer.valueOf(System.getProperty("shads.at.once","4"));
+    
     static {
 
         int database = 11;
@@ -102,7 +104,7 @@ public class CassandraUtils {
                 "redis.port", "6379")), database, "jredis".getBytes());
 
         service = new JRedisService(connectionSpec, connCnt);
-        indexManager = new RedisIndexManager(service,Integer.valueOf(System.getProperty("shads.at.once","4")));
+        indexManager = new RedisIndexManager(service,shardsAtOnce);
 
         try {
             delimeterBytes = delimeter.getBytes("UTF-8");
@@ -146,7 +148,7 @@ public class CassandraUtils {
 
         try {
             daemon.init(new String[] {});
-        } catch (IOException e) {
+        } catch (Throwable e) {
 
             e.printStackTrace();
             System.exit(2);
@@ -303,21 +305,21 @@ public class CassandraUtils {
         if (value == null && superColumns == null) { // remove
 
             if (column != null) {
-                rm.delete(new QueryPath(columnFamily, column), new TimestampClock(System.currentTimeMillis()));
+                rm.delete(new QueryPath(columnFamily, column), System.currentTimeMillis());
             } else {
-                rm.delete(new QueryPath(columnFamily), new TimestampClock(System.currentTimeMillis()));
+                rm.delete(new QueryPath(columnFamily), System.currentTimeMillis());
             }
 
         } else { // insert
 
             if (superColumns == null) {
 
-                rm.add(new QueryPath(columnFamily, null, column), value, new TimestampClock(System.currentTimeMillis()));
+                rm.add(new QueryPath(columnFamily, null, column), value, System.currentTimeMillis());
 
             } else {
 
                 for (Map.Entry<byte[], List<Number>> e : superColumns.entrySet()) {
-                    rm.add(new QueryPath(columnFamily, column, e.getKey()), intVectorToByteArray(e.getValue()), new TimestampClock(System.currentTimeMillis()));
+                    rm.add(new QueryPath(columnFamily, column, e.getKey()), intVectorToByteArray(e.getValue()), System.currentTimeMillis());
                 }
             }
         }

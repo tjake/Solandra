@@ -15,7 +15,6 @@ import lucandra.CassandraUtils;
 import org.apache.cassandra.cache.InstrumentedCache;
 import org.apache.cassandra.db.Row;
 import org.apache.cassandra.db.RowMutation;
-import org.apache.cassandra.db.TimestampClock;
 import org.apache.cassandra.db.filter.QueryPath;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.log4j.Logger;
@@ -123,7 +122,7 @@ public class SolandraCoreContainer extends CoreContainer {
         RowMutation rm = new RowMutation(CassandraUtils.keySpace, indexName.getBytes());
         
         try {
-            rm.add(new QueryPath("SI",null, columnName.getBytes()), schemaXml.getBytes("UTF-8"), new TimestampClock(System.currentTimeMillis()));
+            rm.add(new QueryPath("SI",null, columnName.getBytes()), schemaXml.getBytes("UTF-8"), System.currentTimeMillis());
         } catch (UnsupportedEncodingException e) {
             throw new RuntimeException(e);
         }

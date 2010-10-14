@@ -9,22 +9,17 @@ import java.util.concurrent.TimeoutException;
 import junit.framework.TestCase;
 import lucandra.cluster.AbstractIndexManager;
 import lucandra.cluster.JVMIndexManager;
-import lucandra.cluster.RedisIndexManager;
 
 import org.apache.cassandra.db.ReadCommand;
 import org.apache.cassandra.db.Row;
 import org.apache.cassandra.db.RowMutation;
 import org.apache.cassandra.db.SliceFromReadCommand;
-import org.apache.cassandra.db.TimestampClock;
 import org.apache.cassandra.db.filter.QueryPath;
 import org.apache.cassandra.service.StorageProxy;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.UnavailableException;
-import org.jredis.connector.ConnectionSpec;
-import org.jredis.ri.alphazero.JRedisService;
-import org.jredis.ri.alphazero.connection.DefaultConnectionSpec;
 
 
 public class UtilitiesTests extends TestCase {
@@ -93,7 +88,7 @@ public class UtilitiesTests extends TestCase {
             
             
             RowMutation rm1 = new RowMutation(CassandraUtils.keySpace,key);
-            rm1.add(new QueryPath("MI",null, col), bytes1, new TimestampClock(System.currentTimeMillis()));
+            rm1.add(new QueryPath("MI",null, col), bytes1, System.currentTimeMillis());
             
             rlist.add(rm1);
             
@@ -113,7 +108,7 @@ public class UtilitiesTests extends TestCase {
         
         RowMutation rm2 = new RowMutation(CassandraUtils.keySpace,key);
        
-        rm2.add(new QueryPath("MI",null, col), bytes2, new TimestampClock(System.currentTimeMillis()));
+        rm2.add(new QueryPath("MI",null, col), bytes2, System.currentTimeMillis());
         StorageProxy.mutate(Arrays.asList(rm2),ConsistencyLevel.ALL);
      
         ColumnParent columnParent = new ColumnParent("MI");

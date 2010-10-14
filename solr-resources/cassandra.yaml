@@ -5,6 +5,16 @@
 # name of the cluster
 cluster_name: 'Lucandra Cluster'
 
+# You should always specify InitialToken when setting up a production
+# cluster for the first time, and often when adding capacity later.
+# The principle is that each node should be given an equal slice of
+# the token ring; see http://wiki.apache.org/cassandra/Operations
+# for more details.
+#
+# If blank, Cassandra will request a token bisecting the range of
+# the heaviest-loaded existing node.  If there is no load information
+# available, such as is the case with a new cluster, it will pick
+# a random token, which will lead to hot spots.
 initial_token:
 
 # Set to true to make new [non-seed] nodes automatically migrate data
@@ -16,7 +26,7 @@ initial_token:
 auto_bootstrap: false
 
 # See http://wiki.apache.org/cassandra/HintedHandoff
-hinted_handoff_enabled: false
+hinted_handoff_enabled: true
 
 # authentication backend, implementing IAuthenticator; used to limit keyspace access
 authenticator: org.apache.cassandra.auth.AllowAllAuthenticator
@@ -88,6 +98,12 @@ thrift_framed_transport_size_in_mb: 15
 # internal thrift overhead.
 thrift_max_message_length_in_mb: 16
 
+# Whether or not to take a snapshot before each compaction.  Be
+# careful using this option, since Cassandra won't clean up the
+# snapshots for you.  Mostly useful if you're paranoid when there
+# is a data format change.
+snapshot_before_compaction: false
+
 # The threshold size in megabytes the binary memtable must grow to,
 # before it's submitted for flushing to disk.
 binary_memtable_throughput_in_mb: 256
@@ -103,6 +119,9 @@ in_memory_compaction_limit_in_mb: 128
 
 # commit log
 commitlog_directory: /tmp/cassandra/commitlog
+
+# saved caches
+saved_caches_directory: /tmp/cassandra/saved_caches
 
 # Size to allow commitlog to grow to before creating a new segment
 commitlog_rotation_threshold_in_mb: 128
@@ -137,6 +156,69 @@ rpc_timeout_in_ms: 10000
 # org.apache.cassandra.locator.RackInferringSnitch, and
 # org.apache.cassandra.locator.PropertyFileSnitch.
 endpoint_snitch: org.apache.cassandra.locator.SimpleSnitch
+
+# dynamic_snitch -- This boolean controls whether the above snitch is
+# wrapped with a dynamic snitch, which will monitor read latencies
+# and avoid reading from hosts that have slowed (due to compaction,
+# for instance)
+dynamic_snitch: true
+# controls how often to perform the more expensive part of host score
+# calculation
+dynamic_snitch_update_interval_in_ms: 100
+# controls how often to reset all host scores, allowing a bad host to
+# possibly recover
+dynamic_snitch_reset_interval_in_ms: 600000
+# if set greater than zero and read_repair_chance is < 1.0, this will allow
+# 'pinning' of replicas to hosts in order to increase cache capacity.
+# The badness threshold will control how much worse the pinned host has to be
+# before the dynamic snitch will prefer other replicas over it.  This is
+# expressed as a double which represents a percentage.
+dynamic_snitch_badness_threshold: 0.0
+
+# request_scheduler -- Set this to a class that implements
+# RequestScheduler, which will schedule incoming client requests
+# according to the specific policy. This is useful for multi-tenancy
+# with a single Cassandra cluster.
+# NOTE: This is specifically for requests from the client and does
+# not affect inter node communication.
+# org.apache.cassandra.scheduler.NoScheduler - No scheduling takes place
+# org.apache.cassandra.scheduler.RoundRobinScheduler - Round robin of
+# client requests to a node with a separate queue for each
+# request_scheduler_id. The scheduler is further customized by
+# request_scheduler_options as described below.
+request_scheduler: org.apache.cassandra.scheduler.NoScheduler
+
+# Scheduler Options vary based on the type of scheduler
+# NoScheduler - Has no options
+# RoundRobin
+#  - throttle_limit -- The throttle_limit is the number of in-flight
+#                      requests per client.  Requests beyond
+#                      that limit are queued up until
+#                      running requests can complete.
+#                      The value of 80 here is twice the number of
+#                      concurrent_reads + concurrent_writes.
+#  - default_weight -- default_weight is optional and allows for
+#                      overriding the default which is 1.
+#  - weights -- Weights are optional and will default to 1 or the
+#               overridden default_weight. The weight translates into how
+#               many requests are handled during each turn of the
+#               RoundRobin, based on the scheduler id.
+#
+# request_scheduler_options:
+#    throttle_limit: 80
+#    default_weight: 5
+#    weights:
+#      Keyspace1: 1
+#      Keyspace2: 5
+
+# request_scheduler_id -- An identifer based on which to perform
+# the request scheduling. Currently the only valid option is keyspace.
+# request_scheduler_id: keyspace
+
+# The Index Interval determines how large the sampling of row keys
+#  is for a given SSTable. The larger the sampling, the more effective
+#  the index is at the cost of space.
+index_interval: 128
 
 # A ColumnFamily is the Cassandra concept closest to a relational table.
 #
@@ -219,16 +301,14 @@ keyspaces:
           compare_with: lucandra.VIntType
           read_repair_chance: 0.1
           keys_cached: .9
-          rows_cached: .1
+          rows_cached: 10000
           preload_row_cache: true
      
         - name: SI #schema info
-          keys_cached: .9
+          keys_cached: .5
+          rows_cached: .5
           compare_with: BytesType
 
         - name: TL #Term lists
           keys_cached: .9
           compare_with: BytesType
-          
-
-
