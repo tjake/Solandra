@@ -39,6 +39,9 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
     private int docPosition;
     private int[] termPositionArray;
     private int termPosition;
+    private int doc;
+    private int freq;
+ 
     private static final Logger logger = Logger.getLogger(LucandraTermDocs.class);
 
     public LucandraTermDocs(IndexReader indexReader) {
@@ -51,16 +54,27 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
 
     }
 
+    
     public int doc() {
+        return doc;
+    }
+ 
+    private int getNextDoc() {
         if (docPosition < 0)
             docPosition = 0;
-
-        int docid = indexReader.getDocumentNumber(termDocs.get(docPosition).getSuper_column().getName()); 
-
+ 
+        int docid = indexReader.getDocumentNumber(termDocs.get(docPosition).getSuper_column().getName());
+ 
         return docid;
     }
-
+ 
     public int freq() {
+        return freq;
+    }
+    
+    
+
+    public int getNextFreq() {
 
         //Find the termFrequency
         List<Column> columns  = termDocs.get(docPosition).getSuper_column().getColumns();
@@ -90,23 +104,33 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
     }
 
     public boolean next() throws IOException {
-
+        
         if (termDocs == null)
             return false;
-
-        return ++docPosition < termDocs.size();
+ 
+        if (docPosition == termDocs.size()) {
+            return false;
+        } else {
+            doc = getNextDoc();
+            freq = getNextFreq();
+            docPosition++;
+            return true;
+        }
     }
-
+    
     public int read(int[] docs, int[] freqs) throws IOException {
-
+        
         int i = 0;
         for (; (termDocs != null && docPosition < termDocs.size() && i < docs.length); i++, docPosition++) {
+            doc = getNextDoc();
+            freq = getNextFreq();
             docs[i] = doc();
             freqs[i] = freq();
         }
-
+ 
         return i;
     }
+
 
     public void seek(Term term) throws IOException {
         // on a new term so check cached
@@ -135,6 +159,8 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         }
 
         docPosition = -1;
+        doc = -1;
+        freq = -1;
     }
 
     public void seek(TermEnum termEnum) throws IOException {
