@@ -67,7 +67,7 @@
   <updateHandler class="solandra.SolandraIndexWriter">
      <str name="cassandraHost">127.0.0.1</str>
      <int name="cassandraPort">9160</int>
-     <bool name="cassandraFramed">false</bool>
+     <bool name="cassandraFramed">true</bool>
   </updateHandler>
 
   <!-- Use the following format to specify a custom IndexReaderFactory - allows for alternate
@@ -87,7 +87,7 @@
      <str name="indexName">example</str>
      <str name="cassandraHost">127.0.0.1</str>
      <int name="cassandraPort">9160</int>
-     <bool name="cassandraFramed">false</bool>
+     <bool name="cassandraFramed">true</bool>
   </indexReaderFactory >
 
 
