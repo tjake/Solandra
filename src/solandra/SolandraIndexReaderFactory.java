@@ -72,7 +72,7 @@ public class SolandraIndexReaderFactory extends IndexReaderFactory {
     public IndexReader newReader(Directory indexDir, boolean readOnly) throws IOException {
         
     	Iface client = 	CassandraUtils.createRobustConnection(cassandraHost, cassandraPort, cassandraFramed,"Lucandra", true);
-		IndexContext context = new IndexContext(client, "Lucandra", ConsistencyLevel.ONE);
+		IndexContext context = new IndexContext(client, ConsistencyLevel.ONE);
                 
         return new IndexReader(indexName, context);        
     }

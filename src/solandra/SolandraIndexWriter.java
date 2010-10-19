@@ -95,7 +95,7 @@ public class SolandraIndexWriter extends UpdateHandler {
 		try {
 
 			Iface client = 	CassandraUtils.createRobustConnection(cassandraHost, cassandraPort, cassandraFramed,"Lucandra", true);
-			IndexContext context = new IndexContext(client, "Lucandra", ConsistencyLevel.ONE);
+			IndexContext context = new IndexContext(client, ConsistencyLevel.ONE);
 
 			writer = new lucandra.IndexWriter(core.getSchema().getSchemaName(),context);
 

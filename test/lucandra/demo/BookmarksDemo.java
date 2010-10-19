@@ -55,7 +55,7 @@ public class BookmarksDemo {
     static {
         try {
         	Iface client = CassandraUtils.createConnection();
-        	context = new IndexContext(client, System.getProperty("cassandra.keyspace","Lucandra"), ConsistencyLevel.ONE);
+        	context = new IndexContext(client, ConsistencyLevel.ONE);
         } catch (TTransportException e) {
             System.err.println("Error connecting to Cassandra: "+e.getMessage());
             System.exit(2);

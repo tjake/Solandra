@@ -96,7 +96,7 @@ public class WikipediaIndexWorker implements Callable<Integer> {
             List<String> endpoints = ring.get(r.nextInt(ring.size())).endpoints;
             String endpoint = endpoints.get(r.nextInt(endpoints.size()));
 
-            IndexContext context = new IndexContext(CassandraUtils.createRobustConnection(endpoint, 9160, false, keySpace, false), keySpace, ConsistencyLevel.ONE);
+            IndexContext context = new IndexContext(CassandraUtils.createRobustConnection(endpoint, 9160, false, keySpace, false), ConsistencyLevel.ONE);
             
             indexWriter = new lucandra.IndexWriter("wikipedia", context);
             clientPool.set(indexWriter);

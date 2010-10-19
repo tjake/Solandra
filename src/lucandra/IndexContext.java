@@ -39,19 +39,18 @@ import org.apache.thrift.TException;
 public class IndexContext {
 
 	private final Cassandra.Iface client;
-	private final String keySpace;
+//	private final String keySpace;
 	private final ConsistencyLevel consistencyLevel;
 	private final String termColumnFamily;
 	private final String documentColumnFamily;
 	private final ColumnPath documentPath;
 	private final ColumnPath metaColumnPath;
 
-	public IndexContext(Iface client, String keySpace,
-			ConsistencyLevel consistencyLevel, String termColumnFamily,
+	public IndexContext(Iface client, ConsistencyLevel consistencyLevel, String termColumnFamily,
 			String documentColumnFamily) {
 		super();
 		this.client = client;
-		this.keySpace = keySpace;
+//		this.keySpace = keySpace;
 		this.consistencyLevel = consistencyLevel;
 		this.termColumnFamily = termColumnFamily;
 		this.documentColumnFamily = documentColumnFamily;
@@ -66,16 +65,15 @@ public class IndexContext {
 		}
 		
 		//set our keyspace on the client
-		try {
-			client.set_keyspace(this.keySpace);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
+//		try {
+//			client.set_keyspace(this.keySpace);
+//		} catch (Exception e) {
+//			throw new RuntimeException(e);
+//		}
 	}
 
-	public IndexContext(Iface client, String keySpace,
-			ConsistencyLevel consistencyLevel) {
-		this(client, keySpace, consistencyLevel, "TermInfo", "Documents");
+	public IndexContext(Iface client, ConsistencyLevel consistencyLevel) {
+		this(client, consistencyLevel, "TermInfo", "Documents");
 	}
 
 	/**

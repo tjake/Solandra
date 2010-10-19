@@ -68,8 +68,7 @@ public abstract class LucandraTestCase extends TestCase {
 		
 		try {
 			Iface connection = CassandraUtils.createConnection();
-			context = new IndexContext(connection, "Lucandra",
-					ConsistencyLevel.ONE);
+			context = new IndexContext(connection, ConsistencyLevel.ONE);
 			
 
 			cleanCf(context.getDocumentColumnFamily());

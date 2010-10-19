@@ -73,7 +73,7 @@ public class NumericRangeTests extends LucandraTestHelper{
 			CorruptIndexException, IOException {
 
 		Iface connection = CassandraUtils.createConnection();
-		context = new IndexContext(connection, "Lucandra", ConsistencyLevel.ONE);
+		context = new IndexContext(connection, ConsistencyLevel.ONE);
 		// clean up indexes before we run our test
 		cleanIndexes();
 

@@ -66,7 +66,7 @@ public class BenchmarkTest {
          
         return new Runnable() {
 
-        	IndexContext	context = new IndexContext(client, "Lucandra", ConsistencyLevel.ONE);
+        	IndexContext	context = new IndexContext(client,  ConsistencyLevel.ONE);
     		
             private final IndexReader indexReader = new IndexReader(indexName, context);
             private final IndexWriter indexWriter = new IndexWriter(indexName, context);

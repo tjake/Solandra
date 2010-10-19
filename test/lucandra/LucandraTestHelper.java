@@ -64,7 +64,7 @@ public class LucandraTestHelper {
 
 		} 
 
-		context = new IndexContext(client, "Lucandra", ConsistencyLevel.ONE);
+		context = new IndexContext(client, ConsistencyLevel.ONE);
 
 	}
 
