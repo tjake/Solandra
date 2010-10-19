@@ -19,14 +19,13 @@
  */
 package lucandra;
 
-import static lucandra.ByteHelper.*;
+import static lucandra.ByteHelper.getBytes;
+
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
@@ -239,7 +238,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
         try {
 
-            Map<byte[], List<ColumnOrSuperColumn>> docMap = context.getClient().multiget_slice(Arrays.asList(keyMap.keySet().toArray(new byte[][]{})), columnParent, slicePredicate, ConsistencyLevel.ONE);
+            Map<byte[], List<ColumnOrSuperColumn>> docMap = context.getClient().multiget_slice(Arrays.asList(keyMap.keySet().toArray(new byte[][]{})), columnParent, slicePredicate, context.getConsistencyLevel());
       
             if(keyMap.size() != docMap.size()){
                 logger.warn("Missing documents in multiget_slice call");
@@ -303,8 +302,9 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
                 //Mark the required doc
                 int thisDocNum = getDocumentNumber(keyMap.get(entry.getKey()));
                 
-                if(thisDocNum == docNum)
+                if(thisDocNum == docNum){
                     doc = cacheDoc;
+                }
                 
                 getDocumentCache().put(thisDocNum,cacheDoc);
             }
@@ -460,17 +460,26 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
             
             byte[] norms = getFieldNorms().get(field);
             
-            if (norms == null) 
-                norms = new byte[1024];                         
 
-            while(norms.length <= idx && norms.length < numDocs ){
-                byte[] _norms = new byte[(norms.length * 2) < numDocs ? (norms.length * 2) : (numDocs + 1)];
-                System.arraycopy(norms, 0, _norms, 0, norms.length);
-                norms = _norms;           
+            if (norms == null) {
+
+                norms = new byte[1024];
+
+                norms[idx] = norm; 
+            } else {
+
+                // extend array
+                if ((idx + 1) >= norms.length) {
+
+                    byte[] _norms = new byte[(norms.length * 2) < numDocs ? (norms.length * 2) : (numDocs + 1)];
+                    System.arraycopy(norms, 0, _norms, 0, norms.length);
+                    norms = _norms;
+                }
+
+                // find next empty position
+                norms[idx] = norm;
+
             }
-
-            // find next empty position
-            norms[idx] = norm;
 
             getFieldNorms().put(field, norms);            
         }
@@ -538,8 +547,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     
     private Map<byte[],Integer> getDocIdToDocIndex(){
         Map<byte[], Integer> c = docIdToDocIndex.get();
-        
-        //we need to preserve the order we add documents in 
+         
         if(c == null){
             c = new ConcurrentSkipListMap<byte[],Integer>(CassandraUtils.byteArrayComparator);
             docIdToDocIndex.set(c);

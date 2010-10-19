@@ -1,16 +1,10 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-	<parent>
-		<artifactId>settings</artifactId>
-		<groupId>com.spidertracks.standards</groupId>
-		<version>1.0.4</version>
-	</parent>
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>lucandra</groupId>
 	<artifactId>lucandra</artifactId>
-	<version>0.0.6-SNAPSHOT</version>
-
-		<properties>
+	<version>0.7.0-rc1-SNAPSHOT</version>
+	<properties>
 		<lucene.version>2.9.3</lucene.version>
 		<solr.version>1.4.0</solr.version>
 		<slf4j.version>1.6.1</slf4j.version>
@@ -21,7 +15,7 @@
 		<pelops.version>0.908-0.7.0-SNAPSHOT</pelops.version>
 		<st.deploy.dir>file://${basedir}/../mvnrepo</st.deploy.dir>
 	</properties>
-	
+
 	<repositories>
 
 		<repository>
@@ -49,7 +43,7 @@
 			</snapshots>
 		</repository>
 
-		
+
 	</repositories>
 
 	<dependencies>
@@ -135,15 +129,15 @@
 			<artifactId>solr-solrj</artifactId>
 			<version>${solr.version}</version>
 		</dependency>
-		
-		<!--  other depencencies -->
+
+		<!-- other depencencies -->
 
 		<dependency>
 			<groupId>com.eaio.uuid</groupId>
 			<artifactId>uuid</artifactId>
 			<version>3.2</version>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-api</artifactId>
@@ -170,112 +164,19 @@
 			<scope>test</scope>
 		</dependency>
 
-		<!--<dependency>
-			<groupId>com.google.collections</groupId>
-			<artifactId>google-collections</artifactId>
-			<version>1.0</version>
-			<type>jar</type>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.cliffc</groupId>
-			<artifactId>high-scale-lib</artifactId>
-			<version>${high.scale.version}</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>com.reardencommerce</groupId>
-			<artifactId>clhm-production</artifactId>
-			<version>1.0.0</version>
-			<scope>test</scope>
-		</dependency>
+	</dependencies>
 
-
-		<dependency>
-			<groupId>commons-collections</groupId>
-			<artifactId>commons-collections</artifactId>
-			<version>3.2.1</version>
-			<type>jar</type>
-			<scope>test</scope>
-		</dependency>
-
-		<dependency>
-			<groupId>commons-lang</groupId>
-			<artifactId>commons-lang</artifactId>
-			<version>2.5</version>
-			<type>jar</type>
-			<scope>test</scope>
-		</dependency>
-
-		<dependency>
-			<groupId>org.scale7</groupId>
-			<artifactId>scale7-pelops</artifactId>
-			<version>${pelops.version}</version>
-			<type>test-jar</type>
-			<scope>test</scope>
-		</dependency>
-
-		<dependency>
-			<groupId>org.yaml</groupId>
-			<artifactId>snakeyaml</artifactId>
-			<version>1.6</version>
-			<type>jar</type>
-			<scope>test</scope>
-		</dependency>
-
-
-
-		<dependency>
-			<groupId>com.google.guava</groupId>
-			<artifactId>guava</artifactId>
-			<version>r05</version>
-			<type>jar</type>
-			<scope>test</scope>
-		</dependency>
-
-		<dependency>
-			<groupId>org.apache.avro</groupId>
-			<artifactId>avro</artifactId>
-			<version>1.4.0-fixes</version>
-			<type>jar</type>
-			<scope>test</scope>
-		</dependency>
-
-		<dependency>
-			<groupId>org.mortbay.jetty</groupId>
-			<artifactId>jetty</artifactId>
-			<version>6.1.22</version>
-			<scope>test</scope>
-		</dependency>
-
-	
-		<dependency>
-			<groupId>org.safehaus.jug</groupId>
-			<artifactId>jug</artifactId>
-			<version>2.0.0</version>
-			<classifier>asl</classifier>
-			<scope>test</scope>
-		</dependency>
-
-
-		<dependency>
-			<groupId>org.codehaus.jackson</groupId>
-			<artifactId>jackson-core-asl</artifactId>
-			<version>1.4.0</version>
-			<type>jar</type>
-			<scope>test</scope>
-		</dependency>
-
-		<dependency>
-			<groupId>org.codehaus.jackson</groupId>
-			<artifactId>jackson-mapper-asl</artifactId>
-			<version>1.4.0</version>
-			<type>jar</type>
-			<scope>test</scope>
-		</dependency>
-	--></dependencies>
-
-
+	<distributionManagement>
+		<repository>
+			<id>maven.spidertracks.com.local</id>
+			<name>Deployment Staging Area</name>
+			<!-- The ${st.deploy.dir} is defined in your ~/.m2/settings.xml file and 
+				it should point to the directory that contains the clone of http://github.com/tnine/mvnrepo. 
+				e.g. file:///home/todd/development/m2repo -->
+			<url>${st.deploy.dir}</url>
+			<layout>default</layout>
+		</repository>
+	</distributionManagement>
 
 	<scm>
 		<connection>scm:git:http://github.com/tnine/Lucandra.git</connection>
@@ -353,7 +254,7 @@
 				</configuration>
 			</plugin>
 
-			
+
 
 		</plugins>
 	</build>

@@ -19,7 +19,12 @@
  */
 package lucandra;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.IOException;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
@@ -27,6 +32,7 @@ import org.apache.lucene.analysis.cjk.CJKAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.Field.TermVector;
+import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queryParser.QueryParser;
 import org.apache.lucene.search.BooleanClause;
@@ -43,7 +49,7 @@ import org.apache.lucene.search.highlight.SimpleFragmenter;
 import org.apache.lucene.search.highlight.SimpleHTMLFormatter;
 import org.apache.lucene.search.highlight.TokenSources;
 import org.apache.lucene.util.Version;
-import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class LucandraTests extends LucandraTestHelper {
@@ -53,17 +59,17 @@ public class LucandraTests extends LucandraTestHelper {
     private static final String text = "this is an example value foobar foobar";
     private static final String highlightedText = "this is an example value <B>foobar</B> <B>foobar</B>";
 
-    private IndexWriter indexWriter;
-   
+    private static IndexWriter indexWriter;
     
-    @Before
-    public void setup(){
+    
+    @BeforeClass
+    public static void setup() throws Exception{
+    	
+    	setupServer();
+    	
     	indexWriter = new IndexWriter(indexName, context);
-    }
-
- 
-    @Test
-    public void testWriter() throws Exception {
+    	
+    
 
         Document doc1 = new Document();
         Field f = new Field("key", text, Field.Store.YES, Field.Index.ANALYZED, TermVector.WITH_POSITIONS_OFFSETS);
@@ -93,6 +99,9 @@ public class LucandraTests extends LucandraTestHelper {
         indexWriter.addDocument(d3, analyzer);
         
     }
+
+ 
+  
 
     @Test
     public void testUnicode() throws Exception {

@@ -142,20 +142,7 @@ public class LucandraTermEnum extends TermEnum {
 
     @Override
     public Term term() {
-        Term term =  termBuffer[termPosition];
-        
-        if(logger.isDebugEnabled()){
-			
-			try {
-				String hex = new String(Hex.encodeHex(term.text().getBytes("UTF-8")));
-				logger.debug(String.format("Returning term for field '%s' hex value is : %s", term.field(), hex));
-			} catch (UnsupportedEncodingException e) {
-				/*SWALLOW*/
-			}
-			
-		}
-        
-        return term;
+        return termBuffer[termPosition];
     }
 
     private void loadTerms(Term skipTo) {
@@ -275,13 +262,7 @@ public class LucandraTermEnum extends TermEnum {
         // Get all columns
         SliceRange sliceRange = new SliceRange(new byte[] {}, new byte[] {}, true, Integer.MAX_VALUE);
         slicePredicate.setSlice_range(sliceRange);
-        
-        
-        KeyRange range = new KeyRange();
-        range.setStart_key(startTerm);
-        range.setEnd_key(endTerm);
-        range.setCount(count);
-        
+               
         List<KeySlice> columns;
         
         

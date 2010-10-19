@@ -29,11 +29,39 @@ Lucandra includes a delicious like bookmarks demo to get you started. to build r
 1. Setup Cassandra 0.6 with storage-conf.xml in config
 
 ANT setup
+---------
 
 2. ant lucandra.jar
 3. ant test -Dcassandra.host=127.0.0.1 -Dcassandra.port=9160 -Dcassandra.framed=false -Dcassandra.keyspace=Lucandra
 
 Maven
+-----
+
+Defining repositories
+
+Add the following repository to your pom.xml
+
+    <repository>
+        <id>maven.spidertracks.com</id>
+        <name>Scale7 Maven Repo</name>
+        <url>http://github.com/tnine/m2repo/raw/master</url>
+        <snapshots>
+            <enabled>true</enabled>
+        </snapshots>
+    </repository>
+    
+    
+Add this dependency for the latest release build
+
+	<dependency>
+		<groupId>lucandra</groupId>
+		<artifactId>lucandra</artifactId>
+		<version>0.7.0-rc1</version>
+	</dependency>
+
+
+
+Deploying to your own repository
 
 2. mvn package
 3. mvn deploy -DrepositoryId=<your repo> -Durl=<your repository repo>

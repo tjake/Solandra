@@ -1,3 +1,4 @@
+/* Commands to connecto the local host via the CLI and create the required columns
 connect localhost/9160
 
 /* Create a new keyspace */
@@ -7,5 +8,6 @@ create keyspace Lucandra with replication_factor=1 and placement_strategy=org.ap
 use Lucandra
 
 /* Create new column families */
-create column family Documents with column_type = Standard and comparator = BytesType
-create column family TermInfo with column_type = Super and comparator = BytesType and subcomparator = BytesType and key_cache_size = 10000 and preload_row_cache = 1
+create column family Documents with column_type='Standard' and comparator='BytesType'
+
+create column family TermInfo with column_type='Super' and comparator='BytesType' and subcomparator='BytesType'

@@ -80,7 +80,7 @@ public class CassandraUtils {
     public static final byte[] delimeterBytes 	   = getBytes(delimeter);
     
     public static final String finalToken          = new String("\ufffe\ufffe");
-    public static final byte[] finalTokenBytes 	   = getBytes("UTF-8");
+    public static final byte[] finalTokenBytes 	   = getBytes(finalToken);
 
     public static final List<byte[]> allTermColumns = Arrays.asList(
             CassandraUtils.termFrequencyKey.getBytes(),
@@ -516,7 +516,6 @@ public class CassandraUtils {
     
     
     /*public static String hashKey(String key) {
->>>>>>> tjake/0.7
         
         if(!indexHashingEnabled)
             return getBytes(key);
