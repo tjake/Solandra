@@ -19,18 +19,8 @@
  */
 package lucandra;
 
-import static lucandra.ByteHelper.*;
-import java.util.List;
+import static org.junit.Assert.*;
 
-import junit.framework.TestCase;
-
-import org.apache.cassandra.thrift.Cassandra.Iface;
-import org.apache.cassandra.thrift.ColumnParent;
-import org.apache.cassandra.thrift.ConsistencyLevel;
-import org.apache.cassandra.thrift.KeyRange;
-import org.apache.cassandra.thrift.KeySlice;
-import org.apache.cassandra.thrift.SlicePredicate;
-import org.apache.cassandra.thrift.SliceRange;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.cjk.CJKAnalyzer;
@@ -39,6 +29,8 @@ import org.apache.lucene.document.Field;
 import org.apache.lucene.document.Field.TermVector;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queryParser.QueryParser;
+import org.apache.lucene.search.BooleanClause;
+import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Sort;
@@ -51,29 +43,26 @@ import org.apache.lucene.search.highlight.SimpleFragmenter;
 import org.apache.lucene.search.highlight.SimpleHTMLFormatter;
 import org.apache.lucene.search.highlight.TokenSources;
 import org.apache.lucene.util.Version;
+import org.junit.Before;
+import org.junit.Test;
 
-public class LucandraTests extends TestCase {
+public class LucandraTests extends LucandraTestHelper {
 
     private static final String indexName = String.valueOf(System.nanoTime());
     private static final Analyzer analyzer = new CJKAnalyzer(Version.LUCENE_CURRENT);
     private static final String text = "this is an example value foobar foobar";
     private static final String highlightedText = "this is an example value <B>foobar</B> <B>foobar</B>";
 
-    private static IndexContext context;
-    static {
-        try {
-            Iface client = CassandraUtils.createConnection();
-            context = new IndexContext(client, "Lucandra", ConsistencyLevel.ONE);
-            
-            
-        } catch (Exception e) {
-            e.printStackTrace();
-            fail(e.getLocalizedMessage());
-        }
+    private IndexWriter indexWriter;
+   
+    
+    @Before
+    public void setup(){
+    	indexWriter = new IndexWriter(indexName, context);
     }
 
-    private static final IndexWriter indexWriter = new IndexWriter(indexName, context);
-
+ 
+    @Test
     public void testWriter() throws Exception {
 
         Document doc1 = new Document();
@@ -87,34 +76,6 @@ public class LucandraTests extends TestCase {
         doc2.add(f2);
         indexWriter.addDocument(doc2, analyzer);
 
-        byte[] start = CassandraUtils.hashKey(indexName + CassandraUtils.delimeter + "key" + CassandraUtils.delimeter);
-        byte[] finish = new byte[]{};
-        
-        ColumnParent columnParent = new ColumnParent(context.getTermColumnFamily());
-        SlicePredicate slicePredicate = new SlicePredicate();
-
-        // Get all columns
-        SliceRange sliceRange = new SliceRange(new byte[] {}, new byte[] {}, true, Integer.MAX_VALUE);
-        slicePredicate.setSlice_range(sliceRange);
-
-        KeyRange range = new KeyRange();
-        range.setStart_key(start);
-        range.setEnd_key(finish);
-        range.setCount(5000);
-        
-        List<KeySlice> columns = context.getClient().get_range_slices(columnParent, slicePredicate, range, context.getConsistencyLevel());
-
-        int matchingColumns = 0;
-        for(KeySlice ks : columns){
-        	String stringKey = getString(ks.getKey());
-        	
-            String termStr = stringKey.substring(stringKey.indexOf(CassandraUtils.delimeter) + CassandraUtils.delimeter.length());
-            Term term = CassandraUtils.parseTerm(termStr);
-            
-            if(term.field().equals("key") && ks.getKey().equals(CassandraUtils.hashKey(indexName+CassandraUtils.delimeter+term.field()+CassandraUtils.delimeter+term.text())))
-                matchingColumns++;
-              
-        }
 
         // Index 10 documents to test order
         for (int i = 300; i >= 200; i--) {
@@ -130,14 +91,10 @@ public class LucandraTests extends TestCase {
         d3.add(new Field("key", new String("samefield"), Field.Store.YES, Field.Index.ANALYZED));
         d3.add(new Field("url", "http://www.google.com", Field.Store.YES, Field.Index.NOT_ANALYZED));
         indexWriter.addDocument(d3, analyzer);
-
-        
-        //
-        assertEquals(5, matchingColumns);
-        assertEquals(104, indexWriter.docCount());
         
     }
 
+    @Test
     public void testUnicode() throws Exception {
         IndexReader indexReader = new IndexReader(indexName, context);
         IndexSearcher searcher = new IndexSearcher(indexReader);
@@ -154,6 +111,7 @@ public class LucandraTests extends TestCase {
         assertNotNull(doc.getField("key"));
     }
 
+    @Test
     public void testMultiValuedFields() throws Exception {
 
         IndexReader indexReader = new IndexReader(indexName, context);
@@ -179,6 +137,7 @@ public class LucandraTests extends TestCase {
                
     }
 
+    @Test
     public void testKeywordField() throws Exception {
         IndexReader indexReader = new IndexReader(indexName, context);
         IndexSearcher searcher = new IndexSearcher(indexReader);
@@ -191,6 +150,7 @@ public class LucandraTests extends TestCase {
         
     }
     
+    @Test
     public void testDelete() throws Exception {
     	
     	IndexReader indexReader = new IndexReader(indexName, context);
@@ -214,6 +174,7 @@ public class LucandraTests extends TestCase {
         assertEquals(0, docs.totalHits);
     }
 
+    @Test
     public void testSearch() throws Exception {
 
         IndexReader indexReader = new IndexReader(indexName, context);
@@ -231,6 +192,7 @@ public class LucandraTests extends TestCase {
         assertNotNull(doc.getField("key"));
     }
 
+    @Test
     public void testScore() throws Exception {
 
         IndexReader indexReader = new IndexReader(indexName, context);
@@ -251,6 +213,7 @@ public class LucandraTests extends TestCase {
 
     }
 
+    @Test
     public void testMissingQuery() throws Exception {
 
         IndexReader indexReader = new IndexReader(indexName, context);
@@ -264,6 +227,7 @@ public class LucandraTests extends TestCase {
         assertEquals(0, docs.totalHits);
     }
 
+    @Test
     public void testWildcardQuery() throws Exception {
         IndexReader indexReader = new IndexReader(indexName, context);
         IndexSearcher searcher = new IndexSearcher(indexReader);
@@ -288,6 +252,7 @@ public class LucandraTests extends TestCase {
 
     }
 
+    @Test
     public void testSortQuery() throws Exception {
 
         IndexReader indexReader = new IndexReader(indexName, context);
@@ -307,6 +272,7 @@ public class LucandraTests extends TestCase {
 
     }
 
+    @Test
     public void testRangeQuery() throws Exception {
 
         IndexReader indexReader = new IndexReader(indexName, context);
@@ -321,6 +287,7 @@ public class LucandraTests extends TestCase {
 
     }
 
+    @Test
     public void testExactQuery() throws Exception {
 
         IndexReader indexReader = new IndexReader(indexName, context);
@@ -342,6 +309,7 @@ public class LucandraTests extends TestCase {
         
     }
 
+    @Test
     public void testSimpleAnalyzerWriteRead() throws Exception {
         
         Document doc = new Document();
@@ -368,6 +336,7 @@ public class LucandraTests extends TestCase {
         assertEquals(0, docs.totalHits);
     }
     
+    @Test
     public void testHighlight() throws Exception {
 
         // This tests the TermPositionVector classes
@@ -394,6 +363,7 @@ public class LucandraTests extends TestCase {
         assertEquals(rv, highlightedText);
     }
     
+    @Test
     public void testLucandraFilter() throws Exception {
         IndexReader indexReader = new IndexReader(indexName, context);
         IndexSearcher searcher = new IndexSearcher(indexReader);
@@ -444,4 +414,43 @@ public class LucandraTests extends TestCase {
         }
 
     }
+    
+    @Test
+    public void testLucandraTermDocs() throws Exception {
+        IndexWriter indexWriter = new IndexWriter(indexName, context);
+ 
+        int docSize = 100;
+        for (int i = 0; i < docSize; i++) {
+            Document doc1 = new Document();
+            Field f1 = new Field("UUID", "UUID" + i,
+                    Field.Store.NO,
+                    Field.Index.NOT_ANALYZED_NO_NORMS);
+ 
+            Field f2 = new Field("parent", "parenta",
+                    Field.Store.NO,
+                    Field.Index.NOT_ANALYZED_NO_NORMS);
+ 
+            Field f3 = new Field("nodeType", "item",
+                    Field.Store.NO,
+                    Field.Index.NOT_ANALYZED_NO_NORMS);
+            doc1.add(f1);
+            doc1.add(f2);
+            doc1.add(f3);
+ 
+            indexWriter.addDocument(doc1, analyzer);
+        }
+ 
+        TermQuery tq = new TermQuery(new Term("parent", "parenta"));
+        TermQuery tq1 = new TermQuery(new Term("nodeType", "item"));
+        BooleanQuery query = new BooleanQuery();
+        query.add(tq, BooleanClause.Occur.MUST);
+        query.add(tq1, BooleanClause.Occur.MUST);
+        IndexReader indexReader = new IndexReader(indexName, context);
+        IndexSearcher searcher = new IndexSearcher(indexReader);
+ 
+        TopDocs topDocs = searcher.search(query, 1000);
+        assertEquals(topDocs.totalHits, docSize);
+    }
+    
+    
 }

@@ -44,6 +44,7 @@ public class IndexContext {
 	private final String termColumnFamily;
 	private final String documentColumnFamily;
 	private final ColumnPath documentPath;
+	private final ColumnPath metaColumnPath;
 
 	public IndexContext(Iface client, String keySpace,
 			ConsistencyLevel consistencyLevel, String termColumnFamily,
@@ -58,6 +59,7 @@ public class IndexContext {
 		
 		try {
 			this.documentPath = new ColumnPath(documentColumnFamily).setColumn(CassandraUtils.documentMetaField.getBytes("UTF-8"));
+			this.metaColumnPath = new ColumnPath(documentColumnFamily).setColumn(CassandraUtils.documentMetaField.getBytes("UTF-8"));
 		} catch (UnsupportedEncodingException e) {
 			//should never happen
 			throw new RuntimeException(e);
@@ -105,10 +107,21 @@ public class IndexContext {
 		return documentColumnFamily;
 	}
 
+	/**
+	 * 
+	 * @return
+	 */
 	public ColumnPath getDocumentColumnPath(){
 		return documentPath;
 	}
 
+	/**
+	 * 
+	 * @return
+	 */
+	public ColumnPath getMetaColumnPath(){
+		return metaColumnPath;
+	}
 	
 
 }

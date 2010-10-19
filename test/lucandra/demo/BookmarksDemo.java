@@ -50,7 +50,7 @@ import org.apache.thrift.transport.TTransportException;
  */
 public class BookmarksDemo {
 
-    // Connect to casssssssssandra
+    // Connect to casandra
     private static IndexContext context;
     static {
         try {
