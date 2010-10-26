@@ -6,10 +6,15 @@ package lucandra;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.Cassandra.Iface;
 import org.apache.cassandra.thrift.CfDef;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.KsDef;
+import org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.thrift.protocol.TProtocol;
+import org.apache.thrift.transport.TSocket;
+import org.apache.thrift.transport.TTransport;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 
@@ -25,7 +30,11 @@ public class LucandraTestHelper {
 	@BeforeClass
 	public static void setupServer() throws Exception {
 
-		Iface client = CassandraUtils.createConnection();
+		TTransport transport = new TSocket(System.getProperty("cassandra.host", "localhost"), Integer.parseInt(System.getProperty("cassandra.port", "19160")));
+		TProtocol protocol = new TBinaryProtocol(transport);
+		Cassandra.Client client = new Cassandra.Client(protocol);
+		transport.open();
+		
 
 		String keyspace = System.getProperty("cassandra.keyspace", "Lucandra");
 
@@ -64,11 +73,16 @@ public class LucandraTestHelper {
 			
 			client.system_add_keyspace(keyspaceDefinition);
 			
-			client.set_keyspace(keyspace);
-
+			transport.flush();
+			transport.close();
+			
 		} 
+		
+		//create the realy connection
+		
+		Iface testConnection = CassandraUtils.createConnection();
 
-		context = new IndexContext(client, ConsistencyLevel.ONE);
+		context = new IndexContext(testConnection, ConsistencyLevel.ONE);
 
 	}
 
