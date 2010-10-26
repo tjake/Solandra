@@ -191,7 +191,7 @@ public class LucandraTermEnum extends TermEnum {
         }
 
         
-        
+       
         if ((!skipTo.equals(chunkBoundryTerm) || termPosition == 0) && termCache != null) {
             termDocFreqBuffer = termCache.subMap(skipTo, termCache.lastKey());
         } else {          
@@ -267,7 +267,6 @@ public class LucandraTermEnum extends TermEnum {
         
         
         try {
-
             columns = context.getClient().get_range_slices(columnParent, slicePredicate, kr, context.getConsistencyLevel());
         } catch (InvalidRequestException e) {
             throw new RuntimeException(e);
@@ -281,7 +280,6 @@ public class LucandraTermEnum extends TermEnum {
 
         // term to start with next time
         actualInitSize = columns.size();
-
         
         if(logger.isDebugEnabled()){
             try {

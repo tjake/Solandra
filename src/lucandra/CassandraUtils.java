@@ -19,7 +19,8 @@
  */
 package lucandra;
 
-import static lucandra.ByteHelper.*;
+import static lucandra.ByteHelper.getBytes;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -41,7 +42,6 @@ import java.util.UUID;
 import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.Column;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
-import org.apache.cassandra.thrift.ColumnPath;
 import org.apache.cassandra.thrift.Deletion;
 import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.Mutation;
@@ -80,6 +80,7 @@ public class CassandraUtils {
     public static final byte[] delimeterBytes 	   = getBytes(delimeter);
     
     public static final String finalToken          = new String("\ufffe\ufffe");
+
     public static final byte[] finalTokenBytes 	   = getBytes(finalToken);
 
     public static final List<byte[]> allTermColumns = Arrays.asList(
@@ -92,6 +93,8 @@ public class CassandraUtils {
     public static final String documentMetaField   = delimeter+"META"+delimeter;
     
     public static final boolean indexHashingEnabled = Boolean.valueOf(System.getProperty("index.hashing","true"));
+
+
 
 ////    public static final ColumnPath metaColumnPath;
 //    
@@ -125,7 +128,6 @@ public class CassandraUtils {
                                  Integer.valueOf(System.getProperty("cassandra.port","9160")),
                                  Boolean.valueOf(System.getProperty("cassandra.framed", "true")),
                                  System.getProperty("cassandra.keyspace","Lucandra"),
-
                                  true);
     }
     
@@ -279,7 +281,6 @@ public class CassandraUtils {
     }
 
     public static void addToMutationMap(Map<byte[],Map<String,List<Mutation>>> mutationMap, String columnFamily, byte[] column, byte[] key, byte[] value, Map<String,List<Number>> superColumns){
-
         Long clock = System.currentTimeMillis();
         
         Map<String,List<Mutation>> cfMutation = mutationMap.get(key);
@@ -376,9 +377,8 @@ public class CassandraUtils {
         mutationList.add(mutation);       
     }
     
+
     public static void robustBatchInsert(IndexContext context, Map<byte[],Map<String,List<Mutation>>> mutationMap) {
-
-
         // Should use a circut breaker here
         boolean try_again = false;
         int attempts = 0;
@@ -387,6 +387,7 @@ public class CassandraUtils {
             try {
                 attempts++;
                 try_again = false;
+
                 context.getClient().batch_mutate(mutationMap, context.getConsistencyLevel());
 
                 

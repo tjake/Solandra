@@ -26,6 +26,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 
+
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.cjk.CJKAnalyzer;
@@ -65,7 +66,7 @@ public class LucandraTests extends LucandraTestHelper {
     @BeforeClass
     public static void setup() throws Exception{
     	
-    	setupServer();
+//    	setupServer();
     	
     	indexWriter = new IndexWriter(indexName, context);
     	
@@ -424,6 +425,7 @@ public class LucandraTests extends LucandraTestHelper {
 
     }
     
+
     @Test
     public void testLucandraTermDocs() throws Exception {
         IndexWriter indexWriter = new IndexWriter(indexName, context);
@@ -454,7 +456,9 @@ public class LucandraTests extends LucandraTestHelper {
         BooleanQuery query = new BooleanQuery();
         query.add(tq, BooleanClause.Occur.MUST);
         query.add(tq1, BooleanClause.Occur.MUST);
+
         IndexReader indexReader = new IndexReader(indexName, context);
+
         IndexSearcher searcher = new IndexSearcher(indexReader);
  
         TopDocs topDocs = searcher.search(query, 1000);

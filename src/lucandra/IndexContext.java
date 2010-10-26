@@ -20,14 +20,11 @@
 package lucandra;
 
 import java.io.UnsupportedEncodingException;
-import java.util.List;
 
 import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.Cassandra.Iface;
 import org.apache.cassandra.thrift.ColumnPath;
 import org.apache.cassandra.thrift.ConsistencyLevel;
-import org.apache.cassandra.thrift.KsDef;
-import org.apache.thrift.TException;
 
 /**
  * This class is intended to encapsulate all Cassandra connection information.

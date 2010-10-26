@@ -61,6 +61,10 @@ public class LucandraTestHelper {
 			KsDef keyspaceDefinition = new KsDef(keyspace,
 					"org.apache.cassandra.locator.SimpleStrategy", 1,
 					columns);
+			
+			client.system_add_keyspace(keyspaceDefinition);
+			
+			client.set_keyspace(keyspace);
 
 		} 
 

@@ -280,6 +280,4 @@ public class CassandraProxyClient implements
 	        return result;
 	    }
 	    
-
-
 }

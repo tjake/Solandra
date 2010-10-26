@@ -35,7 +35,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.cassandra.thrift.Column;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.cassandra.thrift.ColumnParent;
-import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.SlicePredicate;
 import org.apache.cassandra.thrift.SliceRange;
 import org.apache.cassandra.thrift.SuperColumn;
@@ -88,6 +87,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     }
 
 
+
     private final byte[] indexName;
     private final IndexContext context;
 
@@ -103,9 +103,9 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     public IndexReader(String name, IndexContext context) {
         super();
-
         this.indexName = getBytes(name);
         this.context = context;
+
 
     }
 
@@ -237,15 +237,13 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         long start = System.currentTimeMillis();
 
         try {
-
             Map<byte[], List<ColumnOrSuperColumn>> docMap = context.getClient().multiget_slice(Arrays.asList(keyMap.keySet().toArray(new byte[][]{})), columnParent, slicePredicate, context.getConsistencyLevel());
-      
+
             if(keyMap.size() != docMap.size()){
                 logger.warn("Missing documents in multiget_slice call");
             }
             
             for (Map.Entry<byte[], List<ColumnOrSuperColumn>> entry : docMap.entrySet()) {
-
 
                 List<ColumnOrSuperColumn> cols = entry.getValue();
 
@@ -303,6 +301,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
                 int thisDocNum = getDocumentNumber(keyMap.get(entry.getKey()));
                 
                 if(thisDocNum == docNum){
+
                     doc = cacheDoc;
                 }
                 
@@ -422,8 +421,6 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     }
 
     public int addDocument(SuperColumn docInfo, String field) {
-
-
         byte[] id =  docInfo.name;
         
         if(logger.isDebugEnabled()){
@@ -547,7 +544,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     
     private Map<byte[],Integer> getDocIdToDocIndex(){
         Map<byte[], Integer> c = docIdToDocIndex.get();
-         
+
         if(c == null){
             c = new ConcurrentSkipListMap<byte[],Integer>(CassandraUtils.byteArrayComparator);
             docIdToDocIndex.set(c);
