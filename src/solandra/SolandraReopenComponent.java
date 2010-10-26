@@ -21,6 +21,7 @@ package solandra;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -29,10 +30,11 @@ import java.util.Set;
 import lucandra.CassandraUtils;
 import lucandra.IndexReader;
 import lucandra.cluster.AbstractIndexManager;
-import lucandra.cluster.RedisIndexManager;
 
+import org.apache.cassandra.db.Table;
 import org.apache.cassandra.dht.Token;
 import org.apache.cassandra.service.StorageService;
+import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.log4j.Logger;
 import org.apache.lucene.document.FieldSelector;
 import org.apache.solr.common.params.ShardParams;
@@ -44,32 +46,39 @@ import org.apache.solr.search.DocIterator;
 import org.apache.solr.search.DocList;
 import org.apache.solr.search.SolrIndexReader;
 
-public class SolandraReopenComponent extends SearchComponent {
+public class SolandraReopenComponent extends SearchComponent
+{
 
     private static final Logger logger = Logger.getLogger(SolandraReopenComponent.class);
-    private final Random random;
+    private final Random        random;
 
-    public SolandraReopenComponent() {
+    public SolandraReopenComponent()
+    {
         random = new Random(System.currentTimeMillis());
     }
 
-    public String getDescription() {
+    public String getDescription()
+    {
         return "Reopens Lucandra readers";
     }
 
-    public String getSource() {
+    public String getSource()
+    {
         return null;
     }
 
-    public String getSourceId() {
+    public String getSourceId()
+    {
         return null;
     }
 
-    public String getVersion() {
+    public String getVersion()
+    {
         return "1.0";
     }
 
-    public void prepare(ResponseBuilder rb) throws IOException {
+    public void prepare(ResponseBuilder rb) throws IOException
+    {
 
         // Only applies to my lucandra index readers
         if (rb.req.getSearcher().getIndexReader().getVersion() != Long.MAX_VALUE)
@@ -80,13 +89,15 @@ public class SolandraReopenComponent extends SearchComponent {
         rb.req.getSearcher().getIndexReader().directory();
 
         // If this is a shard request then no need to do anything
-        if (rb.req.getParams().getBool(ShardParams.IS_SHARD, false)) {
+        if (rb.req.getParams().getBool(ShardParams.IS_SHARD, false))
+        {
             String indexName = (String) rb.req.getContext().get("solandra-index");
 
             if (indexName == null)
                 throw new IOException("Missing core name");
 
-            IndexReader reader = (IndexReader) ((SolrIndexReader) rb.req.getSearcher().getIndexReader()).getWrappedReader();
+            IndexReader reader = (IndexReader) ((SolrIndexReader) rb.req.getSearcher().getIndexReader())
+                    .getWrappedReader();
 
             reader.setIndexName(indexName);
 
@@ -97,13 +108,17 @@ public class SolandraReopenComponent extends SearchComponent {
 
         String indexName = rb.req.getCore().getName();
 
-        if (indexName.equals("")) {
+        if (indexName.equals(""))
+        {
             return; // 
-        } else {
+        }
+        else
+        {
             logger.info("core: " + indexName);
         }
 
-        if (rb.shards == null) {
+        if (rb.shards == null)
+        {
 
             // find number of shards
             long docId = CassandraUtils.indexManager.getCurrentDocId(indexName);
@@ -113,10 +128,12 @@ public class SolandraReopenComponent extends SearchComponent {
             // assign shards
             String[] shards = new String[numShards + 1];
 
-            for (int i = 0; i <= numShards; i++) {
-                byte[] subIndex = CassandraUtils.hashBytes((indexName +"~"+ i).getBytes());
+            for (int i = 0; i <= numShards; i++)
+            {
+                ByteBuffer subIndex = CassandraUtils.hashBytes((indexName + "~" + i).getBytes());
                 Token t = StorageService.getPartitioner().getToken(subIndex);
-                List<InetAddress> addrs = StorageService.instance.getReplicationStrategy(CassandraUtils.keySpace).getNaturalEndpoints(t);
+                List<InetAddress> addrs = Table.open(CassandraUtils.keySpace).replicationStrategy
+                        .getNaturalEndpoints(t);
 
                 // pick a replica at random
                 if (addrs.isEmpty())
@@ -135,7 +152,8 @@ public class SolandraReopenComponent extends SearchComponent {
         }
     }
 
-    public void process(ResponseBuilder rb) throws IOException {
+    public void process(ResponseBuilder rb) throws IOException
+    {
 
         DocList list = rb.getResults().docList;
 
@@ -147,30 +165,34 @@ public class SolandraReopenComponent extends SearchComponent {
 
         logger.debug("Fetching " + docIds.size() + " Docs");
 
-        if (docIds.size() > 0) {
+        if (docIds.size() > 0)
+        {
 
-            List<byte[]> fieldFilter = null;
+            List<ByteBuffer> fieldFilter = null;
             Set<String> returnFields = rb.rsp.getReturnFields();
-            if (returnFields != null) {
+            if (returnFields != null)
+            {
 
                 // copy return fields list
-                fieldFilter = new ArrayList<byte[]>(returnFields.size());
-                for (String field : returnFields) {
-                    fieldFilter.add(field.getBytes("UTF-8"));
+                fieldFilter = new ArrayList<ByteBuffer>(returnFields.size());
+                for (String field : returnFields)
+                {
+                    fieldFilter.add(ByteBufferUtil.bytes(field));
                 }
 
                 // add highlight fields
                 SolrHighlighter highligher = rb.req.getCore().getHighlighter();
-                if (highligher.isHighlightingEnabled(rb.req.getParams())) {
+                if (highligher.isHighlightingEnabled(rb.req.getParams()))
+                {
                     for (String field : highligher.getHighlightFields(rb.getQuery(), rb.req, null))
                         if (!returnFields.contains(field))
-                            fieldFilter.add(field.getBytes());
+                            fieldFilter.add(ByteBufferUtil.bytes(field));
                 }
                 // fetch unique key if one exists.
                 SchemaField keyField = rb.req.getSearcher().getSchema().getUniqueKeyField();
                 if (null != keyField)
                     if (!returnFields.contains(keyField))
-                        fieldFilter.add(keyField.getName().getBytes());
+                        fieldFilter.add(ByteBufferUtil.bytes(keyField.getName()));
             }
 
             FieldSelector selector = new SolandraFieldSelector(docIds, fieldFilter);

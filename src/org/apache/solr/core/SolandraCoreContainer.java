@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -17,6 +18,7 @@ import org.apache.cassandra.db.Row;
 import org.apache.cassandra.db.RowMutation;
 import org.apache.cassandra.db.filter.QueryPath;
 import org.apache.cassandra.thrift.ConsistencyLevel;
+import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.log4j.Logger;
 import org.apache.solr.schema.IndexSchema;
 
@@ -70,7 +72,9 @@ public class SolandraCoreContainer extends CoreContainer {
     }
 
     public static String  readSchemaXML(String indexName) throws IOException {
-        List<Row> rows = CassandraUtils.robustGet(indexName.getBytes(), queryPath, Arrays.asList(columnName.getBytes()), ConsistencyLevel.QUORUM);
+        List<Row> rows = CassandraUtils.robustGet(ByteBuffer.wrap(indexName.getBytes()), queryPath, 
+        										  Arrays.asList(ByteBuffer.wrap(columnName.getBytes())), 
+        										  ConsistencyLevel.QUORUM);
 
         if (rows.isEmpty())
             throw new IOException("invalid index");
@@ -81,7 +85,8 @@ public class SolandraCoreContainer extends CoreContainer {
         if(rows.get(0).cf == null)
             throw new IOException("invalid index");
         
-        return new String(rows.get(0).cf.getColumn(columnName.getBytes()).value(),"UTF-8");   
+        ByteBuffer schema = rows.get(0).cf.getColumn(ByteBuffer.wrap(columnName.getBytes())).value();
+        return ByteBufferUtil.string(schema);
     }
     
     
@@ -93,7 +98,9 @@ public class SolandraCoreContainer extends CoreContainer {
             // get from cassandra
             logger.info("loading indexInfo for: "+ indexName);
             
-            List<Row> rows = CassandraUtils.robustGet(indexName.getBytes(), queryPath, Arrays.asList(columnName.getBytes()), ConsistencyLevel.QUORUM);
+            List<Row> rows = CassandraUtils.robustGet(ByteBuffer.wrap(indexName.getBytes()), queryPath, 
+            										  Arrays.asList(ByteBuffer.wrap(columnName.getBytes())), 
+            										  ConsistencyLevel.QUORUM);
 
             if (rows.isEmpty())
                 throw new IOException("invalid index");
@@ -104,7 +111,8 @@ public class SolandraCoreContainer extends CoreContainer {
             if(rows.get(0).cf == null)
                 throw new IOException("invalid index");
             
-            InputStream stream = new ByteArrayInputStream(rows.get(0).cf.getColumn(columnName.getBytes()).value());
+            ByteBuffer buf = rows.get(0).cf.getColumn(ByteBuffer.wrap(columnName.getBytes())).value();
+            InputStream stream = new ByteArrayInputStream(buf.array(),buf.position(),buf.remaining());
 
             IndexSchema schema = new IndexSchema(solrConfig, indexName, stream);
             
@@ -119,10 +127,13 @@ public class SolandraCoreContainer extends CoreContainer {
     }
 
     public static void writeSchema(String indexName, String schemaXml){
-        RowMutation rm = new RowMutation(CassandraUtils.keySpace, indexName.getBytes());
+        RowMutation rm = new RowMutation(CassandraUtils.keySpace, ByteBuffer.wrap(indexName.getBytes()));
         
         try {
-            rm.add(new QueryPath("SI",null, columnName.getBytes()), schemaXml.getBytes("UTF-8"), System.currentTimeMillis());
+        	
+            rm.add(new QueryPath("SI",null, ByteBuffer.wrap(columnName.getBytes())), 
+            		ByteBuffer.wrap(schemaXml.getBytes("UTF-8")), System.currentTimeMillis());
+            
         } catch (UnsupportedEncodingException e) {
             throw new RuntimeException(e);
         }

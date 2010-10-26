@@ -22,6 +22,7 @@ package lucandra;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -62,7 +63,7 @@ public class IndexWriter {
 
 
     private boolean autoCommit;
-    private static final ThreadLocal<Map<byte[], RowMutation>> mutationList = new ThreadLocal<Map<byte[], RowMutation>>();
+    private static final ThreadLocal<Map<ByteBuffer, RowMutation>> mutationList = new ThreadLocal<Map<ByteBuffer, RowMutation>>();
     private static final InheritableThreadLocal<String> indexName = new InheritableThreadLocal<String>();
     
     private Similarity similarity = Similarity.getDefault(); // how to normalize;
@@ -87,6 +88,7 @@ public class IndexWriter {
     public void addDocument(Document doc, Analyzer analyzer, String indexName, int docNumber) throws CorruptIndexException, IOException {
 
        
+        byte[] indexNameBytes = indexName.getBytes();
         
         List<Term> allIndexedTerms = new ArrayList<Term>();
         Map<String, byte[]> fieldCache = new HashMap<String, byte[]>(1024);
@@ -96,7 +98,7 @@ public class IndexWriter {
         docNumber = docNumber % CassandraUtils.maxDocsPerShard;
         
        
-        byte[] docId = CassandraUtils.writeVInt(docNumber);
+        ByteBuffer docId = CassandraUtils.writeVInt(docNumber);
         int position = 0;
 
         for (Fieldable field : (List<Fieldable>) doc.getFields()) {
@@ -112,7 +114,7 @@ public class IndexWriter {
                 }
 
                 // collect term information per field
-                Map<Term, Map<byte[], List<Number>>> allTermInformation = new ConcurrentSkipListMap<Term, Map<byte[], List<Number>>>();
+                Map<Term, Map<ByteBuffer, List<Number>>> allTermInformation = new ConcurrentSkipListMap<Term, Map<ByteBuffer, List<Number>>>();
 
                 int lastOffset = 0;
                 if (position > 0) {
@@ -149,10 +151,10 @@ public class IndexWriter {
                     allIndexedTerms.add(term);
 
                     // fetch all collected information for this term
-                    Map<byte[], List<Number>> termInfo = allTermInformation.get(term);
+                    Map<ByteBuffer, List<Number>> termInfo = allTermInformation.get(term);
 
                     if (termInfo == null) {
-                        termInfo = new ConcurrentSkipListMap<byte[], List<Number>>(FBUtilities.byteArrayComparator);
+                        termInfo = new ConcurrentSkipListMap<ByteBuffer, List<Number>>();
                         allTermInformation.put(term, termInfo);
                     }
 
@@ -208,15 +210,15 @@ public class IndexWriter {
                     bnorm.add(Similarity.encodeNorm(norm));
                 }
 
-                for (Map.Entry<Term, Map<byte[], List<Number>>> term : allTermInformation.entrySet()) {
+                for (Map.Entry<Term, Map<ByteBuffer, List<Number>>> term : allTermInformation.entrySet()) {
 
                     // Terms are stored within a unique key combination
                     // This is required since cassandra loads all columns
                     // in a key/column family into memory
-                    byte[] key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, term.getKey().field().getBytes(),
+                    ByteBuffer key = CassandraUtils.hashKeyBytes(indexNameBytes, CassandraUtils.delimeterBytes, term.getKey().field().getBytes(),
                             CassandraUtils.delimeterBytes, term.getKey().text().getBytes("UTF-8"));
 
-                    byte[] termkey = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, term.getKey().field().getBytes());
+                    ByteBuffer termkey = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, term.getKey().field().getBytes());
                     
                     // Mix in the norm for this field alongside each term
                     // more writes but faster on read side.
@@ -225,7 +227,7 @@ public class IndexWriter {
                     }
 
                     CassandraUtils.addMutations(getMutationList(), CassandraUtils.termVecColumnFamily, docId, key, null, term.getValue());
-                    CassandraUtils.addMutations(getMutationList(), CassandraUtils.metaInfoColumnFamily, term.getKey().text().getBytes("UTF-8"), termkey, CassandraUtils.emptyByteArray, null);
+                    CassandraUtils.addMutations(getMutationList(), CassandraUtils.metaInfoColumnFamily, term.getKey().text().getBytes("UTF-8"), termkey, FBUtilities.EMPTY_BYTE_BUFFER, null);
                     
                 }
             }
@@ -235,18 +237,18 @@ public class IndexWriter {
                 Term term = new Term(field.name(), field.stringValue());
                 allIndexedTerms.add(term);
 
-                byte[] key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, field.name().getBytes(),
+                ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, field.name().getBytes(),
                         CassandraUtils.delimeterBytes, field.stringValue().getBytes("UTF-8"));
 
-                byte[] termkey = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, field.name().getBytes());
+                ByteBuffer termkey = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, field.name().getBytes());
                 
                 
-                Map<byte[], List<Number>> termMap = new ConcurrentSkipListMap<byte[], List<Number>>(FBUtilities.byteArrayComparator);
+                Map<ByteBuffer, List<Number>> termMap = new ConcurrentSkipListMap<ByteBuffer, List<Number>>();
                 termMap.put(CassandraUtils.termFrequencyKeyBytes, CassandraUtils.emptyArray);
                 termMap.put(CassandraUtils.positionVectorKeyBytes, CassandraUtils.emptyArray);
 
                 CassandraUtils.addMutations(getMutationList(), CassandraUtils.termVecColumnFamily, docId, key, null, termMap);
-                CassandraUtils.addMutations(getMutationList(), CassandraUtils.metaInfoColumnFamily, field.stringValue().getBytes("UTF-8"), termkey, CassandraUtils.emptyByteArray, null);
+                CassandraUtils.addMutations(getMutationList(), CassandraUtils.metaInfoColumnFamily, field.stringValue().getBytes("UTF-8"), termkey, FBUtilities.EMPTY_BYTE_BUFFER, null);
             }
 
             // Stores each field as a column under this doc key
@@ -277,7 +279,7 @@ public class IndexWriter {
             }
         }
 
-        byte[] key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, Integer.toHexString(docNumber).getBytes());
+        ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, Integer.toHexString(docNumber).getBytes("UTF-8"));
 
         // Store each field as a column under this docId
         for (Map.Entry<String, byte[]> field : fieldCache.entrySet()) {
@@ -317,10 +319,10 @@ public class IndexWriter {
 
             ColumnParent cp = new ColumnParent(CassandraUtils.termVecColumnFamily);
 
-            byte[] key = CassandraUtils.hashKeyBytes(getIndexName().getBytes(), CassandraUtils.delimeterBytes, term.field().getBytes(),
+            ByteBuffer key = CassandraUtils.hashKeyBytes(getIndexName().getBytes(), CassandraUtils.delimeterBytes, term.field().getBytes(),
                     CassandraUtils.delimeterBytes, term.text().getBytes("UTF-8"));
 
-            ReadCommand rc = new SliceFromReadCommand(CassandraUtils.keySpace, key, cp, new byte[] {}, new byte[] {}, false, Integer.MAX_VALUE);
+            ReadCommand rc = new SliceFromReadCommand(CassandraUtils.keySpace, key, cp, FBUtilities.EMPTY_BYTE_BUFFER, FBUtilities.EMPTY_BYTE_BUFFER, false, Integer.MAX_VALUE);
 
             List<Row> rows = StorageProxy.readProtocol(Arrays.asList(rc), ConsistencyLevel.ONE);
 
@@ -346,7 +348,7 @@ public class IndexWriter {
 
     private void deleteLucandraDocument(byte[] docId) {
 
-        byte[] key = CassandraUtils.hashKeyBytes(getIndexName().getBytes(), CassandraUtils.delimeterBytes, docId);
+        ByteBuffer key = CassandraUtils.hashKeyBytes(getIndexName().getBytes(), CassandraUtils.delimeterBytes, docId);
 
         List<Row> rows = CassandraUtils.robustGet(key, CassandraUtils.metaColumnPath, Arrays.asList(CassandraUtils.documentMetaFieldBytes), ConsistencyLevel.ONE);
         
@@ -371,12 +373,12 @@ public class IndexWriter {
                 throw new RuntimeException("JVM doesn't support UTF-8", e);
             }
 
-            CassandraUtils.addMutations(getMutationList(), CassandraUtils.termVecColumnFamily, docId, key, null, null);
+            CassandraUtils.addMutations(getMutationList(), CassandraUtils.termVecColumnFamily, docId, key, (ByteBuffer)null, null);
         }
 
         // finally delete ourselves
-        byte[] selfKey = CassandraUtils.hashKeyBytes(getIndexName().getBytes(), CassandraUtils.delimeterBytes, docId);
-        CassandraUtils.addMutations(getMutationList(), CassandraUtils.docColumnFamily, null, selfKey, null, null);
+        ByteBuffer selfKey = CassandraUtils.hashKeyBytes(getIndexName().getBytes(), CassandraUtils.delimeterBytes, docId);
+        CassandraUtils.addMutations(getMutationList(), CassandraUtils.docColumnFamily, (ByteBuffer)null, selfKey, (ByteBuffer)null, null);
 
         if (autoCommit){
             CassandraUtils.robustInsert(Arrays.asList(getMutationList().values().toArray(new RowMutation[]{})), ConsistencyLevel.ONE);
@@ -412,12 +414,12 @@ public class IndexWriter {
         }
     }
 
-    private Map<byte[], RowMutation> getMutationList() {
+    private Map<ByteBuffer, RowMutation> getMutationList() {
 
-        Map<byte[], RowMutation> list = mutationList.get();
+        Map<ByteBuffer, RowMutation> list = mutationList.get();
 
         if (list == null) {
-            list = new ConcurrentSkipListMap<byte[], RowMutation>(FBUtilities.byteArrayComparator);
+            list = new ConcurrentSkipListMap<ByteBuffer, RowMutation>();
             mutationList.set(list);
         }
 

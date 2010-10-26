@@ -20,6 +20,7 @@
 package lucandra;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -36,6 +37,8 @@ import org.apache.cassandra.db.SliceFromReadCommand;
 import org.apache.cassandra.service.StorageProxy;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.ConsistencyLevel;
+import org.apache.cassandra.utils.ByteBufferUtil;
+import org.apache.cassandra.utils.FBUtilities;
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.SimpleAnalyzer;
 import org.apache.lucene.document.Document;
@@ -183,9 +186,9 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
             return doc;
         }
 
-        List<byte[]> fieldNames = null;
+        List<ByteBuffer> fieldNames = null;
 
-        Map<Integer, byte[]> keyMap = new HashMap<Integer, byte[]>();
+        Map<Integer, ByteBuffer> keyMap = new HashMap<Integer, ByteBuffer>();
         keyMap.put(docNum, CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, Integer.toHexString(docNum).getBytes()));
 
         // Special field selector used to carry list of other docIds to cache in
@@ -222,11 +225,11 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
             List<Row> rows = null;
             List<ReadCommand> readCommands = new ArrayList<ReadCommand>();
-            for (byte[] key : keyMap.values()) {
+            for (ByteBuffer key : keyMap.values()) {
 
                 if (fieldNames == null || fieldNames.size() == 0 ) {
                     // get all columns ( except this skips meta info )
-                    readCommands.add(new SliceFromReadCommand(CassandraUtils.keySpace, key, columnParent, new byte[] {}, CassandraUtils.finalTokenBytes, false, Integer.MAX_VALUE));
+                    readCommands.add(new SliceFromReadCommand(CassandraUtils.keySpace, key, columnParent, FBUtilities.EMPTY_BYTE_BUFFER, CassandraUtils.finalTokenBytes, false, Integer.MAX_VALUE));
                 } else {
                     readCommands.add(new SliceByNamesReadCommand(CassandraUtils.keySpace, key, columnParent, fieldNames));
                 }
@@ -235,46 +238,48 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
             rows = StorageProxy.readProtocol(readCommands, ConsistencyLevel.ONE);
 
             // allow lookup by row
-            Map<String, Row> rowMap = new HashMap<String, Row>(keyMap.size());
+            Map<ByteBuffer, Row> rowMap = new HashMap<ByteBuffer, Row>(keyMap.size());
             for (Row row : rows) {
-                rowMap.put(new String(row.key.key, "UTF-8"), row);
+                rowMap.put(row.key.key, row);
             }
 
-            for (Map.Entry<Integer, byte[]> key : keyMap.entrySet()) {
+            for (Map.Entry<Integer, ByteBuffer> key : keyMap.entrySet()) {
                 Document cacheDoc = new Document();
 
-                Row row = rowMap.get(new String(key.getValue(), "UTF-8"));
+                Row row = rowMap.get(key.getValue());
 
                 if (row == null || row.cf == null) {
-                    logger.warn("Missing document in multiget_slice for: " + key.getValue());
+                    logger.warn("Missing document in multiget_slice for: " + ByteBufferUtil.string(key.getValue(),CassandraUtils.UTF_8));
                     continue;
                 }
 
                 for (IColumn col : row.cf.getSortedColumns()) {
 
                     Field field = null;
-                    String fieldName = new String(col.name());
+                    String fieldName = ByteBufferUtil.string(col.name());
 
                     // Incase __META__ slips through
-                    if (Arrays.equals(col.name(), CassandraUtils.documentMetaField.getBytes())) {
+                    if (ByteBufferUtil.compare(col.name(), CassandraUtils.documentMetaField.getBytes()) == 0) {
                         logger.debug("Filtering out __META__ key");
                         continue;
                     }
 
                     byte[] value;
-
-                    if (col.value()[col.value().length - 1] != Byte.MAX_VALUE && col.value()[col.value().length - 1] != Byte.MIN_VALUE) {
+                    ByteBuffer v = col.value();
+                    int vlimit = v.limit()+v.arrayOffset();
+                    
+                    if (v.array()[vlimit - 1] != Byte.MAX_VALUE && v.array()[vlimit - 1] != Byte.MIN_VALUE) {
                         throw new CorruptIndexException("Lucandra field is not properly encoded: " + docNum + "(" + fieldName + ")");
 
-                    } else if (col.value()[col.value().length - 1] == Byte.MAX_VALUE) { // Binary
-                        value = new byte[col.value().length - 1];
-                        System.arraycopy(col.value(), 0, value, 0, col.value().length - 1);
+                    } else if (v.array()[vlimit - 1] == Byte.MAX_VALUE) { // Binary
+                        value = new byte[vlimit - 1];
+                        System.arraycopy(v.array(), v.position()+v.arrayOffset(), value, 0, vlimit - 1);
 
                         field = new Field(fieldName, value, Store.YES);
                         cacheDoc.add(field);
-                    } else if (col.value()[col.value().length - 1] == Byte.MIN_VALUE) { // String
-                        value = new byte[col.value().length - 1];
-                        System.arraycopy(col.value(), 0, value, 0, col.value().length - 1);
+                    } else if (v.array()[vlimit - 1] == Byte.MIN_VALUE) { // String
+                        value = new byte[vlimit - 1];
+                        System.arraycopy(v.array(), v.position()+v.arrayOffset(), value, 0, vlimit - 1);
 
                         // Check for multi-fields
                         String fieldString = new String(value, "UTF-8");
@@ -450,10 +455,10 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
             Byte norm = null;
             IColumn normCol = docInfo.getSubColumn(CassandraUtils.normsKeyBytes);
             if (normCol != null) {
-                if (normCol.value().length != 1)
-                    throw new IllegalStateException("Norm for field " + field + " must be a single byte");
+                if (normCol.value().remaining() != 1)
+                    throw new IllegalStateException("Norm for field '" + field + "' must be a single byte, currently "+normCol.value().remaining());
 
-                norm = normCol.value()[0];
+                norm = normCol.value().array()[normCol.value().position() +  normCol.value().arrayOffset()];
             }
 
             if (norm == null)

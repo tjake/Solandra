@@ -107,12 +107,6 @@ snapshot_before_compaction: false
 # The threshold size in megabytes the binary memtable must grow to,
 # before it's submitted for flushing to disk.
 binary_memtable_throughput_in_mb: 256
-# Number of minutes to keep a memtable in memory
-memtable_flush_after_mins: 60
-# Size of the memtable in memory before it is dumped
-memtable_throughput_in_mb: 64
-# Number of objects in millions in the memtable before it is dumped
-memtable_operations_in_millions: 0.3
 
 column_index_size_in_kb: 64
 in_memory_compaction_limit_in_mb: 128
@@ -294,7 +288,6 @@ keyspaces:
         - name: Docs
           compare_with: BytesType
           keys_cached: .9
-          preload_row_cache: true
 
         - name: TI
           column_type: Super
@@ -302,7 +295,6 @@ keyspaces:
           read_repair_chance: 0.1
           keys_cached: .9
           rows_cached: 10000
-          preload_row_cache: true
      
         - name: SI #schema info
           keys_cached: .5

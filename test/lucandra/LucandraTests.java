@@ -22,11 +22,11 @@ package lucandra;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import junit.framework.TestCase;
-import lucandra.cluster.RedisIndexManager;
 
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.SlicePredicate;
 import org.apache.cassandra.thrift.SliceRange;
+import org.apache.cassandra.utils.FBUtilities;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.cjk.CJKAnalyzer;
@@ -82,7 +82,7 @@ public class LucandraTests extends TestCase {
         SlicePredicate slicePredicate = new SlicePredicate();
 
         // Get all columns
-        SliceRange sliceRange = new SliceRange(new byte[] {}, new byte[] {}, true, Integer.MAX_VALUE);
+        SliceRange sliceRange = new SliceRange(FBUtilities.EMPTY_BYTE_BUFFER, FBUtilities.EMPTY_BYTE_BUFFER, true, Integer.MAX_VALUE);
         slicePredicate.setSlice_range(sliceRange);
 
         /*List<KeySlice> columns = client.get_range_slice(CassandraUtils.keySpace, columnParent, slicePredicate, start, finish, 5000, ConsistencyLevel.ONE);

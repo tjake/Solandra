@@ -20,13 +20,10 @@
 package lucandra;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
+import java.nio.ByteBuffer;
 import java.util.List;
 
 import org.apache.cassandra.db.IColumn;
-import org.apache.cassandra.thrift.Column;
-import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.log4j.Logger;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.TermDocs;
@@ -65,8 +62,8 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
     public int freq() {
               
         //Find the termFrequency
-        IColumn termFrequency  = termDocs[docPosition].getSubColumn(CassandraUtils.termFrequencyKey.getBytes());     
-        IColumn positionVector = termDocs[docPosition].getSubColumn(CassandraUtils.positionVectorKey.getBytes());
+        IColumn termFrequency  = termDocs[docPosition].getSubColumn(CassandraUtils.termFrequencyKeyBytes);     
+        IColumn positionVector = termDocs[docPosition].getSubColumn(CassandraUtils.positionVectorKeyBytes);
           
         if(termFrequency == null){
             throw new RuntimeException("termFrequency is missing from supercolumn");
@@ -139,7 +136,7 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         docPosition = -1;
     }
 
-    public IColumn[] filteredSeek(Term term, List<byte[]> docNums){
+    public IColumn[] filteredSeek(Term term, List<ByteBuffer> docNums){
       
         termEnum.loadFilteredTerms(term, docNums);
        

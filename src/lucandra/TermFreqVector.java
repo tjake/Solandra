@@ -2,6 +2,7 @@ package lucandra;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -17,6 +18,7 @@ import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.UnavailableException;
+import org.apache.cassandra.utils.FBUtilities;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.TermVectorOffsetInfo;
 
@@ -33,7 +35,7 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
         this.field = field;
         this.docId = Integer.toHexString(docI).getBytes();
 
-        byte[] key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, docId );
+        ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, docId );
 
         ReadCommand rc = new SliceByNamesReadCommand(CassandraUtils.keySpace, key, CassandraUtils.metaColumnPath, Arrays
                 .asList(CassandraUtils.documentMetaFieldBytes));
@@ -92,7 +94,7 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
             }
 
             readCommands.add(new SliceFromReadCommand(CassandraUtils.keySpace, key, new ColumnParent().setColumn_family(CassandraUtils.termVecColumnFamily)
-                    .setSuper_column( CassandraUtils.writeVInt(docI)), new byte[] {}, new byte[] {}, false, 1024));
+                    .setSuper_column( CassandraUtils.writeVInt(docI)), FBUtilities.EMPTY_BYTE_BUFFER, FBUtilities.EMPTY_BYTE_BUFFER, false, 1024));
         }
 
         try {
@@ -117,7 +119,7 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
         for (Row row : rows) {
             String rowKey;
             try {
-                rowKey = new String(row.key.key,"UTF-8");
+                rowKey = new String(row.key.key.array(),row.key.key.position(),row.key.key.remaining(),"UTF-8");
             } catch (UnsupportedEncodingException e) {
                throw new RuntimeException("JVM does not support UTF-8");
             }

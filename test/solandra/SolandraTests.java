@@ -35,11 +35,13 @@ public class SolandraTests {
 
     // Set test schema
     String schemaXml = "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n" + "<schema name=\"wikipedia\" version=\"1.1\">\n" + "<types>\n"
+            + "<fieldType name=\"tint\" class=\"solr.TrieIntField\" precisionStep=\"8\" omitNorms=\"true\" positionIncrementGap=\"0\"/>\n"
             + "<fieldType name=\"text\" class=\"solr.TextField\">\n" + "<analyzer><tokenizer class=\"solr.StandardTokenizerFactory\"/></analyzer>\n"
             + "</fieldType>\n" + "<fieldType name=\"string\" class=\"solr.StrField\"/>\n" + "</types>\n" + "<fields>\n"
             + "<field name=\"url\" type=\"string\" indexed=\"true\" stored=\"true\"/>\n"
-            + "<field name=\"title\" type=\"text\" indexed=\"true\"  stored=\"true\"/>\n"
             + "<field name=\"text\"  type=\"text\" indexed=\"true\"  stored=\"true\" termVectors=\"true\" termPositions=\"true\" termOffsets=\"true\" />\n"
+            + "<field name=\"title\" type=\"text\" indexed=\"true\"  stored=\"true\"/>\n"
+            + "<field name=\"price\" type=\"tint\" indexed=\"true\"  stored=\"true\"/>\n"
             + "</fields>\n" + "<uniqueKey>url</uniqueKey>\n" + "<defaultSearchField>title</defaultSearchField>\n" + "</schema>\n";
 
     @BeforeClass
@@ -145,10 +147,11 @@ public class SolandraTests {
 
         SolrInputDocument doc = new SolrInputDocument();
 
-        doc.addField("title", "test");
+        doc.addField("title", "test1");
         doc.addField("url", "http://www.test.com");
-        doc.addField("text", "this is a test of Solandra");
-
+        doc.addField("text", "this is a test of Solandra \u5639\u563b");
+        doc.addField("price", 1000);
+        
         solrClient.add(doc);
 
         doc = new SolrInputDocument();
@@ -156,6 +159,8 @@ public class SolandraTests {
         doc.addField("title", "test2");
         doc.addField("url", "http://www.test2.com");
         doc.addField("text", "this is a test2 of Solandra");
+        doc.addField("price", 10000);
+
 
         solrClient.add(doc);
 
@@ -164,6 +169,8 @@ public class SolandraTests {
         doc.addField("title", "test3");
         doc.addField("url", "http://www.test3.com");
         doc.addField("text", "this is a test3 of Solandra");
+        doc.addField("price", 100000);
+
 
         solrClient.add(doc);
 
@@ -172,12 +179,14 @@ public class SolandraTests {
         doc.addField("title", "test4");
         doc.addField("url", "http://www.test4.com");
         doc.addField("text", "this is a test4 of Solandra");
+        doc.addField("price", 10);
 
+        
         solrClient.add(doc);
     }
 
     @Test
-    public void testSearch() throws Exception {
+    public void testAllSearch() throws Exception {
 
         SolrQuery q = new SolrQuery().setQuery("*:*").addField("*").addField("score");
 
@@ -212,5 +221,20 @@ public class SolandraTests {
 
         assertEquals(1, r.getFacetFields().size());
     }
+    
+    @Test
+    public void testNumericSort() throws Exception {
+        SolrQuery q = new SolrQuery().setQuery("price:[8 TO 1003]").addField("*").addField("score");
 
+        QueryResponse r = solrClient.query(q);
+        assertEquals(2, r.getResults().getNumFound());
+    }
+
+    @Test
+    public void testUnicode() throws Exception {
+        SolrQuery q = new SolrQuery().setQuery("text:\u5639\u563b").addField("*").addField("score");
+
+        QueryResponse r = solrClient.query(q);
+        assertEquals(1, r.getResults().getNumFound());
+    }
 }

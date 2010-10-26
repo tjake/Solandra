@@ -20,6 +20,7 @@
 package lucandra;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -46,7 +47,7 @@ public class LucandraFilter extends Filter {
         OpenBitSet docsHit = ((lucandra.IndexReader) reader).getDocsHit();
         
        
-        List<byte[]> filteredValues = new ArrayList<byte[]>();
+        List<ByteBuffer> filteredValues = new ArrayList<ByteBuffer>();
         for(int i=0; i<docsHit.capacity(); i++){          
             if(docsHit.fastGet(i))
                 filteredValues.add(CassandraUtils.writeVInt(i));
