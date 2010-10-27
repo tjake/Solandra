@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import lucandra.CassandraUtils;
 import lucandra.cluster.AbstractIndexManager;
+import lucandra.cluster.IndexManagerService;
 
 import org.apache.log4j.Logger;
 import org.apache.lucene.document.Document;
@@ -95,7 +96,7 @@ public class SolandraIndexWriter extends UpdateHandler {
         try {
 
             //Term updateTerm = null;
-            long docId =  CassandraUtils.indexManager.incrementDocId(core.getName());
+            long docId =  IndexManagerService.indexManager.incrementDocId(core.getName());
                 
             int shard     = AbstractIndexManager.getShardFromDocId(docId);
             int shardedId = AbstractIndexManager.getShardedDocId(docId);

@@ -30,6 +30,7 @@ import java.util.Set;
 import lucandra.CassandraUtils;
 import lucandra.IndexReader;
 import lucandra.cluster.AbstractIndexManager;
+import lucandra.cluster.IndexManagerService;
 
 import org.apache.cassandra.db.Table;
 import org.apache.cassandra.dht.Token;
@@ -121,7 +122,7 @@ public class SolandraReopenComponent extends SearchComponent
         {
 
             // find number of shards
-            long docId = CassandraUtils.indexManager.getCurrentDocId(indexName);
+            long docId = IndexManagerService.indexManager.getCurrentDocId(indexName);
 
             int numShards = AbstractIndexManager.getShardFromDocId(docId);
 

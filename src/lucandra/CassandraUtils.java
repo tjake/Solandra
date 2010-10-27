@@ -91,29 +91,16 @@ public class CassandraUtils
     public static final ByteBuffer           documentMetaFieldBytes;
 
     public static final boolean              indexHashingEnabled    = Boolean.valueOf(System.getProperty(
-                                                                            "index.hashing", "true"));
-
-    public static final JRedisService        service;
-    public static final AbstractIndexManager indexManager;
+            "index.hashing", "true"));
+    
+  
     public static final QueryPath            metaColumnPath;
 
-    public static final Integer              shardsAtOnce           = Integer.valueOf(System.getProperty(
-                                                                            "shads.at.once", "4"));
 
     public static final Charset UTF_8 = Charset.forName("UTF-8");
 
     static
     {
-
-        int database = 11;
-        int connCnt = 7;
-
-        ConnectionSpec connectionSpec = DefaultConnectionSpec.newSpec(System.getProperty("redis.host", "localhost"),
-                Integer.valueOf(System.getProperty("redis.port", "6379")), database, "jredis".getBytes());
-
-        service = new JRedisService(connectionSpec, connCnt);
-        indexManager = new RedisIndexManager(service, shardsAtOnce);
-
         try
         {
             delimeterBytes = delimeter.getBytes("UTF-8");
