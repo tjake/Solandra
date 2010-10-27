@@ -15,7 +15,7 @@ cluster_name: 'Lucandra Cluster'
 # the heaviest-loaded existing node.  If there is no load information
 # available, such as is the case with a new cluster, it will pick
 # a random token, which will lead to hot spots.
-initial_token:
+initial_token: a
 
 # Set to true to make new [non-seed] nodes automatically migrate data
 # to themselves from the pre-existing nodes in the cluster.  Defaults
@@ -47,7 +47,7 @@ data_file_directories:
 # the topology of the ring.  You must change this if you are running
 # multiple nodes!
 seeds:
-    - 127.0.0.1
+    - 67.23.43.19
 
 # Access mode.  mmapped i/o is substantially faster, but only practical on
 # a 64bit machine (which notably does not include EC2 "small" instances)
@@ -83,7 +83,7 @@ storage_port: 7000
 
 # Address to bind to and tell other nodes to connect to. You _must_
 # change this if you want multiple nodes to be able to communicate!
-listen_address: localhost
+listen_address:
 
 # The address to bind the Thrift RPC service to
 rpc_address: localhost
@@ -289,7 +289,7 @@ keyspaces:
           compare_with: BytesType
           keys_cached: .9
 
-        - name: TI
+        - name: TI 
           column_type: Super
           compare_with: lucandra.VIntType
           read_repair_chance: 0.1

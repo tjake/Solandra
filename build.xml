@@ -18,7 +18,7 @@
  ~ specific language governing permissions and limitations
  ~ under the License.
  -->
-<project name="lucandra" default="lucandra.jar" basedir="."
+<project name="lucandra" default="dist" basedir="."
          xmlns:ivy="antlib:org.apache.ivy.ant">
 
         <description>Lucandra</description>
@@ -30,7 +30,7 @@
         <property name="build.classes" location="${build}/classes"/>
         <property name="build.test.classes" location="${build}/test-classes"/>
         <property name="lib"           location="lib" />
-        <property name="cassandra.base" location="../cassandra-trunk"/>
+        <property name="cassandra.base" location="${basedir}"/>
 
         <property name="solr.app"       location="solandra-app"/>
         <property name="solr.resources" location="solr-resources"/>
@@ -123,9 +123,9 @@
 
         <target name="compile" depends="init,resolve">
 
-	  <exec executable="/bin/sh" failonerror="true">
+	  <!--<exec executable="/bin/sh" failonerror="true">
 	    <arg line="-c &quot;ant -f ${cassandra.base}/build.xml jar&quot;"/> 
-	  </exec>
+	  </exec>-->
 
           <javac debug="true" destdir="${build.classes}">
             <src path="${src}"/>
@@ -165,6 +165,7 @@
 
         <target name="clean">
           <delete dir="${build}" />
+          <delete dir="${lib}" />
           <delete dir="${solr.app}" />
           <delete file="lucandra.jar" />
           <delete file="lucandra-tests.jar" />
@@ -185,6 +186,9 @@
             <lib dir="${cassandra.base}/build">
               <include name="**/*.jar" />
             </lib>
+	    <classes dir="${solr.resources}">
+	      <include name="*.properties"/>
+	    </classes>
             <lib file="lucandra.jar"/>
           </war>
         </target>
@@ -196,10 +200,10 @@
           <mkdir dir="${solr.app}/lib" />
           <mkdir dir="${solr.app}/work" />
           <copy todir="${solr.app}/lib">
-            <fileset dir="lib" includes="jetty*.jar,servlet*.jar"/>
+            <fileset dir="lib" includes="jetty*.jar,servlet*.jar,jsp*.jar"/>
           </copy>
           <copy todir="${solr.app}/etc">
-            <fileset dir="${solr.resources}" includes="jetty.xml,webdefault.xml"/>
+            <fileset dir="${solr.resources}" includes="jetty.xml,jetty-logging.xml,webdefault.xml"/>
           </copy>
           <copy file="solr.war" tofile="${solr.app}/webapps/solr.war"/>
           <copy todir="${solr.app}/solr/conf" overwrite="false">

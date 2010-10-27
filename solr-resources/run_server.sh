@@ -32,4 +32,4 @@ JVM_OPTS="$JVM_OPTS -Dcom.sun.management.jmxremote.port=8080"
 JVM_OPTS="$JVM_OPTS -Dcom.sun.management.jmxremote.ssl=false" 
 JVM_OPTS="$JVM_OPTS -Dcom.sun.management.jmxremote.authenticate=false" 
 
-java $JVM_OPTS -Dlog4j.configuration=log4j.properties -Dredis.host=$REDIS_HOST -jar start.jar
+java $JVM_OPTS -Dredis.host=$REDIS_HOST -jar start.jar etc/jetty-logging.xml etc/jetty.xml
