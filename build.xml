@@ -194,6 +194,7 @@
           <mkdir dir="${solr.app}/logs" />
           <mkdir dir="${solr.app}/etc" />
           <mkdir dir="${solr.app}/lib" />
+          <mkdir dir="${solr.app}/work" />
           <copy todir="${solr.app}/lib">
             <fileset dir="lib" includes="jetty*.jar,servlet*.jar"/>
           </copy>

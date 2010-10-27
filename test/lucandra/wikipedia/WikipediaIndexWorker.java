@@ -42,7 +42,7 @@ public class WikipediaIndexWorker implements Callable<Integer> {
     private static final Random r = new Random();
     
     static int port = 8983;
-    static int batchSize = 64;
+    static int batchSize = 4;
     
     //Add shutdown hook for batched commits to complete
     static {
