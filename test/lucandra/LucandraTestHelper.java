@@ -13,6 +13,7 @@ import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.KsDef;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
+import org.apache.thrift.transport.TFramedTransport;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
 import org.junit.BeforeClass;
@@ -30,7 +31,8 @@ public class LucandraTestHelper {
 	@BeforeClass
 	public static void setupServer() throws Exception {
 
-		TTransport transport = new TSocket(System.getProperty("cassandra.host", "localhost"), Integer.parseInt(System.getProperty("cassandra.port", "19160")));
+		TSocket socket = new TSocket(System.getProperty("cassandra.host", "127.0.0.1"), Integer.parseInt(System.getProperty("cassandra.port", "19160")));
+		TTransport transport = new TFramedTransport(socket);
 		TProtocol protocol = new TBinaryProtocol(transport);
 		Cassandra.Client client = new Cassandra.Client(protocol);
 		transport.open();
