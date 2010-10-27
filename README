@@ -109,13 +109,3 @@ What Works
 * Delete
 * Wildcards and other Lucene magic
 * Faceting/Highlighting
-
-What's Missing (for now)
-==============
-* You can't walk the documents with index reader
-
-
-What's Slow (for now)
-=====================
-* Indexes with many documents and very dense terms
-

@@ -6,7 +6,7 @@ import lucandra.CassandraUtils;
 public abstract class AbstractIndexManager {
     
     //To increase throughput we distribute docs across a number of shards at once
-    //The idea being different shards live of different boxes
+    //The idea being different shards live on different boxes
     private final int shardsAtOnce;  
     
     public AbstractIndexManager(int shardsAtOnce){

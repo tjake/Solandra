@@ -32,23 +32,13 @@ public class UtilitiesTests extends TestCase {
         for(int i=0; i<CassandraUtils.maxDocsPerShard*shardsAtOnce+1; i++){
             id = docCounter.incrementDocId(indexName);
             
-            if(id < 1000)
+            if(i < 1000)
                 System.err.println(id);
         }
         
         assertEquals(CassandraUtils.maxDocsPerShard, id);
     }
     
-    public void testBitSetUtil(){
-        byte[] bytes = BitSetUtils.create(31);
-        
-        assertEquals(bytes.length, (int)Math.ceil(32/8.0));
-        
-        assertFalse(BitSetUtils.get(bytes, 0));
-        BitSetUtils.set(bytes, 0);
-        assertTrue(BitSetUtils.get(bytes, 0));
-        
-    }
     
     public void testVInt(){
         ByteBuffer ibytes = CassandraUtils.writeVInt(1977);
@@ -56,5 +46,4 @@ public class UtilitiesTests extends TestCase {
         assertEquals(1977, CassandraUtils.readVInt(ibytes));
     }
     
-   
 }

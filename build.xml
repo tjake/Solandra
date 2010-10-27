@@ -30,12 +30,9 @@
         <property name="build.classes" location="${build}/classes"/>
         <property name="build.test.classes" location="${build}/test-classes"/>
         <property name="lib"           location="lib" />
-        <property name="cassandra.lib" location="../apache-cassandra-0.7.0-beta2/lib"/>
-        <property name="cassandra.host" value="127.0.0.1"/>
-        <property name="cassandra.port" value="9160"/>
-        <property name="cassandra.framed" value="false"/>
+        <property name="cassandra.base" location="../cassandra-trunk"/>
 
-        <property name="solr.app"       location="solr-app"/>
+        <property name="solr.app"       location="solandra-app"/>
         <property name="solr.resources" location="solr-resources"/>
 
         <!-- ivy properties -->
@@ -114,7 +111,10 @@
           <fileset dir="${lib}">
             <include name="**/*.jar" />
           </fileset>
-          <fileset dir="${cassandra.lib}">
+          <fileset dir="${cassandra.base}/lib">
+            <include name="**/*.jar" />
+          </fileset>
+          <fileset dir="${cassandra.base}/build">
             <include name="**/*.jar" />
           </fileset>
           <path refid="autoivy.classpath" />
@@ -122,6 +122,11 @@
 
 
         <target name="compile" depends="init,resolve">
+
+	  <exec executable="/bin/sh" failonerror="true">
+	    <arg line="-c &quot;ant -f ${cassandra.base}/build.xml jar&quot;"/> 
+	  </exec>
+
           <javac debug="true" destdir="${build.classes}">
             <src path="${src}"/>
             <classpath refid="lucandra.classpath"/>
@@ -158,12 +163,6 @@
           <jar jarfile="lucandra-tests.jar" basedir="${build.test.classes}" />
         </target>
 
-        <target name="demo" depends="compile.tests">
-          <java classname="lucandra.demo.BookmarksDemo">
-            <classpath refid="lucandra.classpath"/>
-          </java>
-        </target>
-
         <target name="clean">
           <delete dir="${build}" />
           <delete dir="${solr.app}" />
@@ -180,7 +179,10 @@
               <exclude name="servlet-api*.jar" />
               <exclude name="easymock.jar" />
             </lib>
-            <lib dir="${cassandra.lib}">
+            <lib dir="${cassandra.base}/lib">
+              <include name="**/*.jar" />
+            </lib>
+            <lib dir="${cassandra.base}/build">
               <include name="**/*.jar" />
             </lib>
             <lib file="lucandra.jar"/>
@@ -208,8 +210,8 @@
           <chmod dir="${solr.app}" perm="755" includes="run_server.sh"/>
           <copy file="${solr.resources}/start.jar" tofile="${solr.app}/start.jar"/>
           <copy file="${solr.resources}/cassandra.yaml" tofile="${solr.app}/cassandra.yaml"/>
-          <echo>Solr successfully builded.</echo>
-          <echo>You can excute the following command to start the server:Solr successfully builded.</echo>
-          <echo>cd ${solr.app}; java -Xmx1G -jar start.jar</echo>
+          <echo>Solandra successfully built</echo>
+          <echo>You can excute the following command to start the server.</echo>
+          <echo>cd ${solr.app}; run_server.sh</echo>
         </target>
 </project>
