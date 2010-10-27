@@ -18,6 +18,7 @@ package lucandra.search;
  */
 
 import java.io.PrintStream;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -117,7 +118,7 @@ public abstract class LucandraTestCase extends TestCase {
 
 					if (keySlice.getColumns().size() > 0) {
 						ColumnPath path = new ColumnPath(cfName);
-						conn.remove(key, path,
+						conn.remove(ByteBuffer.wrap(key), path,
 								System.currentTimeMillis(),
 								ConsistencyLevel.ONE);
 					}

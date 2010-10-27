@@ -23,6 +23,7 @@ import static lucandra.ByteHelper.getBytes;
 
 import java.io.IOException;
 import java.io.StringReader;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -69,7 +70,7 @@ public class IndexWriter {
 	private final IndexContext context;
 	private final ColumnPath docAllColumnPath;
 	private boolean autoCommit;
-	private static final ThreadLocal<Map<byte[], Map<String, List<Mutation>>>> mutationMap = new ThreadLocal<Map<byte[], Map<String, List<Mutation>>>>();
+	private static final ThreadLocal<Map<ByteBuffer, Map<String, List<Mutation>>>> mutationMap = new ThreadLocal<Map<ByteBuffer, Map<String, List<Mutation>>>>();
 
 	private Similarity similarity = Similarity.getDefault(); // how to
 																// normalize;
@@ -311,7 +312,7 @@ public class IndexWriter {
             ColumnParent cp = new ColumnParent(context.getTermColumnFamily());
             byte[] key = CassandraUtils.hashKeyBytes(indexName,CassandraUtils.delimeterBytes,term.field().getBytes("UTF-8"), CassandraUtils.delimeterBytes, term.text().getBytes("UTF-8"));
             
-            List<ColumnOrSuperColumn> docs = context.getClient().get_slice(key, cp, new SlicePredicate().setSlice_range(new SliceRange(new byte[]{}, new byte[]{},true,Integer.MAX_VALUE)), context.getConsistencyLevel());
+            List<ColumnOrSuperColumn> docs = context.getClient().get_slice(ByteBuffer.wrap(key), cp, new SlicePredicate().setSlice_range(new SliceRange(ByteBuffer.wrap(new byte[]{}), ByteBuffer.wrap(new byte[]{}),true,Integer.MAX_VALUE)), context.getConsistencyLevel());
                 
             //delete by documentId
             for(ColumnOrSuperColumn docInfo : docs){
@@ -340,10 +341,10 @@ public class IndexWriter {
 
         byte[] key =  CassandraUtils.hashKeyBytes(indexName,CassandraUtils.delimeterBytes,docId);
 
-        ColumnOrSuperColumn column = context.getClient().get(key, context.getMetaColumnPath(), context.getConsistencyLevel());
+        ColumnOrSuperColumn column = context.getClient().get(ByteBuffer.wrap(key), context.getMetaColumnPath(), context.getConsistencyLevel());
 
         
-        List<Term> terms = (List<Term>) CassandraUtils.fromBytes(column.column.value);
+        List<Term> terms = (List<Term>) CassandraUtils.fromBytes(column.column.getValue());
     
         for(Term term : terms){
             
@@ -362,7 +363,7 @@ public class IndexWriter {
         
         
         //FIXME: once cassandra batch mutation supports slice predicates in deletions
-        context.getClient().remove(selfKey, docAllColumnPath, System.currentTimeMillis(), context.getConsistencyLevel());
+        context.getClient().remove(ByteBuffer.wrap(selfKey), docAllColumnPath, System.currentTimeMillis(), context.getConsistencyLevel());
 
     }
     
@@ -392,12 +393,12 @@ public class IndexWriter {
         }
     }
     
-    private Map<byte[],Map<String,List<Mutation>>> getMutationMap() {
+    private Map<ByteBuffer,Map<String,List<Mutation>>> getMutationMap() {
         
-        Map<byte[],Map<String,List<Mutation>>> map = mutationMap.get();
+        Map<ByteBuffer,Map<String,List<Mutation>>> map = mutationMap.get();
         
         if(map == null){
-            map = new ConcurrentSkipListMap<byte[],Map<String,List<Mutation>>>(CassandraUtils.byteArrayComparator);
+            map = new ConcurrentSkipListMap<ByteBuffer,Map<String,List<Mutation>>>(CassandraUtils.byteBufferComparator);
             mutationMap.set(map);
         }
 

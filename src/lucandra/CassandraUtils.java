@@ -83,11 +83,11 @@ public class CassandraUtils {
 
     public static final byte[] finalTokenBytes 	   = getBytes(finalToken);
 
-    public static final List<byte[]> allTermColumns = Arrays.asList(
-            CassandraUtils.termFrequencyKey.getBytes(),
-            CassandraUtils.positionVectorKey.getBytes(),
-            CassandraUtils.normsKey.getBytes(),
-            CassandraUtils.offsetVectorKey.getBytes());
+    public static final List<ByteBuffer> allTermColumns = Arrays.asList(
+    		ByteBuffer.wrap(CassandraUtils.termFrequencyKey.getBytes()),
+    		ByteBuffer.wrap(CassandraUtils.positionVectorKey.getBytes()),
+			ByteBuffer.wrap(CassandraUtils.normsKey.getBytes()),
+			ByteBuffer.wrap(CassandraUtils.offsetVectorKey.getBytes()));
     
     public static final String documentIdField     = System.getProperty("lucandra.id.field",delimeter+"KEY"+delimeter);
     public static final String documentMetaField   = delimeter+"META"+delimeter;
@@ -207,6 +207,28 @@ public class CassandraUtils {
             return compareByteArrays(o1, o2);
         }
     };
+    
+    public static final Comparator<ByteBuffer> byteBufferComparator = new Comparator<ByteBuffer>()
+    {
+        public int compare(ByteBuffer b1, ByteBuffer b2)
+        {
+        	if(b1 == null){
+        		if(b2 == null){
+        			return 0;
+        		}
+        		
+        		return 1;
+        	}
+        	
+        	if(b2 == null){
+        		return -1;
+        	}
+        	
+        	return b1.compareTo(b2);
+        	
+        	
+        }
+    };
 
     public static int compareByteArrays(byte[] bytes1, byte[] bytes2) {
 
@@ -280,14 +302,16 @@ public class CassandraUtils {
 
     }
 
-    public static void addToMutationMap(Map<byte[],Map<String,List<Mutation>>> mutationMap, String columnFamily, byte[] column, byte[] key, byte[] value, Map<String,List<Number>> superColumns){
+    public static void addToMutationMap(Map<ByteBuffer,Map<String,List<Mutation>>> mutationMap, String columnFamily, byte[] column, byte[] key, byte[] value, Map<String,List<Number>> superColumns){
         Long clock = System.currentTimeMillis();
         
-        Map<String,List<Mutation>> cfMutation = mutationMap.get(key);
+        ByteBuffer wrappedKey = ByteBuffer.wrap(key);
+        
+        Map<String,List<Mutation>> cfMutation = mutationMap.get(wrappedKey);
         
         if(cfMutation == null){
             cfMutation = new HashMap<String,List<Mutation>>();
-            mutationMap.put(key, cfMutation);
+            mutationMap.put(wrappedKey, cfMutation);
         }
        
         Mutation mutation = new Mutation();
@@ -319,7 +343,7 @@ public class CassandraUtils {
                 //FIXME: Somthing ain't right, we shouldn't need to specify these to work
                 d.setPredicate(new SlicePredicate().setColumn_names(allTermColumns));
             }else{
-                d.setPredicate(new SlicePredicate().setSlice_range(new SliceRange(new byte[]{}, new byte[]{},false,Integer.MAX_VALUE)));
+                d.setPredicate(new SlicePredicate().setSlice_range(new SliceRange(ByteBuffer.wrap(new byte[]{}), ByteBuffer.wrap(new byte[]{}),false,Integer.MAX_VALUE)));
             }
             
             mutation.setDeletion(d);
@@ -348,7 +372,7 @@ public class CassandraUtils {
                 }
                 
                 
-                cc.setColumn(new Column(column, value, clock));                    
+                cc.setColumn(new Column(ByteBuffer.wrap(column), ByteBuffer.wrap(value), clock));                    
             
             } else {
                 
@@ -361,7 +385,7 @@ public class CassandraUtils {
                 for(Map.Entry<String, List<Number>> e : superColumns.entrySet()){        
                     
                     try {
-                        columns.add(new Column(e.getKey().getBytes("UTF-8"), intVectorToByteArray(e.getValue()), clock));
+                        columns.add(new Column(ByteBuffer.wrap(e.getKey().getBytes("UTF-8")), ByteBuffer.wrap(intVectorToByteArray(e.getValue())), clock));
                     } catch (UnsupportedEncodingException e1) {
                         throw new RuntimeException("UTF-8 not supported by this JVM");
                     }
@@ -378,7 +402,7 @@ public class CassandraUtils {
     }
     
 
-    public static void robustBatchInsert(IndexContext context, Map<byte[],Map<String,List<Mutation>>> mutationMap) {
+    public static void robustBatchInsert(IndexContext context, Map<ByteBuffer ,Map<String,List<Mutation>>> mutationMap) {
         // Should use a circut breaker here
         boolean try_again = false;
         int attempts = 0;

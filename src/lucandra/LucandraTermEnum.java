@@ -21,6 +21,7 @@ package lucandra;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -260,7 +261,7 @@ public class LucandraTermEnum extends TermEnum {
         kr.setCount(count);
 
         // Get all columns
-        SliceRange sliceRange = new SliceRange(new byte[] {}, new byte[] {}, true, Integer.MAX_VALUE);
+        SliceRange sliceRange = new SliceRange(ByteBuffer.wrap(new byte[] {}), ByteBuffer.wrap(new byte[] {}), true, Integer.MAX_VALUE);
         slicePredicate.setSlice_range(sliceRange);
                
         List<KeySlice> columns;
@@ -384,14 +385,14 @@ public class LucandraTermEnum extends TermEnum {
 
         
         for (byte[] docNum : docNums) {
-            slicePredicate.addToColumn_names(docNum);
+            slicePredicate.addToColumn_names(ByteBuffer.wrap(docNum));
         }
 
         
 
         List<ColumnOrSuperColumn> columsList = null;
         try {
-            columsList = context.getClient().get_slice(key, parent, slicePredicate, context.getConsistencyLevel());
+            columsList = context.getClient().get_slice(ByteBuffer.wrap(key), parent, slicePredicate, context.getConsistencyLevel());
         } catch (InvalidRequestException e) {
             throw new RuntimeException(e);
         } catch (UnavailableException e) {
