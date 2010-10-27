@@ -103,6 +103,11 @@ public class CassandraProxyClient implements java.lang.reflect.InvocationHandler
         return client;
     }
     
+    private void setClient(Cassandra.Iface client)
+    {
+        clientPool.set(client);
+    }
+    
     private synchronized void checkRing() {
         
         Cassandra.Iface client  = getClient();
@@ -199,7 +204,7 @@ public class CassandraProxyClient implements java.lang.reflect.InvocationHandler
          
         
         logger.info("Connected to cassandra at "+endpoint+":"+port);       
-        
+        setClient(client);
         return client;
     }
     
@@ -224,8 +229,9 @@ public class CassandraProxyClient implements java.lang.reflect.InvocationHandler
                 if(breaker.allow()){                
                     result = m.invoke(client, args);
                     breaker.success();
-		    return result;
+                    return result;
                 }else{
+                    
                     while(!breaker.allow()){
                         Thread.sleep(1050); //sleep and try again
                     }
