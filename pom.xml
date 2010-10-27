@@ -243,14 +243,14 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
-					<includes>
-						<include>**/*Test*.java</include>
-					</includes>
 					<systemPropertyVariables>
 						<cassandra.host>127.0.0.1</cassandra.host>
 						<cassandra.port>19160</cassandra.port>
 						<cassandra.framed>true</cassandra.framed>
 					</systemPropertyVariables>
+					<includes>
+						<include>**/*Test*.java</include>
+					</includes>
 				</configuration>
 			</plugin>
 

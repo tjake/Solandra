@@ -61,11 +61,15 @@ public class LucandraTestHelper {
 			termInfo.setComparator_type("BytesType");
 			termInfo.setColumn_type("Super");
 			termInfo.setSubcomparator_type("BytesType");
+			termInfo.setRow_cache_size(1000);
+			termInfo.setKey_cache_size(1000);
 
 			columns.add(termInfo);
 
 			CfDef documents = new CfDef(keyspace, "Documents");
 			termInfo.setComparator_type("BytesType");
+			documents.setRow_cache_size(1000);
+			documents.setKey_cache_size(1000);
 
 			columns.add(documents);
 			
