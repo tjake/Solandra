@@ -37,6 +37,7 @@ import java.util.HashSet;
 import java.util.EnumSet;
 import java.util.Collections;
 import java.util.BitSet;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,7 +64,7 @@ public class Cassandra {
      * @param column_path
      * @param consistency_level
      */
-    public ColumnOrSuperColumn get(byte[] key, ColumnPath column_path, ConsistencyLevel consistency_level) throws InvalidRequestException, NotFoundException, UnavailableException, TimedOutException, TException;
+    public ColumnOrSuperColumn get(ByteBuffer key, ColumnPath column_path, ConsistencyLevel consistency_level) throws InvalidRequestException, NotFoundException, UnavailableException, TimedOutException, TException;
 
     /**
      * Get the group of columns contained by column_parent (either a ColumnFamily name or a ColumnFamily/SuperColumn name
@@ -74,7 +75,7 @@ public class Cassandra {
      * @param predicate
      * @param consistency_level
      */
-    public List<ColumnOrSuperColumn> get_slice(byte[] key, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException;
+    public List<ColumnOrSuperColumn> get_slice(ByteBuffer key, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException;
 
     /**
      * returns the number of columns matching <code>predicate</code> for a particular <code>key</code>,
@@ -85,7 +86,7 @@ public class Cassandra {
      * @param predicate
      * @param consistency_level
      */
-    public int get_count(byte[] key, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException;
+    public int get_count(ByteBuffer key, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException;
 
     /**
      * Performs a get_slice for column_parent and predicate for the given keys in parallel.
@@ -95,7 +96,7 @@ public class Cassandra {
      * @param predicate
      * @param consistency_level
      */
-    public Map<byte[],List<ColumnOrSuperColumn>> multiget_slice(List<byte[]> keys, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException;
+    public Map<ByteBuffer,List<ColumnOrSuperColumn>> multiget_slice(List<ByteBuffer> keys, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException;
 
     /**
      * Perform a get_count in parallel on the given list<binary> keys. The return value maps keys to the count found.
@@ -105,7 +106,7 @@ public class Cassandra {
      * @param predicate
      * @param consistency_level
      */
-    public Map<byte[],Integer> multiget_count(List<byte[]> keys, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException;
+    public Map<ByteBuffer,Integer> multiget_count(List<ByteBuffer> keys, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException;
 
     /**
      * returns a subset of columns for a contiguous range of keys.
@@ -135,7 +136,7 @@ public class Cassandra {
      * @param column
      * @param consistency_level
      */
-    public void insert(byte[] key, ColumnParent column_parent, Column column, ConsistencyLevel consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException;
+    public void insert(ByteBuffer key, ColumnParent column_parent, Column column, ConsistencyLevel consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException;
 
     /**
      * Remove data from the row specified by key at the granularity specified by column_path, and the given timestamp. Note
@@ -147,7 +148,7 @@ public class Cassandra {
      * @param timestamp
      * @param consistency_level
      */
-    public void remove(byte[] key, ColumnPath column_path, long timestamp, ConsistencyLevel consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException;
+    public void remove(ByteBuffer key, ColumnPath column_path, long timestamp, ConsistencyLevel consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException;
 
     /**
      *   Mutate many columns or super columns for many row keys. See also: Mutation.
@@ -158,7 +159,7 @@ public class Cassandra {
      * @param mutation_map
      * @param consistency_level
      */
-    public void batch_mutate(Map<byte[],Map<String,List<Mutation>>> mutation_map, ConsistencyLevel consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException;
+    public void batch_mutate(Map<ByteBuffer,Map<String,List<Mutation>>> mutation_map, ConsistencyLevel consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException;
 
     /**
      * Truncate will mark and entire column family as deleted.
@@ -182,7 +183,7 @@ public class Cassandra {
     /**
      * list the defined keyspaces in this cluster
      */
-    public List<KsDef> describe_keyspaces() throws TException;
+    public List<KsDef> describe_keyspaces() throws InvalidRequestException, TException;
 
     /**
      * get the cluster name
@@ -223,7 +224,7 @@ public class Cassandra {
      * 
      * @param keyspace
      */
-    public KsDef describe_keyspace(String keyspace) throws NotFoundException, TException;
+    public KsDef describe_keyspace(String keyspace) throws NotFoundException, InvalidRequestException, TException;
 
     /**
      * experimental API for hadoop/parallel query support.
@@ -254,14 +255,6 @@ public class Cassandra {
     public String system_drop_column_family(String column_family) throws InvalidRequestException, TException;
 
     /**
-     * renames a column family. returns the new schema id.
-     * 
-     * @param old_name
-     * @param new_name
-     */
-    public String system_rename_column_family(String old_name, String new_name) throws InvalidRequestException, TException;
-
-    /**
      * adds a keyspace and any column families that are part of it. returns the new schema id.
      * 
      * @param ks_def
@@ -274,14 +267,6 @@ public class Cassandra {
      * @param keyspace
      */
     public String system_drop_keyspace(String keyspace) throws InvalidRequestException, TException;
-
-    /**
-     * renames a keyspace. returns the new schema id.
-     * 
-     * @param old_name
-     * @param new_name
-     */
-    public String system_rename_keyspace(String old_name, String new_name) throws InvalidRequestException, TException;
 
     /**
      * updates properties of a keyspace. returns the new schema id.
@@ -305,25 +290,25 @@ public class Cassandra {
 
     public void set_keyspace(String keyspace, AsyncMethodCallback<AsyncClient.set_keyspace_call> resultHandler) throws TException;
 
-    public void get(byte[] key, ColumnPath column_path, ConsistencyLevel consistency_level, AsyncMethodCallback<AsyncClient.get_call> resultHandler) throws TException;
+    public void get(ByteBuffer key, ColumnPath column_path, ConsistencyLevel consistency_level, AsyncMethodCallback<AsyncClient.get_call> resultHandler) throws TException;
 
-    public void get_slice(byte[] key, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level, AsyncMethodCallback<AsyncClient.get_slice_call> resultHandler) throws TException;
+    public void get_slice(ByteBuffer key, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level, AsyncMethodCallback<AsyncClient.get_slice_call> resultHandler) throws TException;
 
-    public void get_count(byte[] key, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level, AsyncMethodCallback<AsyncClient.get_count_call> resultHandler) throws TException;
+    public void get_count(ByteBuffer key, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level, AsyncMethodCallback<AsyncClient.get_count_call> resultHandler) throws TException;
 
-    public void multiget_slice(List<byte[]> keys, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level, AsyncMethodCallback<AsyncClient.multiget_slice_call> resultHandler) throws TException;
+    public void multiget_slice(List<ByteBuffer> keys, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level, AsyncMethodCallback<AsyncClient.multiget_slice_call> resultHandler) throws TException;
 
-    public void multiget_count(List<byte[]> keys, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level, AsyncMethodCallback<AsyncClient.multiget_count_call> resultHandler) throws TException;
+    public void multiget_count(List<ByteBuffer> keys, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level, AsyncMethodCallback<AsyncClient.multiget_count_call> resultHandler) throws TException;
 
     public void get_range_slices(ColumnParent column_parent, SlicePredicate predicate, KeyRange range, ConsistencyLevel consistency_level, AsyncMethodCallback<AsyncClient.get_range_slices_call> resultHandler) throws TException;
 
     public void get_indexed_slices(ColumnParent column_parent, IndexClause index_clause, SlicePredicate column_predicate, ConsistencyLevel consistency_level, AsyncMethodCallback<AsyncClient.get_indexed_slices_call> resultHandler) throws TException;
 
-    public void insert(byte[] key, ColumnParent column_parent, Column column, ConsistencyLevel consistency_level, AsyncMethodCallback<AsyncClient.insert_call> resultHandler) throws TException;
+    public void insert(ByteBuffer key, ColumnParent column_parent, Column column, ConsistencyLevel consistency_level, AsyncMethodCallback<AsyncClient.insert_call> resultHandler) throws TException;
 
-    public void remove(byte[] key, ColumnPath column_path, long timestamp, ConsistencyLevel consistency_level, AsyncMethodCallback<AsyncClient.remove_call> resultHandler) throws TException;
+    public void remove(ByteBuffer key, ColumnPath column_path, long timestamp, ConsistencyLevel consistency_level, AsyncMethodCallback<AsyncClient.remove_call> resultHandler) throws TException;
 
-    public void batch_mutate(Map<byte[],Map<String,List<Mutation>>> mutation_map, ConsistencyLevel consistency_level, AsyncMethodCallback<AsyncClient.batch_mutate_call> resultHandler) throws TException;
+    public void batch_mutate(Map<ByteBuffer,Map<String,List<Mutation>>> mutation_map, ConsistencyLevel consistency_level, AsyncMethodCallback<AsyncClient.batch_mutate_call> resultHandler) throws TException;
 
     public void truncate(String cfname, AsyncMethodCallback<AsyncClient.truncate_call> resultHandler) throws TException;
 
@@ -349,13 +334,9 @@ public class Cassandra {
 
     public void system_drop_column_family(String column_family, AsyncMethodCallback<AsyncClient.system_drop_column_family_call> resultHandler) throws TException;
 
-    public void system_rename_column_family(String old_name, String new_name, AsyncMethodCallback<AsyncClient.system_rename_column_family_call> resultHandler) throws TException;
-
     public void system_add_keyspace(KsDef ks_def, AsyncMethodCallback<AsyncClient.system_add_keyspace_call> resultHandler) throws TException;
 
     public void system_drop_keyspace(String keyspace, AsyncMethodCallback<AsyncClient.system_drop_keyspace_call> resultHandler) throws TException;
-
-    public void system_rename_keyspace(String old_name, String new_name, AsyncMethodCallback<AsyncClient.system_rename_keyspace_call> resultHandler) throws TException;
 
     public void system_update_keyspace(KsDef ks_def, AsyncMethodCallback<AsyncClient.system_update_keyspace_call> resultHandler) throws TException;
 
@@ -475,13 +456,13 @@ public class Cassandra {
       return;
     }
 
-    public ColumnOrSuperColumn get(byte[] key, ColumnPath column_path, ConsistencyLevel consistency_level) throws InvalidRequestException, NotFoundException, UnavailableException, TimedOutException, TException
+    public ColumnOrSuperColumn get(ByteBuffer key, ColumnPath column_path, ConsistencyLevel consistency_level) throws InvalidRequestException, NotFoundException, UnavailableException, TimedOutException, TException
     {
       send_get(key, column_path, consistency_level);
       return recv_get();
     }
 
-    public void send_get(byte[] key, ColumnPath column_path, ConsistencyLevel consistency_level) throws TException
+    public void send_get(ByteBuffer key, ColumnPath column_path, ConsistencyLevel consistency_level) throws TException
     {
       oprot_.writeMessageBegin(new TMessage("get", TMessageType.CALL, ++seqid_));
       get_args args = new get_args();
@@ -525,13 +506,13 @@ public class Cassandra {
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "get failed: unknown result");
     }
 
-    public List<ColumnOrSuperColumn> get_slice(byte[] key, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException
+    public List<ColumnOrSuperColumn> get_slice(ByteBuffer key, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException
     {
       send_get_slice(key, column_parent, predicate, consistency_level);
       return recv_get_slice();
     }
 
-    public void send_get_slice(byte[] key, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level) throws TException
+    public void send_get_slice(ByteBuffer key, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level) throws TException
     {
       oprot_.writeMessageBegin(new TMessage("get_slice", TMessageType.CALL, ++seqid_));
       get_slice_args args = new get_slice_args();
@@ -573,13 +554,13 @@ public class Cassandra {
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "get_slice failed: unknown result");
     }
 
-    public int get_count(byte[] key, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException
+    public int get_count(ByteBuffer key, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException
     {
       send_get_count(key, column_parent, predicate, consistency_level);
       return recv_get_count();
     }
 
-    public void send_get_count(byte[] key, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level) throws TException
+    public void send_get_count(ByteBuffer key, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level) throws TException
     {
       oprot_.writeMessageBegin(new TMessage("get_count", TMessageType.CALL, ++seqid_));
       get_count_args args = new get_count_args();
@@ -621,13 +602,13 @@ public class Cassandra {
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "get_count failed: unknown result");
     }
 
-    public Map<byte[],List<ColumnOrSuperColumn>> multiget_slice(List<byte[]> keys, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException
+    public Map<ByteBuffer,List<ColumnOrSuperColumn>> multiget_slice(List<ByteBuffer> keys, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException
     {
       send_multiget_slice(keys, column_parent, predicate, consistency_level);
       return recv_multiget_slice();
     }
 
-    public void send_multiget_slice(List<byte[]> keys, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level) throws TException
+    public void send_multiget_slice(List<ByteBuffer> keys, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level) throws TException
     {
       oprot_.writeMessageBegin(new TMessage("multiget_slice", TMessageType.CALL, ++seqid_));
       multiget_slice_args args = new multiget_slice_args();
@@ -640,7 +621,7 @@ public class Cassandra {
       oprot_.getTransport().flush();
     }
 
-    public Map<byte[],List<ColumnOrSuperColumn>> recv_multiget_slice() throws InvalidRequestException, UnavailableException, TimedOutException, TException
+    public Map<ByteBuffer,List<ColumnOrSuperColumn>> recv_multiget_slice() throws InvalidRequestException, UnavailableException, TimedOutException, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -669,13 +650,13 @@ public class Cassandra {
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "multiget_slice failed: unknown result");
     }
 
-    public Map<byte[],Integer> multiget_count(List<byte[]> keys, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException
+    public Map<ByteBuffer,Integer> multiget_count(List<ByteBuffer> keys, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException
     {
       send_multiget_count(keys, column_parent, predicate, consistency_level);
       return recv_multiget_count();
     }
 
-    public void send_multiget_count(List<byte[]> keys, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level) throws TException
+    public void send_multiget_count(List<ByteBuffer> keys, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level) throws TException
     {
       oprot_.writeMessageBegin(new TMessage("multiget_count", TMessageType.CALL, ++seqid_));
       multiget_count_args args = new multiget_count_args();
@@ -688,7 +669,7 @@ public class Cassandra {
       oprot_.getTransport().flush();
     }
 
-    public Map<byte[],Integer> recv_multiget_count() throws InvalidRequestException, UnavailableException, TimedOutException, TException
+    public Map<ByteBuffer,Integer> recv_multiget_count() throws InvalidRequestException, UnavailableException, TimedOutException, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -813,13 +794,13 @@ public class Cassandra {
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "get_indexed_slices failed: unknown result");
     }
 
-    public void insert(byte[] key, ColumnParent column_parent, Column column, ConsistencyLevel consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException
+    public void insert(ByteBuffer key, ColumnParent column_parent, Column column, ConsistencyLevel consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException
     {
       send_insert(key, column_parent, column, consistency_level);
       recv_insert();
     }
 
-    public void send_insert(byte[] key, ColumnParent column_parent, Column column, ConsistencyLevel consistency_level) throws TException
+    public void send_insert(ByteBuffer key, ColumnParent column_parent, Column column, ConsistencyLevel consistency_level) throws TException
     {
       oprot_.writeMessageBegin(new TMessage("insert", TMessageType.CALL, ++seqid_));
       insert_args args = new insert_args();
@@ -858,13 +839,13 @@ public class Cassandra {
       return;
     }
 
-    public void remove(byte[] key, ColumnPath column_path, long timestamp, ConsistencyLevel consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException
+    public void remove(ByteBuffer key, ColumnPath column_path, long timestamp, ConsistencyLevel consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException
     {
       send_remove(key, column_path, timestamp, consistency_level);
       recv_remove();
     }
 
-    public void send_remove(byte[] key, ColumnPath column_path, long timestamp, ConsistencyLevel consistency_level) throws TException
+    public void send_remove(ByteBuffer key, ColumnPath column_path, long timestamp, ConsistencyLevel consistency_level) throws TException
     {
       oprot_.writeMessageBegin(new TMessage("remove", TMessageType.CALL, ++seqid_));
       remove_args args = new remove_args();
@@ -903,13 +884,13 @@ public class Cassandra {
       return;
     }
 
-    public void batch_mutate(Map<byte[],Map<String,List<Mutation>>> mutation_map, ConsistencyLevel consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException
+    public void batch_mutate(Map<ByteBuffer,Map<String,List<Mutation>>> mutation_map, ConsistencyLevel consistency_level) throws InvalidRequestException, UnavailableException, TimedOutException, TException
     {
       send_batch_mutate(mutation_map, consistency_level);
       recv_batch_mutate();
     }
 
-    public void send_batch_mutate(Map<byte[],Map<String,List<Mutation>>> mutation_map, ConsistencyLevel consistency_level) throws TException
+    public void send_batch_mutate(Map<ByteBuffer,Map<String,List<Mutation>>> mutation_map, ConsistencyLevel consistency_level) throws TException
     {
       oprot_.writeMessageBegin(new TMessage("batch_mutate", TMessageType.CALL, ++seqid_));
       batch_mutate_args args = new batch_mutate_args();
@@ -1023,7 +1004,7 @@ public class Cassandra {
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "describe_schema_versions failed: unknown result");
     }
 
-    public List<KsDef> describe_keyspaces() throws TException
+    public List<KsDef> describe_keyspaces() throws InvalidRequestException, TException
     {
       send_describe_keyspaces();
       return recv_describe_keyspaces();
@@ -1038,7 +1019,7 @@ public class Cassandra {
       oprot_.getTransport().flush();
     }
 
-    public List<KsDef> recv_describe_keyspaces() throws TException
+    public List<KsDef> recv_describe_keyspaces() throws InvalidRequestException, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -1054,6 +1035,9 @@ public class Cassandra {
       iprot_.readMessageEnd();
       if (result.isSetSuccess()) {
         return result.success;
+      }
+      if (result.ire != null) {
+        throw result.ire;
       }
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "describe_keyspaces failed: unknown result");
     }
@@ -1237,7 +1221,7 @@ public class Cassandra {
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "describe_snitch failed: unknown result");
     }
 
-    public KsDef describe_keyspace(String keyspace) throws NotFoundException, TException
+    public KsDef describe_keyspace(String keyspace) throws NotFoundException, InvalidRequestException, TException
     {
       send_describe_keyspace(keyspace);
       return recv_describe_keyspace();
@@ -1253,7 +1237,7 @@ public class Cassandra {
       oprot_.getTransport().flush();
     }
 
-    public KsDef recv_describe_keyspace() throws NotFoundException, TException
+    public KsDef recv_describe_keyspace() throws NotFoundException, InvalidRequestException, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -1272,6 +1256,9 @@ public class Cassandra {
       }
       if (result.nfe != null) {
         throw result.nfe;
+      }
+      if (result.ire != null) {
+        throw result.ire;
       }
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "describe_keyspace failed: unknown result");
     }
@@ -1393,46 +1380,6 @@ public class Cassandra {
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "system_drop_column_family failed: unknown result");
     }
 
-    public String system_rename_column_family(String old_name, String new_name) throws InvalidRequestException, TException
-    {
-      send_system_rename_column_family(old_name, new_name);
-      return recv_system_rename_column_family();
-    }
-
-    public void send_system_rename_column_family(String old_name, String new_name) throws TException
-    {
-      oprot_.writeMessageBegin(new TMessage("system_rename_column_family", TMessageType.CALL, ++seqid_));
-      system_rename_column_family_args args = new system_rename_column_family_args();
-      args.setOld_name(old_name);
-      args.setNew_name(new_name);
-      args.write(oprot_);
-      oprot_.writeMessageEnd();
-      oprot_.getTransport().flush();
-    }
-
-    public String recv_system_rename_column_family() throws InvalidRequestException, TException
-    {
-      TMessage msg = iprot_.readMessageBegin();
-      if (msg.type == TMessageType.EXCEPTION) {
-        TApplicationException x = TApplicationException.read(iprot_);
-        iprot_.readMessageEnd();
-        throw x;
-      }
-      if (msg.seqid != seqid_) {
-        throw new TApplicationException(TApplicationException.BAD_SEQUENCE_ID, "system_rename_column_family failed: out of sequence response");
-      }
-      system_rename_column_family_result result = new system_rename_column_family_result();
-      result.read(iprot_);
-      iprot_.readMessageEnd();
-      if (result.isSetSuccess()) {
-        return result.success;
-      }
-      if (result.ire != null) {
-        throw result.ire;
-      }
-      throw new TApplicationException(TApplicationException.MISSING_RESULT, "system_rename_column_family failed: unknown result");
-    }
-
     public String system_add_keyspace(KsDef ks_def) throws InvalidRequestException, TException
     {
       send_system_add_keyspace(ks_def);
@@ -1509,46 +1456,6 @@ public class Cassandra {
         throw result.ire;
       }
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "system_drop_keyspace failed: unknown result");
-    }
-
-    public String system_rename_keyspace(String old_name, String new_name) throws InvalidRequestException, TException
-    {
-      send_system_rename_keyspace(old_name, new_name);
-      return recv_system_rename_keyspace();
-    }
-
-    public void send_system_rename_keyspace(String old_name, String new_name) throws TException
-    {
-      oprot_.writeMessageBegin(new TMessage("system_rename_keyspace", TMessageType.CALL, ++seqid_));
-      system_rename_keyspace_args args = new system_rename_keyspace_args();
-      args.setOld_name(old_name);
-      args.setNew_name(new_name);
-      args.write(oprot_);
-      oprot_.writeMessageEnd();
-      oprot_.getTransport().flush();
-    }
-
-    public String recv_system_rename_keyspace() throws InvalidRequestException, TException
-    {
-      TMessage msg = iprot_.readMessageBegin();
-      if (msg.type == TMessageType.EXCEPTION) {
-        TApplicationException x = TApplicationException.read(iprot_);
-        iprot_.readMessageEnd();
-        throw x;
-      }
-      if (msg.seqid != seqid_) {
-        throw new TApplicationException(TApplicationException.BAD_SEQUENCE_ID, "system_rename_keyspace failed: out of sequence response");
-      }
-      system_rename_keyspace_result result = new system_rename_keyspace_result();
-      result.read(iprot_);
-      iprot_.readMessageEnd();
-      if (result.isSetSuccess()) {
-        return result.success;
-      }
-      if (result.ire != null) {
-        throw result.ire;
-      }
-      throw new TApplicationException(TApplicationException.MISSING_RESULT, "system_rename_keyspace failed: unknown result");
     }
 
     public String system_update_keyspace(KsDef ks_def) throws InvalidRequestException, TException
@@ -1709,17 +1616,17 @@ public class Cassandra {
       }
     }
 
-    public void get(byte[] key, ColumnPath column_path, ConsistencyLevel consistency_level, AsyncMethodCallback<get_call> resultHandler) throws TException {
+    public void get(ByteBuffer key, ColumnPath column_path, ConsistencyLevel consistency_level, AsyncMethodCallback<get_call> resultHandler) throws TException {
       checkReady();
       get_call method_call = new get_call(key, column_path, consistency_level, resultHandler, this, protocolFactory, transport);
       manager.call(method_call);
     }
 
     public static class get_call extends TAsyncMethodCall {
-      private byte[] key;
+      private ByteBuffer key;
       private ColumnPath column_path;
       private ConsistencyLevel consistency_level;
-      public get_call(byte[] key, ColumnPath column_path, ConsistencyLevel consistency_level, AsyncMethodCallback<get_call> resultHandler, TAsyncClient client, TProtocolFactory protocolFactory, TNonblockingTransport transport) throws TException {
+      public get_call(ByteBuffer key, ColumnPath column_path, ConsistencyLevel consistency_level, AsyncMethodCallback<get_call> resultHandler, TAsyncClient client, TProtocolFactory protocolFactory, TNonblockingTransport transport) throws TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.key = key;
         this.column_path = column_path;
@@ -1746,18 +1653,18 @@ public class Cassandra {
       }
     }
 
-    public void get_slice(byte[] key, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level, AsyncMethodCallback<get_slice_call> resultHandler) throws TException {
+    public void get_slice(ByteBuffer key, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level, AsyncMethodCallback<get_slice_call> resultHandler) throws TException {
       checkReady();
       get_slice_call method_call = new get_slice_call(key, column_parent, predicate, consistency_level, resultHandler, this, protocolFactory, transport);
       manager.call(method_call);
     }
 
     public static class get_slice_call extends TAsyncMethodCall {
-      private byte[] key;
+      private ByteBuffer key;
       private ColumnParent column_parent;
       private SlicePredicate predicate;
       private ConsistencyLevel consistency_level;
-      public get_slice_call(byte[] key, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level, AsyncMethodCallback<get_slice_call> resultHandler, TAsyncClient client, TProtocolFactory protocolFactory, TNonblockingTransport transport) throws TException {
+      public get_slice_call(ByteBuffer key, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level, AsyncMethodCallback<get_slice_call> resultHandler, TAsyncClient client, TProtocolFactory protocolFactory, TNonblockingTransport transport) throws TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.key = key;
         this.column_parent = column_parent;
@@ -1786,18 +1693,18 @@ public class Cassandra {
       }
     }
 
-    public void get_count(byte[] key, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level, AsyncMethodCallback<get_count_call> resultHandler) throws TException {
+    public void get_count(ByteBuffer key, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level, AsyncMethodCallback<get_count_call> resultHandler) throws TException {
       checkReady();
       get_count_call method_call = new get_count_call(key, column_parent, predicate, consistency_level, resultHandler, this, protocolFactory, transport);
       manager.call(method_call);
     }
 
     public static class get_count_call extends TAsyncMethodCall {
-      private byte[] key;
+      private ByteBuffer key;
       private ColumnParent column_parent;
       private SlicePredicate predicate;
       private ConsistencyLevel consistency_level;
-      public get_count_call(byte[] key, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level, AsyncMethodCallback<get_count_call> resultHandler, TAsyncClient client, TProtocolFactory protocolFactory, TNonblockingTransport transport) throws TException {
+      public get_count_call(ByteBuffer key, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level, AsyncMethodCallback<get_count_call> resultHandler, TAsyncClient client, TProtocolFactory protocolFactory, TNonblockingTransport transport) throws TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.key = key;
         this.column_parent = column_parent;
@@ -1826,18 +1733,18 @@ public class Cassandra {
       }
     }
 
-    public void multiget_slice(List<byte[]> keys, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level, AsyncMethodCallback<multiget_slice_call> resultHandler) throws TException {
+    public void multiget_slice(List<ByteBuffer> keys, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level, AsyncMethodCallback<multiget_slice_call> resultHandler) throws TException {
       checkReady();
       multiget_slice_call method_call = new multiget_slice_call(keys, column_parent, predicate, consistency_level, resultHandler, this, protocolFactory, transport);
       manager.call(method_call);
     }
 
     public static class multiget_slice_call extends TAsyncMethodCall {
-      private List<byte[]> keys;
+      private List<ByteBuffer> keys;
       private ColumnParent column_parent;
       private SlicePredicate predicate;
       private ConsistencyLevel consistency_level;
-      public multiget_slice_call(List<byte[]> keys, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level, AsyncMethodCallback<multiget_slice_call> resultHandler, TAsyncClient client, TProtocolFactory protocolFactory, TNonblockingTransport transport) throws TException {
+      public multiget_slice_call(List<ByteBuffer> keys, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level, AsyncMethodCallback<multiget_slice_call> resultHandler, TAsyncClient client, TProtocolFactory protocolFactory, TNonblockingTransport transport) throws TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.keys = keys;
         this.column_parent = column_parent;
@@ -1856,7 +1763,7 @@ public class Cassandra {
         prot.writeMessageEnd();
       }
 
-      public Map<byte[],List<ColumnOrSuperColumn>> getResult() throws InvalidRequestException, UnavailableException, TimedOutException, TException {
+      public Map<ByteBuffer,List<ColumnOrSuperColumn>> getResult() throws InvalidRequestException, UnavailableException, TimedOutException, TException {
         if (getState() != State.RESPONSE_READ) {
           throw new IllegalStateException("Method call not finished!");
         }
@@ -1866,18 +1773,18 @@ public class Cassandra {
       }
     }
 
-    public void multiget_count(List<byte[]> keys, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level, AsyncMethodCallback<multiget_count_call> resultHandler) throws TException {
+    public void multiget_count(List<ByteBuffer> keys, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level, AsyncMethodCallback<multiget_count_call> resultHandler) throws TException {
       checkReady();
       multiget_count_call method_call = new multiget_count_call(keys, column_parent, predicate, consistency_level, resultHandler, this, protocolFactory, transport);
       manager.call(method_call);
     }
 
     public static class multiget_count_call extends TAsyncMethodCall {
-      private List<byte[]> keys;
+      private List<ByteBuffer> keys;
       private ColumnParent column_parent;
       private SlicePredicate predicate;
       private ConsistencyLevel consistency_level;
-      public multiget_count_call(List<byte[]> keys, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level, AsyncMethodCallback<multiget_count_call> resultHandler, TAsyncClient client, TProtocolFactory protocolFactory, TNonblockingTransport transport) throws TException {
+      public multiget_count_call(List<ByteBuffer> keys, ColumnParent column_parent, SlicePredicate predicate, ConsistencyLevel consistency_level, AsyncMethodCallback<multiget_count_call> resultHandler, TAsyncClient client, TProtocolFactory protocolFactory, TNonblockingTransport transport) throws TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.keys = keys;
         this.column_parent = column_parent;
@@ -1896,7 +1803,7 @@ public class Cassandra {
         prot.writeMessageEnd();
       }
 
-      public Map<byte[],Integer> getResult() throws InvalidRequestException, UnavailableException, TimedOutException, TException {
+      public Map<ByteBuffer,Integer> getResult() throws InvalidRequestException, UnavailableException, TimedOutException, TException {
         if (getState() != State.RESPONSE_READ) {
           throw new IllegalStateException("Method call not finished!");
         }
@@ -1986,18 +1893,18 @@ public class Cassandra {
       }
     }
 
-    public void insert(byte[] key, ColumnParent column_parent, Column column, ConsistencyLevel consistency_level, AsyncMethodCallback<insert_call> resultHandler) throws TException {
+    public void insert(ByteBuffer key, ColumnParent column_parent, Column column, ConsistencyLevel consistency_level, AsyncMethodCallback<insert_call> resultHandler) throws TException {
       checkReady();
       insert_call method_call = new insert_call(key, column_parent, column, consistency_level, resultHandler, this, protocolFactory, transport);
       manager.call(method_call);
     }
 
     public static class insert_call extends TAsyncMethodCall {
-      private byte[] key;
+      private ByteBuffer key;
       private ColumnParent column_parent;
       private Column column;
       private ConsistencyLevel consistency_level;
-      public insert_call(byte[] key, ColumnParent column_parent, Column column, ConsistencyLevel consistency_level, AsyncMethodCallback<insert_call> resultHandler, TAsyncClient client, TProtocolFactory protocolFactory, TNonblockingTransport transport) throws TException {
+      public insert_call(ByteBuffer key, ColumnParent column_parent, Column column, ConsistencyLevel consistency_level, AsyncMethodCallback<insert_call> resultHandler, TAsyncClient client, TProtocolFactory protocolFactory, TNonblockingTransport transport) throws TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.key = key;
         this.column_parent = column_parent;
@@ -2026,18 +1933,18 @@ public class Cassandra {
       }
     }
 
-    public void remove(byte[] key, ColumnPath column_path, long timestamp, ConsistencyLevel consistency_level, AsyncMethodCallback<remove_call> resultHandler) throws TException {
+    public void remove(ByteBuffer key, ColumnPath column_path, long timestamp, ConsistencyLevel consistency_level, AsyncMethodCallback<remove_call> resultHandler) throws TException {
       checkReady();
       remove_call method_call = new remove_call(key, column_path, timestamp, consistency_level, resultHandler, this, protocolFactory, transport);
       manager.call(method_call);
     }
 
     public static class remove_call extends TAsyncMethodCall {
-      private byte[] key;
+      private ByteBuffer key;
       private ColumnPath column_path;
       private long timestamp;
       private ConsistencyLevel consistency_level;
-      public remove_call(byte[] key, ColumnPath column_path, long timestamp, ConsistencyLevel consistency_level, AsyncMethodCallback<remove_call> resultHandler, TAsyncClient client, TProtocolFactory protocolFactory, TNonblockingTransport transport) throws TException {
+      public remove_call(ByteBuffer key, ColumnPath column_path, long timestamp, ConsistencyLevel consistency_level, AsyncMethodCallback<remove_call> resultHandler, TAsyncClient client, TProtocolFactory protocolFactory, TNonblockingTransport transport) throws TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.key = key;
         this.column_path = column_path;
@@ -2066,16 +1973,16 @@ public class Cassandra {
       }
     }
 
-    public void batch_mutate(Map<byte[],Map<String,List<Mutation>>> mutation_map, ConsistencyLevel consistency_level, AsyncMethodCallback<batch_mutate_call> resultHandler) throws TException {
+    public void batch_mutate(Map<ByteBuffer,Map<String,List<Mutation>>> mutation_map, ConsistencyLevel consistency_level, AsyncMethodCallback<batch_mutate_call> resultHandler) throws TException {
       checkReady();
       batch_mutate_call method_call = new batch_mutate_call(mutation_map, consistency_level, resultHandler, this, protocolFactory, transport);
       manager.call(method_call);
     }
 
     public static class batch_mutate_call extends TAsyncMethodCall {
-      private Map<byte[],Map<String,List<Mutation>>> mutation_map;
+      private Map<ByteBuffer,Map<String,List<Mutation>>> mutation_map;
       private ConsistencyLevel consistency_level;
-      public batch_mutate_call(Map<byte[],Map<String,List<Mutation>>> mutation_map, ConsistencyLevel consistency_level, AsyncMethodCallback<batch_mutate_call> resultHandler, TAsyncClient client, TProtocolFactory protocolFactory, TNonblockingTransport transport) throws TException {
+      public batch_mutate_call(Map<ByteBuffer,Map<String,List<Mutation>>> mutation_map, ConsistencyLevel consistency_level, AsyncMethodCallback<batch_mutate_call> resultHandler, TAsyncClient client, TProtocolFactory protocolFactory, TNonblockingTransport transport) throws TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.mutation_map = mutation_map;
         this.consistency_level = consistency_level;
@@ -2177,7 +2084,7 @@ public class Cassandra {
         prot.writeMessageEnd();
       }
 
-      public List<KsDef> getResult() throws TException {
+      public List<KsDef> getResult() throws InvalidRequestException, TException {
         if (getState() != State.RESPONSE_READ) {
           throw new IllegalStateException("Method call not finished!");
         }
@@ -2351,7 +2258,7 @@ public class Cassandra {
         prot.writeMessageEnd();
       }
 
-      public KsDef getResult() throws NotFoundException, TException {
+      public KsDef getResult() throws NotFoundException, InvalidRequestException, TException {
         if (getState() != State.RESPONSE_READ) {
           throw new IllegalStateException("Method call not finished!");
         }
@@ -2463,40 +2370,6 @@ public class Cassandra {
       }
     }
 
-    public void system_rename_column_family(String old_name, String new_name, AsyncMethodCallback<system_rename_column_family_call> resultHandler) throws TException {
-      checkReady();
-      system_rename_column_family_call method_call = new system_rename_column_family_call(old_name, new_name, resultHandler, this, protocolFactory, transport);
-      manager.call(method_call);
-    }
-
-    public static class system_rename_column_family_call extends TAsyncMethodCall {
-      private String old_name;
-      private String new_name;
-      public system_rename_column_family_call(String old_name, String new_name, AsyncMethodCallback<system_rename_column_family_call> resultHandler, TAsyncClient client, TProtocolFactory protocolFactory, TNonblockingTransport transport) throws TException {
-        super(client, protocolFactory, transport, resultHandler, false);
-        this.old_name = old_name;
-        this.new_name = new_name;
-      }
-
-      public void write_args(TProtocol prot) throws TException {
-        prot.writeMessageBegin(new TMessage("system_rename_column_family", TMessageType.CALL, 0));
-        system_rename_column_family_args args = new system_rename_column_family_args();
-        args.setOld_name(old_name);
-        args.setNew_name(new_name);
-        args.write(prot);
-        prot.writeMessageEnd();
-      }
-
-      public String getResult() throws InvalidRequestException, TException {
-        if (getState() != State.RESPONSE_READ) {
-          throw new IllegalStateException("Method call not finished!");
-        }
-        TMemoryInputTransport memoryTransport = new TMemoryInputTransport(getFrameBuffer().array());
-        TProtocol prot = client.getProtocolFactory().getProtocol(memoryTransport);
-        return (new Client(prot)).recv_system_rename_column_family();
-      }
-    }
-
     public void system_add_keyspace(KsDef ks_def, AsyncMethodCallback<system_add_keyspace_call> resultHandler) throws TException {
       checkReady();
       system_add_keyspace_call method_call = new system_add_keyspace_call(ks_def, resultHandler, this, protocolFactory, transport);
@@ -2556,40 +2429,6 @@ public class Cassandra {
         TMemoryInputTransport memoryTransport = new TMemoryInputTransport(getFrameBuffer().array());
         TProtocol prot = client.getProtocolFactory().getProtocol(memoryTransport);
         return (new Client(prot)).recv_system_drop_keyspace();
-      }
-    }
-
-    public void system_rename_keyspace(String old_name, String new_name, AsyncMethodCallback<system_rename_keyspace_call> resultHandler) throws TException {
-      checkReady();
-      system_rename_keyspace_call method_call = new system_rename_keyspace_call(old_name, new_name, resultHandler, this, protocolFactory, transport);
-      manager.call(method_call);
-    }
-
-    public static class system_rename_keyspace_call extends TAsyncMethodCall {
-      private String old_name;
-      private String new_name;
-      public system_rename_keyspace_call(String old_name, String new_name, AsyncMethodCallback<system_rename_keyspace_call> resultHandler, TAsyncClient client, TProtocolFactory protocolFactory, TNonblockingTransport transport) throws TException {
-        super(client, protocolFactory, transport, resultHandler, false);
-        this.old_name = old_name;
-        this.new_name = new_name;
-      }
-
-      public void write_args(TProtocol prot) throws TException {
-        prot.writeMessageBegin(new TMessage("system_rename_keyspace", TMessageType.CALL, 0));
-        system_rename_keyspace_args args = new system_rename_keyspace_args();
-        args.setOld_name(old_name);
-        args.setNew_name(new_name);
-        args.write(prot);
-        prot.writeMessageEnd();
-      }
-
-      public String getResult() throws InvalidRequestException, TException {
-        if (getState() != State.RESPONSE_READ) {
-          throw new IllegalStateException("Method call not finished!");
-        }
-        TMemoryInputTransport memoryTransport = new TMemoryInputTransport(getFrameBuffer().array());
-        TProtocol prot = client.getProtocolFactory().getProtocol(memoryTransport);
-        return (new Client(prot)).recv_system_rename_keyspace();
       }
     }
 
@@ -2686,10 +2525,8 @@ public class Cassandra {
       processMap_.put("describe_splits", new describe_splits());
       processMap_.put("system_add_column_family", new system_add_column_family());
       processMap_.put("system_drop_column_family", new system_drop_column_family());
-      processMap_.put("system_rename_column_family", new system_rename_column_family());
       processMap_.put("system_add_keyspace", new system_add_keyspace());
       processMap_.put("system_drop_keyspace", new system_drop_keyspace());
-      processMap_.put("system_rename_keyspace", new system_rename_keyspace());
       processMap_.put("system_update_keyspace", new system_update_keyspace());
       processMap_.put("system_update_column_family", new system_update_column_family());
     }
@@ -3315,7 +3152,19 @@ public class Cassandra {
         }
         iprot.readMessageEnd();
         describe_keyspaces_result result = new describe_keyspaces_result();
-        result.success = iface_.describe_keyspaces();
+        try {
+          result.success = iface_.describe_keyspaces();
+        } catch (InvalidRequestException ire) {
+          result.ire = ire;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing describe_keyspaces", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing describe_keyspaces");
+          oprot.writeMessageBegin(new TMessage("describe_keyspaces", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
+        }
         oprot.writeMessageBegin(new TMessage("describe_keyspaces", TMessageType.REPLY, seqid));
         result.write(oprot);
         oprot.writeMessageEnd();
@@ -3487,6 +3336,8 @@ public class Cassandra {
           result.success = iface_.describe_keyspace(args.keyspace);
         } catch (NotFoundException nfe) {
           result.nfe = nfe;
+        } catch (InvalidRequestException ire) {
+          result.ire = ire;
         } catch (Throwable th) {
           LOGGER.error("Internal error processing describe_keyspace", th);
           TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing describe_keyspace");
@@ -3606,44 +3457,6 @@ public class Cassandra {
 
     }
 
-    private class system_rename_column_family implements ProcessFunction {
-      public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
-      {
-        system_rename_column_family_args args = new system_rename_column_family_args();
-        try {
-          args.read(iprot);
-        } catch (TProtocolException e) {
-          iprot.readMessageEnd();
-          TApplicationException x = new TApplicationException(TApplicationException.PROTOCOL_ERROR, e.getMessage());
-          oprot.writeMessageBegin(new TMessage("system_rename_column_family", TMessageType.EXCEPTION, seqid));
-          x.write(oprot);
-          oprot.writeMessageEnd();
-          oprot.getTransport().flush();
-          return;
-        }
-        iprot.readMessageEnd();
-        system_rename_column_family_result result = new system_rename_column_family_result();
-        try {
-          result.success = iface_.system_rename_column_family(args.old_name, args.new_name);
-        } catch (InvalidRequestException ire) {
-          result.ire = ire;
-        } catch (Throwable th) {
-          LOGGER.error("Internal error processing system_rename_column_family", th);
-          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing system_rename_column_family");
-          oprot.writeMessageBegin(new TMessage("system_rename_column_family", TMessageType.EXCEPTION, seqid));
-          x.write(oprot);
-          oprot.writeMessageEnd();
-          oprot.getTransport().flush();
-          return;
-        }
-        oprot.writeMessageBegin(new TMessage("system_rename_column_family", TMessageType.REPLY, seqid));
-        result.write(oprot);
-        oprot.writeMessageEnd();
-        oprot.getTransport().flush();
-      }
-
-    }
-
     private class system_add_keyspace implements ProcessFunction {
       public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
       {
@@ -3713,44 +3526,6 @@ public class Cassandra {
           return;
         }
         oprot.writeMessageBegin(new TMessage("system_drop_keyspace", TMessageType.REPLY, seqid));
-        result.write(oprot);
-        oprot.writeMessageEnd();
-        oprot.getTransport().flush();
-      }
-
-    }
-
-    private class system_rename_keyspace implements ProcessFunction {
-      public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
-      {
-        system_rename_keyspace_args args = new system_rename_keyspace_args();
-        try {
-          args.read(iprot);
-        } catch (TProtocolException e) {
-          iprot.readMessageEnd();
-          TApplicationException x = new TApplicationException(TApplicationException.PROTOCOL_ERROR, e.getMessage());
-          oprot.writeMessageBegin(new TMessage("system_rename_keyspace", TMessageType.EXCEPTION, seqid));
-          x.write(oprot);
-          oprot.writeMessageEnd();
-          oprot.getTransport().flush();
-          return;
-        }
-        iprot.readMessageEnd();
-        system_rename_keyspace_result result = new system_rename_keyspace_result();
-        try {
-          result.success = iface_.system_rename_keyspace(args.old_name, args.new_name);
-        } catch (InvalidRequestException ire) {
-          result.ire = ire;
-        } catch (Throwable th) {
-          LOGGER.error("Internal error processing system_rename_keyspace", th);
-          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing system_rename_keyspace");
-          oprot.writeMessageBegin(new TMessage("system_rename_keyspace", TMessageType.EXCEPTION, seqid));
-          x.write(oprot);
-          oprot.writeMessageEnd();
-          oprot.getTransport().flush();
-          return;
-        }
-        oprot.writeMessageBegin(new TMessage("system_rename_keyspace", TMessageType.REPLY, seqid));
         result.write(oprot);
         oprot.writeMessageEnd();
         oprot.getTransport().flush();
@@ -3935,9 +3710,9 @@ public class Cassandra {
       return new login_args(this);
     }
 
-    @Deprecated
-    public login_args clone() {
-      return new login_args(this);
+    @Override
+    public void clear() {
+      this.auth_request = null;
     }
 
     public AuthenticationRequest getAuth_request() {
@@ -3977,10 +3752,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case AUTH_REQUEST:
@@ -3990,21 +3761,17 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case AUTH_REQUEST:
         return isSetAuth_request();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -4056,12 +3823,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetAuth_request()) {        lastComparison = TBaseHelper.compareTo(this.auth_request, typedOther.auth_request);
+      if (isSetAuth_request()) {
+        lastComparison = TBaseHelper.compareTo(this.auth_request, typedOther.auth_request);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -4242,9 +4014,10 @@ public class Cassandra {
       return new login_result(this);
     }
 
-    @Deprecated
-    public login_result clone() {
-      return new login_result(this);
+    @Override
+    public void clear() {
+      this.authnx = null;
+      this.authzx = null;
     }
 
     public AuthenticationException getAuthnx() {
@@ -4316,10 +4089,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case AUTHNX:
@@ -4332,12 +4101,12 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case AUTHNX:
         return isSetAuthnx();
@@ -4345,10 +4114,6 @@ public class Cassandra {
         return isSetAuthzx();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -4414,7 +4179,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetAuthnx()) {        lastComparison = TBaseHelper.compareTo(this.authnx, typedOther.authnx);
+      if (isSetAuthnx()) {
+        lastComparison = TBaseHelper.compareTo(this.authnx, typedOther.authnx);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -4423,12 +4189,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetAuthzx()) {        lastComparison = TBaseHelper.compareTo(this.authzx, typedOther.authzx);
+      if (isSetAuthzx()) {
+        lastComparison = TBaseHelper.compareTo(this.authzx, typedOther.authzx);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -4613,9 +4384,9 @@ public class Cassandra {
       return new set_keyspace_args(this);
     }
 
-    @Deprecated
-    public set_keyspace_args clone() {
-      return new set_keyspace_args(this);
+    @Override
+    public void clear() {
+      this.keyspace = null;
     }
 
     public String getKeyspace() {
@@ -4655,10 +4426,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case KEYSPACE:
@@ -4668,21 +4435,17 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case KEYSPACE:
         return isSetKeyspace();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -4734,12 +4497,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetKeyspace()) {        lastComparison = TBaseHelper.compareTo(this.keyspace, typedOther.keyspace);
+      if (isSetKeyspace()) {
+        lastComparison = TBaseHelper.compareTo(this.keyspace, typedOther.keyspace);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -4907,9 +4675,9 @@ public class Cassandra {
       return new set_keyspace_result(this);
     }
 
-    @Deprecated
-    public set_keyspace_result clone() {
-      return new set_keyspace_result(this);
+    @Override
+    public void clear() {
+      this.ire = null;
     }
 
     public InvalidRequestException getIre() {
@@ -4949,10 +4717,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case IRE:
@@ -4962,21 +4726,17 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case IRE:
         return isSetIre();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -5028,12 +4788,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetIre()) {        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
+      if (isSetIre()) {
+        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -5106,7 +4871,7 @@ public class Cassandra {
     private static final TField COLUMN_PATH_FIELD_DESC = new TField("column_path", TType.STRUCT, (short)2);
     private static final TField CONSISTENCY_LEVEL_FIELD_DESC = new TField("consistency_level", TType.I32, (short)3);
 
-    public byte[] key;
+    public ByteBuffer key;
     public ColumnPath column_path;
     /**
      * 
@@ -5203,7 +4968,7 @@ public class Cassandra {
     }
 
     public get_args(
-      byte[] key,
+      ByteBuffer key,
       ColumnPath column_path,
       ConsistencyLevel consistency_level)
     {
@@ -5218,8 +4983,8 @@ public class Cassandra {
      */
     public get_args(get_args other) {
       if (other.isSetKey()) {
-        this.key = new byte[other.key.length];
-        System.arraycopy(other.key, 0, key, 0, other.key.length);
+        this.key = TBaseHelper.copyBinary(other.key);
+;
       }
       if (other.isSetColumn_path()) {
         this.column_path = new ColumnPath(other.column_path);
@@ -5233,16 +4998,29 @@ public class Cassandra {
       return new get_args(this);
     }
 
-    @Deprecated
-    public get_args clone() {
-      return new get_args(this);
+    @Override
+    public void clear() {
+      this.key = null;
+      this.column_path = null;
+      this.consistency_level = ConsistencyLevel.ONE;
+
     }
 
     public byte[] getKey() {
-      return this.key;
+      setKey(TBaseHelper.rightSize(key));
+      return key.array();
+    }
+
+    public ByteBuffer BufferForKey() {
+      return key;
     }
 
     public get_args setKey(byte[] key) {
+      setKey(ByteBuffer.wrap(key));
+      return this;
+    }
+
+    public get_args setKey(ByteBuffer key) {
       this.key = key;
       return this;
     }
@@ -5324,7 +5102,7 @@ public class Cassandra {
         if (value == null) {
           unsetKey();
         } else {
-          setKey((byte[])value);
+          setKey((ByteBuffer)value);
         }
         break;
 
@@ -5347,10 +5125,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case KEY:
@@ -5366,12 +5140,12 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case KEY:
         return isSetKey();
@@ -5381,10 +5155,6 @@ public class Cassandra {
         return isSetConsistency_level();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -5405,7 +5175,7 @@ public class Cassandra {
       if (this_present_key || that_present_key) {
         if (!(this_present_key && that_present_key))
           return false;
-        if (!java.util.Arrays.equals(this.key, that.key))
+        if (!this.key.equals(that.key))
           return false;
       }
 
@@ -5464,7 +5234,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetKey()) {        lastComparison = TBaseHelper.compareTo(this.key, typedOther.key);
+      if (isSetKey()) {
+        lastComparison = TBaseHelper.compareTo(this.key, typedOther.key);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -5473,7 +5244,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetColumn_path()) {        lastComparison = TBaseHelper.compareTo(this.column_path, typedOther.column_path);
+      if (isSetColumn_path()) {
+        lastComparison = TBaseHelper.compareTo(this.column_path, typedOther.column_path);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -5482,12 +5254,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetConsistency_level()) {        lastComparison = TBaseHelper.compareTo(this.consistency_level, typedOther.consistency_level);
+      if (isSetConsistency_level()) {
+        lastComparison = TBaseHelper.compareTo(this.consistency_level, typedOther.consistency_level);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -5565,12 +5342,7 @@ public class Cassandra {
       if (this.key == null) {
         sb.append("null");
       } else {
-          int __key_size = Math.min(this.key.length, 128);
-          for (int i = 0; i < __key_size; i++) {
-            if (i != 0) sb.append(" ");
-            sb.append(Integer.toHexString(this.key[i]).length() > 1 ? Integer.toHexString(this.key[i]).substring(Integer.toHexString(this.key[i]).length() - 2).toUpperCase() : "0" + Integer.toHexString(this.key[i]).toUpperCase());
-          }
-          if (this.key.length > 128) sb.append(" ...");
+        TBaseHelper.toString(this.key, sb);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -5755,9 +5527,13 @@ public class Cassandra {
       return new get_result(this);
     }
 
-    @Deprecated
-    public get_result clone() {
-      return new get_result(this);
+    @Override
+    public void clear() {
+      this.success = null;
+      this.ire = null;
+      this.nfe = null;
+      this.ue = null;
+      this.te = null;
     }
 
     public ColumnOrSuperColumn getSuccess() {
@@ -5925,10 +5701,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case SUCCESS:
@@ -5950,12 +5722,12 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case SUCCESS:
         return isSetSuccess();
@@ -5969,10 +5741,6 @@ public class Cassandra {
         return isSetTe();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -6080,7 +5848,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetSuccess()) {        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
+      if (isSetSuccess()) {
+        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -6089,7 +5858,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetIre()) {        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
+      if (isSetIre()) {
+        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -6098,7 +5868,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetNfe()) {        lastComparison = TBaseHelper.compareTo(this.nfe, typedOther.nfe);
+      if (isSetNfe()) {
+        lastComparison = TBaseHelper.compareTo(this.nfe, typedOther.nfe);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -6107,7 +5878,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetUe()) {        lastComparison = TBaseHelper.compareTo(this.ue, typedOther.ue);
+      if (isSetUe()) {
+        lastComparison = TBaseHelper.compareTo(this.ue, typedOther.ue);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -6116,12 +5888,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetTe()) {        lastComparison = TBaseHelper.compareTo(this.te, typedOther.te);
+      if (isSetTe()) {
+        lastComparison = TBaseHelper.compareTo(this.te, typedOther.te);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -6275,7 +6052,7 @@ public class Cassandra {
     private static final TField PREDICATE_FIELD_DESC = new TField("predicate", TType.STRUCT, (short)3);
     private static final TField CONSISTENCY_LEVEL_FIELD_DESC = new TField("consistency_level", TType.I32, (short)4);
 
-    public byte[] key;
+    public ByteBuffer key;
     public ColumnParent column_parent;
     public SlicePredicate predicate;
     /**
@@ -6378,7 +6155,7 @@ public class Cassandra {
     }
 
     public get_slice_args(
-      byte[] key,
+      ByteBuffer key,
       ColumnParent column_parent,
       SlicePredicate predicate,
       ConsistencyLevel consistency_level)
@@ -6395,8 +6172,8 @@ public class Cassandra {
      */
     public get_slice_args(get_slice_args other) {
       if (other.isSetKey()) {
-        this.key = new byte[other.key.length];
-        System.arraycopy(other.key, 0, key, 0, other.key.length);
+        this.key = TBaseHelper.copyBinary(other.key);
+;
       }
       if (other.isSetColumn_parent()) {
         this.column_parent = new ColumnParent(other.column_parent);
@@ -6413,16 +6190,30 @@ public class Cassandra {
       return new get_slice_args(this);
     }
 
-    @Deprecated
-    public get_slice_args clone() {
-      return new get_slice_args(this);
+    @Override
+    public void clear() {
+      this.key = null;
+      this.column_parent = null;
+      this.predicate = null;
+      this.consistency_level = ConsistencyLevel.ONE;
+
     }
 
     public byte[] getKey() {
-      return this.key;
+      setKey(TBaseHelper.rightSize(key));
+      return key.array();
+    }
+
+    public ByteBuffer BufferForKey() {
+      return key;
     }
 
     public get_slice_args setKey(byte[] key) {
+      setKey(ByteBuffer.wrap(key));
+      return this;
+    }
+
+    public get_slice_args setKey(ByteBuffer key) {
       this.key = key;
       return this;
     }
@@ -6528,7 +6319,7 @@ public class Cassandra {
         if (value == null) {
           unsetKey();
         } else {
-          setKey((byte[])value);
+          setKey((ByteBuffer)value);
         }
         break;
 
@@ -6559,10 +6350,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case KEY:
@@ -6581,12 +6368,12 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case KEY:
         return isSetKey();
@@ -6598,10 +6385,6 @@ public class Cassandra {
         return isSetConsistency_level();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -6622,7 +6405,7 @@ public class Cassandra {
       if (this_present_key || that_present_key) {
         if (!(this_present_key && that_present_key))
           return false;
-        if (!java.util.Arrays.equals(this.key, that.key))
+        if (!this.key.equals(that.key))
           return false;
       }
 
@@ -6695,7 +6478,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetKey()) {        lastComparison = TBaseHelper.compareTo(this.key, typedOther.key);
+      if (isSetKey()) {
+        lastComparison = TBaseHelper.compareTo(this.key, typedOther.key);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -6704,7 +6488,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetColumn_parent()) {        lastComparison = TBaseHelper.compareTo(this.column_parent, typedOther.column_parent);
+      if (isSetColumn_parent()) {
+        lastComparison = TBaseHelper.compareTo(this.column_parent, typedOther.column_parent);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -6713,7 +6498,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetPredicate()) {        lastComparison = TBaseHelper.compareTo(this.predicate, typedOther.predicate);
+      if (isSetPredicate()) {
+        lastComparison = TBaseHelper.compareTo(this.predicate, typedOther.predicate);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -6722,12 +6508,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetConsistency_level()) {        lastComparison = TBaseHelper.compareTo(this.consistency_level, typedOther.consistency_level);
+      if (isSetConsistency_level()) {
+        lastComparison = TBaseHelper.compareTo(this.consistency_level, typedOther.consistency_level);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -6818,12 +6609,7 @@ public class Cassandra {
       if (this.key == null) {
         sb.append("null");
       } else {
-          int __key_size = Math.min(this.key.length, 128);
-          for (int i = 0; i < __key_size; i++) {
-            if (i != 0) sb.append(" ");
-            sb.append(Integer.toHexString(this.key[i]).length() > 1 ? Integer.toHexString(this.key[i]).substring(Integer.toHexString(this.key[i]).length() - 2).toUpperCase() : "0" + Integer.toHexString(this.key[i]).toUpperCase());
-          }
-          if (this.key.length > 128) sb.append(" ...");
+        TBaseHelper.toString(this.key, sb);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -7012,9 +6798,12 @@ public class Cassandra {
       return new get_slice_result(this);
     }
 
-    @Deprecated
-    public get_slice_result clone() {
-      return new get_slice_result(this);
+    @Override
+    public void clear() {
+      this.success = null;
+      this.ire = null;
+      this.ue = null;
+      this.te = null;
     }
 
     public int getSuccessSize() {
@@ -7165,10 +6954,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case SUCCESS:
@@ -7187,12 +6972,12 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case SUCCESS:
         return isSetSuccess();
@@ -7204,10 +6989,6 @@ public class Cassandra {
         return isSetTe();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -7301,7 +7082,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetSuccess()) {        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
+      if (isSetSuccess()) {
+        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -7310,7 +7092,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetIre()) {        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
+      if (isSetIre()) {
+        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -7319,7 +7102,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetUe()) {        lastComparison = TBaseHelper.compareTo(this.ue, typedOther.ue);
+      if (isSetUe()) {
+        lastComparison = TBaseHelper.compareTo(this.ue, typedOther.ue);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -7328,12 +7112,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetTe()) {        lastComparison = TBaseHelper.compareTo(this.te, typedOther.te);
+      if (isSetTe()) {
+        lastComparison = TBaseHelper.compareTo(this.te, typedOther.te);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -7484,7 +7273,7 @@ public class Cassandra {
     private static final TField PREDICATE_FIELD_DESC = new TField("predicate", TType.STRUCT, (short)3);
     private static final TField CONSISTENCY_LEVEL_FIELD_DESC = new TField("consistency_level", TType.I32, (short)4);
 
-    public byte[] key;
+    public ByteBuffer key;
     public ColumnParent column_parent;
     public SlicePredicate predicate;
     /**
@@ -7587,7 +7376,7 @@ public class Cassandra {
     }
 
     public get_count_args(
-      byte[] key,
+      ByteBuffer key,
       ColumnParent column_parent,
       SlicePredicate predicate,
       ConsistencyLevel consistency_level)
@@ -7604,8 +7393,8 @@ public class Cassandra {
      */
     public get_count_args(get_count_args other) {
       if (other.isSetKey()) {
-        this.key = new byte[other.key.length];
-        System.arraycopy(other.key, 0, key, 0, other.key.length);
+        this.key = TBaseHelper.copyBinary(other.key);
+;
       }
       if (other.isSetColumn_parent()) {
         this.column_parent = new ColumnParent(other.column_parent);
@@ -7622,16 +7411,30 @@ public class Cassandra {
       return new get_count_args(this);
     }
 
-    @Deprecated
-    public get_count_args clone() {
-      return new get_count_args(this);
+    @Override
+    public void clear() {
+      this.key = null;
+      this.column_parent = null;
+      this.predicate = null;
+      this.consistency_level = ConsistencyLevel.ONE;
+
     }
 
     public byte[] getKey() {
-      return this.key;
+      setKey(TBaseHelper.rightSize(key));
+      return key.array();
+    }
+
+    public ByteBuffer BufferForKey() {
+      return key;
     }
 
     public get_count_args setKey(byte[] key) {
+      setKey(ByteBuffer.wrap(key));
+      return this;
+    }
+
+    public get_count_args setKey(ByteBuffer key) {
       this.key = key;
       return this;
     }
@@ -7737,7 +7540,7 @@ public class Cassandra {
         if (value == null) {
           unsetKey();
         } else {
-          setKey((byte[])value);
+          setKey((ByteBuffer)value);
         }
         break;
 
@@ -7768,10 +7571,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case KEY:
@@ -7790,12 +7589,12 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case KEY:
         return isSetKey();
@@ -7807,10 +7606,6 @@ public class Cassandra {
         return isSetConsistency_level();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -7831,7 +7626,7 @@ public class Cassandra {
       if (this_present_key || that_present_key) {
         if (!(this_present_key && that_present_key))
           return false;
-        if (!java.util.Arrays.equals(this.key, that.key))
+        if (!this.key.equals(that.key))
           return false;
       }
 
@@ -7904,7 +7699,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetKey()) {        lastComparison = TBaseHelper.compareTo(this.key, typedOther.key);
+      if (isSetKey()) {
+        lastComparison = TBaseHelper.compareTo(this.key, typedOther.key);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -7913,7 +7709,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetColumn_parent()) {        lastComparison = TBaseHelper.compareTo(this.column_parent, typedOther.column_parent);
+      if (isSetColumn_parent()) {
+        lastComparison = TBaseHelper.compareTo(this.column_parent, typedOther.column_parent);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -7922,7 +7719,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetPredicate()) {        lastComparison = TBaseHelper.compareTo(this.predicate, typedOther.predicate);
+      if (isSetPredicate()) {
+        lastComparison = TBaseHelper.compareTo(this.predicate, typedOther.predicate);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -7931,12 +7729,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetConsistency_level()) {        lastComparison = TBaseHelper.compareTo(this.consistency_level, typedOther.consistency_level);
+      if (isSetConsistency_level()) {
+        lastComparison = TBaseHelper.compareTo(this.consistency_level, typedOther.consistency_level);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -8027,12 +7830,7 @@ public class Cassandra {
       if (this.key == null) {
         sb.append("null");
       } else {
-          int __key_size = Math.min(this.key.length, 128);
-          for (int i = 0; i < __key_size; i++) {
-            if (i != 0) sb.append(" ");
-            sb.append(Integer.toHexString(this.key[i]).length() > 1 ? Integer.toHexString(this.key[i]).substring(Integer.toHexString(this.key[i]).length() - 2).toUpperCase() : "0" + Integer.toHexString(this.key[i]).toUpperCase());
-          }
-          if (this.key.length > 128) sb.append(" ...");
+        TBaseHelper.toString(this.key, sb);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -8219,9 +8017,13 @@ public class Cassandra {
       return new get_count_result(this);
     }
 
-    @Deprecated
-    public get_count_result clone() {
-      return new get_count_result(this);
+    @Override
+    public void clear() {
+      setSuccessIsSet(false);
+      this.success = 0;
+      this.ire = null;
+      this.ue = null;
+      this.te = null;
     }
 
     public int getSuccess() {
@@ -8356,10 +8158,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case SUCCESS:
@@ -8378,12 +8176,12 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case SUCCESS:
         return isSetSuccess();
@@ -8395,10 +8193,6 @@ public class Cassandra {
         return isSetTe();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -8492,7 +8286,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetSuccess()) {        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
+      if (isSetSuccess()) {
+        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -8501,7 +8296,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetIre()) {        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
+      if (isSetIre()) {
+        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -8510,7 +8306,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetUe()) {        lastComparison = TBaseHelper.compareTo(this.ue, typedOther.ue);
+      if (isSetUe()) {
+        lastComparison = TBaseHelper.compareTo(this.ue, typedOther.ue);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -8519,12 +8316,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetTe()) {        lastComparison = TBaseHelper.compareTo(this.te, typedOther.te);
+      if (isSetTe()) {
+        lastComparison = TBaseHelper.compareTo(this.te, typedOther.te);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -8654,7 +8456,7 @@ public class Cassandra {
     private static final TField PREDICATE_FIELD_DESC = new TField("predicate", TType.STRUCT, (short)3);
     private static final TField CONSISTENCY_LEVEL_FIELD_DESC = new TField("consistency_level", TType.I32, (short)4);
 
-    public List<byte[]> keys;
+    public List<ByteBuffer> keys;
     public ColumnParent column_parent;
     public SlicePredicate predicate;
     /**
@@ -8758,7 +8560,7 @@ public class Cassandra {
     }
 
     public multiget_slice_args(
-      List<byte[]> keys,
+      List<ByteBuffer> keys,
       ColumnParent column_parent,
       SlicePredicate predicate,
       ConsistencyLevel consistency_level)
@@ -8775,10 +8577,10 @@ public class Cassandra {
      */
     public multiget_slice_args(multiget_slice_args other) {
       if (other.isSetKeys()) {
-        List<byte[]> __this__keys = new ArrayList<byte[]>();
-        for (byte[] other_element : other.keys) {
-          byte[] temp_binary_element = new byte[other_element.length];
-          System.arraycopy(other_element, 0, temp_binary_element, 0, other_element.length);
+        List<ByteBuffer> __this__keys = new ArrayList<ByteBuffer>();
+        for (ByteBuffer other_element : other.keys) {
+          ByteBuffer temp_binary_element = TBaseHelper.copyBinary(other_element);
+;
           __this__keys.add(temp_binary_element);
         }
         this.keys = __this__keys;
@@ -8798,31 +8600,35 @@ public class Cassandra {
       return new multiget_slice_args(this);
     }
 
-    @Deprecated
-    public multiget_slice_args clone() {
-      return new multiget_slice_args(this);
+    @Override
+    public void clear() {
+      this.keys = null;
+      this.column_parent = null;
+      this.predicate = null;
+      this.consistency_level = ConsistencyLevel.ONE;
+
     }
 
     public int getKeysSize() {
       return (this.keys == null) ? 0 : this.keys.size();
     }
 
-    public java.util.Iterator<byte[]> getKeysIterator() {
+    public java.util.Iterator<ByteBuffer> getKeysIterator() {
       return (this.keys == null) ? null : this.keys.iterator();
     }
 
-    public void addToKeys(byte[] elem) {
+    public void addToKeys(ByteBuffer elem) {
       if (this.keys == null) {
-        this.keys = new ArrayList<byte[]>();
+        this.keys = new ArrayList<ByteBuffer>();
       }
       this.keys.add(elem);
     }
 
-    public List<byte[]> getKeys() {
+    public List<ByteBuffer> getKeys() {
       return this.keys;
     }
 
-    public multiget_slice_args setKeys(List<byte[]> keys) {
+    public multiget_slice_args setKeys(List<ByteBuffer> keys) {
       this.keys = keys;
       return this;
     }
@@ -8928,7 +8734,7 @@ public class Cassandra {
         if (value == null) {
           unsetKeys();
         } else {
-          setKeys((List<byte[]>)value);
+          setKeys((List<ByteBuffer>)value);
         }
         break;
 
@@ -8959,10 +8765,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case KEYS:
@@ -8981,12 +8783,12 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case KEYS:
         return isSetKeys();
@@ -8998,10 +8800,6 @@ public class Cassandra {
         return isSetConsistency_level();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -9095,7 +8893,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetKeys()) {        lastComparison = TBaseHelper.compareTo(this.keys, typedOther.keys);
+      if (isSetKeys()) {
+        lastComparison = TBaseHelper.compareTo(this.keys, typedOther.keys);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -9104,7 +8903,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetColumn_parent()) {        lastComparison = TBaseHelper.compareTo(this.column_parent, typedOther.column_parent);
+      if (isSetColumn_parent()) {
+        lastComparison = TBaseHelper.compareTo(this.column_parent, typedOther.column_parent);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -9113,7 +8913,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetPredicate()) {        lastComparison = TBaseHelper.compareTo(this.predicate, typedOther.predicate);
+      if (isSetPredicate()) {
+        lastComparison = TBaseHelper.compareTo(this.predicate, typedOther.predicate);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -9122,12 +8923,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetConsistency_level()) {        lastComparison = TBaseHelper.compareTo(this.consistency_level, typedOther.consistency_level);
+      if (isSetConsistency_level()) {
+        lastComparison = TBaseHelper.compareTo(this.consistency_level, typedOther.consistency_level);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -9144,10 +8950,10 @@ public class Cassandra {
             if (field.type == TType.LIST) {
               {
                 TList _list42 = iprot.readListBegin();
-                this.keys = new ArrayList<byte[]>(_list42.size);
+                this.keys = new ArrayList<ByteBuffer>(_list42.size);
                 for (int _i43 = 0; _i43 < _list42.size; ++_i43)
                 {
-                  byte[] _elem44;
+                  ByteBuffer _elem44;
                   _elem44 = iprot.readBinary();
                   this.keys.add(_elem44);
                 }
@@ -9199,7 +9005,7 @@ public class Cassandra {
         oprot.writeFieldBegin(KEYS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRING, this.keys.size()));
-          for (byte[] _iter45 : this.keys)
+          for (ByteBuffer _iter45 : this.keys)
           {
             oprot.writeBinary(_iter45);
           }
@@ -9292,7 +9098,7 @@ public class Cassandra {
     private static final TField UE_FIELD_DESC = new TField("ue", TType.STRUCT, (short)2);
     private static final TField TE_FIELD_DESC = new TField("te", TType.STRUCT, (short)3);
 
-    public Map<byte[],List<ColumnOrSuperColumn>> success;
+    public Map<ByteBuffer,List<ColumnOrSuperColumn>> success;
     public InvalidRequestException ire;
     public UnavailableException ue;
     public TimedOutException te;
@@ -9388,7 +9194,7 @@ public class Cassandra {
     }
 
     public multiget_slice_result(
-      Map<byte[],List<ColumnOrSuperColumn>> success,
+      Map<ByteBuffer,List<ColumnOrSuperColumn>> success,
       InvalidRequestException ire,
       UnavailableException ue,
       TimedOutException te)
@@ -9405,14 +9211,14 @@ public class Cassandra {
      */
     public multiget_slice_result(multiget_slice_result other) {
       if (other.isSetSuccess()) {
-        Map<byte[],List<ColumnOrSuperColumn>> __this__success = new HashMap<byte[],List<ColumnOrSuperColumn>>();
-        for (Map.Entry<byte[], List<ColumnOrSuperColumn>> other_element : other.success.entrySet()) {
+        Map<ByteBuffer,List<ColumnOrSuperColumn>> __this__success = new HashMap<ByteBuffer,List<ColumnOrSuperColumn>>();
+        for (Map.Entry<ByteBuffer, List<ColumnOrSuperColumn>> other_element : other.success.entrySet()) {
 
-          byte[] other_element_key = other_element.getKey();
+          ByteBuffer other_element_key = other_element.getKey();
           List<ColumnOrSuperColumn> other_element_value = other_element.getValue();
 
-          byte[] __this__success_copy_key = new byte[other_element_key.length];
-          System.arraycopy(other_element_key, 0, __this__success_copy_key, 0, other_element_key.length);
+          ByteBuffer __this__success_copy_key = TBaseHelper.copyBinary(other_element_key);
+;
 
           List<ColumnOrSuperColumn> __this__success_copy_value = new ArrayList<ColumnOrSuperColumn>();
           for (ColumnOrSuperColumn other_element_value_element : other_element_value) {
@@ -9438,27 +9244,30 @@ public class Cassandra {
       return new multiget_slice_result(this);
     }
 
-    @Deprecated
-    public multiget_slice_result clone() {
-      return new multiget_slice_result(this);
+    @Override
+    public void clear() {
+      this.success = null;
+      this.ire = null;
+      this.ue = null;
+      this.te = null;
     }
 
     public int getSuccessSize() {
       return (this.success == null) ? 0 : this.success.size();
     }
 
-    public void putToSuccess(byte[] key, List<ColumnOrSuperColumn> val) {
+    public void putToSuccess(ByteBuffer key, List<ColumnOrSuperColumn> val) {
       if (this.success == null) {
-        this.success = new HashMap<byte[],List<ColumnOrSuperColumn>>();
+        this.success = new HashMap<ByteBuffer,List<ColumnOrSuperColumn>>();
       }
       this.success.put(key, val);
     }
 
-    public Map<byte[],List<ColumnOrSuperColumn>> getSuccess() {
+    public Map<ByteBuffer,List<ColumnOrSuperColumn>> getSuccess() {
       return this.success;
     }
 
-    public multiget_slice_result setSuccess(Map<byte[],List<ColumnOrSuperColumn>> success) {
+    public multiget_slice_result setSuccess(Map<ByteBuffer,List<ColumnOrSuperColumn>> success) {
       this.success = success;
       return this;
     }
@@ -9556,7 +9365,7 @@ public class Cassandra {
         if (value == null) {
           unsetSuccess();
         } else {
-          setSuccess((Map<byte[],List<ColumnOrSuperColumn>>)value);
+          setSuccess((Map<ByteBuffer,List<ColumnOrSuperColumn>>)value);
         }
         break;
 
@@ -9587,10 +9396,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case SUCCESS:
@@ -9609,12 +9414,12 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case SUCCESS:
         return isSetSuccess();
@@ -9626,10 +9431,6 @@ public class Cassandra {
         return isSetTe();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -9723,7 +9524,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetSuccess()) {        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
+      if (isSetSuccess()) {
+        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -9732,7 +9534,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetIre()) {        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
+      if (isSetIre()) {
+        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -9741,7 +9544,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetUe()) {        lastComparison = TBaseHelper.compareTo(this.ue, typedOther.ue);
+      if (isSetUe()) {
+        lastComparison = TBaseHelper.compareTo(this.ue, typedOther.ue);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -9750,12 +9554,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetTe()) {        lastComparison = TBaseHelper.compareTo(this.te, typedOther.te);
+      if (isSetTe()) {
+        lastComparison = TBaseHelper.compareTo(this.te, typedOther.te);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -9772,10 +9581,10 @@ public class Cassandra {
             if (field.type == TType.MAP) {
               {
                 TMap _map46 = iprot.readMapBegin();
-                this.success = new HashMap<byte[],List<ColumnOrSuperColumn>>(2*_map46.size);
+                this.success = new HashMap<ByteBuffer,List<ColumnOrSuperColumn>>(2*_map46.size);
                 for (int _i47 = 0; _i47 < _map46.size; ++_i47)
                 {
-                  byte[] _key48;
+                  ByteBuffer _key48;
                   List<ColumnOrSuperColumn> _val49;
                   _key48 = iprot.readBinary();
                   {
@@ -9840,7 +9649,7 @@ public class Cassandra {
         oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
         {
           oprot.writeMapBegin(new TMap(TType.STRING, TType.LIST, this.success.size()));
-          for (Map.Entry<byte[], List<ColumnOrSuperColumn>> _iter53 : this.success.entrySet())
+          for (Map.Entry<ByteBuffer, List<ColumnOrSuperColumn>> _iter53 : this.success.entrySet())
           {
             oprot.writeBinary(_iter53.getKey());
             {
@@ -9926,7 +9735,7 @@ public class Cassandra {
     private static final TField PREDICATE_FIELD_DESC = new TField("predicate", TType.STRUCT, (short)3);
     private static final TField CONSISTENCY_LEVEL_FIELD_DESC = new TField("consistency_level", TType.I32, (short)4);
 
-    public List<byte[]> keys;
+    public List<ByteBuffer> keys;
     public ColumnParent column_parent;
     public SlicePredicate predicate;
     /**
@@ -10030,7 +9839,7 @@ public class Cassandra {
     }
 
     public multiget_count_args(
-      List<byte[]> keys,
+      List<ByteBuffer> keys,
       ColumnParent column_parent,
       SlicePredicate predicate,
       ConsistencyLevel consistency_level)
@@ -10047,10 +9856,10 @@ public class Cassandra {
      */
     public multiget_count_args(multiget_count_args other) {
       if (other.isSetKeys()) {
-        List<byte[]> __this__keys = new ArrayList<byte[]>();
-        for (byte[] other_element : other.keys) {
-          byte[] temp_binary_element = new byte[other_element.length];
-          System.arraycopy(other_element, 0, temp_binary_element, 0, other_element.length);
+        List<ByteBuffer> __this__keys = new ArrayList<ByteBuffer>();
+        for (ByteBuffer other_element : other.keys) {
+          ByteBuffer temp_binary_element = TBaseHelper.copyBinary(other_element);
+;
           __this__keys.add(temp_binary_element);
         }
         this.keys = __this__keys;
@@ -10070,31 +9879,35 @@ public class Cassandra {
       return new multiget_count_args(this);
     }
 
-    @Deprecated
-    public multiget_count_args clone() {
-      return new multiget_count_args(this);
+    @Override
+    public void clear() {
+      this.keys = null;
+      this.column_parent = null;
+      this.predicate = null;
+      this.consistency_level = ConsistencyLevel.ONE;
+
     }
 
     public int getKeysSize() {
       return (this.keys == null) ? 0 : this.keys.size();
     }
 
-    public java.util.Iterator<byte[]> getKeysIterator() {
+    public java.util.Iterator<ByteBuffer> getKeysIterator() {
       return (this.keys == null) ? null : this.keys.iterator();
     }
 
-    public void addToKeys(byte[] elem) {
+    public void addToKeys(ByteBuffer elem) {
       if (this.keys == null) {
-        this.keys = new ArrayList<byte[]>();
+        this.keys = new ArrayList<ByteBuffer>();
       }
       this.keys.add(elem);
     }
 
-    public List<byte[]> getKeys() {
+    public List<ByteBuffer> getKeys() {
       return this.keys;
     }
 
-    public multiget_count_args setKeys(List<byte[]> keys) {
+    public multiget_count_args setKeys(List<ByteBuffer> keys) {
       this.keys = keys;
       return this;
     }
@@ -10200,7 +10013,7 @@ public class Cassandra {
         if (value == null) {
           unsetKeys();
         } else {
-          setKeys((List<byte[]>)value);
+          setKeys((List<ByteBuffer>)value);
         }
         break;
 
@@ -10231,10 +10044,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case KEYS:
@@ -10253,12 +10062,12 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case KEYS:
         return isSetKeys();
@@ -10270,10 +10079,6 @@ public class Cassandra {
         return isSetConsistency_level();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -10367,7 +10172,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetKeys()) {        lastComparison = TBaseHelper.compareTo(this.keys, typedOther.keys);
+      if (isSetKeys()) {
+        lastComparison = TBaseHelper.compareTo(this.keys, typedOther.keys);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -10376,7 +10182,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetColumn_parent()) {        lastComparison = TBaseHelper.compareTo(this.column_parent, typedOther.column_parent);
+      if (isSetColumn_parent()) {
+        lastComparison = TBaseHelper.compareTo(this.column_parent, typedOther.column_parent);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -10385,7 +10192,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetPredicate()) {        lastComparison = TBaseHelper.compareTo(this.predicate, typedOther.predicate);
+      if (isSetPredicate()) {
+        lastComparison = TBaseHelper.compareTo(this.predicate, typedOther.predicate);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -10394,12 +10202,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetConsistency_level()) {        lastComparison = TBaseHelper.compareTo(this.consistency_level, typedOther.consistency_level);
+      if (isSetConsistency_level()) {
+        lastComparison = TBaseHelper.compareTo(this.consistency_level, typedOther.consistency_level);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -10416,10 +10229,10 @@ public class Cassandra {
             if (field.type == TType.LIST) {
               {
                 TList _list55 = iprot.readListBegin();
-                this.keys = new ArrayList<byte[]>(_list55.size);
+                this.keys = new ArrayList<ByteBuffer>(_list55.size);
                 for (int _i56 = 0; _i56 < _list55.size; ++_i56)
                 {
-                  byte[] _elem57;
+                  ByteBuffer _elem57;
                   _elem57 = iprot.readBinary();
                   this.keys.add(_elem57);
                 }
@@ -10471,7 +10284,7 @@ public class Cassandra {
         oprot.writeFieldBegin(KEYS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRING, this.keys.size()));
-          for (byte[] _iter58 : this.keys)
+          for (ByteBuffer _iter58 : this.keys)
           {
             oprot.writeBinary(_iter58);
           }
@@ -10564,7 +10377,7 @@ public class Cassandra {
     private static final TField UE_FIELD_DESC = new TField("ue", TType.STRUCT, (short)2);
     private static final TField TE_FIELD_DESC = new TField("te", TType.STRUCT, (short)3);
 
-    public Map<byte[],Integer> success;
+    public Map<ByteBuffer,Integer> success;
     public InvalidRequestException ire;
     public UnavailableException ue;
     public TimedOutException te;
@@ -10659,7 +10472,7 @@ public class Cassandra {
     }
 
     public multiget_count_result(
-      Map<byte[],Integer> success,
+      Map<ByteBuffer,Integer> success,
       InvalidRequestException ire,
       UnavailableException ue,
       TimedOutException te)
@@ -10676,14 +10489,14 @@ public class Cassandra {
      */
     public multiget_count_result(multiget_count_result other) {
       if (other.isSetSuccess()) {
-        Map<byte[],Integer> __this__success = new HashMap<byte[],Integer>();
-        for (Map.Entry<byte[], Integer> other_element : other.success.entrySet()) {
+        Map<ByteBuffer,Integer> __this__success = new HashMap<ByteBuffer,Integer>();
+        for (Map.Entry<ByteBuffer, Integer> other_element : other.success.entrySet()) {
 
-          byte[] other_element_key = other_element.getKey();
+          ByteBuffer other_element_key = other_element.getKey();
           Integer other_element_value = other_element.getValue();
 
-          byte[] __this__success_copy_key = new byte[other_element_key.length];
-          System.arraycopy(other_element_key, 0, __this__success_copy_key, 0, other_element_key.length);
+          ByteBuffer __this__success_copy_key = TBaseHelper.copyBinary(other_element_key);
+;
 
           Integer __this__success_copy_value = other_element_value;
 
@@ -10706,27 +10519,30 @@ public class Cassandra {
       return new multiget_count_result(this);
     }
 
-    @Deprecated
-    public multiget_count_result clone() {
-      return new multiget_count_result(this);
+    @Override
+    public void clear() {
+      this.success = null;
+      this.ire = null;
+      this.ue = null;
+      this.te = null;
     }
 
     public int getSuccessSize() {
       return (this.success == null) ? 0 : this.success.size();
     }
 
-    public void putToSuccess(byte[] key, int val) {
+    public void putToSuccess(ByteBuffer key, int val) {
       if (this.success == null) {
-        this.success = new HashMap<byte[],Integer>();
+        this.success = new HashMap<ByteBuffer,Integer>();
       }
       this.success.put(key, val);
     }
 
-    public Map<byte[],Integer> getSuccess() {
+    public Map<ByteBuffer,Integer> getSuccess() {
       return this.success;
     }
 
-    public multiget_count_result setSuccess(Map<byte[],Integer> success) {
+    public multiget_count_result setSuccess(Map<ByteBuffer,Integer> success) {
       this.success = success;
       return this;
     }
@@ -10824,7 +10640,7 @@ public class Cassandra {
         if (value == null) {
           unsetSuccess();
         } else {
-          setSuccess((Map<byte[],Integer>)value);
+          setSuccess((Map<ByteBuffer,Integer>)value);
         }
         break;
 
@@ -10855,10 +10671,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case SUCCESS:
@@ -10877,12 +10689,12 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case SUCCESS:
         return isSetSuccess();
@@ -10894,10 +10706,6 @@ public class Cassandra {
         return isSetTe();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -10991,7 +10799,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetSuccess()) {        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
+      if (isSetSuccess()) {
+        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -11000,7 +10809,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetIre()) {        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
+      if (isSetIre()) {
+        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -11009,7 +10819,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetUe()) {        lastComparison = TBaseHelper.compareTo(this.ue, typedOther.ue);
+      if (isSetUe()) {
+        lastComparison = TBaseHelper.compareTo(this.ue, typedOther.ue);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -11018,12 +10829,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetTe()) {        lastComparison = TBaseHelper.compareTo(this.te, typedOther.te);
+      if (isSetTe()) {
+        lastComparison = TBaseHelper.compareTo(this.te, typedOther.te);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -11040,10 +10856,10 @@ public class Cassandra {
             if (field.type == TType.MAP) {
               {
                 TMap _map59 = iprot.readMapBegin();
-                this.success = new HashMap<byte[],Integer>(2*_map59.size);
+                this.success = new HashMap<ByteBuffer,Integer>(2*_map59.size);
                 for (int _i60 = 0; _i60 < _map59.size; ++_i60)
                 {
-                  byte[] _key61;
+                  ByteBuffer _key61;
                   int _val62;
                   _key61 = iprot.readBinary();
                   _val62 = iprot.readI32();
@@ -11097,7 +10913,7 @@ public class Cassandra {
         oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
         {
           oprot.writeMapBegin(new TMap(TType.STRING, TType.I32, this.success.size()));
-          for (Map.Entry<byte[], Integer> _iter63 : this.success.entrySet())
+          for (Map.Entry<ByteBuffer, Integer> _iter63 : this.success.entrySet())
           {
             oprot.writeBinary(_iter63.getKey());
             oprot.writeI32(_iter63.getValue());
@@ -11313,9 +11129,13 @@ public class Cassandra {
       return new get_range_slices_args(this);
     }
 
-    @Deprecated
-    public get_range_slices_args clone() {
-      return new get_range_slices_args(this);
+    @Override
+    public void clear() {
+      this.column_parent = null;
+      this.predicate = null;
+      this.range = null;
+      this.consistency_level = ConsistencyLevel.ONE;
+
     }
 
     public ColumnParent getColumn_parent() {
@@ -11459,10 +11279,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case COLUMN_PARENT:
@@ -11481,12 +11297,12 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case COLUMN_PARENT:
         return isSetColumn_parent();
@@ -11498,10 +11314,6 @@ public class Cassandra {
         return isSetConsistency_level();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -11595,7 +11407,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetColumn_parent()) {        lastComparison = TBaseHelper.compareTo(this.column_parent, typedOther.column_parent);
+      if (isSetColumn_parent()) {
+        lastComparison = TBaseHelper.compareTo(this.column_parent, typedOther.column_parent);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -11604,7 +11417,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetPredicate()) {        lastComparison = TBaseHelper.compareTo(this.predicate, typedOther.predicate);
+      if (isSetPredicate()) {
+        lastComparison = TBaseHelper.compareTo(this.predicate, typedOther.predicate);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -11613,7 +11427,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetRange()) {        lastComparison = TBaseHelper.compareTo(this.range, typedOther.range);
+      if (isSetRange()) {
+        lastComparison = TBaseHelper.compareTo(this.range, typedOther.range);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -11622,12 +11437,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetConsistency_level()) {        lastComparison = TBaseHelper.compareTo(this.consistency_level, typedOther.consistency_level);
+      if (isSetConsistency_level()) {
+        lastComparison = TBaseHelper.compareTo(this.consistency_level, typedOther.consistency_level);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -11908,9 +11728,12 @@ public class Cassandra {
       return new get_range_slices_result(this);
     }
 
-    @Deprecated
-    public get_range_slices_result clone() {
-      return new get_range_slices_result(this);
+    @Override
+    public void clear() {
+      this.success = null;
+      this.ire = null;
+      this.ue = null;
+      this.te = null;
     }
 
     public int getSuccessSize() {
@@ -12061,10 +11884,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case SUCCESS:
@@ -12083,12 +11902,12 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case SUCCESS:
         return isSetSuccess();
@@ -12100,10 +11919,6 @@ public class Cassandra {
         return isSetTe();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -12197,7 +12012,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetSuccess()) {        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
+      if (isSetSuccess()) {
+        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -12206,7 +12022,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetIre()) {        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
+      if (isSetIre()) {
+        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -12215,7 +12032,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetUe()) {        lastComparison = TBaseHelper.compareTo(this.ue, typedOther.ue);
+      if (isSetUe()) {
+        lastComparison = TBaseHelper.compareTo(this.ue, typedOther.ue);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -12224,12 +12042,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetTe()) {        lastComparison = TBaseHelper.compareTo(this.te, typedOther.te);
+      if (isSetTe()) {
+        lastComparison = TBaseHelper.compareTo(this.te, typedOther.te);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -12517,9 +12340,13 @@ public class Cassandra {
       return new get_indexed_slices_args(this);
     }
 
-    @Deprecated
-    public get_indexed_slices_args clone() {
-      return new get_indexed_slices_args(this);
+    @Override
+    public void clear() {
+      this.column_parent = null;
+      this.index_clause = null;
+      this.column_predicate = null;
+      this.consistency_level = ConsistencyLevel.ONE;
+
     }
 
     public ColumnParent getColumn_parent() {
@@ -12663,10 +12490,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case COLUMN_PARENT:
@@ -12685,12 +12508,12 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case COLUMN_PARENT:
         return isSetColumn_parent();
@@ -12702,10 +12525,6 @@ public class Cassandra {
         return isSetConsistency_level();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -12799,7 +12618,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetColumn_parent()) {        lastComparison = TBaseHelper.compareTo(this.column_parent, typedOther.column_parent);
+      if (isSetColumn_parent()) {
+        lastComparison = TBaseHelper.compareTo(this.column_parent, typedOther.column_parent);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -12808,7 +12628,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetIndex_clause()) {        lastComparison = TBaseHelper.compareTo(this.index_clause, typedOther.index_clause);
+      if (isSetIndex_clause()) {
+        lastComparison = TBaseHelper.compareTo(this.index_clause, typedOther.index_clause);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -12817,7 +12638,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetColumn_predicate()) {        lastComparison = TBaseHelper.compareTo(this.column_predicate, typedOther.column_predicate);
+      if (isSetColumn_predicate()) {
+        lastComparison = TBaseHelper.compareTo(this.column_predicate, typedOther.column_predicate);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -12826,12 +12648,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetConsistency_level()) {        lastComparison = TBaseHelper.compareTo(this.consistency_level, typedOther.consistency_level);
+      if (isSetConsistency_level()) {
+        lastComparison = TBaseHelper.compareTo(this.consistency_level, typedOther.consistency_level);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -13112,9 +12939,12 @@ public class Cassandra {
       return new get_indexed_slices_result(this);
     }
 
-    @Deprecated
-    public get_indexed_slices_result clone() {
-      return new get_indexed_slices_result(this);
+    @Override
+    public void clear() {
+      this.success = null;
+      this.ire = null;
+      this.ue = null;
+      this.te = null;
     }
 
     public int getSuccessSize() {
@@ -13265,10 +13095,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case SUCCESS:
@@ -13287,12 +13113,12 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case SUCCESS:
         return isSetSuccess();
@@ -13304,10 +13130,6 @@ public class Cassandra {
         return isSetTe();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -13401,7 +13223,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetSuccess()) {        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
+      if (isSetSuccess()) {
+        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -13410,7 +13233,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetIre()) {        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
+      if (isSetIre()) {
+        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -13419,7 +13243,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetUe()) {        lastComparison = TBaseHelper.compareTo(this.ue, typedOther.ue);
+      if (isSetUe()) {
+        lastComparison = TBaseHelper.compareTo(this.ue, typedOther.ue);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -13428,12 +13253,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetTe()) {        lastComparison = TBaseHelper.compareTo(this.te, typedOther.te);
+      if (isSetTe()) {
+        lastComparison = TBaseHelper.compareTo(this.te, typedOther.te);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -13584,7 +13414,7 @@ public class Cassandra {
     private static final TField COLUMN_FIELD_DESC = new TField("column", TType.STRUCT, (short)3);
     private static final TField CONSISTENCY_LEVEL_FIELD_DESC = new TField("consistency_level", TType.I32, (short)4);
 
-    public byte[] key;
+    public ByteBuffer key;
     public ColumnParent column_parent;
     public Column column;
     /**
@@ -13687,7 +13517,7 @@ public class Cassandra {
     }
 
     public insert_args(
-      byte[] key,
+      ByteBuffer key,
       ColumnParent column_parent,
       Column column,
       ConsistencyLevel consistency_level)
@@ -13704,8 +13534,8 @@ public class Cassandra {
      */
     public insert_args(insert_args other) {
       if (other.isSetKey()) {
-        this.key = new byte[other.key.length];
-        System.arraycopy(other.key, 0, key, 0, other.key.length);
+        this.key = TBaseHelper.copyBinary(other.key);
+;
       }
       if (other.isSetColumn_parent()) {
         this.column_parent = new ColumnParent(other.column_parent);
@@ -13722,16 +13552,30 @@ public class Cassandra {
       return new insert_args(this);
     }
 
-    @Deprecated
-    public insert_args clone() {
-      return new insert_args(this);
+    @Override
+    public void clear() {
+      this.key = null;
+      this.column_parent = null;
+      this.column = null;
+      this.consistency_level = ConsistencyLevel.ONE;
+
     }
 
     public byte[] getKey() {
-      return this.key;
+      setKey(TBaseHelper.rightSize(key));
+      return key.array();
+    }
+
+    public ByteBuffer BufferForKey() {
+      return key;
     }
 
     public insert_args setKey(byte[] key) {
+      setKey(ByteBuffer.wrap(key));
+      return this;
+    }
+
+    public insert_args setKey(ByteBuffer key) {
       this.key = key;
       return this;
     }
@@ -13837,7 +13681,7 @@ public class Cassandra {
         if (value == null) {
           unsetKey();
         } else {
-          setKey((byte[])value);
+          setKey((ByteBuffer)value);
         }
         break;
 
@@ -13868,10 +13712,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case KEY:
@@ -13890,12 +13730,12 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case KEY:
         return isSetKey();
@@ -13907,10 +13747,6 @@ public class Cassandra {
         return isSetConsistency_level();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -13931,7 +13767,7 @@ public class Cassandra {
       if (this_present_key || that_present_key) {
         if (!(this_present_key && that_present_key))
           return false;
-        if (!java.util.Arrays.equals(this.key, that.key))
+        if (!this.key.equals(that.key))
           return false;
       }
 
@@ -14004,7 +13840,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetKey()) {        lastComparison = TBaseHelper.compareTo(this.key, typedOther.key);
+      if (isSetKey()) {
+        lastComparison = TBaseHelper.compareTo(this.key, typedOther.key);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -14013,7 +13850,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetColumn_parent()) {        lastComparison = TBaseHelper.compareTo(this.column_parent, typedOther.column_parent);
+      if (isSetColumn_parent()) {
+        lastComparison = TBaseHelper.compareTo(this.column_parent, typedOther.column_parent);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -14022,7 +13860,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetColumn()) {        lastComparison = TBaseHelper.compareTo(this.column, typedOther.column);
+      if (isSetColumn()) {
+        lastComparison = TBaseHelper.compareTo(this.column, typedOther.column);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -14031,12 +13870,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetConsistency_level()) {        lastComparison = TBaseHelper.compareTo(this.consistency_level, typedOther.consistency_level);
+      if (isSetConsistency_level()) {
+        lastComparison = TBaseHelper.compareTo(this.consistency_level, typedOther.consistency_level);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -14127,12 +13971,7 @@ public class Cassandra {
       if (this.key == null) {
         sb.append("null");
       } else {
-          int __key_size = Math.min(this.key.length, 128);
-          for (int i = 0; i < __key_size; i++) {
-            if (i != 0) sb.append(" ");
-            sb.append(Integer.toHexString(this.key[i]).length() > 1 ? Integer.toHexString(this.key[i]).substring(Integer.toHexString(this.key[i]).length() - 2).toUpperCase() : "0" + Integer.toHexString(this.key[i]).toUpperCase());
-          }
-          if (this.key.length > 128) sb.append(" ...");
+        TBaseHelper.toString(this.key, sb);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -14304,9 +14143,11 @@ public class Cassandra {
       return new insert_result(this);
     }
 
-    @Deprecated
-    public insert_result clone() {
-      return new insert_result(this);
+    @Override
+    public void clear() {
+      this.ire = null;
+      this.ue = null;
+      this.te = null;
     }
 
     public InvalidRequestException getIre() {
@@ -14410,10 +14251,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case IRE:
@@ -14429,12 +14266,12 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case IRE:
         return isSetIre();
@@ -14444,10 +14281,6 @@ public class Cassandra {
         return isSetTe();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -14527,7 +14360,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetIre()) {        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
+      if (isSetIre()) {
+        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -14536,7 +14370,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetUe()) {        lastComparison = TBaseHelper.compareTo(this.ue, typedOther.ue);
+      if (isSetUe()) {
+        lastComparison = TBaseHelper.compareTo(this.ue, typedOther.ue);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -14545,12 +14380,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetTe()) {        lastComparison = TBaseHelper.compareTo(this.te, typedOther.te);
+      if (isSetTe()) {
+        lastComparison = TBaseHelper.compareTo(this.te, typedOther.te);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -14664,7 +14504,7 @@ public class Cassandra {
     private static final TField TIMESTAMP_FIELD_DESC = new TField("timestamp", TType.I64, (short)3);
     private static final TField CONSISTENCY_LEVEL_FIELD_DESC = new TField("consistency_level", TType.I32, (short)4);
 
-    public byte[] key;
+    public ByteBuffer key;
     public ColumnPath column_path;
     public long timestamp;
     /**
@@ -14769,7 +14609,7 @@ public class Cassandra {
     }
 
     public remove_args(
-      byte[] key,
+      ByteBuffer key,
       ColumnPath column_path,
       long timestamp,
       ConsistencyLevel consistency_level)
@@ -14789,8 +14629,8 @@ public class Cassandra {
       __isset_bit_vector.clear();
       __isset_bit_vector.or(other.__isset_bit_vector);
       if (other.isSetKey()) {
-        this.key = new byte[other.key.length];
-        System.arraycopy(other.key, 0, key, 0, other.key.length);
+        this.key = TBaseHelper.copyBinary(other.key);
+;
       }
       if (other.isSetColumn_path()) {
         this.column_path = new ColumnPath(other.column_path);
@@ -14805,16 +14645,31 @@ public class Cassandra {
       return new remove_args(this);
     }
 
-    @Deprecated
-    public remove_args clone() {
-      return new remove_args(this);
+    @Override
+    public void clear() {
+      this.key = null;
+      this.column_path = null;
+      setTimestampIsSet(false);
+      this.timestamp = 0;
+      this.consistency_level = ConsistencyLevel.ONE;
+
     }
 
     public byte[] getKey() {
-      return this.key;
+      setKey(TBaseHelper.rightSize(key));
+      return key.array();
+    }
+
+    public ByteBuffer BufferForKey() {
+      return key;
     }
 
     public remove_args setKey(byte[] key) {
+      setKey(ByteBuffer.wrap(key));
+      return this;
+    }
+
+    public remove_args setKey(ByteBuffer key) {
       this.key = key;
       return this;
     }
@@ -14919,7 +14774,7 @@ public class Cassandra {
         if (value == null) {
           unsetKey();
         } else {
-          setKey((byte[])value);
+          setKey((ByteBuffer)value);
         }
         break;
 
@@ -14950,10 +14805,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case KEY:
@@ -14972,12 +14823,12 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case KEY:
         return isSetKey();
@@ -14989,10 +14840,6 @@ public class Cassandra {
         return isSetConsistency_level();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -15013,7 +14860,7 @@ public class Cassandra {
       if (this_present_key || that_present_key) {
         if (!(this_present_key && that_present_key))
           return false;
-        if (!java.util.Arrays.equals(this.key, that.key))
+        if (!this.key.equals(that.key))
           return false;
       }
 
@@ -15086,7 +14933,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetKey()) {        lastComparison = TBaseHelper.compareTo(this.key, typedOther.key);
+      if (isSetKey()) {
+        lastComparison = TBaseHelper.compareTo(this.key, typedOther.key);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -15095,7 +14943,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetColumn_path()) {        lastComparison = TBaseHelper.compareTo(this.column_path, typedOther.column_path);
+      if (isSetColumn_path()) {
+        lastComparison = TBaseHelper.compareTo(this.column_path, typedOther.column_path);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -15104,7 +14953,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetTimestamp()) {        lastComparison = TBaseHelper.compareTo(this.timestamp, typedOther.timestamp);
+      if (isSetTimestamp()) {
+        lastComparison = TBaseHelper.compareTo(this.timestamp, typedOther.timestamp);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -15113,12 +14963,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetConsistency_level()) {        lastComparison = TBaseHelper.compareTo(this.consistency_level, typedOther.consistency_level);
+      if (isSetConsistency_level()) {
+        lastComparison = TBaseHelper.compareTo(this.consistency_level, typedOther.consistency_level);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -15210,12 +15065,7 @@ public class Cassandra {
       if (this.key == null) {
         sb.append("null");
       } else {
-          int __key_size = Math.min(this.key.length, 128);
-          for (int i = 0; i < __key_size; i++) {
-            if (i != 0) sb.append(" ");
-            sb.append(Integer.toHexString(this.key[i]).length() > 1 ? Integer.toHexString(this.key[i]).substring(Integer.toHexString(this.key[i]).length() - 2).toUpperCase() : "0" + Integer.toHexString(this.key[i]).toUpperCase());
-          }
-          if (this.key.length > 128) sb.append(" ...");
+        TBaseHelper.toString(this.key, sb);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -15378,9 +15228,11 @@ public class Cassandra {
       return new remove_result(this);
     }
 
-    @Deprecated
-    public remove_result clone() {
-      return new remove_result(this);
+    @Override
+    public void clear() {
+      this.ire = null;
+      this.ue = null;
+      this.te = null;
     }
 
     public InvalidRequestException getIre() {
@@ -15484,10 +15336,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case IRE:
@@ -15503,12 +15351,12 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case IRE:
         return isSetIre();
@@ -15518,10 +15366,6 @@ public class Cassandra {
         return isSetTe();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -15601,7 +15445,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetIre()) {        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
+      if (isSetIre()) {
+        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -15610,7 +15455,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetUe()) {        lastComparison = TBaseHelper.compareTo(this.ue, typedOther.ue);
+      if (isSetUe()) {
+        lastComparison = TBaseHelper.compareTo(this.ue, typedOther.ue);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -15619,12 +15465,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetTe()) {        lastComparison = TBaseHelper.compareTo(this.te, typedOther.te);
+      if (isSetTe()) {
+        lastComparison = TBaseHelper.compareTo(this.te, typedOther.te);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -15736,7 +15587,7 @@ public class Cassandra {
     private static final TField MUTATION_MAP_FIELD_DESC = new TField("mutation_map", TType.MAP, (short)1);
     private static final TField CONSISTENCY_LEVEL_FIELD_DESC = new TField("consistency_level", TType.I32, (short)2);
 
-    public Map<byte[],Map<String,List<Mutation>>> mutation_map;
+    public Map<ByteBuffer,Map<String,List<Mutation>>> mutation_map;
     /**
      * 
      * @see ConsistencyLevel
@@ -15832,7 +15683,7 @@ public class Cassandra {
     }
 
     public batch_mutate_args(
-      Map<byte[],Map<String,List<Mutation>>> mutation_map,
+      Map<ByteBuffer,Map<String,List<Mutation>>> mutation_map,
       ConsistencyLevel consistency_level)
     {
       this();
@@ -15845,14 +15696,14 @@ public class Cassandra {
      */
     public batch_mutate_args(batch_mutate_args other) {
       if (other.isSetMutation_map()) {
-        Map<byte[],Map<String,List<Mutation>>> __this__mutation_map = new HashMap<byte[],Map<String,List<Mutation>>>();
-        for (Map.Entry<byte[], Map<String,List<Mutation>>> other_element : other.mutation_map.entrySet()) {
+        Map<ByteBuffer,Map<String,List<Mutation>>> __this__mutation_map = new HashMap<ByteBuffer,Map<String,List<Mutation>>>();
+        for (Map.Entry<ByteBuffer, Map<String,List<Mutation>>> other_element : other.mutation_map.entrySet()) {
 
-          byte[] other_element_key = other_element.getKey();
+          ByteBuffer other_element_key = other_element.getKey();
           Map<String,List<Mutation>> other_element_value = other_element.getValue();
 
-          byte[] __this__mutation_map_copy_key = new byte[other_element_key.length];
-          System.arraycopy(other_element_key, 0, __this__mutation_map_copy_key, 0, other_element_key.length);
+          ByteBuffer __this__mutation_map_copy_key = TBaseHelper.copyBinary(other_element_key);
+;
 
           Map<String,List<Mutation>> __this__mutation_map_copy_value = new HashMap<String,List<Mutation>>();
           for (Map.Entry<String, List<Mutation>> other_element_value_element : other_element_value.entrySet()) {
@@ -15883,27 +15734,29 @@ public class Cassandra {
       return new batch_mutate_args(this);
     }
 
-    @Deprecated
-    public batch_mutate_args clone() {
-      return new batch_mutate_args(this);
+    @Override
+    public void clear() {
+      this.mutation_map = null;
+      this.consistency_level = ConsistencyLevel.ONE;
+
     }
 
     public int getMutation_mapSize() {
       return (this.mutation_map == null) ? 0 : this.mutation_map.size();
     }
 
-    public void putToMutation_map(byte[] key, Map<String,List<Mutation>> val) {
+    public void putToMutation_map(ByteBuffer key, Map<String,List<Mutation>> val) {
       if (this.mutation_map == null) {
-        this.mutation_map = new HashMap<byte[],Map<String,List<Mutation>>>();
+        this.mutation_map = new HashMap<ByteBuffer,Map<String,List<Mutation>>>();
       }
       this.mutation_map.put(key, val);
     }
 
-    public Map<byte[],Map<String,List<Mutation>>> getMutation_map() {
+    public Map<ByteBuffer,Map<String,List<Mutation>>> getMutation_map() {
       return this.mutation_map;
     }
 
-    public batch_mutate_args setMutation_map(Map<byte[],Map<String,List<Mutation>>> mutation_map) {
+    public batch_mutate_args setMutation_map(Map<ByteBuffer,Map<String,List<Mutation>>> mutation_map) {
       this.mutation_map = mutation_map;
       return this;
     }
@@ -15961,7 +15814,7 @@ public class Cassandra {
         if (value == null) {
           unsetMutation_map();
         } else {
-          setMutation_map((Map<byte[],Map<String,List<Mutation>>>)value);
+          setMutation_map((Map<ByteBuffer,Map<String,List<Mutation>>>)value);
         }
         break;
 
@@ -15976,10 +15829,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case MUTATION_MAP:
@@ -15992,12 +15841,12 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case MUTATION_MAP:
         return isSetMutation_map();
@@ -16005,10 +15854,6 @@ public class Cassandra {
         return isSetConsistency_level();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -16074,7 +15919,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetMutation_map()) {        lastComparison = TBaseHelper.compareTo(this.mutation_map, typedOther.mutation_map);
+      if (isSetMutation_map()) {
+        lastComparison = TBaseHelper.compareTo(this.mutation_map, typedOther.mutation_map);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -16083,12 +15929,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetConsistency_level()) {        lastComparison = TBaseHelper.compareTo(this.consistency_level, typedOther.consistency_level);
+      if (isSetConsistency_level()) {
+        lastComparison = TBaseHelper.compareTo(this.consistency_level, typedOther.consistency_level);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -16105,10 +15956,10 @@ public class Cassandra {
             if (field.type == TType.MAP) {
               {
                 TMap _map72 = iprot.readMapBegin();
-                this.mutation_map = new HashMap<byte[],Map<String,List<Mutation>>>(2*_map72.size);
+                this.mutation_map = new HashMap<ByteBuffer,Map<String,List<Mutation>>>(2*_map72.size);
                 for (int _i73 = 0; _i73 < _map72.size; ++_i73)
                 {
-                  byte[] _key74;
+                  ByteBuffer _key74;
                   Map<String,List<Mutation>> _val75;
                   _key74 = iprot.readBinary();
                   {
@@ -16169,7 +16020,7 @@ public class Cassandra {
         oprot.writeFieldBegin(MUTATION_MAP_FIELD_DESC);
         {
           oprot.writeMapBegin(new TMap(TType.STRING, TType.MAP, this.mutation_map.size()));
-          for (Map.Entry<byte[], Map<String,List<Mutation>>> _iter83 : this.mutation_map.entrySet())
+          for (Map.Entry<ByteBuffer, Map<String,List<Mutation>>> _iter83 : this.mutation_map.entrySet())
           {
             oprot.writeBinary(_iter83.getKey());
             {
@@ -16361,9 +16212,11 @@ public class Cassandra {
       return new batch_mutate_result(this);
     }
 
-    @Deprecated
-    public batch_mutate_result clone() {
-      return new batch_mutate_result(this);
+    @Override
+    public void clear() {
+      this.ire = null;
+      this.ue = null;
+      this.te = null;
     }
 
     public InvalidRequestException getIre() {
@@ -16467,10 +16320,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case IRE:
@@ -16486,12 +16335,12 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case IRE:
         return isSetIre();
@@ -16501,10 +16350,6 @@ public class Cassandra {
         return isSetTe();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -16584,7 +16429,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetIre()) {        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
+      if (isSetIre()) {
+        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -16593,7 +16439,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetUe()) {        lastComparison = TBaseHelper.compareTo(this.ue, typedOther.ue);
+      if (isSetUe()) {
+        lastComparison = TBaseHelper.compareTo(this.ue, typedOther.ue);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -16602,12 +16449,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetTe()) {        lastComparison = TBaseHelper.compareTo(this.te, typedOther.te);
+      if (isSetTe()) {
+        lastComparison = TBaseHelper.compareTo(this.te, typedOther.te);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -16812,9 +16664,9 @@ public class Cassandra {
       return new truncate_args(this);
     }
 
-    @Deprecated
-    public truncate_args clone() {
-      return new truncate_args(this);
+    @Override
+    public void clear() {
+      this.cfname = null;
     }
 
     public String getCfname() {
@@ -16854,10 +16706,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case CFNAME:
@@ -16867,21 +16715,17 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case CFNAME:
         return isSetCfname();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -16933,12 +16777,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetCfname()) {        lastComparison = TBaseHelper.compareTo(this.cfname, typedOther.cfname);
+      if (isSetCfname()) {
+        lastComparison = TBaseHelper.compareTo(this.cfname, typedOther.cfname);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -17118,9 +16967,10 @@ public class Cassandra {
       return new truncate_result(this);
     }
 
-    @Deprecated
-    public truncate_result clone() {
-      return new truncate_result(this);
+    @Override
+    public void clear() {
+      this.ire = null;
+      this.ue = null;
     }
 
     public InvalidRequestException getIre() {
@@ -17192,10 +17042,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case IRE:
@@ -17208,12 +17054,12 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case IRE:
         return isSetIre();
@@ -17221,10 +17067,6 @@ public class Cassandra {
         return isSetUe();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -17290,7 +17132,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetIre()) {        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
+      if (isSetIre()) {
+        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -17299,12 +17142,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetUe()) {        lastComparison = TBaseHelper.compareTo(this.ue, typedOther.ue);
+      if (isSetUe()) {
+        lastComparison = TBaseHelper.compareTo(this.ue, typedOther.ue);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -17470,18 +17318,13 @@ public class Cassandra {
       return new describe_schema_versions_args(this);
     }
 
-    @Deprecated
-    public describe_schema_versions_args clone() {
-      return new describe_schema_versions_args(this);
+    @Override
+    public void clear() {
     }
 
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       }
-    }
-
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
     }
 
     public Object getFieldValue(_Fields field) {
@@ -17490,19 +17333,15 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -17537,6 +17376,10 @@ public class Cassandra {
       describe_schema_versions_args typedOther = (describe_schema_versions_args)other;
 
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -17712,9 +17555,10 @@ public class Cassandra {
       return new describe_schema_versions_result(this);
     }
 
-    @Deprecated
-    public describe_schema_versions_result clone() {
-      return new describe_schema_versions_result(this);
+    @Override
+    public void clear() {
+      this.success = null;
+      this.ire = null;
     }
 
     public int getSuccessSize() {
@@ -17797,10 +17641,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case SUCCESS:
@@ -17813,12 +17653,12 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case SUCCESS:
         return isSetSuccess();
@@ -17826,10 +17666,6 @@ public class Cassandra {
         return isSetIre();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -17895,7 +17731,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetSuccess()) {        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
+      if (isSetSuccess()) {
+        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -17904,12 +17741,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetIre()) {        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
+      if (isSetIre()) {
+        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -18111,18 +17953,13 @@ public class Cassandra {
       return new describe_keyspaces_args(this);
     }
 
-    @Deprecated
-    public describe_keyspaces_args clone() {
-      return new describe_keyspaces_args(this);
+    @Override
+    public void clear() {
     }
 
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       }
-    }
-
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
     }
 
     public Object getFieldValue(_Fields field) {
@@ -18131,19 +17968,15 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -18178,6 +18011,10 @@ public class Cassandra {
       describe_keyspaces_args typedOther = (describe_keyspaces_args)other;
 
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -18228,12 +18065,15 @@ public class Cassandra {
     private static final TStruct STRUCT_DESC = new TStruct("describe_keyspaces_result");
 
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
+    private static final TField IRE_FIELD_DESC = new TField("ire", TType.STRUCT, (short)1);
 
     public List<KsDef> success;
+    public InvalidRequestException ire;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
-      SUCCESS((short)0, "success");
+      SUCCESS((short)0, "success"),
+      IRE((short)1, "ire");
 
       private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -18250,6 +18090,8 @@ public class Cassandra {
         switch(fieldId) {
           case 0: // SUCCESS
             return SUCCESS;
+          case 1: // IRE
+            return IRE;
           default:
             return null;
         }
@@ -18297,6 +18139,8 @@ public class Cassandra {
       tmpMap.put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
           new ListMetaData(TType.LIST, 
               new StructMetaData(TType.STRUCT, KsDef.class))));
+      tmpMap.put(_Fields.IRE, new FieldMetaData("ire", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRUCT)));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
       FieldMetaData.addStructMetaDataMap(describe_keyspaces_result.class, metaDataMap);
     }
@@ -18305,10 +18149,12 @@ public class Cassandra {
     }
 
     public describe_keyspaces_result(
-      List<KsDef> success)
+      List<KsDef> success,
+      InvalidRequestException ire)
     {
       this();
       this.success = success;
+      this.ire = ire;
     }
 
     /**
@@ -18322,15 +18168,19 @@ public class Cassandra {
         }
         this.success = __this__success;
       }
+      if (other.isSetIre()) {
+        this.ire = new InvalidRequestException(other.ire);
+      }
     }
 
     public describe_keyspaces_result deepCopy() {
       return new describe_keyspaces_result(this);
     }
 
-    @Deprecated
-    public describe_keyspaces_result clone() {
-      return new describe_keyspaces_result(this);
+    @Override
+    public void clear() {
+      this.success = null;
+      this.ire = null;
     }
 
     public int getSuccessSize() {
@@ -18372,6 +18222,30 @@ public class Cassandra {
       }
     }
 
+    public InvalidRequestException getIre() {
+      return this.ire;
+    }
+
+    public describe_keyspaces_result setIre(InvalidRequestException ire) {
+      this.ire = ire;
+      return this;
+    }
+
+    public void unsetIre() {
+      this.ire = null;
+    }
+
+    /** Returns true if field ire is set (has been asigned a value) and false otherwise */
+    public boolean isSetIre() {
+      return this.ire != null;
+    }
+
+    public void setIreIsSet(boolean value) {
+      if (!value) {
+        this.ire = null;
+      }
+    }
+
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       case SUCCESS:
@@ -18382,11 +18256,15 @@ public class Cassandra {
         }
         break;
 
-      }
-    }
+      case IRE:
+        if (value == null) {
+          unsetIre();
+        } else {
+          setIre((InvalidRequestException)value);
+        }
+        break;
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+      }
     }
 
     public Object getFieldValue(_Fields field) {
@@ -18394,25 +18272,26 @@ public class Cassandra {
       case SUCCESS:
         return getSuccess();
 
+      case IRE:
+        return getIre();
+
       }
       throw new IllegalStateException();
-    }
-
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
     }
 
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case SUCCESS:
         return isSetSuccess();
+      case IRE:
+        return isSetIre();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -18437,6 +18316,15 @@ public class Cassandra {
           return false;
       }
 
+      boolean this_present_ire = true && this.isSetIre();
+      boolean that_present_ire = true && that.isSetIre();
+      if (this_present_ire || that_present_ire) {
+        if (!(this_present_ire && that_present_ire))
+          return false;
+        if (!this.ire.equals(that.ire))
+          return false;
+      }
+
       return true;
     }
 
@@ -18448,6 +18336,11 @@ public class Cassandra {
       builder.append(present_success);
       if (present_success)
         builder.append(success);
+
+      boolean present_ire = true && (isSetIre());
+      builder.append(present_ire);
+      if (present_ire)
+        builder.append(ire);
 
       return builder.toHashCode();
     }
@@ -18464,12 +18357,27 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetSuccess()) {        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
+      if (isSetSuccess()) {
+        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
+      lastComparison = Boolean.valueOf(isSetIre()).compareTo(typedOther.isSetIre());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetIre()) {
+        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -18500,6 +18408,14 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
+          case 1: // IRE
+            if (field.type == TType.STRUCT) {
+              this.ire = new InvalidRequestException();
+              this.ire.read(iprot);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
           default:
             TProtocolUtil.skip(iprot, field.type);
         }
@@ -18525,6 +18441,10 @@ public class Cassandra {
           oprot.writeListEnd();
         }
         oprot.writeFieldEnd();
+      } else if (this.isSetIre()) {
+        oprot.writeFieldBegin(IRE_FIELD_DESC);
+        this.ire.write(oprot);
+        oprot.writeFieldEnd();
       }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
@@ -18540,6 +18460,14 @@ public class Cassandra {
         sb.append("null");
       } else {
         sb.append(this.success);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("ire:");
+      if (this.ire == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.ire);
       }
       first = false;
       sb.append(")");
@@ -18632,18 +18560,13 @@ public class Cassandra {
       return new describe_cluster_name_args(this);
     }
 
-    @Deprecated
-    public describe_cluster_name_args clone() {
-      return new describe_cluster_name_args(this);
+    @Override
+    public void clear() {
     }
 
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       }
-    }
-
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
     }
 
     public Object getFieldValue(_Fields field) {
@@ -18652,19 +18575,15 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -18699,6 +18618,10 @@ public class Cassandra {
       describe_cluster_name_args typedOther = (describe_cluster_name_args)other;
 
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -18844,9 +18767,9 @@ public class Cassandra {
       return new describe_cluster_name_result(this);
     }
 
-    @Deprecated
-    public describe_cluster_name_result clone() {
-      return new describe_cluster_name_result(this);
+    @Override
+    public void clear() {
+      this.success = null;
     }
 
     public String getSuccess() {
@@ -18886,10 +18809,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case SUCCESS:
@@ -18899,21 +18818,17 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case SUCCESS:
         return isSetSuccess();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -18965,12 +18880,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetSuccess()) {        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
+      if (isSetSuccess()) {
+        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -19115,18 +19035,13 @@ public class Cassandra {
       return new describe_version_args(this);
     }
 
-    @Deprecated
-    public describe_version_args clone() {
-      return new describe_version_args(this);
+    @Override
+    public void clear() {
     }
 
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       }
-    }
-
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
     }
 
     public Object getFieldValue(_Fields field) {
@@ -19135,19 +19050,15 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -19182,6 +19093,10 @@ public class Cassandra {
       describe_version_args typedOther = (describe_version_args)other;
 
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -19327,9 +19242,9 @@ public class Cassandra {
       return new describe_version_result(this);
     }
 
-    @Deprecated
-    public describe_version_result clone() {
-      return new describe_version_result(this);
+    @Override
+    public void clear() {
+      this.success = null;
     }
 
     public String getSuccess() {
@@ -19369,10 +19284,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case SUCCESS:
@@ -19382,21 +19293,17 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case SUCCESS:
         return isSetSuccess();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -19448,12 +19355,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetSuccess()) {        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
+      if (isSetSuccess()) {
+        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -19617,9 +19529,9 @@ public class Cassandra {
       return new describe_ring_args(this);
     }
 
-    @Deprecated
-    public describe_ring_args clone() {
-      return new describe_ring_args(this);
+    @Override
+    public void clear() {
+      this.keyspace = null;
     }
 
     public String getKeyspace() {
@@ -19659,10 +19571,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case KEYSPACE:
@@ -19672,21 +19580,17 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case KEYSPACE:
         return isSetKeyspace();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -19738,12 +19642,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetKeyspace()) {        lastComparison = TBaseHelper.compareTo(this.keyspace, typedOther.keyspace);
+      if (isSetKeyspace()) {
+        lastComparison = TBaseHelper.compareTo(this.keyspace, typedOther.keyspace);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -19928,9 +19837,10 @@ public class Cassandra {
       return new describe_ring_result(this);
     }
 
-    @Deprecated
-    public describe_ring_result clone() {
-      return new describe_ring_result(this);
+    @Override
+    public void clear() {
+      this.success = null;
+      this.ire = null;
     }
 
     public int getSuccessSize() {
@@ -20017,10 +19927,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case SUCCESS:
@@ -20033,12 +19939,12 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case SUCCESS:
         return isSetSuccess();
@@ -20046,10 +19952,6 @@ public class Cassandra {
         return isSetIre();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -20115,7 +20017,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetSuccess()) {        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
+      if (isSetSuccess()) {
+        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -20124,12 +20027,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetIre()) {        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
+      if (isSetIre()) {
+        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -20312,18 +20220,13 @@ public class Cassandra {
       return new describe_partitioner_args(this);
     }
 
-    @Deprecated
-    public describe_partitioner_args clone() {
-      return new describe_partitioner_args(this);
+    @Override
+    public void clear() {
     }
 
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       }
-    }
-
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
     }
 
     public Object getFieldValue(_Fields field) {
@@ -20332,19 +20235,15 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -20379,6 +20278,10 @@ public class Cassandra {
       describe_partitioner_args typedOther = (describe_partitioner_args)other;
 
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -20524,9 +20427,9 @@ public class Cassandra {
       return new describe_partitioner_result(this);
     }
 
-    @Deprecated
-    public describe_partitioner_result clone() {
-      return new describe_partitioner_result(this);
+    @Override
+    public void clear() {
+      this.success = null;
     }
 
     public String getSuccess() {
@@ -20566,10 +20469,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case SUCCESS:
@@ -20579,21 +20478,17 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case SUCCESS:
         return isSetSuccess();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -20645,12 +20540,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetSuccess()) {        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
+      if (isSetSuccess()) {
+        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -20795,18 +20695,13 @@ public class Cassandra {
       return new describe_snitch_args(this);
     }
 
-    @Deprecated
-    public describe_snitch_args clone() {
-      return new describe_snitch_args(this);
+    @Override
+    public void clear() {
     }
 
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       }
-    }
-
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
     }
 
     public Object getFieldValue(_Fields field) {
@@ -20815,19 +20710,15 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -20862,6 +20753,10 @@ public class Cassandra {
       describe_snitch_args typedOther = (describe_snitch_args)other;
 
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -21007,9 +20902,9 @@ public class Cassandra {
       return new describe_snitch_result(this);
     }
 
-    @Deprecated
-    public describe_snitch_result clone() {
-      return new describe_snitch_result(this);
+    @Override
+    public void clear() {
+      this.success = null;
     }
 
     public String getSuccess() {
@@ -21049,10 +20944,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case SUCCESS:
@@ -21062,21 +20953,17 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case SUCCESS:
         return isSetSuccess();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -21128,12 +21015,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetSuccess()) {        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
+      if (isSetSuccess()) {
+        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -21297,9 +21189,9 @@ public class Cassandra {
       return new describe_keyspace_args(this);
     }
 
-    @Deprecated
-    public describe_keyspace_args clone() {
-      return new describe_keyspace_args(this);
+    @Override
+    public void clear() {
+      this.keyspace = null;
     }
 
     public String getKeyspace() {
@@ -21339,10 +21231,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case KEYSPACE:
@@ -21352,21 +21240,17 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case KEYSPACE:
         return isSetKeyspace();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -21418,12 +21302,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetKeyspace()) {        lastComparison = TBaseHelper.compareTo(this.keyspace, typedOther.keyspace);
+      if (isSetKeyspace()) {
+        lastComparison = TBaseHelper.compareTo(this.keyspace, typedOther.keyspace);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -21497,14 +21386,17 @@ public class Cassandra {
 
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.STRUCT, (short)0);
     private static final TField NFE_FIELD_DESC = new TField("nfe", TType.STRUCT, (short)1);
+    private static final TField IRE_FIELD_DESC = new TField("ire", TType.STRUCT, (short)2);
 
     public KsDef success;
     public NotFoundException nfe;
+    public InvalidRequestException ire;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
       SUCCESS((short)0, "success"),
-      NFE((short)1, "nfe");
+      NFE((short)1, "nfe"),
+      IRE((short)2, "ire");
 
       private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -21523,6 +21415,8 @@ public class Cassandra {
             return SUCCESS;
           case 1: // NFE
             return NFE;
+          case 2: // IRE
+            return IRE;
           default:
             return null;
         }
@@ -21571,6 +21465,8 @@ public class Cassandra {
           new StructMetaData(TType.STRUCT, KsDef.class)));
       tmpMap.put(_Fields.NFE, new FieldMetaData("nfe", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
+      tmpMap.put(_Fields.IRE, new FieldMetaData("ire", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRUCT)));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
       FieldMetaData.addStructMetaDataMap(describe_keyspace_result.class, metaDataMap);
     }
@@ -21580,11 +21476,13 @@ public class Cassandra {
 
     public describe_keyspace_result(
       KsDef success,
-      NotFoundException nfe)
+      NotFoundException nfe,
+      InvalidRequestException ire)
     {
       this();
       this.success = success;
       this.nfe = nfe;
+      this.ire = ire;
     }
 
     /**
@@ -21597,15 +21495,20 @@ public class Cassandra {
       if (other.isSetNfe()) {
         this.nfe = new NotFoundException(other.nfe);
       }
+      if (other.isSetIre()) {
+        this.ire = new InvalidRequestException(other.ire);
+      }
     }
 
     public describe_keyspace_result deepCopy() {
       return new describe_keyspace_result(this);
     }
 
-    @Deprecated
-    public describe_keyspace_result clone() {
-      return new describe_keyspace_result(this);
+    @Override
+    public void clear() {
+      this.success = null;
+      this.nfe = null;
+      this.ire = null;
     }
 
     public KsDef getSuccess() {
@@ -21656,6 +21559,30 @@ public class Cassandra {
       }
     }
 
+    public InvalidRequestException getIre() {
+      return this.ire;
+    }
+
+    public describe_keyspace_result setIre(InvalidRequestException ire) {
+      this.ire = ire;
+      return this;
+    }
+
+    public void unsetIre() {
+      this.ire = null;
+    }
+
+    /** Returns true if field ire is set (has been asigned a value) and false otherwise */
+    public boolean isSetIre() {
+      return this.ire != null;
+    }
+
+    public void setIreIsSet(boolean value) {
+      if (!value) {
+        this.ire = null;
+      }
+    }
+
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       case SUCCESS:
@@ -21674,11 +21601,15 @@ public class Cassandra {
         }
         break;
 
-      }
-    }
+      case IRE:
+        if (value == null) {
+          unsetIre();
+        } else {
+          setIre((InvalidRequestException)value);
+        }
+        break;
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+      }
     }
 
     public Object getFieldValue(_Fields field) {
@@ -21689,27 +21620,28 @@ public class Cassandra {
       case NFE:
         return getNfe();
 
+      case IRE:
+        return getIre();
+
       }
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case SUCCESS:
         return isSetSuccess();
       case NFE:
         return isSetNfe();
+      case IRE:
+        return isSetIre();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -21743,6 +21675,15 @@ public class Cassandra {
           return false;
       }
 
+      boolean this_present_ire = true && this.isSetIre();
+      boolean that_present_ire = true && that.isSetIre();
+      if (this_present_ire || that_present_ire) {
+        if (!(this_present_ire && that_present_ire))
+          return false;
+        if (!this.ire.equals(that.ire))
+          return false;
+      }
+
       return true;
     }
 
@@ -21760,6 +21701,11 @@ public class Cassandra {
       if (present_nfe)
         builder.append(nfe);
 
+      boolean present_ire = true && (isSetIre());
+      builder.append(present_ire);
+      if (present_ire)
+        builder.append(ire);
+
       return builder.toHashCode();
     }
 
@@ -21775,7 +21721,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetSuccess()) {        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
+      if (isSetSuccess()) {
+        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -21784,12 +21731,27 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetNfe()) {        lastComparison = TBaseHelper.compareTo(this.nfe, typedOther.nfe);
+      if (isSetNfe()) {
+        lastComparison = TBaseHelper.compareTo(this.nfe, typedOther.nfe);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
+      lastComparison = Boolean.valueOf(isSetIre()).compareTo(typedOther.isSetIre());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetIre()) {
+        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -21818,6 +21780,14 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
+          case 2: // IRE
+            if (field.type == TType.STRUCT) {
+              this.ire = new InvalidRequestException();
+              this.ire.read(iprot);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
           default:
             TProtocolUtil.skip(iprot, field.type);
         }
@@ -21839,6 +21809,10 @@ public class Cassandra {
       } else if (this.isSetNfe()) {
         oprot.writeFieldBegin(NFE_FIELD_DESC);
         this.nfe.write(oprot);
+        oprot.writeFieldEnd();
+      } else if (this.isSetIre()) {
+        oprot.writeFieldBegin(IRE_FIELD_DESC);
+        this.ire.write(oprot);
         oprot.writeFieldEnd();
       }
       oprot.writeFieldStop();
@@ -21863,6 +21837,14 @@ public class Cassandra {
         sb.append("null");
       } else {
         sb.append(this.nfe);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("ire:");
+      if (this.ire == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.ire);
       }
       first = false;
       sb.append(")");
@@ -22013,9 +21995,13 @@ public class Cassandra {
       return new describe_splits_args(this);
     }
 
-    @Deprecated
-    public describe_splits_args clone() {
-      return new describe_splits_args(this);
+    @Override
+    public void clear() {
+      this.cfName = null;
+      this.start_token = null;
+      this.end_token = null;
+      setKeys_per_splitIsSet(false);
+      this.keys_per_split = 0;
     }
 
     public String getCfName() {
@@ -22150,10 +22136,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case CF_NAME:
@@ -22172,12 +22154,12 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case CF_NAME:
         return isSetCfName();
@@ -22189,10 +22171,6 @@ public class Cassandra {
         return isSetKeys_per_split();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -22286,7 +22264,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetCfName()) {        lastComparison = TBaseHelper.compareTo(this.cfName, typedOther.cfName);
+      if (isSetCfName()) {
+        lastComparison = TBaseHelper.compareTo(this.cfName, typedOther.cfName);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -22295,7 +22274,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetStart_token()) {        lastComparison = TBaseHelper.compareTo(this.start_token, typedOther.start_token);
+      if (isSetStart_token()) {
+        lastComparison = TBaseHelper.compareTo(this.start_token, typedOther.start_token);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -22304,7 +22284,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetEnd_token()) {        lastComparison = TBaseHelper.compareTo(this.end_token, typedOther.end_token);
+      if (isSetEnd_token()) {
+        lastComparison = TBaseHelper.compareTo(this.end_token, typedOther.end_token);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -22313,12 +22294,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetKeys_per_split()) {        lastComparison = TBaseHelper.compareTo(this.keys_per_split, typedOther.keys_per_split);
+      if (isSetKeys_per_split()) {
+        lastComparison = TBaseHelper.compareTo(this.keys_per_split, typedOther.keys_per_split);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -22556,9 +22542,9 @@ public class Cassandra {
       return new describe_splits_result(this);
     }
 
-    @Deprecated
-    public describe_splits_result clone() {
-      return new describe_splits_result(this);
+    @Override
+    public void clear() {
+      this.success = null;
     }
 
     public int getSuccessSize() {
@@ -22613,10 +22599,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case SUCCESS:
@@ -22626,21 +22608,17 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case SUCCESS:
         return isSetSuccess();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -22692,12 +22670,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetSuccess()) {        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
+      if (isSetSuccess()) {
+        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -22878,9 +22861,9 @@ public class Cassandra {
       return new system_add_column_family_args(this);
     }
 
-    @Deprecated
-    public system_add_column_family_args clone() {
-      return new system_add_column_family_args(this);
+    @Override
+    public void clear() {
+      this.cf_def = null;
     }
 
     public CfDef getCf_def() {
@@ -22920,10 +22903,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case CF_DEF:
@@ -22933,21 +22912,17 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case CF_DEF:
         return isSetCf_def();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -22999,12 +22974,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetCf_def()) {        lastComparison = TBaseHelper.compareTo(this.cf_def, typedOther.cf_def);
+      if (isSetCf_def()) {
+        lastComparison = TBaseHelper.compareTo(this.cf_def, typedOther.cf_def);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -23185,9 +23165,10 @@ public class Cassandra {
       return new system_add_column_family_result(this);
     }
 
-    @Deprecated
-    public system_add_column_family_result clone() {
-      return new system_add_column_family_result(this);
+    @Override
+    public void clear() {
+      this.success = null;
+      this.ire = null;
     }
 
     public String getSuccess() {
@@ -23259,10 +23240,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case SUCCESS:
@@ -23275,12 +23252,12 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case SUCCESS:
         return isSetSuccess();
@@ -23288,10 +23265,6 @@ public class Cassandra {
         return isSetIre();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -23357,7 +23330,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetSuccess()) {        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
+      if (isSetSuccess()) {
+        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -23366,12 +23340,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetIre()) {        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
+      if (isSetIre()) {
+        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -23555,9 +23534,9 @@ public class Cassandra {
       return new system_drop_column_family_args(this);
     }
 
-    @Deprecated
-    public system_drop_column_family_args clone() {
-      return new system_drop_column_family_args(this);
+    @Override
+    public void clear() {
+      this.column_family = null;
     }
 
     public String getColumn_family() {
@@ -23597,10 +23576,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case COLUMN_FAMILY:
@@ -23610,21 +23585,17 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case COLUMN_FAMILY:
         return isSetColumn_family();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -23676,12 +23647,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetColumn_family()) {        lastComparison = TBaseHelper.compareTo(this.column_family, typedOther.column_family);
+      if (isSetColumn_family()) {
+        lastComparison = TBaseHelper.compareTo(this.column_family, typedOther.column_family);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -23861,9 +23837,10 @@ public class Cassandra {
       return new system_drop_column_family_result(this);
     }
 
-    @Deprecated
-    public system_drop_column_family_result clone() {
-      return new system_drop_column_family_result(this);
+    @Override
+    public void clear() {
+      this.success = null;
+      this.ire = null;
     }
 
     public String getSuccess() {
@@ -23935,10 +23912,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case SUCCESS:
@@ -23951,12 +23924,12 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case SUCCESS:
         return isSetSuccess();
@@ -23964,10 +23937,6 @@ public class Cassandra {
         return isSetIre();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -24033,7 +24002,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetSuccess()) {        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
+      if (isSetSuccess()) {
+        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -24042,12 +24012,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetIre()) {        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
+      if (isSetIre()) {
+        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -24105,777 +24080,6 @@ public class Cassandra {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("system_drop_column_family_result(");
-      boolean first = true;
-
-      sb.append("success:");
-      if (this.success == null) {
-        sb.append("null");
-      } else {
-        sb.append(this.success);
-      }
-      first = false;
-      if (!first) sb.append(", ");
-      sb.append("ire:");
-      if (this.ire == null) {
-        sb.append("null");
-      } else {
-        sb.append(this.ire);
-      }
-      first = false;
-      sb.append(")");
-      return sb.toString();
-    }
-
-    public void validate() throws TException {
-      // check for required fields
-    }
-
-  }
-
-  public static class system_rename_column_family_args implements TBase<system_rename_column_family_args, system_rename_column_family_args._Fields>, java.io.Serializable, Cloneable   {
-    private static final TStruct STRUCT_DESC = new TStruct("system_rename_column_family_args");
-
-    private static final TField OLD_NAME_FIELD_DESC = new TField("old_name", TType.STRING, (short)1);
-    private static final TField NEW_NAME_FIELD_DESC = new TField("new_name", TType.STRING, (short)2);
-
-    public String old_name;
-    public String new_name;
-
-    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
-    public enum _Fields implements TFieldIdEnum {
-      OLD_NAME((short)1, "old_name"),
-      NEW_NAME((short)2, "new_name");
-
-      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
-
-      static {
-        for (_Fields field : EnumSet.allOf(_Fields.class)) {
-          byName.put(field.getFieldName(), field);
-        }
-      }
-
-      /**
-       * Find the _Fields constant that matches fieldId, or null if its not found.
-       */
-      public static _Fields findByThriftId(int fieldId) {
-        switch(fieldId) {
-          case 1: // OLD_NAME
-            return OLD_NAME;
-          case 2: // NEW_NAME
-            return NEW_NAME;
-          default:
-            return null;
-        }
-      }
-
-      /**
-       * Find the _Fields constant that matches fieldId, throwing an exception
-       * if it is not found.
-       */
-      public static _Fields findByThriftIdOrThrow(int fieldId) {
-        _Fields fields = findByThriftId(fieldId);
-        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
-        return fields;
-      }
-
-      /**
-       * Find the _Fields constant that matches name, or null if its not found.
-       */
-      public static _Fields findByName(String name) {
-        return byName.get(name);
-      }
-
-      private final short _thriftId;
-      private final String _fieldName;
-
-      _Fields(short thriftId, String fieldName) {
-        _thriftId = thriftId;
-        _fieldName = fieldName;
-      }
-
-      public short getThriftFieldId() {
-        return _thriftId;
-      }
-
-      public String getFieldName() {
-        return _fieldName;
-      }
-    }
-
-    // isset id assignments
-
-    public static final Map<_Fields, FieldMetaData> metaDataMap;
-    static {
-      Map<_Fields, FieldMetaData> tmpMap = new EnumMap<_Fields, FieldMetaData>(_Fields.class);
-      tmpMap.put(_Fields.OLD_NAME, new FieldMetaData("old_name", TFieldRequirementType.REQUIRED, 
-          new FieldValueMetaData(TType.STRING)));
-      tmpMap.put(_Fields.NEW_NAME, new FieldMetaData("new_name", TFieldRequirementType.REQUIRED, 
-          new FieldValueMetaData(TType.STRING)));
-      metaDataMap = Collections.unmodifiableMap(tmpMap);
-      FieldMetaData.addStructMetaDataMap(system_rename_column_family_args.class, metaDataMap);
-    }
-
-    public system_rename_column_family_args() {
-    }
-
-    public system_rename_column_family_args(
-      String old_name,
-      String new_name)
-    {
-      this();
-      this.old_name = old_name;
-      this.new_name = new_name;
-    }
-
-    /**
-     * Performs a deep copy on <i>other</i>.
-     */
-    public system_rename_column_family_args(system_rename_column_family_args other) {
-      if (other.isSetOld_name()) {
-        this.old_name = other.old_name;
-      }
-      if (other.isSetNew_name()) {
-        this.new_name = other.new_name;
-      }
-    }
-
-    public system_rename_column_family_args deepCopy() {
-      return new system_rename_column_family_args(this);
-    }
-
-    @Deprecated
-    public system_rename_column_family_args clone() {
-      return new system_rename_column_family_args(this);
-    }
-
-    public String getOld_name() {
-      return this.old_name;
-    }
-
-    public system_rename_column_family_args setOld_name(String old_name) {
-      this.old_name = old_name;
-      return this;
-    }
-
-    public void unsetOld_name() {
-      this.old_name = null;
-    }
-
-    /** Returns true if field old_name is set (has been asigned a value) and false otherwise */
-    public boolean isSetOld_name() {
-      return this.old_name != null;
-    }
-
-    public void setOld_nameIsSet(boolean value) {
-      if (!value) {
-        this.old_name = null;
-      }
-    }
-
-    public String getNew_name() {
-      return this.new_name;
-    }
-
-    public system_rename_column_family_args setNew_name(String new_name) {
-      this.new_name = new_name;
-      return this;
-    }
-
-    public void unsetNew_name() {
-      this.new_name = null;
-    }
-
-    /** Returns true if field new_name is set (has been asigned a value) and false otherwise */
-    public boolean isSetNew_name() {
-      return this.new_name != null;
-    }
-
-    public void setNew_nameIsSet(boolean value) {
-      if (!value) {
-        this.new_name = null;
-      }
-    }
-
-    public void setFieldValue(_Fields field, Object value) {
-      switch (field) {
-      case OLD_NAME:
-        if (value == null) {
-          unsetOld_name();
-        } else {
-          setOld_name((String)value);
-        }
-        break;
-
-      case NEW_NAME:
-        if (value == null) {
-          unsetNew_name();
-        } else {
-          setNew_name((String)value);
-        }
-        break;
-
-      }
-    }
-
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
-    public Object getFieldValue(_Fields field) {
-      switch (field) {
-      case OLD_NAME:
-        return getOld_name();
-
-      case NEW_NAME:
-        return getNew_name();
-
-      }
-      throw new IllegalStateException();
-    }
-
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
-    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
-    public boolean isSet(_Fields field) {
-      switch (field) {
-      case OLD_NAME:
-        return isSetOld_name();
-      case NEW_NAME:
-        return isSetNew_name();
-      }
-      throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
-    }
-
-    @Override
-    public boolean equals(Object that) {
-      if (that == null)
-        return false;
-      if (that instanceof system_rename_column_family_args)
-        return this.equals((system_rename_column_family_args)that);
-      return false;
-    }
-
-    public boolean equals(system_rename_column_family_args that) {
-      if (that == null)
-        return false;
-
-      boolean this_present_old_name = true && this.isSetOld_name();
-      boolean that_present_old_name = true && that.isSetOld_name();
-      if (this_present_old_name || that_present_old_name) {
-        if (!(this_present_old_name && that_present_old_name))
-          return false;
-        if (!this.old_name.equals(that.old_name))
-          return false;
-      }
-
-      boolean this_present_new_name = true && this.isSetNew_name();
-      boolean that_present_new_name = true && that.isSetNew_name();
-      if (this_present_new_name || that_present_new_name) {
-        if (!(this_present_new_name && that_present_new_name))
-          return false;
-        if (!this.new_name.equals(that.new_name))
-          return false;
-      }
-
-      return true;
-    }
-
-    @Override
-    public int hashCode() {
-      HashCodeBuilder builder = new HashCodeBuilder();
-
-      boolean present_old_name = true && (isSetOld_name());
-      builder.append(present_old_name);
-      if (present_old_name)
-        builder.append(old_name);
-
-      boolean present_new_name = true && (isSetNew_name());
-      builder.append(present_new_name);
-      if (present_new_name)
-        builder.append(new_name);
-
-      return builder.toHashCode();
-    }
-
-    public int compareTo(system_rename_column_family_args other) {
-      if (!getClass().equals(other.getClass())) {
-        return getClass().getName().compareTo(other.getClass().getName());
-      }
-
-      int lastComparison = 0;
-      system_rename_column_family_args typedOther = (system_rename_column_family_args)other;
-
-      lastComparison = Boolean.valueOf(isSetOld_name()).compareTo(typedOther.isSetOld_name());
-      if (lastComparison != 0) {
-        return lastComparison;
-      }
-      if (isSetOld_name()) {        lastComparison = TBaseHelper.compareTo(this.old_name, typedOther.old_name);
-        if (lastComparison != 0) {
-          return lastComparison;
-        }
-      }
-      lastComparison = Boolean.valueOf(isSetNew_name()).compareTo(typedOther.isSetNew_name());
-      if (lastComparison != 0) {
-        return lastComparison;
-      }
-      if (isSetNew_name()) {        lastComparison = TBaseHelper.compareTo(this.new_name, typedOther.new_name);
-        if (lastComparison != 0) {
-          return lastComparison;
-        }
-      }
-      return 0;
-    }
-
-    public void read(TProtocol iprot) throws TException {
-      TField field;
-      iprot.readStructBegin();
-      while (true)
-      {
-        field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
-          break;
-        }
-        switch (field.id) {
-          case 1: // OLD_NAME
-            if (field.type == TType.STRING) {
-              this.old_name = iprot.readString();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case 2: // NEW_NAME
-            if (field.type == TType.STRING) {
-              this.new_name = iprot.readString();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-        }
-        iprot.readFieldEnd();
-      }
-      iprot.readStructEnd();
-
-      // check for required fields of primitive type, which can't be checked in the validate method
-      validate();
-    }
-
-    public void write(TProtocol oprot) throws TException {
-      validate();
-
-      oprot.writeStructBegin(STRUCT_DESC);
-      if (this.old_name != null) {
-        oprot.writeFieldBegin(OLD_NAME_FIELD_DESC);
-        oprot.writeString(this.old_name);
-        oprot.writeFieldEnd();
-      }
-      if (this.new_name != null) {
-        oprot.writeFieldBegin(NEW_NAME_FIELD_DESC);
-        oprot.writeString(this.new_name);
-        oprot.writeFieldEnd();
-      }
-      oprot.writeFieldStop();
-      oprot.writeStructEnd();
-    }
-
-    @Override
-    public String toString() {
-      StringBuilder sb = new StringBuilder("system_rename_column_family_args(");
-      boolean first = true;
-
-      sb.append("old_name:");
-      if (this.old_name == null) {
-        sb.append("null");
-      } else {
-        sb.append(this.old_name);
-      }
-      first = false;
-      if (!first) sb.append(", ");
-      sb.append("new_name:");
-      if (this.new_name == null) {
-        sb.append("null");
-      } else {
-        sb.append(this.new_name);
-      }
-      first = false;
-      sb.append(")");
-      return sb.toString();
-    }
-
-    public void validate() throws TException {
-      // check for required fields
-      if (old_name == null) {
-        throw new TProtocolException("Required field 'old_name' was not present! Struct: " + toString());
-      }
-      if (new_name == null) {
-        throw new TProtocolException("Required field 'new_name' was not present! Struct: " + toString());
-      }
-    }
-
-  }
-
-  public static class system_rename_column_family_result implements TBase<system_rename_column_family_result, system_rename_column_family_result._Fields>, java.io.Serializable, Cloneable   {
-    private static final TStruct STRUCT_DESC = new TStruct("system_rename_column_family_result");
-
-    private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.STRING, (short)0);
-    private static final TField IRE_FIELD_DESC = new TField("ire", TType.STRUCT, (short)1);
-
-    public String success;
-    public InvalidRequestException ire;
-
-    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
-    public enum _Fields implements TFieldIdEnum {
-      SUCCESS((short)0, "success"),
-      IRE((short)1, "ire");
-
-      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
-
-      static {
-        for (_Fields field : EnumSet.allOf(_Fields.class)) {
-          byName.put(field.getFieldName(), field);
-        }
-      }
-
-      /**
-       * Find the _Fields constant that matches fieldId, or null if its not found.
-       */
-      public static _Fields findByThriftId(int fieldId) {
-        switch(fieldId) {
-          case 0: // SUCCESS
-            return SUCCESS;
-          case 1: // IRE
-            return IRE;
-          default:
-            return null;
-        }
-      }
-
-      /**
-       * Find the _Fields constant that matches fieldId, throwing an exception
-       * if it is not found.
-       */
-      public static _Fields findByThriftIdOrThrow(int fieldId) {
-        _Fields fields = findByThriftId(fieldId);
-        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
-        return fields;
-      }
-
-      /**
-       * Find the _Fields constant that matches name, or null if its not found.
-       */
-      public static _Fields findByName(String name) {
-        return byName.get(name);
-      }
-
-      private final short _thriftId;
-      private final String _fieldName;
-
-      _Fields(short thriftId, String fieldName) {
-        _thriftId = thriftId;
-        _fieldName = fieldName;
-      }
-
-      public short getThriftFieldId() {
-        return _thriftId;
-      }
-
-      public String getFieldName() {
-        return _fieldName;
-      }
-    }
-
-    // isset id assignments
-
-    public static final Map<_Fields, FieldMetaData> metaDataMap;
-    static {
-      Map<_Fields, FieldMetaData> tmpMap = new EnumMap<_Fields, FieldMetaData>(_Fields.class);
-      tmpMap.put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
-          new FieldValueMetaData(TType.STRING)));
-      tmpMap.put(_Fields.IRE, new FieldMetaData("ire", TFieldRequirementType.DEFAULT, 
-          new FieldValueMetaData(TType.STRUCT)));
-      metaDataMap = Collections.unmodifiableMap(tmpMap);
-      FieldMetaData.addStructMetaDataMap(system_rename_column_family_result.class, metaDataMap);
-    }
-
-    public system_rename_column_family_result() {
-    }
-
-    public system_rename_column_family_result(
-      String success,
-      InvalidRequestException ire)
-    {
-      this();
-      this.success = success;
-      this.ire = ire;
-    }
-
-    /**
-     * Performs a deep copy on <i>other</i>.
-     */
-    public system_rename_column_family_result(system_rename_column_family_result other) {
-      if (other.isSetSuccess()) {
-        this.success = other.success;
-      }
-      if (other.isSetIre()) {
-        this.ire = new InvalidRequestException(other.ire);
-      }
-    }
-
-    public system_rename_column_family_result deepCopy() {
-      return new system_rename_column_family_result(this);
-    }
-
-    @Deprecated
-    public system_rename_column_family_result clone() {
-      return new system_rename_column_family_result(this);
-    }
-
-    public String getSuccess() {
-      return this.success;
-    }
-
-    public system_rename_column_family_result setSuccess(String success) {
-      this.success = success;
-      return this;
-    }
-
-    public void unsetSuccess() {
-      this.success = null;
-    }
-
-    /** Returns true if field success is set (has been asigned a value) and false otherwise */
-    public boolean isSetSuccess() {
-      return this.success != null;
-    }
-
-    public void setSuccessIsSet(boolean value) {
-      if (!value) {
-        this.success = null;
-      }
-    }
-
-    public InvalidRequestException getIre() {
-      return this.ire;
-    }
-
-    public system_rename_column_family_result setIre(InvalidRequestException ire) {
-      this.ire = ire;
-      return this;
-    }
-
-    public void unsetIre() {
-      this.ire = null;
-    }
-
-    /** Returns true if field ire is set (has been asigned a value) and false otherwise */
-    public boolean isSetIre() {
-      return this.ire != null;
-    }
-
-    public void setIreIsSet(boolean value) {
-      if (!value) {
-        this.ire = null;
-      }
-    }
-
-    public void setFieldValue(_Fields field, Object value) {
-      switch (field) {
-      case SUCCESS:
-        if (value == null) {
-          unsetSuccess();
-        } else {
-          setSuccess((String)value);
-        }
-        break;
-
-      case IRE:
-        if (value == null) {
-          unsetIre();
-        } else {
-          setIre((InvalidRequestException)value);
-        }
-        break;
-
-      }
-    }
-
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
-    public Object getFieldValue(_Fields field) {
-      switch (field) {
-      case SUCCESS:
-        return getSuccess();
-
-      case IRE:
-        return getIre();
-
-      }
-      throw new IllegalStateException();
-    }
-
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
-    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
-    public boolean isSet(_Fields field) {
-      switch (field) {
-      case SUCCESS:
-        return isSetSuccess();
-      case IRE:
-        return isSetIre();
-      }
-      throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
-    }
-
-    @Override
-    public boolean equals(Object that) {
-      if (that == null)
-        return false;
-      if (that instanceof system_rename_column_family_result)
-        return this.equals((system_rename_column_family_result)that);
-      return false;
-    }
-
-    public boolean equals(system_rename_column_family_result that) {
-      if (that == null)
-        return false;
-
-      boolean this_present_success = true && this.isSetSuccess();
-      boolean that_present_success = true && that.isSetSuccess();
-      if (this_present_success || that_present_success) {
-        if (!(this_present_success && that_present_success))
-          return false;
-        if (!this.success.equals(that.success))
-          return false;
-      }
-
-      boolean this_present_ire = true && this.isSetIre();
-      boolean that_present_ire = true && that.isSetIre();
-      if (this_present_ire || that_present_ire) {
-        if (!(this_present_ire && that_present_ire))
-          return false;
-        if (!this.ire.equals(that.ire))
-          return false;
-      }
-
-      return true;
-    }
-
-    @Override
-    public int hashCode() {
-      HashCodeBuilder builder = new HashCodeBuilder();
-
-      boolean present_success = true && (isSetSuccess());
-      builder.append(present_success);
-      if (present_success)
-        builder.append(success);
-
-      boolean present_ire = true && (isSetIre());
-      builder.append(present_ire);
-      if (present_ire)
-        builder.append(ire);
-
-      return builder.toHashCode();
-    }
-
-    public int compareTo(system_rename_column_family_result other) {
-      if (!getClass().equals(other.getClass())) {
-        return getClass().getName().compareTo(other.getClass().getName());
-      }
-
-      int lastComparison = 0;
-      system_rename_column_family_result typedOther = (system_rename_column_family_result)other;
-
-      lastComparison = Boolean.valueOf(isSetSuccess()).compareTo(typedOther.isSetSuccess());
-      if (lastComparison != 0) {
-        return lastComparison;
-      }
-      if (isSetSuccess()) {        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
-        if (lastComparison != 0) {
-          return lastComparison;
-        }
-      }
-      lastComparison = Boolean.valueOf(isSetIre()).compareTo(typedOther.isSetIre());
-      if (lastComparison != 0) {
-        return lastComparison;
-      }
-      if (isSetIre()) {        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
-        if (lastComparison != 0) {
-          return lastComparison;
-        }
-      }
-      return 0;
-    }
-
-    public void read(TProtocol iprot) throws TException {
-      TField field;
-      iprot.readStructBegin();
-      while (true)
-      {
-        field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
-          break;
-        }
-        switch (field.id) {
-          case 0: // SUCCESS
-            if (field.type == TType.STRING) {
-              this.success = iprot.readString();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case 1: // IRE
-            if (field.type == TType.STRUCT) {
-              this.ire = new InvalidRequestException();
-              this.ire.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-        }
-        iprot.readFieldEnd();
-      }
-      iprot.readStructEnd();
-
-      // check for required fields of primitive type, which can't be checked in the validate method
-      validate();
-    }
-
-    public void write(TProtocol oprot) throws TException {
-      oprot.writeStructBegin(STRUCT_DESC);
-
-      if (this.isSetSuccess()) {
-        oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
-        oprot.writeString(this.success);
-        oprot.writeFieldEnd();
-      } else if (this.isSetIre()) {
-        oprot.writeFieldBegin(IRE_FIELD_DESC);
-        this.ire.write(oprot);
-        oprot.writeFieldEnd();
-      }
-      oprot.writeFieldStop();
-      oprot.writeStructEnd();
-    }
-
-    @Override
-    public String toString() {
-      StringBuilder sb = new StringBuilder("system_rename_column_family_result(");
       boolean first = true;
 
       sb.append("success:");
@@ -25002,9 +24206,9 @@ public class Cassandra {
       return new system_add_keyspace_args(this);
     }
 
-    @Deprecated
-    public system_add_keyspace_args clone() {
-      return new system_add_keyspace_args(this);
+    @Override
+    public void clear() {
+      this.ks_def = null;
     }
 
     public KsDef getKs_def() {
@@ -25044,10 +24248,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case KS_DEF:
@@ -25057,21 +24257,17 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case KS_DEF:
         return isSetKs_def();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -25123,12 +24319,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetKs_def()) {        lastComparison = TBaseHelper.compareTo(this.ks_def, typedOther.ks_def);
+      if (isSetKs_def()) {
+        lastComparison = TBaseHelper.compareTo(this.ks_def, typedOther.ks_def);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -25309,9 +24510,10 @@ public class Cassandra {
       return new system_add_keyspace_result(this);
     }
 
-    @Deprecated
-    public system_add_keyspace_result clone() {
-      return new system_add_keyspace_result(this);
+    @Override
+    public void clear() {
+      this.success = null;
+      this.ire = null;
     }
 
     public String getSuccess() {
@@ -25383,10 +24585,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case SUCCESS:
@@ -25399,12 +24597,12 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case SUCCESS:
         return isSetSuccess();
@@ -25412,10 +24610,6 @@ public class Cassandra {
         return isSetIre();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -25481,7 +24675,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetSuccess()) {        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
+      if (isSetSuccess()) {
+        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -25490,12 +24685,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetIre()) {        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
+      if (isSetIre()) {
+        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -25679,9 +24879,9 @@ public class Cassandra {
       return new system_drop_keyspace_args(this);
     }
 
-    @Deprecated
-    public system_drop_keyspace_args clone() {
-      return new system_drop_keyspace_args(this);
+    @Override
+    public void clear() {
+      this.keyspace = null;
     }
 
     public String getKeyspace() {
@@ -25721,10 +24921,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case KEYSPACE:
@@ -25734,21 +24930,17 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case KEYSPACE:
         return isSetKeyspace();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -25800,12 +24992,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetKeyspace()) {        lastComparison = TBaseHelper.compareTo(this.keyspace, typedOther.keyspace);
+      if (isSetKeyspace()) {
+        lastComparison = TBaseHelper.compareTo(this.keyspace, typedOther.keyspace);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -25985,9 +25182,10 @@ public class Cassandra {
       return new system_drop_keyspace_result(this);
     }
 
-    @Deprecated
-    public system_drop_keyspace_result clone() {
-      return new system_drop_keyspace_result(this);
+    @Override
+    public void clear() {
+      this.success = null;
+      this.ire = null;
     }
 
     public String getSuccess() {
@@ -26059,10 +25257,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case SUCCESS:
@@ -26075,12 +25269,12 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case SUCCESS:
         return isSetSuccess();
@@ -26088,10 +25282,6 @@ public class Cassandra {
         return isSetIre();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -26157,7 +25347,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetSuccess()) {        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
+      if (isSetSuccess()) {
+        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -26166,12 +25357,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetIre()) {        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
+      if (isSetIre()) {
+        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -26229,777 +25425,6 @@ public class Cassandra {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("system_drop_keyspace_result(");
-      boolean first = true;
-
-      sb.append("success:");
-      if (this.success == null) {
-        sb.append("null");
-      } else {
-        sb.append(this.success);
-      }
-      first = false;
-      if (!first) sb.append(", ");
-      sb.append("ire:");
-      if (this.ire == null) {
-        sb.append("null");
-      } else {
-        sb.append(this.ire);
-      }
-      first = false;
-      sb.append(")");
-      return sb.toString();
-    }
-
-    public void validate() throws TException {
-      // check for required fields
-    }
-
-  }
-
-  public static class system_rename_keyspace_args implements TBase<system_rename_keyspace_args, system_rename_keyspace_args._Fields>, java.io.Serializable, Cloneable   {
-    private static final TStruct STRUCT_DESC = new TStruct("system_rename_keyspace_args");
-
-    private static final TField OLD_NAME_FIELD_DESC = new TField("old_name", TType.STRING, (short)1);
-    private static final TField NEW_NAME_FIELD_DESC = new TField("new_name", TType.STRING, (short)2);
-
-    public String old_name;
-    public String new_name;
-
-    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
-    public enum _Fields implements TFieldIdEnum {
-      OLD_NAME((short)1, "old_name"),
-      NEW_NAME((short)2, "new_name");
-
-      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
-
-      static {
-        for (_Fields field : EnumSet.allOf(_Fields.class)) {
-          byName.put(field.getFieldName(), field);
-        }
-      }
-
-      /**
-       * Find the _Fields constant that matches fieldId, or null if its not found.
-       */
-      public static _Fields findByThriftId(int fieldId) {
-        switch(fieldId) {
-          case 1: // OLD_NAME
-            return OLD_NAME;
-          case 2: // NEW_NAME
-            return NEW_NAME;
-          default:
-            return null;
-        }
-      }
-
-      /**
-       * Find the _Fields constant that matches fieldId, throwing an exception
-       * if it is not found.
-       */
-      public static _Fields findByThriftIdOrThrow(int fieldId) {
-        _Fields fields = findByThriftId(fieldId);
-        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
-        return fields;
-      }
-
-      /**
-       * Find the _Fields constant that matches name, or null if its not found.
-       */
-      public static _Fields findByName(String name) {
-        return byName.get(name);
-      }
-
-      private final short _thriftId;
-      private final String _fieldName;
-
-      _Fields(short thriftId, String fieldName) {
-        _thriftId = thriftId;
-        _fieldName = fieldName;
-      }
-
-      public short getThriftFieldId() {
-        return _thriftId;
-      }
-
-      public String getFieldName() {
-        return _fieldName;
-      }
-    }
-
-    // isset id assignments
-
-    public static final Map<_Fields, FieldMetaData> metaDataMap;
-    static {
-      Map<_Fields, FieldMetaData> tmpMap = new EnumMap<_Fields, FieldMetaData>(_Fields.class);
-      tmpMap.put(_Fields.OLD_NAME, new FieldMetaData("old_name", TFieldRequirementType.REQUIRED, 
-          new FieldValueMetaData(TType.STRING)));
-      tmpMap.put(_Fields.NEW_NAME, new FieldMetaData("new_name", TFieldRequirementType.REQUIRED, 
-          new FieldValueMetaData(TType.STRING)));
-      metaDataMap = Collections.unmodifiableMap(tmpMap);
-      FieldMetaData.addStructMetaDataMap(system_rename_keyspace_args.class, metaDataMap);
-    }
-
-    public system_rename_keyspace_args() {
-    }
-
-    public system_rename_keyspace_args(
-      String old_name,
-      String new_name)
-    {
-      this();
-      this.old_name = old_name;
-      this.new_name = new_name;
-    }
-
-    /**
-     * Performs a deep copy on <i>other</i>.
-     */
-    public system_rename_keyspace_args(system_rename_keyspace_args other) {
-      if (other.isSetOld_name()) {
-        this.old_name = other.old_name;
-      }
-      if (other.isSetNew_name()) {
-        this.new_name = other.new_name;
-      }
-    }
-
-    public system_rename_keyspace_args deepCopy() {
-      return new system_rename_keyspace_args(this);
-    }
-
-    @Deprecated
-    public system_rename_keyspace_args clone() {
-      return new system_rename_keyspace_args(this);
-    }
-
-    public String getOld_name() {
-      return this.old_name;
-    }
-
-    public system_rename_keyspace_args setOld_name(String old_name) {
-      this.old_name = old_name;
-      return this;
-    }
-
-    public void unsetOld_name() {
-      this.old_name = null;
-    }
-
-    /** Returns true if field old_name is set (has been asigned a value) and false otherwise */
-    public boolean isSetOld_name() {
-      return this.old_name != null;
-    }
-
-    public void setOld_nameIsSet(boolean value) {
-      if (!value) {
-        this.old_name = null;
-      }
-    }
-
-    public String getNew_name() {
-      return this.new_name;
-    }
-
-    public system_rename_keyspace_args setNew_name(String new_name) {
-      this.new_name = new_name;
-      return this;
-    }
-
-    public void unsetNew_name() {
-      this.new_name = null;
-    }
-
-    /** Returns true if field new_name is set (has been asigned a value) and false otherwise */
-    public boolean isSetNew_name() {
-      return this.new_name != null;
-    }
-
-    public void setNew_nameIsSet(boolean value) {
-      if (!value) {
-        this.new_name = null;
-      }
-    }
-
-    public void setFieldValue(_Fields field, Object value) {
-      switch (field) {
-      case OLD_NAME:
-        if (value == null) {
-          unsetOld_name();
-        } else {
-          setOld_name((String)value);
-        }
-        break;
-
-      case NEW_NAME:
-        if (value == null) {
-          unsetNew_name();
-        } else {
-          setNew_name((String)value);
-        }
-        break;
-
-      }
-    }
-
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
-    public Object getFieldValue(_Fields field) {
-      switch (field) {
-      case OLD_NAME:
-        return getOld_name();
-
-      case NEW_NAME:
-        return getNew_name();
-
-      }
-      throw new IllegalStateException();
-    }
-
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
-    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
-    public boolean isSet(_Fields field) {
-      switch (field) {
-      case OLD_NAME:
-        return isSetOld_name();
-      case NEW_NAME:
-        return isSetNew_name();
-      }
-      throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
-    }
-
-    @Override
-    public boolean equals(Object that) {
-      if (that == null)
-        return false;
-      if (that instanceof system_rename_keyspace_args)
-        return this.equals((system_rename_keyspace_args)that);
-      return false;
-    }
-
-    public boolean equals(system_rename_keyspace_args that) {
-      if (that == null)
-        return false;
-
-      boolean this_present_old_name = true && this.isSetOld_name();
-      boolean that_present_old_name = true && that.isSetOld_name();
-      if (this_present_old_name || that_present_old_name) {
-        if (!(this_present_old_name && that_present_old_name))
-          return false;
-        if (!this.old_name.equals(that.old_name))
-          return false;
-      }
-
-      boolean this_present_new_name = true && this.isSetNew_name();
-      boolean that_present_new_name = true && that.isSetNew_name();
-      if (this_present_new_name || that_present_new_name) {
-        if (!(this_present_new_name && that_present_new_name))
-          return false;
-        if (!this.new_name.equals(that.new_name))
-          return false;
-      }
-
-      return true;
-    }
-
-    @Override
-    public int hashCode() {
-      HashCodeBuilder builder = new HashCodeBuilder();
-
-      boolean present_old_name = true && (isSetOld_name());
-      builder.append(present_old_name);
-      if (present_old_name)
-        builder.append(old_name);
-
-      boolean present_new_name = true && (isSetNew_name());
-      builder.append(present_new_name);
-      if (present_new_name)
-        builder.append(new_name);
-
-      return builder.toHashCode();
-    }
-
-    public int compareTo(system_rename_keyspace_args other) {
-      if (!getClass().equals(other.getClass())) {
-        return getClass().getName().compareTo(other.getClass().getName());
-      }
-
-      int lastComparison = 0;
-      system_rename_keyspace_args typedOther = (system_rename_keyspace_args)other;
-
-      lastComparison = Boolean.valueOf(isSetOld_name()).compareTo(typedOther.isSetOld_name());
-      if (lastComparison != 0) {
-        return lastComparison;
-      }
-      if (isSetOld_name()) {        lastComparison = TBaseHelper.compareTo(this.old_name, typedOther.old_name);
-        if (lastComparison != 0) {
-          return lastComparison;
-        }
-      }
-      lastComparison = Boolean.valueOf(isSetNew_name()).compareTo(typedOther.isSetNew_name());
-      if (lastComparison != 0) {
-        return lastComparison;
-      }
-      if (isSetNew_name()) {        lastComparison = TBaseHelper.compareTo(this.new_name, typedOther.new_name);
-        if (lastComparison != 0) {
-          return lastComparison;
-        }
-      }
-      return 0;
-    }
-
-    public void read(TProtocol iprot) throws TException {
-      TField field;
-      iprot.readStructBegin();
-      while (true)
-      {
-        field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
-          break;
-        }
-        switch (field.id) {
-          case 1: // OLD_NAME
-            if (field.type == TType.STRING) {
-              this.old_name = iprot.readString();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case 2: // NEW_NAME
-            if (field.type == TType.STRING) {
-              this.new_name = iprot.readString();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-        }
-        iprot.readFieldEnd();
-      }
-      iprot.readStructEnd();
-
-      // check for required fields of primitive type, which can't be checked in the validate method
-      validate();
-    }
-
-    public void write(TProtocol oprot) throws TException {
-      validate();
-
-      oprot.writeStructBegin(STRUCT_DESC);
-      if (this.old_name != null) {
-        oprot.writeFieldBegin(OLD_NAME_FIELD_DESC);
-        oprot.writeString(this.old_name);
-        oprot.writeFieldEnd();
-      }
-      if (this.new_name != null) {
-        oprot.writeFieldBegin(NEW_NAME_FIELD_DESC);
-        oprot.writeString(this.new_name);
-        oprot.writeFieldEnd();
-      }
-      oprot.writeFieldStop();
-      oprot.writeStructEnd();
-    }
-
-    @Override
-    public String toString() {
-      StringBuilder sb = new StringBuilder("system_rename_keyspace_args(");
-      boolean first = true;
-
-      sb.append("old_name:");
-      if (this.old_name == null) {
-        sb.append("null");
-      } else {
-        sb.append(this.old_name);
-      }
-      first = false;
-      if (!first) sb.append(", ");
-      sb.append("new_name:");
-      if (this.new_name == null) {
-        sb.append("null");
-      } else {
-        sb.append(this.new_name);
-      }
-      first = false;
-      sb.append(")");
-      return sb.toString();
-    }
-
-    public void validate() throws TException {
-      // check for required fields
-      if (old_name == null) {
-        throw new TProtocolException("Required field 'old_name' was not present! Struct: " + toString());
-      }
-      if (new_name == null) {
-        throw new TProtocolException("Required field 'new_name' was not present! Struct: " + toString());
-      }
-    }
-
-  }
-
-  public static class system_rename_keyspace_result implements TBase<system_rename_keyspace_result, system_rename_keyspace_result._Fields>, java.io.Serializable, Cloneable   {
-    private static final TStruct STRUCT_DESC = new TStruct("system_rename_keyspace_result");
-
-    private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.STRING, (short)0);
-    private static final TField IRE_FIELD_DESC = new TField("ire", TType.STRUCT, (short)1);
-
-    public String success;
-    public InvalidRequestException ire;
-
-    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
-    public enum _Fields implements TFieldIdEnum {
-      SUCCESS((short)0, "success"),
-      IRE((short)1, "ire");
-
-      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
-
-      static {
-        for (_Fields field : EnumSet.allOf(_Fields.class)) {
-          byName.put(field.getFieldName(), field);
-        }
-      }
-
-      /**
-       * Find the _Fields constant that matches fieldId, or null if its not found.
-       */
-      public static _Fields findByThriftId(int fieldId) {
-        switch(fieldId) {
-          case 0: // SUCCESS
-            return SUCCESS;
-          case 1: // IRE
-            return IRE;
-          default:
-            return null;
-        }
-      }
-
-      /**
-       * Find the _Fields constant that matches fieldId, throwing an exception
-       * if it is not found.
-       */
-      public static _Fields findByThriftIdOrThrow(int fieldId) {
-        _Fields fields = findByThriftId(fieldId);
-        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
-        return fields;
-      }
-
-      /**
-       * Find the _Fields constant that matches name, or null if its not found.
-       */
-      public static _Fields findByName(String name) {
-        return byName.get(name);
-      }
-
-      private final short _thriftId;
-      private final String _fieldName;
-
-      _Fields(short thriftId, String fieldName) {
-        _thriftId = thriftId;
-        _fieldName = fieldName;
-      }
-
-      public short getThriftFieldId() {
-        return _thriftId;
-      }
-
-      public String getFieldName() {
-        return _fieldName;
-      }
-    }
-
-    // isset id assignments
-
-    public static final Map<_Fields, FieldMetaData> metaDataMap;
-    static {
-      Map<_Fields, FieldMetaData> tmpMap = new EnumMap<_Fields, FieldMetaData>(_Fields.class);
-      tmpMap.put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
-          new FieldValueMetaData(TType.STRING)));
-      tmpMap.put(_Fields.IRE, new FieldMetaData("ire", TFieldRequirementType.DEFAULT, 
-          new FieldValueMetaData(TType.STRUCT)));
-      metaDataMap = Collections.unmodifiableMap(tmpMap);
-      FieldMetaData.addStructMetaDataMap(system_rename_keyspace_result.class, metaDataMap);
-    }
-
-    public system_rename_keyspace_result() {
-    }
-
-    public system_rename_keyspace_result(
-      String success,
-      InvalidRequestException ire)
-    {
-      this();
-      this.success = success;
-      this.ire = ire;
-    }
-
-    /**
-     * Performs a deep copy on <i>other</i>.
-     */
-    public system_rename_keyspace_result(system_rename_keyspace_result other) {
-      if (other.isSetSuccess()) {
-        this.success = other.success;
-      }
-      if (other.isSetIre()) {
-        this.ire = new InvalidRequestException(other.ire);
-      }
-    }
-
-    public system_rename_keyspace_result deepCopy() {
-      return new system_rename_keyspace_result(this);
-    }
-
-    @Deprecated
-    public system_rename_keyspace_result clone() {
-      return new system_rename_keyspace_result(this);
-    }
-
-    public String getSuccess() {
-      return this.success;
-    }
-
-    public system_rename_keyspace_result setSuccess(String success) {
-      this.success = success;
-      return this;
-    }
-
-    public void unsetSuccess() {
-      this.success = null;
-    }
-
-    /** Returns true if field success is set (has been asigned a value) and false otherwise */
-    public boolean isSetSuccess() {
-      return this.success != null;
-    }
-
-    public void setSuccessIsSet(boolean value) {
-      if (!value) {
-        this.success = null;
-      }
-    }
-
-    public InvalidRequestException getIre() {
-      return this.ire;
-    }
-
-    public system_rename_keyspace_result setIre(InvalidRequestException ire) {
-      this.ire = ire;
-      return this;
-    }
-
-    public void unsetIre() {
-      this.ire = null;
-    }
-
-    /** Returns true if field ire is set (has been asigned a value) and false otherwise */
-    public boolean isSetIre() {
-      return this.ire != null;
-    }
-
-    public void setIreIsSet(boolean value) {
-      if (!value) {
-        this.ire = null;
-      }
-    }
-
-    public void setFieldValue(_Fields field, Object value) {
-      switch (field) {
-      case SUCCESS:
-        if (value == null) {
-          unsetSuccess();
-        } else {
-          setSuccess((String)value);
-        }
-        break;
-
-      case IRE:
-        if (value == null) {
-          unsetIre();
-        } else {
-          setIre((InvalidRequestException)value);
-        }
-        break;
-
-      }
-    }
-
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
-    public Object getFieldValue(_Fields field) {
-      switch (field) {
-      case SUCCESS:
-        return getSuccess();
-
-      case IRE:
-        return getIre();
-
-      }
-      throw new IllegalStateException();
-    }
-
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
-    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
-    public boolean isSet(_Fields field) {
-      switch (field) {
-      case SUCCESS:
-        return isSetSuccess();
-      case IRE:
-        return isSetIre();
-      }
-      throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
-    }
-
-    @Override
-    public boolean equals(Object that) {
-      if (that == null)
-        return false;
-      if (that instanceof system_rename_keyspace_result)
-        return this.equals((system_rename_keyspace_result)that);
-      return false;
-    }
-
-    public boolean equals(system_rename_keyspace_result that) {
-      if (that == null)
-        return false;
-
-      boolean this_present_success = true && this.isSetSuccess();
-      boolean that_present_success = true && that.isSetSuccess();
-      if (this_present_success || that_present_success) {
-        if (!(this_present_success && that_present_success))
-          return false;
-        if (!this.success.equals(that.success))
-          return false;
-      }
-
-      boolean this_present_ire = true && this.isSetIre();
-      boolean that_present_ire = true && that.isSetIre();
-      if (this_present_ire || that_present_ire) {
-        if (!(this_present_ire && that_present_ire))
-          return false;
-        if (!this.ire.equals(that.ire))
-          return false;
-      }
-
-      return true;
-    }
-
-    @Override
-    public int hashCode() {
-      HashCodeBuilder builder = new HashCodeBuilder();
-
-      boolean present_success = true && (isSetSuccess());
-      builder.append(present_success);
-      if (present_success)
-        builder.append(success);
-
-      boolean present_ire = true && (isSetIre());
-      builder.append(present_ire);
-      if (present_ire)
-        builder.append(ire);
-
-      return builder.toHashCode();
-    }
-
-    public int compareTo(system_rename_keyspace_result other) {
-      if (!getClass().equals(other.getClass())) {
-        return getClass().getName().compareTo(other.getClass().getName());
-      }
-
-      int lastComparison = 0;
-      system_rename_keyspace_result typedOther = (system_rename_keyspace_result)other;
-
-      lastComparison = Boolean.valueOf(isSetSuccess()).compareTo(typedOther.isSetSuccess());
-      if (lastComparison != 0) {
-        return lastComparison;
-      }
-      if (isSetSuccess()) {        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
-        if (lastComparison != 0) {
-          return lastComparison;
-        }
-      }
-      lastComparison = Boolean.valueOf(isSetIre()).compareTo(typedOther.isSetIre());
-      if (lastComparison != 0) {
-        return lastComparison;
-      }
-      if (isSetIre()) {        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
-        if (lastComparison != 0) {
-          return lastComparison;
-        }
-      }
-      return 0;
-    }
-
-    public void read(TProtocol iprot) throws TException {
-      TField field;
-      iprot.readStructBegin();
-      while (true)
-      {
-        field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
-          break;
-        }
-        switch (field.id) {
-          case 0: // SUCCESS
-            if (field.type == TType.STRING) {
-              this.success = iprot.readString();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case 1: // IRE
-            if (field.type == TType.STRUCT) {
-              this.ire = new InvalidRequestException();
-              this.ire.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-        }
-        iprot.readFieldEnd();
-      }
-      iprot.readStructEnd();
-
-      // check for required fields of primitive type, which can't be checked in the validate method
-      validate();
-    }
-
-    public void write(TProtocol oprot) throws TException {
-      oprot.writeStructBegin(STRUCT_DESC);
-
-      if (this.isSetSuccess()) {
-        oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
-        oprot.writeString(this.success);
-        oprot.writeFieldEnd();
-      } else if (this.isSetIre()) {
-        oprot.writeFieldBegin(IRE_FIELD_DESC);
-        this.ire.write(oprot);
-        oprot.writeFieldEnd();
-      }
-      oprot.writeFieldStop();
-      oprot.writeStructEnd();
-    }
-
-    @Override
-    public String toString() {
-      StringBuilder sb = new StringBuilder("system_rename_keyspace_result(");
       boolean first = true;
 
       sb.append("success:");
@@ -27126,9 +25551,9 @@ public class Cassandra {
       return new system_update_keyspace_args(this);
     }
 
-    @Deprecated
-    public system_update_keyspace_args clone() {
-      return new system_update_keyspace_args(this);
+    @Override
+    public void clear() {
+      this.ks_def = null;
     }
 
     public KsDef getKs_def() {
@@ -27168,10 +25593,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case KS_DEF:
@@ -27181,21 +25602,17 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case KS_DEF:
         return isSetKs_def();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -27247,12 +25664,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetKs_def()) {        lastComparison = TBaseHelper.compareTo(this.ks_def, typedOther.ks_def);
+      if (isSetKs_def()) {
+        lastComparison = TBaseHelper.compareTo(this.ks_def, typedOther.ks_def);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -27433,9 +25855,10 @@ public class Cassandra {
       return new system_update_keyspace_result(this);
     }
 
-    @Deprecated
-    public system_update_keyspace_result clone() {
-      return new system_update_keyspace_result(this);
+    @Override
+    public void clear() {
+      this.success = null;
+      this.ire = null;
     }
 
     public String getSuccess() {
@@ -27507,10 +25930,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case SUCCESS:
@@ -27523,12 +25942,12 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case SUCCESS:
         return isSetSuccess();
@@ -27536,10 +25955,6 @@ public class Cassandra {
         return isSetIre();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -27605,7 +26020,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetSuccess()) {        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
+      if (isSetSuccess()) {
+        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -27614,12 +26030,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetIre()) {        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
+      if (isSetIre()) {
+        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -27803,9 +26224,9 @@ public class Cassandra {
       return new system_update_column_family_args(this);
     }
 
-    @Deprecated
-    public system_update_column_family_args clone() {
-      return new system_update_column_family_args(this);
+    @Override
+    public void clear() {
+      this.cf_def = null;
     }
 
     public CfDef getCf_def() {
@@ -27845,10 +26266,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case CF_DEF:
@@ -27858,21 +26275,17 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case CF_DEF:
         return isSetCf_def();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -27924,12 +26337,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetCf_def()) {        lastComparison = TBaseHelper.compareTo(this.cf_def, typedOther.cf_def);
+      if (isSetCf_def()) {
+        lastComparison = TBaseHelper.compareTo(this.cf_def, typedOther.cf_def);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -28110,9 +26528,10 @@ public class Cassandra {
       return new system_update_column_family_result(this);
     }
 
-    @Deprecated
-    public system_update_column_family_result clone() {
-      return new system_update_column_family_result(this);
+    @Override
+    public void clear() {
+      this.success = null;
+      this.ire = null;
     }
 
     public String getSuccess() {
@@ -28184,10 +26603,6 @@ public class Cassandra {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-    }
-
     public Object getFieldValue(_Fields field) {
       switch (field) {
       case SUCCESS:
@@ -28200,12 +26615,12 @@ public class Cassandra {
       throw new IllegalStateException();
     }
 
-    public Object getFieldValue(int fieldId) {
-      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-    }
-
     /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
     public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
       switch (field) {
       case SUCCESS:
         return isSetSuccess();
@@ -28213,10 +26628,6 @@ public class Cassandra {
         return isSetIre();
       }
       throw new IllegalStateException();
-    }
-
-    public boolean isSet(int fieldID) {
-      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -28282,7 +26693,8 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetSuccess()) {        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
+      if (isSetSuccess()) {
+        lastComparison = TBaseHelper.compareTo(this.success, typedOther.success);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -28291,12 +26703,17 @@ public class Cassandra {
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetIre()) {        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
+      if (isSetIre()) {
+        lastComparison = TBaseHelper.compareTo(this.ire, typedOther.ire);
         if (lastComparison != 0) {
           return lastComparison;
         }
       }
       return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
     }
 
     public void read(TProtocol iprot) throws TException {

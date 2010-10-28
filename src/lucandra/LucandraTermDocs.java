@@ -20,6 +20,7 @@
 package lucandra;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 
@@ -62,7 +63,7 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         if (docPosition < 0)
             docPosition = 0;
  
-        int docid = indexReader.getDocumentNumber(termDocs.get(docPosition).getSuper_column().getName());
+        int docid = indexReader.getDocumentNumber(termDocs.get(docPosition).getSuper_column().name);
  
         return docid;
     }
@@ -93,8 +94,8 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         }
  
  
-        Integer freq      = CassandraUtils.byteArrayToInt(termFrequency.getValue());
-        termPositionArray =  positionVector == null ? null : CassandraUtils.byteArrayToIntArray(positionVector.getValue());
+        Integer freq      = CassandraUtils.byteArrayToInt(termFrequency.value);
+        termPositionArray =  positionVector == null ? null : CassandraUtils.byteArrayToIntArray(positionVector.value);
         termPosition      = 0;
  
         return freq;
@@ -170,7 +171,7 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         docPosition = -1;
     }
 
-    public List<ColumnOrSuperColumn> filteredSeek(Term term, List<byte[]> docNums){
+    public List<ColumnOrSuperColumn> filteredSeek(Term term, List<ByteBuffer> docNums){
       
         termEnum.loadFilteredTerms(term, docNums);
        

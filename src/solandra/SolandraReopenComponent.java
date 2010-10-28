@@ -20,6 +20,7 @@
 package solandra;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -77,14 +78,14 @@ public class SolandraReopenComponent extends SearchComponent {
         
         if(docIds.size() > 0){
             
-            List<byte[]> fieldFilter = null;
+            List<ByteBuffer> fieldFilter = null;
             Set<String> returnFields = rb.rsp.getReturnFields();
             if(returnFields != null) {
               
               // copy return fields list
-              fieldFilter = new ArrayList<byte[]>(returnFields.size());
+              fieldFilter = new ArrayList<ByteBuffer>(returnFields.size());
               for(String field : returnFields){
-                  fieldFilter.add(field.getBytes());
+                  fieldFilter.add(ByteBuffer.wrap(field.getBytes()));
               }
               
               
@@ -93,13 +94,13 @@ public class SolandraReopenComponent extends SearchComponent {
               if(highligher.isHighlightingEnabled(rb.req.getParams())) {
                 for(String field: highligher.getHighlightFields(rb.getQuery(), rb.req, null)) 
                   if(!returnFields.contains(field))
-                      fieldFilter.add(field.getBytes());        
+                      fieldFilter.add(ByteBuffer.wrap(field.getBytes()));        
               }
               // fetch unique key if one exists.
               SchemaField keyField = rb.req.getSearcher().getSchema().getUniqueKeyField();
               if(null != keyField)
                   if(!returnFields.contains(keyField))
-                      fieldFilter.add(keyField.getName().getBytes());  
+                      fieldFilter.add(ByteBuffer.wrap(keyField.getName().getBytes()));  
             }
             
     

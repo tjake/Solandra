@@ -24,12 +24,12 @@
 	<classpathentry kind="lib" path="lib/lucene-queries-2.9.1.jar"/>
 	<classpathentry kind="lib" path="lib/lucene-snowball-2.9.1.jar"/>
 	<classpathentry kind="lib" path="lib/lucene-spellchecker-2.9.1.jar"/>
-	<classpathentry kind="lib" path="lib/slf4j-simple-1.5.8.jar"/>
 	<classpathentry kind="lib" path="lib/solr-commons-csv-1.4.0.jar"/>
 	<classpathentry kind="lib" path="lib/solr-core-1.4.0.jar"/>
 	<classpathentry kind="lib" path="lib/solr-solrj-1.4.0.jar"/>
 	<classpathentry kind="lib" path="lib/stax-api-1.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/wstx-asl-3.2.7.jar"/>
-	<classpathentry kind="lib" path="lib/libthrift-r959516.jar"/>
+	<classpathentry kind="lib" path="lib/libthrift-0.5.jar"/>
+	<classpathentry kind="lib" path="lib/slf4j-log4j12-1.5.8.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

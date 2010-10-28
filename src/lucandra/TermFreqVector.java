@@ -1,6 +1,7 @@
 package lucandra;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -10,7 +11,6 @@ import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.Column;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.cassandra.thrift.ColumnParent;
-import org.apache.cassandra.thrift.ColumnPath;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.NotFoundException;
@@ -25,17 +25,22 @@ import org.apache.thrift.TException;
 public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, org.apache.lucene.index.TermPositionVector {
 
     private String field;
-    private byte[] docId;
+    private ByteBuffer docId;
     private String[] terms;
     private int[] freqVec;
     private int[][] termPositions;
     private TermVectorOffsetInfo[][] termOffsets;
 
-    public TermFreqVector(byte[] indexName, String field, byte[] docId, Cassandra.Iface client) {
+    public TermFreqVector(byte[] indexName, String field, ByteBuffer docId, Cassandra.Iface client) {
         this.field = field;
         this.docId = docId;
 
-        byte[] key = CassandraUtils.hashKeyBytes(indexName, CassandraUtils.delimeterBytes, docId);
+
+        byte[] docIdBytes = new byte[docId.remaining()];
+        System.arraycopy(docId.array(), docId.position()+docId.arrayOffset(), docIdBytes, 0, docIdBytes.length);
+        
+        
+        ByteBuffer key = CassandraUtils.hashKeyBytes(indexName, CassandraUtils.delimeterBytes, docIdBytes);
 
         // Get all terms
         ColumnOrSuperColumn column;
@@ -43,7 +48,7 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
             column = client.get( key, CassandraUtils.metaColumnPath, ConsistencyLevel.ONE);
 
             List<Term> allTermList = (List<Term>) CassandraUtils.fromBytes(column.column.value);
-            List<byte[]> keys        = new ArrayList<byte[]>();
+            List<ByteBuffer> keys        = new ArrayList<ByteBuffer>();
          
             
             for (Term t : allTermList) {
@@ -60,7 +65,7 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
 
             
             //Fetch all term vectors in this field
-            Map<byte[], List<ColumnOrSuperColumn>> allTermInfo = client.multiget_slice( keys, new ColumnParent(CassandraUtils.termVecColumnFamily).setSuper_column(docId), new SlicePredicate().setSlice_range(new SliceRange(CassandraUtils.emptyByteArray, CassandraUtils.emptyByteArray, false, Integer.MAX_VALUE)), ConsistencyLevel.ONE);
+            Map<ByteBuffer, List<ColumnOrSuperColumn>> allTermInfo = client.multiget_slice( keys, new ColumnParent(CassandraUtils.termVecColumnFamily).setSuper_column(docId), new SlicePredicate().setSlice_range(new SliceRange(CassandraUtils.emptyByteArray, CassandraUtils.emptyByteArray, false, Integer.MAX_VALUE)), ConsistencyLevel.ONE);
             
             terms         = new String[allTermInfo.size()];
             freqVec       = new int[allTermInfo.size()];
@@ -69,9 +74,9 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
             
             int i  = 0;
             
-            for(Map.Entry<byte[],List<ColumnOrSuperColumn>> e : allTermInfo.entrySet()){
+            for(Map.Entry<ByteBuffer,List<ColumnOrSuperColumn>> e : allTermInfo.entrySet()){
                 
-                String ekey = new String(e.getKey(), "UTF-8");
+                String ekey = new String(e.getKey().array(), e.getKey().position()+e.getKey().arrayOffset(), e.getKey().remaining(), "UTF-8");
                 String termStr = ekey.substring(ekey.indexOf(CassandraUtils.delimeter) + CassandraUtils.delimeter.length());
                 
                 Term t = CassandraUtils.parseTerm(termStr);
@@ -101,7 +106,7 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
                     termOffsets[i] = TermVectorOffsetInfo.EMPTY_OFFSET_INFO;
                 }else{
                     
-                    int[] offsets  = CassandraUtils.byteArrayToIntArray(offsetVector.getValue());
+                    int[] offsets  = CassandraUtils.byteArrayToIntArray(offsetVector.value);
                     
                     termOffsets[i] = new TermVectorOffsetInfo[freqVec[i]];
                     for(int j=0,k=0; j<offsets.length; j+=2,k++){
