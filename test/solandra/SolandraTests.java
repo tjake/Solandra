@@ -113,7 +113,7 @@ public class SolandraTests {
             wr.write(schemaXml);
             wr.flush();
             wr.close();
-
+            
             assertEquals(200, conn.getResponseCode());
 
         } catch (IOException e) {

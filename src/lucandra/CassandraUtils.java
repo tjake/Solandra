@@ -33,11 +33,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.TimeoutException;
-
-import lucandra.cluster.AbstractIndexManager;
-import lucandra.cluster.RedisIndexManager;
 
 import org.apache.cassandra.config.ConfigurationException;
 import org.apache.cassandra.config.DatabaseDescriptor;
@@ -55,9 +51,6 @@ import org.apache.cassandra.thrift.UnavailableException;
 import org.apache.cassandra.utils.FBUtilities;
 import org.apache.log4j.Logger;
 import org.apache.lucene.index.Term;
-import org.jredis.connector.ConnectionSpec;
-import org.jredis.ri.alphazero.JRedisService;
-import org.jredis.ri.alphazero.connection.DefaultConnectionSpec;
 
 public class CassandraUtils
 {

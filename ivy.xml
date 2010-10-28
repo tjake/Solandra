@@ -24,6 +24,7 @@
     <dependency org="org.slf4j" name="slf4j-api" rev="1.5.8" conf="* -> *,!sources,!javadoc"/>
     <dependency org="org.slf4j" name="slf4j-log4j12" rev="1.5.8" conf="* -> *,!sources,!javadoc"/>
     <dependency org="commons-lang" name="commons-lang" rev="2.4" conf="* -> *,!sources,!javadoc"/>
+    <dependency org="commons-collections" name="commons-collections" rev="3.2.1" conf="* -> *,!sources,!javadoc"/>
     <dependency org="org.apache.lucene" name="lucene-core" rev="2.9.1" conf="*"/>
     <dependency org="org.apache.solr" name="solr-core" rev="1.4.0" conf="* -> *,!javadoc"/>
     <dependency org="org.mortbay.jetty" name="jetty" rev="6.1.6" conf="* -> *,!sources,!javadoc" />
@@ -33,14 +34,33 @@
     <dependency org="redis.clients" name="jedis" rev="1.3.0"  conf="* -> *,!sources,!javadoc"/>
     <!--<dependency org="com.cloudera.zookeeper" name="zookeeper" rev="3.3.1-10" conf="* -> *,!sources,!javadoc"/>-->
 
+    <dependency org="snakeyaml" name="snakeyaml" rev="1.6" conf="* -> *,!sources,!javadoc" />
+    <dependency org="org.safehaus.jug" name="jug-asl" rev="2.0.0" conf="* -> *,!sources,!javadoc" />
     <dependency org="libthrift" name="libthrift" rev="0.5" conf="* -> *,!sources,!javadoc" />
     <dependency org="org.apache.cassandra" name="apache-cassandra" rev="0.7.0-rc1" conf="* -> *,!sources,!javadoc" />
 
     <dependency org="com.thoughtworks.paranamer" name="paranamer-ant" rev="2.1" conf="* -> *,!sources,!javadoc"/>
-    <dependency org="junit" name="junit" rev="4.6" conf="* -> *,!sources,!javadoc"/>
     <dependency org="commons-logging" name="commons-logging" rev="1.1.1" conf="* -> *,!sources,!javadoc"/>
     <dependency org="com.reardencommerce" name="clhm-production" rev="1.0" conf="* -> *,!sources,!javadoc"/>
-    
+    <dependency org="com.google.guava" name="guava" rev="r07" conf="* -> *,!sources,!javadoc"/>
+    <dependency org="org.cliffc.high_scale_lib" name="high-scale-lib" rev="1.0" conf="* -> *,!sources,!javadoc"/>
+
+    <dependency org="org.apache.avro" name="avro" rev="1.4.0" conf="* -> *,!sources,!javadoc">       
+      <exclude module="ant"/>
+      <exclude module="ant-eclipse"/>
+      <exclude module="hadoop-core"/>
+      <exclude module="apache-rat"/>
+      <exclude module="maven-ant-tasks"/>
+      <exclude module="apache-rat"/>
+      <exclude module="javacc"/>
+      <exclude module="netty"/>
+      <exclude module="jetty"/>
+      <exclude module="paranamer-ant"/>
+      <exclude module="velocity"/>
+      <exclude module="slf4j-simple"/>
+      <exclude module="slf4j-api"/>
+      <exclude module="checkstyle"/>
+    </dependency>
     <!--<dependency org="com.cloudera.hadoop" name="hadoop-core" rev="0.20.2-320"/>
 	<dependency org="com.cloudera.hadoop" name="hadoop-streaming" rev="0.20.2-320"/>
 	<dependency org="net.sf.jopt-simple" name="jopt-simple" rev="3.2"/> -->

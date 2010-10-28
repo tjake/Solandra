@@ -32,5 +32,8 @@
     <module organisation="com.cloudera.*" name="*" resolver="chain" />
     <module organisation="com.reardencommerce" name="*" resolver="chain" />
     <module organisation="libthrift" name="*" resolver="chain" />
+    <module organisation="snakeyaml" name="*" resolver="chain" />
+    <module organisation="org.cliffc.high_scale_lib" name="*" resolver="chain" />
+    <module organisation="org.safehaus.jug" name="*" resolver="chain" />
   </modules>
 </ivysettings>

@@ -1,15 +1,16 @@
 package lucandra.cluster;
 
-import org.jredis.RedisException;
-import org.jredis.ri.alphazero.JRedisService;
+import java.util.concurrent.TimeoutException;
+
+import redis.clients.jedis.JedisPool;
 
 public class RedisIndexManager extends AbstractIndexManager {
 
-    private JRedisService redisService;
+    private JedisPool redisService;
     private static final String root = "/Ctrs";
     
     
-    public RedisIndexManager(JRedisService redisService, int shardsAtOnce){
+    public RedisIndexManager(JedisPool redisService, int shardsAtOnce){
         super(shardsAtOnce);
         this.redisService = redisService;
         
@@ -20,11 +21,15 @@ public class RedisIndexManager extends AbstractIndexManager {
     public long internalIncrement(String indexName) {
         long id;
         String key = root + "/" + indexName;
-        try {
-            id = redisService.incr(key);
-        } catch (RedisException e) {
-            throw new RuntimeException(e);
-        }
+     
+            try
+            {
+                id = redisService.getResource(200).incr(key);
+            }
+            catch (TimeoutException e)
+            {
+                throw new RuntimeException(e);
+            }
         
         return id-1;  
     }
@@ -35,8 +40,8 @@ public class RedisIndexManager extends AbstractIndexManager {
         long id;
         String key = root + "/" + indexName;
         try {
-            id = redisService.incrby(key, 0);
-        } catch (RedisException e) {
+            id = redisService.getResource(200).incrBy(key, 0);
+        } catch (TimeoutException e) {
             throw new RuntimeException(e);
         }
         
@@ -48,8 +53,8 @@ public class RedisIndexManager extends AbstractIndexManager {
     public void resetCounter(String indexName) {      
         String key = root + "/" + indexName;
         try {
-            redisService.set(key, 0);
-        } catch (RedisException e) {
+            redisService.getResource(200).set(key, "0");
+        } catch (TimeoutException e) {
             throw new RuntimeException(e);
         }    
     }
