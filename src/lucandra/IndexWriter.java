@@ -402,7 +402,14 @@ public class IndexWriter {
     }
 
     public boolean isAutoCommit() {
-        return autoCommit.get();
+        Boolean isCommit = autoCommit.get();
+        if(isCommit == null)
+        {
+            setAutoCommit(true);
+            return true;
+        }
+        
+        return isCommit;
     }
 
     public void setAutoCommit(boolean autoCommit) {
