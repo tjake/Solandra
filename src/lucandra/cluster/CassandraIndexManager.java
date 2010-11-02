@@ -430,7 +430,8 @@ public class CassandraIndexManager extends AbstractIndexManager
     {
 
         assert shards != null;
-
+        String myToken = StorageService.instance.getToken();
+        
         NodeInfo[] picked = new NodeInfo[shardsAtOnce];
         
         int maxShard = -1;
@@ -440,11 +441,13 @@ public class CassandraIndexManager extends AbstractIndexManager
         {
             NodeInfo nodes = shard.getValue();
 
-            Integer offset = nodes.nodes.get(StorageService.instance.getToken());
+            Integer offset = nodes.nodes.get(myToken);
 
+            
             if (offset == null)
             {
-               throw new IllegalStateException("node offset is null");
+                //this means shard was started by another node
+                updateNodeOffset(shards.indexName, myToken, nodes, 0);
             }
 
             else if (offset+reserveSlabSize < randomSeq.length)
