@@ -33,13 +33,11 @@
 	<classpathentry kind="lib" path="lib/stax-api-1.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/wstx-asl-3.2.7.jar"/>
 	<classpathentry kind="lib" path="lib/ant-1.6.5.jar"/>
-	<classpathentry kind="lib" path="lib/apache-cassandra-0.7.0-rc1.jar" sourcepath="/cassandra-trunk"/>
 	<classpathentry kind="lib" path="lib/asm-3.2.jar"/>
 	<classpathentry kind="lib" path="lib/avalon-framework-4.1.3.jar"/>
 	<classpathentry kind="lib" path="lib/clhm-production-1.0.jar"/>
 	<classpathentry kind="lib" path="lib/commons-logging-1.1.1.jar"/>
 	<classpathentry kind="lib" path="lib/core-3.1.1.jar"/>
-	<classpathentry kind="lib" path="lib/jedis-1.3.0.jar" sourcepath="/Users/jake/workspace/jedis/src/main/java"/>
 	<classpathentry kind="lib" path="lib/jna-3.2.7-sources.jar"/>
 	<classpathentry kind="lib" path="lib/jna-3.2.7.jar"/>
 	<classpathentry kind="lib" path="lib/jsp-2.1-6.1.6.jar"/>
@@ -63,6 +61,6 @@
 	<classpathentry kind="lib" path="lib/jopt-simple-3.2.jar"/>
 	<classpathentry kind="lib" path="lib/paranamer-2.2.jar"/>
 	<classpathentry kind="lib" path="lib/jug-asl-2.0.0.jar"/>
-	<classpathentry kind="lib" path="lib/commons-math-2.1.jar"/>
+	<classpathentry kind="lib" path="lib/apache-cassandra-0.7.0-beta3.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

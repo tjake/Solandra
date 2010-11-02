@@ -17,31 +17,12 @@ public abstract class AbstractIndexManager {
         long id = internalIncrement(indexName, key);
 
         return id;
-        
-        /*
-        //calculate shard from info
-        long shard = id % shardsAtOnce;
-        long actualShard = (long)Math.floor(id / (CassandraUtils.maxDocsPerShard*shardsAtOnce));
-        long shardDoc  = (long) id % (CassandraUtils.maxDocsPerShard*shardsAtOnce);
-        
-        return ((actualShard + shard) * CassandraUtils.maxDocsPerShard) + (shardDoc/shardsAtOnce);
-         */
     }
   
     public long getCurrentDocId(String indexName){
         long id = internalFetch(indexName);
     
         return id;
-       
-        /*
-        //calculate shard from info
-        long shard = shardsAtOnce-1; //always return max shard offset
-        long actualShard = (long)Math.floor(id / (CassandraUtils.maxDocsPerShard*shardsAtOnce));
-        long shardDoc  = (long) id % (CassandraUtils.maxDocsPerShard*shardsAtOnce);
-        
-        return ((actualShard + shard)  * CassandraUtils.maxDocsPerShard) + shardDoc/shardsAtOnce;
-        */
-
     }
     
     public abstract void resetCounter(String indexName);
