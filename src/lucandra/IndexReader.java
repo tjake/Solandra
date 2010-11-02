@@ -89,6 +89,8 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     private final ThreadLocal<AtomicInteger> docCounter = new ThreadLocal<AtomicInteger>();
     private final ThreadLocal<Map<Term, LucandraTermEnum>> termEnumCache = new ThreadLocal<Map<Term, LucandraTermEnum>>();
     private final ThreadLocal<Map<String,byte[]>> fieldNorms = new ThreadLocal<Map<String, byte[]>>();
+    private final static ThreadLocal<Object> fieldCacheRefs  = new ThreadLocal<Object>();
+
     
     private static final Logger logger = Logger.getLogger(IndexReader.class);
 
@@ -117,6 +119,22 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         if(termEnumCache.get() != null) termEnumCache.get().clear();
         if(documentCache.get() != null) documentCache.get().clear();
         if(fieldNorms.get() != null) fieldNorms.get().clear();
+    
+        if (fieldCacheRefs.get() != null)
+            fieldCacheRefs.set(new Integer(1));
+    }
+    
+    @Override
+    public Object getFieldCacheKey() {
+        
+        Object ref = fieldCacheRefs.get();
+        
+        if(ref == null){           
+            ref = new Integer(1);
+            fieldCacheRefs.set(ref);     
+        }
+        
+        return ref;        
     }
     
     protected void doClose() throws IOException {
