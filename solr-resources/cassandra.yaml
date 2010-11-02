@@ -297,6 +297,7 @@ keyspaces:
           rows_cached: 10000
      
         - name: SI #schema info
+          column_type: Super
           keys_cached: .5
           rows_cached: .5
           compare_with: BytesType

@@ -237,4 +237,34 @@ public class SolandraTests {
         QueryResponse r = solrClient.query(q);
         assertEquals(1, r.getResults().getNumFound());
     }
+ 
+    @Test
+    public void testDeleteTerm() throws Exception {
+         
+        solrClient.deleteById("http://www.test4.com");
+        
+        SolrQuery q = new SolrQuery().setQuery("*:*").addField("*").addField("score");
+
+        QueryResponse r = solrClient.query(q);
+        assertEquals(3, r.getResults().getNumFound());
+        
+    }
+    
+    @Test 
+    public void testUpdateDocument() throws Exception {
+        SolrInputDocument doc = new SolrInputDocument();
+
+        doc.addField("title", "test1");
+        doc.addField("url", "http://www.test.com");
+        doc.addField("text", "this is a test of Solandra");
+        doc.addField("price", 1000);
+        
+        solrClient.add(doc);
+
+        SolrQuery q = new SolrQuery().setQuery("text:\u5639\u563b").addField("*").addField("score");
+
+        QueryResponse r = solrClient.query(q);
+        assertEquals(0, r.getResults().getNumFound());
+    }
+    
 }

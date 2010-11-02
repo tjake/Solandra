@@ -211,7 +211,7 @@
 
      <arr name="components">
       <str>query</str>
-      <str>reopenComponent</str>
+      <str>solandraComponent</str>
       <str>facet</str>
       <str>mlt</str>
       <str>highlight</str>
@@ -357,7 +357,7 @@
   -->
 
 
-  <searchComponent name="reopenComponent" class="solandra.SolandraReopenComponent"/>
+  <searchComponent name="solandraComponent" class="solandra.SolandraComponent"/>
 
 
 

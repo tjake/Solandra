@@ -62,7 +62,7 @@ import org.apache.lucene.search.TopDocs;
 public class IndexWriter {
 
 
-    private boolean autoCommit;
+    private static final ThreadLocal<Boolean> autoCommit = new ThreadLocal<Boolean>();
     private static final ThreadLocal<Map<ByteBuffer, RowMutation>> mutationList = new ThreadLocal<Map<ByteBuffer, RowMutation>>();
     private static final InheritableThreadLocal<String> indexName = new InheritableThreadLocal<String>();
     
@@ -71,12 +71,12 @@ public class IndexWriter {
     
     public IndexWriter() {
       
-        autoCommit = true;
+        setAutoCommit(true);
     }
     
     public IndexWriter(String indexName) {
         setIndexName(indexName);
-        autoCommit = true;
+        setAutoCommit(true);
     }
 
     public void addDocument(Document doc, Analyzer analyzer, int docNumber) throws CorruptIndexException, IOException{
@@ -290,8 +290,8 @@ public class IndexWriter {
         CassandraUtils.addMutations(getMutationList(), CassandraUtils.docColumnFamily, CassandraUtils.documentMetaFieldBytes, key, CassandraUtils
                 .toBytes(allIndexedTerms), null);
 
-        if (autoCommit) {
-            CassandraUtils.robustInsert(Arrays.asList(getMutationList().values().toArray(new RowMutation[]{})), ConsistencyLevel.ONE);
+        if (isAutoCommit()) {
+            CassandraUtils.robustInsert(ConsistencyLevel.ONE, getMutationList().values().toArray(new RowMutation[]{}));
             getMutationList().clear();
         }
     }
@@ -350,7 +350,7 @@ public class IndexWriter {
 
         ByteBuffer key = CassandraUtils.hashKeyBytes(getIndexName().getBytes(), CassandraUtils.delimeterBytes, docId);
 
-        List<Row> rows = CassandraUtils.robustGet(key, CassandraUtils.metaColumnPath, Arrays.asList(CassandraUtils.documentMetaFieldBytes), ConsistencyLevel.ONE);
+        List<Row> rows = CassandraUtils.robustRead(key, CassandraUtils.metaColumnPath, Arrays.asList(CassandraUtils.documentMetaFieldBytes), ConsistencyLevel.ONE);
         
         if (rows.isEmpty())
             return; // nothing to delete
@@ -380,14 +380,16 @@ public class IndexWriter {
         ByteBuffer selfKey = CassandraUtils.hashKeyBytes(getIndexName().getBytes(), CassandraUtils.delimeterBytes, docId);
         CassandraUtils.addMutations(getMutationList(), CassandraUtils.docColumnFamily, (ByteBuffer)null, selfKey, (ByteBuffer)null, null);
 
-        if (autoCommit){
-            CassandraUtils.robustInsert(Arrays.asList(getMutationList().values().toArray(new RowMutation[]{})), ConsistencyLevel.ONE);
+        if (isAutoCommit()){
+            CassandraUtils.robustInsert(ConsistencyLevel.ONE, getMutationList().values().toArray(new RowMutation[]{}));
             getMutationList().clear();
         }
     }
 
     public void updateDocument(Term updateTerm, Document doc, Analyzer analyzer, int docNumber) throws CorruptIndexException, IOException {
 
+        
+        
         deleteDocuments(updateTerm);
         addDocument(doc, analyzer, docNumber);
 
@@ -400,16 +402,16 @@ public class IndexWriter {
     }
 
     public boolean isAutoCommit() {
-        return autoCommit;
+        return autoCommit.get();
     }
 
     public void setAutoCommit(boolean autoCommit) {
-        this.autoCommit = autoCommit;
+        IndexWriter.autoCommit.set(autoCommit);
     }
 
     public void commit() {
-        if (!autoCommit){
-            CassandraUtils.robustInsert(Arrays.asList(getMutationList().values().toArray(new RowMutation[]{})), ConsistencyLevel.ONE);
+        if (!isAutoCommit()){
+            CassandraUtils.robustInsert(ConsistencyLevel.ONE, getMutationList().values().toArray(new RowMutation[]{}));
             getMutationList().clear();
         }
     }
@@ -431,7 +433,8 @@ public class IndexWriter {
     }
 
     public void setIndexName(String indexName) {
-        this.indexName.set(indexName);
+        IndexWriter.indexName.set(indexName);
     }
 
+    
 }

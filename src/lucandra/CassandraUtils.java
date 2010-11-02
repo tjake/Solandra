@@ -30,6 +30,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -59,16 +60,22 @@ public class CassandraUtils
     public static final String               termVecColumnFamily    = "TI";
     public static final String               docColumnFamily        = "Docs";
     public static final String               metaInfoColumnFamily   = "TL";
+    public static final String               schemaInfoColumnFamily = "SI";
 
     public static final String               positionVectorKey      = "P";
     public static final String               offsetVectorKey        = "O";
     public static final String               termFrequencyKey       = "F";
     public static final String               normsKey               = "N";
+    
+    public static final String               schemaKey              = "S";
+    
     public static final ByteBuffer           positionVectorKeyBytes = ByteBuffer.wrap(positionVectorKey.getBytes());
     public static final ByteBuffer           offsetVectorKeyBytes   = ByteBuffer.wrap(offsetVectorKey.getBytes());
     public static final ByteBuffer           termFrequencyKeyBytes  = ByteBuffer.wrap(termFrequencyKey.getBytes());
     public static final ByteBuffer           normsKeyBytes          = ByteBuffer.wrap(normsKey.getBytes());
 
+    public static final ByteBuffer           schemaKeyBytes         = ByteBuffer.wrap(schemaKey.getBytes());
+    
     public static final int                  maxDocsPerShard        = 100000;
 
     public static final List<Number>         emptyArray             = Arrays.asList(new Number[] { 0 });
@@ -358,7 +365,7 @@ public class CassandraUtils
         }
     }
 
-    public static void robustInsert(List<RowMutation> mutations, ConsistencyLevel cl)
+    public static void robustInsert(ConsistencyLevel cl, RowMutation... mutations )
     {
 
         int attempts = 0;
@@ -367,7 +374,7 @@ public class CassandraUtils
 
             try
             {
-                StorageProxy.mutate(mutations, cl);
+                StorageProxy.mutate(Arrays.asList(mutations), cl);
                 return;
             }
             catch (UnavailableException e)
@@ -392,15 +399,15 @@ public class CassandraUtils
         throw new RuntimeException("insert failed after 10 attempts");
     }
 
-    public static List<Row> robustGet(List<ReadCommand> rc, ConsistencyLevel cl)
-    {
+    public static List<Row> robustRead(ConsistencyLevel cl, ReadCommand... rc)
+    {      
         List<Row> rows = null;
         int attempts = 0;
         while (attempts++ < 10)
         {
             try
             {
-                rows = StorageProxy.readProtocol(rc, cl);
+                rows = StorageProxy.readProtocol(Arrays.asList(rc), cl);
                 break;
             }
             catch (IOException e1)
@@ -436,12 +443,12 @@ public class CassandraUtils
         return rows;
     }
 
-    public static List<Row> robustGet(ByteBuffer key, QueryPath qp, List<ByteBuffer> columns, ConsistencyLevel cl)
+    public static List<Row> robustRead(ByteBuffer key, QueryPath qp, List<ByteBuffer> columns, ConsistencyLevel cl)
     {
 
         ReadCommand rc = new SliceByNamesReadCommand(CassandraUtils.keySpace, key, qp, columns);
 
-        return robustGet(Arrays.asList(rc), cl);
+        return robustRead(cl,rc);
 
     }
 

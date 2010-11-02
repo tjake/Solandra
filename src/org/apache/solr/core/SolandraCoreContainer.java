@@ -25,8 +25,7 @@ import org.apache.solr.schema.IndexSchema;
 public class SolandraCoreContainer extends CoreContainer {
     private static final Logger logger = Logger.getLogger(SolandraCoreContainer.class);
     private final static InstrumentedCache<String, SolrCore> cache = new InstrumentedCache<String, SolrCore>(1024);
-    private final static QueryPath queryPath = new QueryPath("SI");
-    private final static String columnName = "IDX";
+    private final static QueryPath queryPath = new QueryPath(CassandraUtils.schemaInfoColumnFamily,CassandraUtils.schemaKeyBytes);
     public  final static Pattern shardPattern = Pattern.compile("^([^~]+)~?(\\d*)$");
     
     private final SolrConfig solrConfig;
@@ -72,8 +71,8 @@ public class SolandraCoreContainer extends CoreContainer {
     }
 
     public static String  readSchemaXML(String indexName) throws IOException {
-        List<Row> rows = CassandraUtils.robustGet(ByteBuffer.wrap(indexName.getBytes()), queryPath, 
-        										  Arrays.asList(ByteBuffer.wrap(columnName.getBytes())), 
+        List<Row> rows = CassandraUtils.robustRead(ByteBuffer.wrap((indexName+"/schema").getBytes()), queryPath, 
+        										  Arrays.asList(CassandraUtils.schemaKeyBytes), 
         										  ConsistencyLevel.QUORUM);
 
         if (rows.isEmpty())
@@ -85,7 +84,7 @@ public class SolandraCoreContainer extends CoreContainer {
         if(rows.get(0).cf == null)
             throw new IOException("invalid index");
         
-        ByteBuffer schema = rows.get(0).cf.getColumn(ByteBuffer.wrap(columnName.getBytes())).value();
+        ByteBuffer schema = rows.get(0).cf.getColumn(CassandraUtils.schemaKeyBytes).getSubColumn(CassandraUtils.schemaKeyBytes).value();
         return ByteBufferUtil.string(schema);
     }
     
@@ -98,8 +97,8 @@ public class SolandraCoreContainer extends CoreContainer {
             // get from cassandra
             logger.info("loading indexInfo for: "+ indexName);
             
-            List<Row> rows = CassandraUtils.robustGet(ByteBuffer.wrap(indexName.getBytes()), queryPath, 
-            										  Arrays.asList(ByteBuffer.wrap(columnName.getBytes())), 
+            List<Row> rows = CassandraUtils.robustRead(ByteBuffer.wrap((indexName+"/schema").getBytes()), queryPath, 
+            										  Arrays.asList(CassandraUtils.schemaKeyBytes), 
             										  ConsistencyLevel.QUORUM);
 
             if (rows.isEmpty())
@@ -111,7 +110,7 @@ public class SolandraCoreContainer extends CoreContainer {
             if(rows.get(0).cf == null)
                 throw new IOException("invalid index");
             
-            ByteBuffer buf = rows.get(0).cf.getColumn(ByteBuffer.wrap(columnName.getBytes())).value();
+            ByteBuffer buf = rows.get(0).cf.getColumn(CassandraUtils.schemaKeyBytes).getSubColumn(CassandraUtils.schemaKeyBytes).value();
             InputStream stream = new ByteArrayInputStream(buf.array(),buf.position(),buf.remaining());
 
             IndexSchema schema = new IndexSchema(solrConfig, indexName, stream);
@@ -127,18 +126,18 @@ public class SolandraCoreContainer extends CoreContainer {
     }
 
     public static void writeSchema(String indexName, String schemaXml){
-        RowMutation rm = new RowMutation(CassandraUtils.keySpace, ByteBuffer.wrap(indexName.getBytes()));
+        RowMutation rm = new RowMutation(CassandraUtils.keySpace, ByteBuffer.wrap((indexName+"/schema").getBytes()));
         
         try {
         	
-            rm.add(new QueryPath("SI",null, ByteBuffer.wrap(columnName.getBytes())), 
+            rm.add(new QueryPath(CassandraUtils.schemaInfoColumnFamily,CassandraUtils.schemaKeyBytes, CassandraUtils.schemaKeyBytes), 
             		ByteBuffer.wrap(schemaXml.getBytes("UTF-8")), System.currentTimeMillis());
             
         } catch (UnsupportedEncodingException e) {
             throw new RuntimeException(e);
         }
 
-        CassandraUtils.robustInsert(Arrays.asList(rm), ConsistencyLevel.ONE);
+        CassandraUtils.robustInsert(ConsistencyLevel.ONE, rm);
         
         logger.debug("Wrote Schema for "+indexName);
     }

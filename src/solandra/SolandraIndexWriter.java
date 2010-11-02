@@ -21,14 +21,23 @@ package solandra;
 
 import java.io.IOException;
 import java.net.URL;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import lucandra.CassandraUtils;
 import lucandra.cluster.AbstractIndexManager;
 import lucandra.cluster.IndexManagerService;
 
+import org.apache.cassandra.db.IColumn;
+import org.apache.cassandra.db.Row;
+import org.apache.cassandra.db.RowMutation;
+import org.apache.cassandra.db.filter.QueryPath;
+import org.apache.cassandra.thrift.ConsistencyLevel;
+import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.log4j.Logger;
-import org.apache.lucene.document.Document;
+import org.apache.lucene.index.Term;
 import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.Query;
 import org.apache.solr.common.SolrException;
@@ -44,37 +53,40 @@ import org.apache.solr.update.MergeIndexesCommand;
 import org.apache.solr.update.RollbackUpdateCommand;
 import org.apache.solr.update.UpdateHandler;
 
-public class SolandraIndexWriter extends UpdateHandler {
+public class SolandraIndexWriter extends UpdateHandler
+{
 
     private final lucandra.IndexWriter writer;
-    private final static Logger logger = Logger.getLogger(SolandraIndexWriter.class);
-    
-    // stats
-    AtomicLong addCommands = new AtomicLong();
-    AtomicLong addCommandsCumulative = new AtomicLong();
-    AtomicLong deleteByIdCommands = new AtomicLong();
-    AtomicLong deleteByIdCommandsCumulative = new AtomicLong();
-    AtomicLong deleteByQueryCommands = new AtomicLong();
-    AtomicLong deleteByQueryCommandsCumulative = new AtomicLong();
-    AtomicLong expungeDeleteCommands = new AtomicLong();
-    AtomicLong mergeIndexesCommands = new AtomicLong();
-    AtomicLong commitCommands = new AtomicLong();
-    AtomicLong optimizeCommands = new AtomicLong();
-    AtomicLong rollbackCommands = new AtomicLong();
-    AtomicLong numDocsPending = new AtomicLong();
-    AtomicLong numErrors = new AtomicLong();
-    AtomicLong numErrorsCumulative = new AtomicLong();
+    private final static Logger        logger                          = Logger.getLogger(SolandraIndexWriter.class);
 
-    
-    public SolandraIndexWriter(SolrCore core) {
+    // stats
+    AtomicLong                         addCommands                     = new AtomicLong();
+    AtomicLong                         addCommandsCumulative           = new AtomicLong();
+    AtomicLong                         deleteByIdCommands              = new AtomicLong();
+    AtomicLong                         deleteByIdCommandsCumulative    = new AtomicLong();
+    AtomicLong                         deleteByQueryCommands           = new AtomicLong();
+    AtomicLong                         deleteByQueryCommandsCumulative = new AtomicLong();
+    AtomicLong                         expungeDeleteCommands           = new AtomicLong();
+    AtomicLong                         mergeIndexesCommands            = new AtomicLong();
+    AtomicLong                         commitCommands                  = new AtomicLong();
+    AtomicLong                         optimizeCommands                = new AtomicLong();
+    AtomicLong                         rollbackCommands                = new AtomicLong();
+    AtomicLong                         numDocsPending                  = new AtomicLong();
+    AtomicLong                         numErrors                       = new AtomicLong();
+    AtomicLong                         numErrorsCumulative             = new AtomicLong();
+
+    public SolandraIndexWriter(SolrCore core)
+    {
         super(core);
-         
-        
-        try {
-            
+
+        try
+        {
+
             writer = new lucandra.IndexWriter();
-            
-        } catch (Exception e) {
+
+        }
+        catch (Exception e)
+        {
             throw new RuntimeException(e);
         }
     }
@@ -85,63 +97,46 @@ public class SolandraIndexWriter extends UpdateHandler {
         addCommandsCumulative.incrementAndGet();
         int rc = -1;
 
+        // no duplicates allowed            
+        SchemaField uniqueField = core.getSchema().getUniqueKeyField();
+        
+        if(uniqueField == null)
+            throw new IOException("Solandra requires a unique field");
         
         // if there is no ID field, use allowDups
         if (idField == null) {
-            cmd.allowDups = true;
-            cmd.overwriteCommitted = false;
-            cmd.overwritePending = false;
+            throw new IOException("Solandra requires a unique field");   
         }
 
-        try {
-
-            //Term updateTerm = null;
-            long docId =  IndexManagerService.indexManager.incrementDocId(core.getName());
+       try{
+            long docId =  IndexManagerService.indexManager.incrementDocId(core.getName(), cmd.getIndexedId(schema));
                 
+            boolean isUpdate = false;
+            if(docId < 0)
+            {
+                docId    = -docId;
+                isUpdate = true;
+            }
+            
             int shard     = AbstractIndexManager.getShardFromDocId(docId);
             int shardedId = AbstractIndexManager.getShardedDocId(docId);
             String indexName = core.getName()+"~"+shard;
             
-            logger.debug("Adding "+shardedId+" to "+indexName);
+            if(logger.isDebugEnabled())
+                logger.debug("Adding "+shardedId+" to "+indexName);
             
             writer.setIndexName(indexName);
-            
-          /*  if (cmd.overwriteCommitted || cmd.overwritePending) {
-                if (cmd.indexedId == null) {
-                    cmd.indexedId = getIndexedId(cmd.doc);
-                }
-                Term idTerm = this.idTerm.createTerm(cmd.indexedId);
-                boolean del = false;
-                if (cmd.updateTerm == null) {
-                    updateTerm = idTerm;
-                } else {
-                    del = true;
-                    updateTerm = cmd.updateTerm;
-                }
-
-                
-                
-                writer.updateDocument(updateTerm, cmd.getLuceneDocument(schema), schema.getAnalyzer(), docId);
-                if (del) { // ensure id remains unique
-                    BooleanQuery bq = new BooleanQuery();
-                    bq.add(new BooleanClause(new TermQuery(updateTerm), Occur.MUST_NOT));
-                    bq.add(new BooleanClause(new TermQuery(idTerm), Occur.MUST));
-                    writer.deleteDocuments(bq);
-                }
-            } else {*/
-                // allow duplicates            
-                SchemaField uniqueField = core.getSchema().getUniqueKeyField();
-                
-                if(uniqueField == null)
-                    throw new IOException("Solandra requires a unique field");
-                
-                Document doc = cmd.getLuceneDocument(core.getSchema());
-                
-                writer.addDocument(doc, core.getSchema().getAnalyzer(), shardedId);
-            //}
+                       
+            Term idTerm = this.idTerm.createTerm(cmd.indexedId);
+                       
+            if(isUpdate)
+                writer.updateDocument(idTerm, cmd.getLuceneDocument(schema), schema.getAnalyzer(), shardedId);                
+            else
+                writer.addDocument(cmd.getLuceneDocument(schema), schema.getAnalyzer(), shardedId);
 
             rc = 1;
-        } finally {
+            
+       }finally {
             if (rc != 1) {
                 numErrors.incrementAndGet();
                 numErrorsCumulative.incrementAndGet();
@@ -152,46 +147,95 @@ public class SolandraIndexWriter extends UpdateHandler {
 
     }
 
-    
-    public void close() throws IOException {
+    public void close() throws IOException
+    {
         // hehe
     }
 
-    
-    public void commit(CommitUpdateCommand cmd) throws IOException {
+    public void commit(CommitUpdateCommand cmd) throws IOException
+    {
         // hehe
     }
 
-    
-    public void delete(DeleteUpdateCommand cmd) throws IOException {
+    public void delete(DeleteUpdateCommand cmd) throws IOException
+    {
         deleteByIdCommands.incrementAndGet();
         deleteByIdCommandsCumulative.incrementAndGet();
 
-        if (!cmd.fromPending && !cmd.fromCommitted) {
+        if (!cmd.fromPending && !cmd.fromCommitted)
+        {
             numErrors.incrementAndGet();
             numErrorsCumulative.incrementAndGet();
             throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, "meaningless command: " + cmd);
         }
-        if (!cmd.fromPending || !cmd.fromCommitted) {
+        if (!cmd.fromPending || !cmd.fromCommitted)
+        {
             numErrors.incrementAndGet();
             numErrorsCumulative.incrementAndGet();
             throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, "operation not supported" + cmd);
         }
 
-        writer.deleteDocuments(idTerm.createTerm(idFieldType.toInternal(cmd.id)));
+  
+        Term term = idTerm.createTerm(idFieldType.toInternal(cmd.id));
+
+        logger.info("Deleting term: "+term);
+        
+        ByteBuffer keyKey = ByteBuffer.wrap((core.getName() + "/keys").getBytes());
+        ByteBuffer keyCol= ByteBuffer.wrap(term.text().getBytes());
+    
+        List<Row> rows = CassandraUtils.robustRead(keyKey, new QueryPath(CassandraUtils.schemaInfoColumnFamily), Arrays.asList(keyCol), ConsistencyLevel.QUORUM);
+
+        if(rows.size() == 1)
+        {
+            Row row = rows.get(0);
+            
+            if(row.cf != null)
+            {
+               IColumn col = row.cf.getColumn(keyCol);
+               
+               if(col != null){
+                   ByteBuffer idCol = col.getSubColumns().iterator().next().name();
+                   Long  id  = Long.valueOf(ByteBufferUtil.string(idCol));                   
+                   int shard = AbstractIndexManager.getShardFromDocId(id);
+                   int sid   = AbstractIndexManager.getShardedDocId(id);
+                   
+                   ByteBuffer sidName = ByteBuffer.wrap(String.valueOf(sid).getBytes());
+                   
+                   String subIndex = core.getName() + "~" + shard;
+                  
+                   //Delete all terms/fields/etc
+                   writer.setIndexName(subIndex);
+                   writer.deleteDocuments(term);
+                   
+                   //Delete key -> docId lookup
+                   RowMutation rm = new RowMutation(CassandraUtils.keySpace, keyKey);
+                   rm.delete(new QueryPath(CassandraUtils.schemaInfoColumnFamily, keyCol), System.currentTimeMillis()-10);
+                   
+                   //Delete docId so it can be reused
+                   //TODO: update shard info with docid
+                   ByteBuffer idKey = ByteBuffer.wrap((subIndex + "/ids").getBytes());
+                   RowMutation rm2 = new RowMutation(CassandraUtils.keySpace, idKey);
+                   rm2.delete(new QueryPath(CassandraUtils.schemaInfoColumnFamily, sidName), System.currentTimeMillis()-10);
+                   
+                   CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm, rm2);
+               }
+            }        
+        }
     }
 
-    
-    public void deleteByQuery(DeleteUpdateCommand cmd) throws IOException {
+    public void deleteByQuery(DeleteUpdateCommand cmd) throws IOException
+    {
         deleteByQueryCommands.incrementAndGet();
         deleteByQueryCommandsCumulative.incrementAndGet();
 
-        if (!cmd.fromPending && !cmd.fromCommitted) {
+        if (!cmd.fromPending && !cmd.fromCommitted)
+        {
             numErrors.incrementAndGet();
             numErrorsCumulative.incrementAndGet();
             throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, "meaningless command: " + cmd);
         }
-        if (!cmd.fromPending || !cmd.fromCommitted) {
+        if (!cmd.fromPending || !cmd.fromCommitted)
+        {
             numErrors.incrementAndGet();
             numErrorsCumulative.incrementAndGet();
             throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, "operation not supported" + cmd);
@@ -199,21 +243,28 @@ public class SolandraIndexWriter extends UpdateHandler {
 
         boolean madeIt = false;
         boolean delAll = false;
-        try {
+        try
+        {
             Query q = QueryParsing.parseQuery(cmd.query, schema);
             delAll = MatchAllDocsQuery.class == q.getClass();
 
-            if (delAll) {
+            if (delAll)
+            {
 
                 throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, "can't delete all: " + cmd);
-            } else {
+            }
+            else
+            {
                 writer.deleteDocuments(q);
             }
 
             madeIt = true;
 
-        } finally {
-            if (!madeIt) {
+        }
+        finally
+        {
+            if (!madeIt)
+            {
                 numErrors.incrementAndGet();
                 numErrorsCumulative.incrementAndGet();
             }
@@ -221,54 +272,54 @@ public class SolandraIndexWriter extends UpdateHandler {
 
     }
 
-    
-    public int mergeIndexes(MergeIndexesCommand cmd) throws IOException {
+    public int mergeIndexes(MergeIndexesCommand cmd) throws IOException
+    {
         // haha
         return 0;
     }
 
-    
-    public void rollback(RollbackUpdateCommand cmd) throws IOException {
+    public void rollback(RollbackUpdateCommand cmd) throws IOException
+    {
         // TODO Auto-generated method stub
 
     }
 
-    
-    public Category getCategory() {
+    public Category getCategory()
+    {
         return Category.UPDATEHANDLER;
     }
 
-    
-    public String getDescription() {
+    public String getDescription()
+    {
         return "Update handler for Solandra";
     }
 
-    
-    public URL[] getDocs() {
+    public URL[] getDocs()
+    {
         // TODO Auto-generated method stub
         return null;
     }
 
-    
-    public String getName() {
+    public String getName()
+    {
         return SolandraIndexWriter.class.getName();
     }
 
-    
-    public String getSource() {
+    public String getSource()
+    {
         // TODO Auto-generated method stub
         return null;
     }
 
-    
-    public String getSourceId() {
+    public String getSourceId()
+    {
         // TODO Auto-generated method stub
         return null;
     }
 
-    
     @SuppressWarnings("unchecked")
-    public NamedList getStatistics() {
+    public NamedList getStatistics()
+    {
         NamedList lst = new SimpleOrderedMap();
 
         lst.add("rollbacks", rollbackCommands.get());
@@ -283,8 +334,8 @@ public class SolandraIndexWriter extends UpdateHandler {
         return lst;
     }
 
-   
-    public String getVersion() {
+    public String getVersion()
+    {
         return core.getVersion();
     }
 

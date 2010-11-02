@@ -4,8 +4,11 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
+import org.apache.cassandra.db.ExpiringColumn;
+import org.apache.cassandra.db.IColumn;
 import org.apache.cassandra.db.ReadCommand;
 import org.apache.cassandra.db.Row;
 import org.apache.cassandra.db.SliceFromReadCommand;
@@ -23,32 +26,9 @@ public class LucandraAllTermDocs implements TermDocs
 
     private static Logger logger    = Logger.getLogger(LucandraAllTermDocs.class);
     private String        indexName;
-    private int           idx;                                                    // tracks
-    // how
-    // where
-    // we
-    // are
-    // in
-    // the
-    // doc
-    // buffer
-    private int           fillSize;                                               // tracks
-    // how
-    // much
-    // the
-    // buffer
-    // was
-    // filled
-    // with
-    // docs
-    // from
-    // cassandra
-    private int[]         docBuffer = new int[128];                               // max
-    // number
-    // of
-    // docs
-    // we
-    // pull
+    private int           idx;      // tracks where we are in the doc buffer
+    private int           fillSize; // tracks how much the buffer was filled with docs from cassandra
+    private int[]         docBuffer = new int[CassandraUtils.maxDocsPerShard+1]; // max number of docs we pull
     private int           doc       = -1;
     private int           maxDoc;
 
@@ -56,8 +36,13 @@ public class LucandraAllTermDocs implements TermDocs
     {
         indexName = indexReader.getIndexName();
         maxDoc = indexReader.maxDoc();
+        Arrays.fill(docBuffer, 0);
+        
         idx = 0;
         fillSize = 0;
+        
+        fillDocBuffer();
+
     }
 
     public void seek(Term term) throws IOException
@@ -100,7 +85,7 @@ public class LucandraAllTermDocs implements TermDocs
         {
 
             docs[i] = doc;
-            freqs[i] = 1;
+            freqs[i] = docBuffer[doc];
             ++i;
 
             next();
@@ -111,20 +96,13 @@ public class LucandraAllTermDocs implements TermDocs
     public boolean skipTo(int target) throws IOException
     {
         doc = target;
-
-        do
+        for (; idx < maxDoc; idx++)
         {
-            if (idx >= fillSize)
-                getMoreDocs();
-
-            for (; idx < fillSize; idx++)
-            {
-                if (docBuffer[idx] >= doc)
-                    return true;
-            }
-
+                if (idx >= doc && docBuffer[idx] > 0){
+                    doc = idx;
+                    return true; 
+                }
         }
-        while (doc < maxDoc && fillSize > 0);
 
         return false;
     }
@@ -133,74 +111,35 @@ public class LucandraAllTermDocs implements TermDocs
     {
     }
 
-    private void getMoreDocs()
+    private void fillDocBuffer()
     {
-        List<ReadCommand> readCommands = new ArrayList<ReadCommand>();
+        
+        ByteBuffer key = ByteBuffer.wrap((indexName + "/ids").getBytes());
 
-        ColumnParent columnParent = new ColumnParent();
-        columnParent.setColumn_family(CassandraUtils.docColumnFamily);
+        ReadCommand cmd = new SliceFromReadCommand(CassandraUtils.keySpace, key,
+                new ColumnParent(CassandraUtils.schemaInfoColumnFamily), FBUtilities.EMPTY_BYTE_BUFFER,
+                FBUtilities.EMPTY_BYTE_BUFFER, false, Integer.MAX_VALUE);
 
-        idx = 0;
-        fillSize = 0;
-        logger.info("Getting more docs for " + indexName);
+        
+        List<Row> rows = CassandraUtils.robustRead(ConsistencyLevel.ONE, cmd);
 
-        do
-        {
+        if(rows.isEmpty())
+            return;
+        
+        Row row = rows.get(0);
 
-            readCommands.clear();
-
-            for (int i = doc; i < (doc + docBuffer.length) && i < maxDoc; i++)
+        for(IColumn sc : row.cf.getSortedColumns()){
+            Integer id   = Integer.valueOf(ByteBufferUtil.string(sc.name()));
+            
+            for(IColumn c : sc.getSubColumns())
             {
-                String docHex = Integer.toHexString(i);
-                logger.debug("Scanning index " + indexName + " " + i);
-
-                try
-                {
-                    ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes,
-                            docHex.getBytes("UTF-8"));
-
-                    readCommands.add(new SliceFromReadCommand(CassandraUtils.keySpace, key, columnParent,
-                            FBUtilities.EMPTY_BYTE_BUFFER, CassandraUtils.finalTokenBytes, false, Integer.MAX_VALUE));
-                }
-                catch (UnsupportedEncodingException e)
-                {
-                    throw new RuntimeException(e);
+                //valid id
+                if( !(c instanceof ExpiringColumn)){
+                    docBuffer[id] = 1;
+                    fillSize++;
                 }
             }
-
-            List<Row> rows = CassandraUtils.robustGet(readCommands, ConsistencyLevel.ONE);
-
-            // No more docs!
-            if (rows.isEmpty())
-                return;
-
-            int numNulls = 0;
-
-            for (Row row : rows)
-            {
-
-                if (row.cf == null || row.cf.isMarkedForDelete())
-                {
-                    numNulls++;
-                    continue;
-                }
-
-                String key = ByteBufferUtil.string(row.key.key, CassandraUtils.UTF_8);
-
-                // term keys look like indexName/docNum
-                String docHex = key
-                        .substring(key.indexOf(CassandraUtils.delimeter) + CassandraUtils.delimeter.length());
-
-                Integer docNum = Integer.valueOf(docHex, 16);
-                docBuffer[fillSize] = docNum;
-                fillSize++;
-            }
-
-            if (fillSize == 0 && numNulls >= readCommands.size())
-                return;
-
-        }
-        while (fillSize == 0);
+        }     
     }
 
 }
