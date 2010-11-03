@@ -17,8 +17,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
 
 import lucandra.CassandraUtils;
 
@@ -36,26 +34,28 @@ import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.cassandra.utils.FBUtilities;
 import org.apache.log4j.Logger;
 
-import com.google.common.collect.MapMaker;
-
 public class CassandraIndexManager extends AbstractIndexManager
 {
-    private final int[]                               randomSeq;
-    private final double                              collisionThreshold;
-    private final int                                 reserveSlabSize = 100;
-    private final int                                 expirationTime  = 120;                                          // seconds
+  
+    //To increase throughput we distribute docs across a number of shards at once
+    //The idea being different shards live on different boxes
+    protected final int shardsAtOnce;  
+    
+    private final int[]                     randomSeq;
+    private final double                    collisionThreshold;
+    private final int                       reserveSlabSize = 100;
+    private final int                       expirationTime  = 10;                                           // seconds
 
-    private final ConcurrentMap<String, List<IdInfo>> indexReserves   = new MapMaker().expiration(expirationTime,
-                                                                              TimeUnit.SECONDS).makeMap();
-    private final ConcurrentMap<String, ShardInfo>    indexShards     = new MapMaker().expiration(expirationTime,
-                                                                              TimeUnit.SECONDS).makeMap();
+    private final Map<String, List<IdInfo>> indexReserves   = new HashMap<String, List<IdInfo>>();
+    private final Map<String, ShardInfo>    indexShards     = new HashMap<String, ShardInfo>();
 
-    private static final Logger                       logger          = Logger.getLogger(CassandraIndexManager.class);
+    private static final Logger             logger          = Logger.getLogger(CassandraIndexManager.class);
 
     private class ShardInfo
     {
-        public String                     indexName;
-        public TreeMap<Integer, NodeInfo> shards = new TreeMap<Integer, NodeInfo>();
+        public final String                     indexName;
+        public final long                       ttl    = System.currentTimeMillis() + expirationTime * 1000 - 1000;
+        public final TreeMap<Integer, NodeInfo> shards = new TreeMap<Integer, NodeInfo>();
 
         public ShardInfo(String indexName)
         {
@@ -76,9 +76,10 @@ public class CassandraIndexManager extends AbstractIndexManager
 
     private class IdInfo
     {
-        public NodeInfo node;
-        public Integer  id;
-        public Integer  offset;
+        public NodeInfo   node;
+        public Integer    id;
+        public Integer    offset;
+        public final long ttl = System.currentTimeMillis() + expirationTime * 1000 - 1000;
 
         public IdInfo(NodeInfo node, Integer id, Integer offset)
         {
@@ -90,7 +91,7 @@ public class CassandraIndexManager extends AbstractIndexManager
 
     public CassandraIndexManager(int shardsAtOnce, double collisionThreshold)
     {
-        super(shardsAtOnce);
+        this.shardsAtOnce = shardsAtOnce;
 
         assert (collisionThreshold >= 0.0 && collisionThreshold <= 1.0);
 
@@ -103,54 +104,71 @@ public class CassandraIndexManager extends AbstractIndexManager
 
     private ShardInfo getShardInfo(String indexName)
     {
-        ShardInfo shards = indexShards.get(indexName);
 
-        if (shards != null)
-            return shards;
-
-        ReadCommand cmd = new SliceFromReadCommand(CassandraUtils.keySpace, ByteBuffer.wrap((indexName + "/shards")
-                .getBytes()), new ColumnParent(CassandraUtils.schemaInfoColumnFamily), FBUtilities.EMPTY_BYTE_BUFFER,
-                FBUtilities.EMPTY_BYTE_BUFFER, false, 100);
-
-        List<Row> rows = CassandraUtils.robustRead(ConsistencyLevel.QUORUM, cmd);
-
-        shards = new ShardInfo(indexName);
-        if (rows != null || !rows.isEmpty())
+        synchronized (indexName.intern())
         {
-            assert rows.size() == 1;
 
-            Row row = rows.get(0);
+            ShardInfo shards = indexShards.get(indexName);
 
-            if (row.cf != null && !row.cf.isMarkedForDelete())
+            if (shards != null)
             {
-
-                assert row.cf.getSortedColumns() != null;
-
-                // Each column represents each shard and latest id for each node
-                // {"shard1" : {"node1" : 1234}}
-                for (IColumn c : row.cf.getSortedColumns())
+                if (shards.ttl > System.currentTimeMillis())
                 {
-                    String shardStr = ByteBufferUtil.string(c.name());
-                    Integer shardNum = Integer.valueOf(shardStr);
-
-                    NodeInfo nodes = new NodeInfo(shardNum);
-
-                    for (IColumn s : c.getSubColumns())
-                    {
-                        String token = ByteBufferUtil.string(s.name());
-                        Integer offset = Integer.valueOf(ByteBufferUtil.string(s.value()));
-
-                        nodes.nodes.put(token, offset);
-                    }
-
-                    shards.shards.put(shardNum, nodes);
+                    return shards;
+                }
+                else
+                {
+                    logger.info("ShardInfo for " + indexName + " has expired");
                 }
             }
+
+            ReadCommand cmd = new SliceFromReadCommand(CassandraUtils.keySpace, ByteBuffer.wrap((indexName + "/shards")
+                    .getBytes()), new ColumnParent(CassandraUtils.schemaInfoColumnFamily),
+                    FBUtilities.EMPTY_BYTE_BUFFER, FBUtilities.EMPTY_BYTE_BUFFER, false, 100);
+
+            List<Row> rows = CassandraUtils.robustRead(ConsistencyLevel.QUORUM, cmd);
+
+            shards = new ShardInfo(indexName);
+            if (rows != null || !rows.isEmpty())
+            {
+                assert rows.size() == 1;
+
+                Row row = rows.get(0);
+
+                if (row.cf != null && !row.cf.isMarkedForDelete())
+                {
+
+                    assert row.cf.getSortedColumns() != null;
+
+                    // Each column represents each shard and latest id for each
+                    // node
+                    // {"shard1" : {"node1" : 1234}}
+                    for (IColumn c : row.cf.getSortedColumns())
+                    {
+                        String shardStr = ByteBufferUtil.string(c.name());
+                        Integer shardNum = Integer.valueOf(shardStr);
+
+                        NodeInfo nodes = new NodeInfo(shardNum);
+
+                        for (IColumn s : c.getSubColumns())
+                        {
+                            String token = ByteBufferUtil.string(s.name());
+                            Integer offset = Integer.valueOf(ByteBufferUtil.string(s.value()));
+
+                            nodes.nodes.put(token, offset);
+                        }
+
+                        shards.shards.put(shardNum, nodes);
+                    }
+                }
+            }
+
+            indexShards.put(indexName, shards);
+
+            logger.info(indexName + " has " + shards.shards.size() + " shards");
+
+            return shards;
         }
-
-        indexShards.put(indexName, shards);
-
-        return shards;
     }
 
     public void deleteId(String indexName, long id)
@@ -158,7 +176,7 @@ public class CassandraIndexManager extends AbstractIndexManager
 
     }
 
-    public long internalFetch(String indexName)
+    public long getMaxId(String indexName)
     {
         // find the max shard
         ShardInfo shards = getShardInfo(indexName);
@@ -168,16 +186,14 @@ public class CassandraIndexManager extends AbstractIndexManager
         return (CassandraUtils.maxDocsPerShard * highest);
     }
 
-    public Long internalFetch(String indexName, String key)
+    public Long getId(String indexName, String key)
     {
-        return null;
+        return checkForUpdate(indexName, key);
     }
 
     public Long checkForUpdate(String indexName, String key)
     {
         ByteBuffer keyCol = ByteBuffer.wrap(key.getBytes());
-
-        // First, be sure this isn't an update
         ByteBuffer keyKey = ByteBuffer.wrap((indexName + "/keys").getBytes());
 
         List<Row> rows = CassandraUtils.robustRead(keyKey, new QueryPath(CassandraUtils.schemaInfoColumnFamily), Arrays
@@ -195,6 +211,7 @@ public class CassandraIndexManager extends AbstractIndexManager
                 {
                     ByteBuffer idVal = col.getSubColumns().iterator().next().name();
                     Long id = Long.valueOf(ByteBufferUtil.string(idVal));
+
                     return id;
                 }
             }
@@ -208,19 +225,17 @@ public class CassandraIndexManager extends AbstractIndexManager
         return StorageService.instance.getTokenMetadata().getToken(FBUtilities.getLocalAddress()).toString();
     }
 
-    public long internalIncrement(String indexName, String key)
-    {
-        Long updateId = checkForUpdate(indexName, key);
-
-        if (updateId != null)
-            return -updateId; // dirty, dirty
-
-        ShardInfo shards = getShardInfo(indexName);
-        NodeInfo nodes[] = pickAShard(shards);
+    public long getNextId(String indexName, String key)
+    {      
         String myToken = getToken();
 
+        ShardInfo shards  = getShardInfo(indexName);
+        NodeInfo nodes[] = pickAShard(shards);
         List<IdInfo> ids = reserveIds(indexName, nodes, myToken);
 
+        if(ids.isEmpty())
+            throw new IllegalStateException("No reserved Ids availible");
+        
         IdInfo idInfo = ids.remove(0);
         ByteBuffer idCol = ByteBuffer.wrap(String.valueOf(idInfo.id).getBytes());
 
@@ -276,9 +291,30 @@ public class CassandraIndexManager extends AbstractIndexManager
 
             List<IdInfo> currentRsvpd = indexReserves.get(indexName);
 
-            if (currentRsvpd != null && currentRsvpd.size() > 0)
-                return currentRsvpd;
+            if (currentRsvpd != null)
+            {
+                // make sure none have timed out
+                List<IdInfo> expired = null;
 
+                for (IdInfo id : currentRsvpd)
+                {
+                    if (id.ttl <= System.currentTimeMillis())
+                    {
+                        if (expired == null)
+                            expired = new ArrayList<IdInfo>();
+
+                        expired.add(id);
+                    }
+                }
+
+                if (expired != null)
+                {
+                    currentRsvpd.removeAll(expired);
+                    logger.info(expired.size() + " reserved ids for " + indexName + " have expired");
+                }
+                if (!currentRsvpd.isEmpty())
+                    return currentRsvpd;
+            }
             Map<NodeInfo, TreeSet<IdInfo>> rsvpdByNode = new LinkedHashMap<NodeInfo, TreeSet<IdInfo>>();
 
             for (NodeInfo node : shards)
@@ -406,7 +442,7 @@ public class CassandraIndexManager extends AbstractIndexManager
 
     private List<IdInfo> interleaveByNode(Map<NodeInfo, TreeSet<IdInfo>> rsvpdByNode)
     {
-        List<IdInfo> rsvpd = Collections.synchronizedList( new LinkedList<IdInfo>() );
+        List<IdInfo> rsvpd = Collections.synchronizedList(new LinkedList<IdInfo>());
 
         while (true)
         {
@@ -443,49 +479,53 @@ public class CassandraIndexManager extends AbstractIndexManager
     {
 
         assert shards != null;
-        String myToken = getToken();
 
-        NodeInfo[] picked = new NodeInfo[shardsAtOnce];
-
-        int maxShard = -1;
-        int pickedShard = 0;
-
-        for (Map.Entry<Integer, NodeInfo> shard : shards.shards.entrySet())
+        synchronized (shards)
         {
-            NodeInfo nodes = shard.getValue();
+            String myToken = getToken();
 
-            Integer offset = nodes.nodes.get(myToken);
+            NodeInfo[] picked = new NodeInfo[shardsAtOnce];
 
-            if (offset == null)
+            int maxShard = -1;
+            int pickedShard = 0;
+
+            for (Map.Entry<Integer, NodeInfo> shard : shards.shards.entrySet())
             {
-                // this means shard was started by another node
-                updateNodeOffset(shards.indexName, myToken, nodes, 0);
-            }
+                NodeInfo nodes = shard.getValue();
 
-            else if (offset + reserveSlabSize < randomSeq.length)
-            {
-                // if we still have
-                if (((1 - (offset / randomSeq.length)) * randomSeq.length) > reserveSlabSize)
+                Integer offset = nodes.nodes.get(myToken);
+
+                if (offset == null)
                 {
-                    picked[pickedShard] = nodes;
-                    pickedShard++;
-                    if (pickedShard >= shardsAtOnce)
-                        return picked;
+                    // this means shard was started by another node
+                    updateNodeOffset(shards.indexName, myToken, nodes, 0);
                 }
+
+                if (offset + reserveSlabSize < randomSeq.length)
+                {
+                    // if we still have
+                    if (((offset / randomSeq.length) * randomSeq.length) < reserveSlabSize)
+                    {
+                        picked[pickedShard] = nodes;
+                        pickedShard++;
+                        if (pickedShard >= shardsAtOnce)
+                            return picked;
+                    }
+                }
+
+                if (shard.getKey() > maxShard)
+                    maxShard = shard.getKey();
+
             }
 
-            if (shard.getKey() > maxShard)
-                maxShard = shard.getKey();
+            // new shards
+            for (int i = pickedShard; i < shardsAtOnce; i++)
+            {
+                picked[i] = addNewShard(shards.indexName);
+            }
 
+            return picked;
         }
-
-        // new shards
-        for (int i = pickedShard; i < shardsAtOnce; i++)
-        {
-            picked[i] = addNewShard(shards.indexName);
-        }
-
-        return picked;
     }
 
     private NodeInfo addNewShard(String indexName)
@@ -500,7 +540,7 @@ public class CassandraIndexManager extends AbstractIndexManager
         NodeInfo nodes = new NodeInfo(maxShard + 1);
 
         RowMutation rm = updateNodeOffset(indexName, getToken(), nodes, 0); // offset
-                                                                            // 0
+        // 0
 
         CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm);
 
@@ -519,10 +559,13 @@ public class CassandraIndexManager extends AbstractIndexManager
 
         rm.add(new QueryPath(CassandraUtils.schemaInfoColumnFamily, ByteBuffer.wrap(String.valueOf(node.shard)
                 .getBytes()), ByteBuffer.wrap(myToken.getBytes())), ByteBuffer.wrap(String.valueOf(offset).getBytes()),
-                0);
+                System.currentTimeMillis());
 
         // update locally
         node.nodes.put(myToken, offset);
+
+        if (logger.isDebugEnabled())
+            logger.debug("updated node offset for " + indexName + "(" + node.shard + ")(" + myToken + ") to " + offset);
 
         return rm;
     }

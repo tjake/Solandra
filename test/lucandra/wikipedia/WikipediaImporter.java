@@ -55,7 +55,7 @@ public class WikipediaImporter {
 
         WikipediaIndexWorker.hosts.addAll(Arrays.asList(hosts.split(",")));
         
-        IndexManagerService.indexManager.resetCounter("wikassandra");
+        IndexManagerService.instance.resetCounter("wikassandra");
         
         startTime = System.currentTimeMillis();
         lastTime = System.currentTimeMillis();

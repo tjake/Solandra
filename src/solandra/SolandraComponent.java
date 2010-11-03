@@ -121,7 +121,7 @@ public class SolandraComponent extends SearchComponent
         if (rb.shards == null)
         {
             // find number of shards
-            long docId = IndexManagerService.indexManager.getCurrentDocId(indexName);
+            long docId = IndexManagerService.instance.getMaxId(indexName);
 
             int numShards = AbstractIndexManager.getShardFromDocId(docId);
 

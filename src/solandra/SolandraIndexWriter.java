@@ -109,18 +109,25 @@ public class SolandraIndexWriter extends UpdateHandler
         }
 
        try{
-            long docId =  IndexManagerService.indexManager.incrementDocId(core.getName(), cmd.getIndexedId(schema));
+           
+           String indexName = core.getName();
+           String key       = cmd.getIndexedId(schema);
+           
+            Long docId =  IndexManagerService.instance.getId(indexName, key);
                 
             boolean isUpdate = false;
-            if(docId < 0)
+            if(docId != null)
             {
-                docId    = -docId;
                 isUpdate = true;
+            } 
+            else
+            {
+                docId = IndexManagerService.instance.getNextId(indexName, key);
             }
             
             int shard     = AbstractIndexManager.getShardFromDocId(docId);
             int shardedId = AbstractIndexManager.getShardedDocId(docId);
-            String indexName = core.getName()+"~"+shard;
+            indexName = core.getName()+"~"+shard;
             
             if(logger.isDebugEnabled())
                 logger.debug("Adding "+shardedId+" to "+indexName);
