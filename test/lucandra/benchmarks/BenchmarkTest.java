@@ -7,6 +7,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.SolrQuery.ORDER;
@@ -38,9 +39,12 @@ public class BenchmarkTest {
         try {
             return new Runnable() {
 
-                private final CommonsHttpSolrServer solrClient = new CommonsHttpSolrServer(url + ":" + port + "/solr/" + indexName);
+                private final CommonsHttpSolrServer solrClient = new CommonsHttpSolrServer(url + ":" + port + "/solr/"+indexName);
                 private final SolrQuery q = new SolrQuery().setQuery(queryString).addFacetField("type").setSortField("id", ORDER.asc);
+                //private final SolrQuery q = new SolrQuery().setQuery(queryString).setSortField("id", ORDER.asc);
+                //private final SolrQuery q = new SolrQuery().setQuery(queryString);
 
+                
                 private final int myThreadId = threadId++;
                 
                 private SolrInputDocument getDocument(){
@@ -88,8 +92,8 @@ public class BenchmarkTest {
 
                         total = r.getResults().getNumFound();
 
-                        // if (i % 1000 == 999)
-                        System.err.println("Thread " + myThreadId + ": total " + total + " vs "+r.getFacetFields());
+                        if (i>0 && i % numLoops/2 == 0)
+                            System.err.println("Thread " + myThreadId + ": total " + total + " facets "+r.getFacetFields());
                     }
 
                     if (myThreadId == 0)
@@ -101,6 +105,7 @@ public class BenchmarkTest {
                     for (int i = 0; i < numLoops; i++) {
                        
                         solrClient.add(getDocument());
+                        solrClient.commit(true,true);
                     }
                 }
 
@@ -114,12 +119,13 @@ public class BenchmarkTest {
                             QueryResponse r = solrClient.query(q);
                             total = r.getResults().getNumFound();
 
-                            if (i % 1000 == 999)
-                                System.err.println("Thread " + myThreadId + ": total " + total);
+                            if (i > 1 && i % numLoops/2 == 1)
+                                System.err.println("Thread " + myThreadId + ": total " + total + " facets " +r.getFacetFields());
 
                         } else {
                             
                             solrClient.add(getDocument());
+                            solrClient.commit(true,true);
                         }
 
                     }
@@ -170,6 +176,11 @@ public class BenchmarkTest {
 
                     if (arg.equalsIgnoreCase("type"))
                         type = Type.valueOf(value);
+                    
+                    if(arg.equalsIgnoreCase("solr"))
+                        indexName = "";
+                    
+                    
                 } catch (Throwable t) {
                     usage();
                 }

@@ -125,6 +125,15 @@ public class SolandraComponent extends SearchComponent
 
             int numShards = AbstractIndexManager.getShardFromDocId(docId);
 
+            //run local
+            /*if(numShards == 0) {
+                IndexReader reader = (IndexReader) ((SolrIndexReader) rb.req.getSearcher().getIndexReader())
+                .getWrappedReader();
+
+                reader.setIndexName(indexName+"~0");
+                return;
+            }*/
+            
             // assign shards
             String[] shards = new String[numShards + 1];
 

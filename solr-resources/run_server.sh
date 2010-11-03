@@ -1,8 +1,13 @@
 #!/bin/bash 
-
-REDIS_HOST="localhost"
 MAX_HEAP_SIZE="2G" 
+SHARDS_AT_ONCE="1"
+USE_STDERR=$1
 
+
+if ! test -n "$USE_STDERR"
+then
+    LOGGING="etc/jetty-logging.xml"
+fi
 
 # Here we create the arguments that will get passed to the jvm when
 # starting cassandra.
@@ -32,4 +37,4 @@ JVM_OPTS="$JVM_OPTS -Dcom.sun.management.jmxremote.port=8080"
 JVM_OPTS="$JVM_OPTS -Dcom.sun.management.jmxremote.ssl=false" 
 JVM_OPTS="$JVM_OPTS -Dcom.sun.management.jmxremote.authenticate=false" 
 
-java $JVM_OPTS -Dredis.host=$REDIS_HOST -jar start.jar etc/jetty-logging.xml etc/jetty.xml
+java $JVM_OPTS -Dshards.at.once=$SHARDS_AT_ONCE -jar start.jar $LOGGING etc/jetty.xml

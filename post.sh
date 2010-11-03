@@ -14,13 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FILES=$*
-URL=http://localhost:8983/solr/schema/wikassandra
+NAME=$1
+FILE=$2
 
-for f in $FILES; do
-  echo Posting file $f to $URL
-  curl $URL --data-binary @$f -H 'Content-type:text/xml; charset=utf-8' 
-  echo
-done
+URL=http://localhost:8983/solr/schema/$NAME
 
+curl $URL --data-binary @$FILE -H 'Content-type:text/xml; charset=utf-8' 
+
+echo "posted $FILE to $URL"
 

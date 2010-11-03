@@ -223,7 +223,6 @@ public class CassandraUtils
 
     public static final int byteArrayToInt(ByteBuffer b)
     {
-        logger.info(b);
         return (b.array()[b.position() + b.arrayOffset() + 0] << 24)
                 + ((b.array()[b.position() + b.arrayOffset() + 1] & 0xFF) << 16)
                 + ((b.array()[b.position() + b.arrayOffset() + 2] & 0xFF) << 8)
