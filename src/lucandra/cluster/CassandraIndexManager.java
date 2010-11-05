@@ -7,19 +7,20 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Random;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import lucandra.CassandraUtils;
 
+import org.apache.cassandra.db.DeletedColumn;
 import org.apache.cassandra.db.ExpiringColumn;
 import org.apache.cassandra.db.IColumn;
 import org.apache.cassandra.db.ReadCommand;
@@ -44,9 +45,9 @@ public class CassandraIndexManager extends AbstractIndexManager
     private final int[]                     randomSeq;
     private final double                    collisionThreshold;
     private final int                       reserveSlabSize = 100;
-    private final int                       expirationTime  = 10;                                           // seconds
+    private final int                       expirationTime  = 60;  // seconds
 
-    private final Map<String, List<IdInfo>> indexReserves   = new HashMap<String, List<IdInfo>>();
+    private final Map<String, LinkedBlockingQueue<IdInfo>> indexReserves   = new HashMap<String, LinkedBlockingQueue<IdInfo>>();
     private final Map<String, ShardInfo>    indexShards     = new HashMap<String, ShardInfo>();
 
     private static final Logger             logger          = Logger.getLogger(CassandraIndexManager.class);
@@ -228,15 +229,26 @@ public class CassandraIndexManager extends AbstractIndexManager
     public long getNextId(String indexName, String key)
     {      
         String myToken = getToken();
-
-        ShardInfo shards  = getShardInfo(indexName);
-        NodeInfo nodes[] = pickAShard(shards);
-        List<IdInfo> ids = reserveIds(indexName, nodes, myToken);
-
-        if(ids.isEmpty())
-            throw new IllegalStateException("No reserved Ids availible");
+        ShardInfo shards = null;
+        NodeInfo nodes[] = null;
+        IdInfo idInfo    = null;
         
-        IdInfo idInfo = ids.remove(0);
+        int attempts = 0;
+        while(attempts < 10){
+            shards  = getShardInfo(indexName);
+            nodes   = pickAShard(shards);
+
+            try {
+                idInfo = nextReservedId(indexName, nodes, myToken);
+            }catch(NoSuchElementException e){
+                     
+                logger.info("No reserved Ids availible for "+myToken);
+                attempts++;
+                continue;
+            }
+            break;
+        }
+        
         ByteBuffer idCol = ByteBuffer.wrap(String.valueOf(idInfo.id).getBytes());
 
         ByteBuffer keyCol = ByteBuffer.wrap(key.getBytes());
@@ -281,7 +293,7 @@ public class CassandraIndexManager extends AbstractIndexManager
         CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rms.toArray(new RowMutation[] {}));
     }
 
-    private List<IdInfo> reserveIds(String indexName, NodeInfo[] shards, String myToken)
+    private IdInfo nextReservedId(String indexName, NodeInfo[] shards, String myToken)
     {
         if (logger.isDebugEnabled())
             logger.debug("in reserveIds for index " + indexName);
@@ -289,7 +301,7 @@ public class CassandraIndexManager extends AbstractIndexManager
         synchronized (indexName.intern())
         {
 
-            List<IdInfo> currentRsvpd = indexReserves.get(indexName);
+            LinkedBlockingQueue<IdInfo> currentRsvpd = indexReserves.get(indexName);
 
             if (currentRsvpd != null)
             {
@@ -309,12 +321,18 @@ public class CassandraIndexManager extends AbstractIndexManager
 
                 if (expired != null)
                 {
-                    currentRsvpd.removeAll(expired);
                     logger.info(expired.size() + " reserved ids for " + indexName + " have expired");
+                    currentRsvpd.removeAll(expired);
                 }
-                if (!currentRsvpd.isEmpty())
-                    return currentRsvpd;
+                if (!currentRsvpd.isEmpty()){
+                    
+                    //if(currentRsvpd.size() == 1)
+                    //    logger.info("need more ids for "+myToken); 
+                    
+                    return currentRsvpd.poll();
+                }
             }
+            
             Map<NodeInfo, TreeSet<IdInfo>> rsvpdByNode = new LinkedHashMap<NodeInfo, TreeSet<IdInfo>>();
 
             for (NodeInfo node : shards)
@@ -352,12 +370,12 @@ public class CassandraIndexManager extends AbstractIndexManager
 
                 for (int i = offset + 1; i < (offset + reserveSlabSize + 1); i++)
                 {
-                    ByteBuffer id = ByteBuffer.wrap(String.valueOf(randomSeq[i]).getBytes());
+                    ByteBuffer id  = ByteBuffer.wrap(String.valueOf(randomSeq[i]).getBytes());
                     ByteBuffer off = ByteBuffer.wrap(String.valueOf(i).getBytes());
 
                     rm.add(
                             new QueryPath(CassandraUtils.schemaInfoColumnFamily, id, ByteBuffer
-                                    .wrap(myToken.getBytes())), off, 0, expirationTime);
+                                    .wrap(myToken.getBytes())), off, System.currentTimeMillis(), expirationTime);
 
                     ids.add(id);
                 }
@@ -371,8 +389,7 @@ public class CassandraIndexManager extends AbstractIndexManager
                 // See which ones we successfully reserved
                 if (rows == null || rows.size() == 0)
                 {
-                    logger.info("read back no rows");
-                    continue;
+                    throw new IllegalStateException("Read back no rows");
                 }
 
                 assert rows.size() == 1;
@@ -380,7 +397,7 @@ public class CassandraIndexManager extends AbstractIndexManager
 
                 if (row.cf == null || row.cf.isMarkedForDelete())
                 {
-                    continue;
+                    throw new IllegalStateException("Row was deleted");
                 }
 
                 Collection<IColumn> supercols = rows.get(0).cf.getSortedColumns();
@@ -392,15 +409,20 @@ public class CassandraIndexManager extends AbstractIndexManager
                 {
                     Integer id = Integer.valueOf(ByteBufferUtil.string(sc.name()));
                     Integer off = null;
-                    int minTtl = Integer.MAX_VALUE;
-                    String winningToken = "";
+                    long minTtl = Long.MAX_VALUE;
+                    ByteBuffer winningToken = null;
 
                     for (IColumn c : sc.getSubColumns())
                     {
+                        
+                        
                         // someone already took this id
-                        if (!(c instanceof ExpiringColumn))
+                        if (!(c instanceof ExpiringColumn) && !(c instanceof DeletedColumn))
                         {
-                            winningToken = "";
+                            if(logger.isDebugEnabled())
+                                logger.debug(id+" was taken by "+ByteBufferUtil.string(c.name()));
+                            
+                            winningToken = null;
                             break;
                         }
 
@@ -408,16 +430,22 @@ public class CassandraIndexManager extends AbstractIndexManager
                         if (c.isMarkedForDelete())
                             continue;
 
-                        if (c.getLocalDeletionTime() < minTtl)
+                        if( c.timestamp() == minTtl && winningToken.compareTo(c.name()) <= 0 )
                         {
-                            minTtl = c.getLocalDeletionTime();
-                            winningToken = ByteBufferUtil.string(c.name());
+                            winningToken = c.name();
+                            off = Integer.valueOf(ByteBufferUtil.string(c.value()));   
+                        }
+                            
+                        if (c.timestamp() < minTtl)
+                        {
+                            minTtl = c.timestamp();
+                            winningToken = c.name();
                             off = Integer.valueOf(ByteBufferUtil.string(c.value()));
                         }
                     }
 
                     // we won!
-                    if (winningToken.equals(myToken))
+                    if (winningToken != null && ByteBufferUtil.string(winningToken).equals(myToken))
                     {
                         rsvpd.add(new IdInfo(node, id, off));
                     }
@@ -433,16 +461,16 @@ public class CassandraIndexManager extends AbstractIndexManager
 
             indexReserves.put(indexName, currentRsvpd);
 
-            if (logger.isDebugEnabled())
-                logger.debug("Reserved " + currentRsvpd.size() + "ids");
+           // if (logger.isDebugEnabled())
+           //     logger.info("Reserved " + currentRsvpd.size() + " ids for "+myToken);
 
-            return currentRsvpd;
+            return currentRsvpd.poll();
         }
     }
 
-    private List<IdInfo> interleaveByNode(Map<NodeInfo, TreeSet<IdInfo>> rsvpdByNode)
+    private LinkedBlockingQueue<IdInfo> interleaveByNode(Map<NodeInfo, TreeSet<IdInfo>> rsvpdByNode)
     {
-        List<IdInfo> rsvpd = Collections.synchronizedList(new LinkedList<IdInfo>());
+        LinkedBlockingQueue<IdInfo> rsvpd = new LinkedBlockingQueue<IdInfo>();
 
         while (true)
         {
@@ -499,6 +527,7 @@ public class CassandraIndexManager extends AbstractIndexManager
                 {
                     // this means shard was started by another node
                     updateNodeOffset(shards.indexName, myToken, nodes, 0);
+                    offset = 0;
                 }
 
                 if (offset + reserveSlabSize < randomSeq.length)
