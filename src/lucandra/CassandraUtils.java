@@ -76,7 +76,7 @@ public class CassandraUtils
 
     public static final ByteBuffer           schemaKeyBytes         = ByteBuffer.wrap(schemaKey.getBytes());
     
-    public static final int                  maxDocsPerShard        = 100000;
+    public static final int                  maxDocsPerShard        = (int) Math.pow(2, 17);
 
     public static final List<Number>         emptyArray             = Arrays.asList(new Number[] { 0 });
     public static final String               delimeter              = new String("\uffff");

@@ -8,7 +8,7 @@ public class IndexManagerService
 
     static
     {   
-        instance = new CassandraIndexManager(shardsAtOnce, 0.9);
+        instance = new CassandraIndexManager2(shardsAtOnce, 0.9);
     }
 
 }

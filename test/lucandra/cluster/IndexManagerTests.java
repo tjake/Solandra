@@ -1,7 +1,6 @@
 package lucandra.cluster;
 
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
@@ -25,7 +24,7 @@ public class IndexManagerTests
 {
     static String indexName = String.valueOf(System.nanoTime());
     
-    private class TestCassandraIndexManager extends CassandraIndexManager
+    private class TestCassandraIndexManager extends CassandraIndexManager2
     {
 
         
@@ -53,7 +52,7 @@ public class IndexManagerTests
     public void testCassandraIncrement()
     {
         
-        CassandraIndexManager idx = new CassandraIndexManager(4, 0.1);
+        CassandraIndexManager2 idx = new CassandraIndexManager2(4, 0.1);
         
         Set<Long> all = new HashSet<Long>(CassandraUtils.maxDocsPerShard);
         
@@ -64,7 +63,7 @@ public class IndexManagerTests
               
             assertTrue(id+" already exists "+all.size(),all.add(id));
             
-            if(i % 1000 == 0)
+            if(i % 10000 == 0)
                 System.err.println(id);          
         }
         
@@ -76,7 +75,7 @@ public class IndexManagerTests
             
             assertNotNull(id);
             
-            if(i % 1000 == 0)
+            if(i % 10000 == 0)
                 System.err.println(id);          
         }
     }
@@ -108,7 +107,7 @@ public class IndexManagerTests
                         Long id = idx.getNextId(indexName, "i"+i);
                         assertTrue(id+" already exists "+all.size(),all.add(id));
                         
-                        if(i % 1000 == 0)
+                        if(i % 10000 == 0)
                             System.err.println(Thread.currentThread().getName()+" "+id);          
                     }    
                     
