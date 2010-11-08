@@ -56,6 +56,8 @@ public class IndexManagerTests
         
         Set<Long> all = new HashSet<Long>(CassandraUtils.maxDocsPerShard);
         
+        long startTime = System.currentTimeMillis();
+        
         //Add
         for(int i=0; i<CassandraUtils.maxDocsPerShard; i++)
         {
@@ -63,8 +65,11 @@ public class IndexManagerTests
               
             assertTrue(id+" already exists "+all.size(),all.add(id));
             
-            if(i % 10000 == 0)
-                System.err.println(id);          
+            if(i % 10000 == 0){
+                long endTime = System.currentTimeMillis();
+                System.err.println("added:"+id+", 10k iterations in "+(endTime - startTime)/1000+" sec");
+                startTime = endTime;         
+            }
         }
         
         //Update
@@ -75,8 +80,12 @@ public class IndexManagerTests
             
             assertNotNull(id);
             
-            if(i % 10000 == 0)
-                System.err.println(id);          
+            if(i % 10000 == 0){
+                long endTime = System.currentTimeMillis();
+                System.err.println("updated:"+id+", 10k iterations in "+(endTime - startTime)/1000+" sec");
+                startTime = endTime;      
+            }
+
         }
     }
     
@@ -99,6 +108,7 @@ public class IndexManagerTests
                 {
                     final TestCassandraIndexManager idx = new TestCassandraIndexManager(4, 0.1);
 
+                   long startTime = System.currentTimeMillis();
                     
                     Set<Long> all = new HashSet<Long>(CassandraUtils.maxDocsPerShard);
 
@@ -107,9 +117,12 @@ public class IndexManagerTests
                         Long id = idx.getNextId(indexName, "i"+i);
                         assertTrue(id+" already exists "+all.size(),all.add(id));
                         
-                        if(i % 10000 == 0)
-                            System.err.println(Thread.currentThread().getName()+" "+id);          
-                    }    
+                        if(i % 10000 == 0){
+                            long endTime = System.currentTimeMillis();
+                            System.err.println(Thread.currentThread().getName()+" id:"+id+", 10k iterations in "+(endTime - startTime)/1000+" sec");
+                            startTime = endTime;      
+                        }
+                    }
                     
                     return all;
                 }
