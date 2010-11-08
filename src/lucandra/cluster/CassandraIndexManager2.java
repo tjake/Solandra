@@ -319,7 +319,7 @@ public class CassandraIndexManager2 extends AbstractIndexManager
 
         // Update last offset info for this shard
         RowMutation rm3 = updateNodeOffset(indexName+"~"+idInfo.node.shard, getToken(), idInfo.node, idInfo.offset);
-        CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm, rm2, rm3);
+        CassandraUtils.robustInsert(ConsistencyLevel.ONE, rm, rm2, rm3);
 
         //Delayed Insert!
         //Checks for more recent updates and disregards the older ones
