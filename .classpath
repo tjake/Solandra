@@ -60,7 +60,7 @@
 	<classpathentry kind="lib" path="lib/jopt-simple-3.2.jar"/>
 	<classpathentry kind="lib" path="lib/paranamer-2.2.jar"/>
 	<classpathentry kind="lib" path="lib/jug-asl-2.0.0.jar"/>
-	<classpathentry kind="lib" path="lib/apache-cassandra-0.7.0-beta3.jar"/>
+	<classpathentry kind="lib" path="lib/apache-cassandra-0.7.0-beta3.jar" sourcepath="/cassandra-trunk"/>
 	<classpathentry kind="lib" path="lib/junit-4.6.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

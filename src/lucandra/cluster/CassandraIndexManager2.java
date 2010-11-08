@@ -429,33 +429,40 @@ public class CassandraIndexManager2 extends AbstractIndexManager
                 
                 CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm);
 
-                // Read the columns back
-                List<Row> rows = CassandraUtils.robustRead(key, new QueryPath(CassandraUtils.schemaInfoColumnFamily),
+                // Read the columns back              
+                IColumn supercol = null;
+                int attempts = 0;
+                while(supercol == null && attempts < 10){
+                    List<Row> rows = CassandraUtils.robustRead(key, new QueryPath(CassandraUtils.schemaInfoColumnFamily),
                         Arrays.asList(id), ConsistencyLevel.QUORUM);
 
-                // See which ones we successfully reserved
-                if (rows == null || rows.size() == 0)
-                {
-                    throw new IllegalStateException("Read back no rows");
+                    if (rows == null || rows.size() == 0)
+                    {
+                        continue;
+                    }
+
+                    if(rows.size() == 1){
+                        Row row = rows.get(0);
+
+                        if (row.cf == null || row.cf.isMarkedForDelete())
+                        {
+                            continue;
+                        }
+                    
+               
+                        supercol = rows.get(0).cf.getColumn(id);
+                    }
+                    attempts ++;
                 }
-
-                assert rows.size() == 1;
-                Row row = rows.get(0);
-
-                if (row.cf == null || row.cf.isMarkedForDelete())
-                {
-                    throw new IllegalStateException("Row was deleted");
-                }
-
-                IColumn supercol = rows.get(0).cf.getColumn(id);
-
+                
                 if (supercol == null)
                     throw new IllegalStateException("just wrote "+offset+", but didn't read it");
 
                
                 long minTtl = Long.MAX_VALUE;
                 ByteBuffer winningToken = null;
-
+                
+                // See which ones we successfully reserved
                 for (IColumn c : supercol.getSubColumns())
                 {
                                               
