@@ -403,7 +403,7 @@ public class CassandraUtils
     {      
         List<Row> rows = null;
         int attempts = 0;
-        while (attempts++ < 10)
+        while (attempts++ < 100)
         {
             try
             {
@@ -437,8 +437,8 @@ public class CassandraUtils
             }
         }
 
-        if (attempts >= 10)
-            throw new RuntimeException("Read command failed after 10 attempts");
+        if (attempts >= 100)
+            throw new RuntimeException("Read command failed after 100 attempts");
 
         return rows;
     }
