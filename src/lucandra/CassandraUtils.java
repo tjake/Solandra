@@ -25,12 +25,8 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.UnsupportedEncodingException;
-import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +40,6 @@ import org.apache.cassandra.db.Row;
 import org.apache.cassandra.db.RowMutation;
 import org.apache.cassandra.db.SliceByNamesReadCommand;
 import org.apache.cassandra.db.filter.QueryPath;
-import org.apache.cassandra.service.AbstractCassandraDaemon;
 import org.apache.cassandra.service.StorageProxy;
 import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.thrift.ConsistencyLevel;
@@ -54,8 +49,6 @@ import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.cassandra.utils.FBUtilities;
 import org.apache.log4j.Logger;
 import org.apache.lucene.index.Term;
-
-import com.sun.jna.ptr.ByteByReference;
 
 public class CassandraUtils
 {
@@ -132,6 +125,9 @@ public class CassandraUtils
 
         cassandraStarted = true;
 
+        
+        System.setProperty("cassandra-foreground", "1");
+        
         final CassandraDaemon daemon = new CassandraDaemon();
         
         try

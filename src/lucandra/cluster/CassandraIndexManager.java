@@ -95,6 +95,8 @@ public class CassandraIndexManager extends AbstractIndexManager
     {
         this.shardsAtOnce = shardsAtOnce;
 
+        logger.info("Shards at once: "+shardsAtOnce);
+        
         // get our unique sequence
         Random r = new Random(getNodeSeed(getToken()));
         
@@ -400,7 +402,7 @@ public class CassandraIndexManager extends AbstractIndexManager
                 
                 assert offset != null;              
                 
-                //goto next offset marker
+                //goto next offset marker (unless its the first)
                 if(offset != randomSeq[0])
                     offset = randomSeq[offsetLookup.get(offset)+1];
                                          
@@ -491,14 +493,14 @@ public class CassandraIndexManager extends AbstractIndexManager
                     {                   
                         rsvpd.add(new IdInfo(node, i, i));
                     }
-                } else {
-                    //no matches so skip
-                    
-                    //incase this was first offset
+                } 
+                else
+                {
+                    //secial case, otherwise we never move on
                     if(offset == randomSeq[0])
-                        offset++;
+                        offset+=1;
                     
-                    updateNodeOffset(indexName, myToken, node, offset);
+                    updateNodeOffset(indexName+"~"+node.shard, myToken, node, offset);
                 }
 
                 rsvpdByNode.put(node, rsvpd);
@@ -582,8 +584,8 @@ public class CassandraIndexManager extends AbstractIndexManager
                     updateNodeOffset(shards.indexName+"~"+nodes.shard, myToken, nodes, offset);
                 }
 
-                //can we still use this shard
-                if (offsetLookup.get(offset) < offsetSlots )
+                //can we still use this shard?
+                if (offsetLookup.get(offset+1) != null )
                 {
                     picked[pickedShard] = nodes;
                     pickedShard++;
@@ -617,7 +619,7 @@ public class CassandraIndexManager extends AbstractIndexManager
 
         NodeInfo nodes = new NodeInfo(maxShard + 1);
 
-        RowMutation rm = updateNodeOffset(indexName, getToken(), nodes, randomSeq[0]); // offset 0
+        RowMutation rm  = updateNodeOffset(indexName, getToken(), nodes, randomSeq[0]); // offset 0
         RowMutation rm2 = updateNodeOffset(indexName + "~" + nodes.shard, getToken(), nodes, 0); // offset 0
 
         
@@ -681,10 +683,11 @@ public class CassandraIndexManager extends AbstractIndexManager
      * @param rng
      */
     private int[] shuffle(int array[], Random rng)
-    {
-        
+    {    
+        //Always place maxVal at end (to avoid NPE)
+
         // i is the number of items remaining to be shuffled.
-        for (int i = array.length; i > 1; i--)
+        for (int i = array.length-1; i > 1; i--)
         {
             // Pick a random element to swap with the i-th element.
             int j = rng.nextInt(i); // 0 <= j <= i-1 (0-based array)
@@ -693,7 +696,7 @@ public class CassandraIndexManager extends AbstractIndexManager
             array[j] = array[i - 1];
             array[i - 1] = tmp;
         }
-
+        
         return array;
     }
 
