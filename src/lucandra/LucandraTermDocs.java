@@ -92,6 +92,8 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
             freqs[i] = freq();
         }
 
+        logger.debug("read "+i);
+        
         return i;
     }
 
@@ -133,6 +135,9 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         }
     
         termDocs = this.termEnum.getTermDocFreq();
+        
+        logger.info("seeked out "+termDocs.length);
+        
         docPosition = -1;
     }
 
@@ -173,11 +178,15 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
 
     public int nextPosition() throws IOException {
         
+        logger.debug("In nextPosition()");
+        
         if(termPositionArray == null)
             return -1;
         
         int pos = termPositionArray[termPosition];
         termPosition++;
+        
+        logger.debug("Doc: "+doc()+", Position: "+pos);
 
         return pos;
     }

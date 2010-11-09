@@ -187,7 +187,7 @@ public class SolandraIndexWriter extends UpdateHandler
 
         logger.info("Deleting term: "+term);
         
-        ByteBuffer keyKey = ByteBuffer.wrap((core.getName() + "/keys").getBytes());
+        ByteBuffer keyKey = CassandraUtils.hashKeyBytes((core.getName()+"~"+term.text()).getBytes(), CassandraUtils.delimeterBytes, "keys".getBytes());
         ByteBuffer keyCol= ByteBuffer.wrap(term.text().getBytes());
     
         List<Row> rows = CassandraUtils.robustRead(keyKey, new QueryPath(CassandraUtils.schemaInfoColumnFamily), Arrays.asList(keyCol), ConsistencyLevel.QUORUM);
@@ -220,7 +220,7 @@ public class SolandraIndexWriter extends UpdateHandler
                    
                    //Delete docId so it can be reused
                    //TODO: update shard info with docid
-                   ByteBuffer idKey = ByteBuffer.wrap((subIndex + "/ids").getBytes());
+                   ByteBuffer idKey = CassandraUtils.hashKeyBytes(subIndex.getBytes(), CassandraUtils.delimeterBytes, "ids".getBytes());
                    RowMutation rm2 = new RowMutation(CassandraUtils.keySpace, idKey);
                    rm2.delete(new QueryPath(CassandraUtils.schemaInfoColumnFamily, sidName), System.currentTimeMillis()-10);
                    

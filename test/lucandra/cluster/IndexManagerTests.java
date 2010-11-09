@@ -1,6 +1,6 @@
 package lucandra.cluster;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
@@ -24,14 +24,14 @@ public class IndexManagerTests
 {
     static String indexName = String.valueOf(System.nanoTime());
     
-    private class TestCassandraIndexManager extends CassandraIndexManager2
+    private class TestCassandraIndexManager extends CassandraIndexManager
     {
 
         
         
-        public TestCassandraIndexManager(int shardsAtOnce, double collisionThreshold)
+        public TestCassandraIndexManager(int shardsAtOnce)
         {
-            super(shardsAtOnce, collisionThreshold);
+            super(shardsAtOnce);
             // TODO Auto-generated constructor stub
         }
         
@@ -52,7 +52,7 @@ public class IndexManagerTests
     public void testCassandraIncrement()
     {
         
-        CassandraIndexManager2 idx = new CassandraIndexManager2(4, 0.1);
+        CassandraIndexManager idx = new CassandraIndexManager(4);
         
         Set<Long> all = new HashSet<Long>(CassandraUtils.maxDocsPerShard);
         
@@ -106,7 +106,7 @@ public class IndexManagerTests
                 
                 public Set<Long> call()
                 {
-                    final TestCassandraIndexManager idx = new TestCassandraIndexManager(4, 0.1);
+                    final TestCassandraIndexManager idx = new TestCassandraIndexManager(4);
 
                    long startTime = System.currentTimeMillis();
                     

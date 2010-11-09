@@ -234,6 +234,7 @@ public class SolandraTests {
     public void testUnicode() throws Exception {
         SolrQuery q = new SolrQuery().setQuery("text:\u5639\u563b").addField("*").addField("score");
 
+        System.err.println("STARTING UNICODE TEST");
         QueryResponse r = solrClient.query(q);
         assertEquals(1, r.getResults().getNumFound());
     }

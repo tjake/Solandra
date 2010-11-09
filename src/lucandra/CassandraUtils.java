@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.cassandra.config.ConfigurationException;
@@ -49,9 +50,12 @@ import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.UnavailableException;
+import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.cassandra.utils.FBUtilities;
 import org.apache.log4j.Logger;
 import org.apache.lucene.index.Term;
+
+import com.sun.jna.ptr.ByteByReference;
 
 public class CassandraUtils
 {
@@ -96,7 +100,6 @@ public class CassandraUtils
   
     public static final QueryPath            metaColumnPath;
 
-
     public static final Charset UTF_8 = Charset.forName("UTF-8");
 
     static
@@ -114,8 +117,7 @@ public class CassandraUtils
         }
     }
 
-    public static final String               hashChars              = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    public static final BigInteger           CHAR_MASK              = new BigInteger("65535");
+    public static final int                  keySigBytes            = FBUtilities.md5hash(documentMetaFieldBytes).toString().length();
 
     private static final Logger              logger                 = Logger.getLogger(CassandraUtils.class);
 
@@ -130,26 +132,18 @@ public class CassandraUtils
 
         cassandraStarted = true;
 
-        AbstractCassandraDaemon daemon = new AbstractCassandraDaemon() {
-
-            @Override
-            public void stop()
-            {
-                // TODO Auto-generated method stub
-
-            }
-
-            @Override
-            public void start() throws IOException
-            {
-                // TODO Auto-generated method stub
-
-            }
-        };
-
+        final CassandraDaemon daemon = new CassandraDaemon();
+        
         try
         {
-            daemon.init(new String[] {});
+            //run in own thread
+            new Thread(new Runnable() {
+                
+                public void run()
+                {
+                    daemon.activate();                   
+                }
+            }).start();
         }
         catch (Throwable e)
         {
@@ -158,6 +152,17 @@ public class CassandraUtils
             System.exit(2);
         }
 
+        //wait for startup to complete
+        try
+        {
+            daemon.getStartedLatch().await(1, TimeUnit.HOURS);
+        }
+        catch (InterruptedException e1)
+        {
+            logger.error("Cassandra not started after 1 hour");
+            System.exit(3);
+        }
+        
         // Check for Lucandra schema
         // if not there then load from yaml
         if (DatabaseDescriptor.getTableDefinition(keySpace) == null)
@@ -474,24 +479,9 @@ public class CassandraUtils
 
     public static ByteBuffer hashBytes(byte[] key)
     {
-        MessageDigest md;
-        try
-        {
-            md = MessageDigest.getInstance("SHA");
-        }
-        catch (NoSuchAlgorithmException e)
-        {
-            throw new RuntimeException(e);
-        }
-
-        int saltSize = key.length; // Only hash the indexName
-
-        byte[] salt = new byte[saltSize];
-        System.arraycopy(key, 0, salt, 0, key.length);
-
-        md.update(salt);
-
-        return bytesForBig(new BigInteger(1, md.digest()), 8);
+    
+        
+        return ByteBufferUtil.bytes(FBUtilities.md5hash(ByteBuffer.wrap(key)).toString()+delimeter);
     }
 
     public static ByteBuffer hashKeyBytes(byte[]... keys)
@@ -523,8 +513,14 @@ public class CassandraUtils
 
         // no hashing, just combine the arrays together
         int totalBytes = indexName.length;
-        for (int i = 1; i < keys.length; i++)
+        for (int i = 1; i < keys.length; i++){
+         
+            //for index hashing we've already add the delimiter
+            if(indexHashingEnabled && i == 1)
+                continue;
+            
             totalBytes += keys[i].length;
+        }
 
         hashedKey = new byte[totalBytes];
         System.arraycopy(indexName, 0, hashedKey, 0, indexName.length);
@@ -532,6 +528,11 @@ public class CassandraUtils
 
         for (int i = 1; i < keys.length; i++)
         {
+            
+            //for index hashing we've already add the delimiter
+            if(indexHashingEnabled && i == 1)
+                continue;
+            
             System.arraycopy(keys[i], 0, hashedKey, currentLen, keys[i].length);
             currentLen += keys[i].length;
         }
@@ -539,26 +540,13 @@ public class CassandraUtils
         return ByteBuffer.wrap(hashedKey);
     }
 
-    // based on cassandra source
-    private static ByteBuffer bytesForBig(BigInteger big, int sigchars)
-    {
-        byte[] chars = new byte[sigchars];
-
-        for (int i = 0; i < sigchars; i++)
-        {
-            int maskpos = 16 * (sigchars - (i + 1));
-            // apply bitmask and get char value
-            chars[i] = (byte) hashChars.charAt(big.and(CHAR_MASK.shiftLeft(maskpos)).shiftRight(maskpos).intValue()
-                    % hashChars.length());
-        }
-
-        return ByteBuffer.wrap(chars);
-    }
-
     public static int readVInt(ByteBuffer buf)
-    {
+    {       
         int length = buf.remaining();
 
+        if(length == 0)
+            return 0;
+        
         byte b = buf.array()[buf.position() + buf.arrayOffset()];
         int i = b & 0x7F;
         for (int pos = 1, shift = 7; (b & 0x80) != 0 && pos < length; shift += 7, pos++)

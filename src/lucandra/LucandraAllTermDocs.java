@@ -114,7 +114,7 @@ public class LucandraAllTermDocs implements TermDocs
     private void fillDocBuffer()
     {
         
-        ByteBuffer key = ByteBuffer.wrap((indexName + "/ids").getBytes());
+        ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, "ids".getBytes());
 
         ReadCommand cmd = new SliceFromReadCommand(CassandraUtils.keySpace, key,
                 new ColumnParent(CassandraUtils.schemaInfoColumnFamily), FBUtilities.EMPTY_BYTE_BUFFER,

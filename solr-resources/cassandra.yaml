@@ -15,7 +15,7 @@ cluster_name: 'Lucandra Cluster'
 # the heaviest-loaded existing node.  If there is no load information
 # available, such as is the case with a new cluster, it will pick
 # a random token, which will lead to hot spots.
-initial_token: a
+initial_token:
 
 # Set to true to make new [non-seed] nodes automatically migrate data
 # to themselves from the pre-existing nodes in the cluster.  Defaults
@@ -36,7 +36,8 @@ authenticator: org.apache.cassandra.auth.AllowAllAuthenticator
 # org.apache.cassandra.dht.RandomPartitioner
 # org.apache.cassandra.dht.OrderPreservingPartitioner, and
 # org.apache.cassandra.dht.CollatingOrderPreservingPartitioner.
-partitioner: org.apache.cassandra.dht.OrderPreservingPartitioner
+partitioner: lucandra.dht.RandomPartitioner
+#partitioner: org.apache.cassandra.dht.RandomPartitioner
 
 # directories where Cassandra should store data on disk.
 data_file_directories:
@@ -47,7 +48,7 @@ data_file_directories:
 # the topology of the ring.  You must change this if you are running
 # multiple nodes!
 seeds:
-    - 67.23.43.19
+    - 127.0.0.1
 
 # Access mode.  mmapped i/o is substantially faster, but only practical on
 # a 64bit machine (which notably does not include EC2 "small" instances)

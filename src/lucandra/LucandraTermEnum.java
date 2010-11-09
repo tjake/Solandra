@@ -166,8 +166,9 @@ public class LucandraTermEnum extends TermEnum
         if (initTerm == null)
             initTerm = skipTo;
 
-        ByteBuffer fieldKey = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, skipTo
-                .field().getBytes());
+        ByteBuffer fieldKey = CassandraUtils.hashKeyBytes(indexName.getBytes(), 
+                                                          CassandraUtils.delimeterBytes, 
+                                                          skipTo.field().getBytes());
 
         // chose starting term
         ByteBuffer startTerm;
@@ -255,31 +256,8 @@ public class LucandraTermEnum extends TermEnum
 
         ColumnParent columnFamily = new ColumnParent(CassandraUtils.metaInfoColumnFamily);
 
-        List<Row> rows = null;
-        try
-        {
-
-            rows = StorageProxy.readProtocol(Arrays.asList((ReadCommand) new SliceFromReadCommand(
-                    CassandraUtils.keySpace, fieldKey, columnFamily, startTerm, endTerm, false, count)),
-                    ConsistencyLevel.ONE);
-
-        }
-        catch (IOException e)
-        {
-            throw new RuntimeException(e);
-        }
-        catch (UnavailableException e)
-        {
-            throw new RuntimeException(e);
-        }
-        catch (TimeoutException e)
-        {
-            throw new RuntimeException(e);
-        }
-        catch (InvalidRequestException e)
-        {
-            throw new RuntimeException(e);
-        }
+        List<Row> rows = CassandraUtils.robustRead(ConsistencyLevel.ONE, 
+                new SliceFromReadCommand(CassandraUtils.keySpace, fieldKey, columnFamily, startTerm, endTerm, false, count));
 
         ColumnParent columnParent = new ColumnParent(CassandraUtils.termVecColumnFamily);
 
@@ -297,36 +275,22 @@ public class LucandraTermEnum extends TermEnum
         for (IColumn column : columns)
         {
 
-            ByteBuffer rowKey = CassandraUtils
-                    .hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, skipTo.field().getBytes(),
-                            CassandraUtils.delimeterBytes, ByteBufferUtil.string(column.name()).getBytes());
+            ByteBuffer rowKey = CassandraUtils.hashKeyBytes(indexName.getBytes(), 
+                                                            CassandraUtils.delimeterBytes, 
+                                                            skipTo.field().getBytes(),
+                                                            CassandraUtils.delimeterBytes, 
+                                                            ByteBufferUtil.string(column.name()).getBytes());
 
+            if(logger.isDebugEnabled())
+                logger.debug("scanning row: "+ByteBufferUtil.string(rowKey));
+            
+            
             reads.add((ReadCommand) new SliceFromReadCommand(CassandraUtils.keySpace, rowKey, columnParent,
                     FBUtilities.EMPTY_BYTE_BUFFER, FBUtilities.EMPTY_BYTE_BUFFER, false, Integer.MAX_VALUE));
         }
 
-        try
-        {
-
-            rows = StorageProxy.readProtocol(reads, ConsistencyLevel.ONE);
-
-        }
-        catch (IOException e)
-        {
-            throw new RuntimeException(e);
-        }
-        catch (UnavailableException e)
-        {
-            throw new RuntimeException(e);
-        }
-        catch (TimeoutException e)
-        {
-            throw new RuntimeException(e);
-        }
-        catch (InvalidRequestException e)
-        {
-            throw new RuntimeException(e);
-        }
+        rows = CassandraUtils.robustRead(ConsistencyLevel.ONE, reads.toArray(new ReadCommand[]{}));
+   
 
         // term to start with next time
         actualInitSize = rows.size();
@@ -363,7 +327,8 @@ public class LucandraTermEnum extends TermEnum
 
                 columns = row.cf.getSortedColumns();
 
-                logger.debug(termStr + " has " + columns.size());
+                if(logger.isDebugEnabled())
+                    logger.debug(term + " has " + columns.size());
 
                 // check for tombstone keys or incorrect keys (from RP)
                 // and verify this is from the correct index
@@ -371,14 +336,19 @@ public class LucandraTermEnum extends TermEnum
                 {
                     if (columns.size() > 0
                             && term.field().equals(skipTo.field())
-                            && ByteBufferUtil.compareUnsigned(row.key.key, CassandraUtils.hashKeyBytes(indexName
-                                    .getBytes(), CassandraUtils.delimeterBytes, term.field().getBytes(),
+                            && ByteBufferUtil.compareUnsigned(row.key.key, 
+                                    CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, term.field().getBytes(),
                                     CassandraUtils.delimeterBytes, term.text().getBytes("UTF-8"))) == 0)
                     {
 
-                        if (!columns.iterator().next().isMarkedForDelete())
+                        if (!columns.iterator().next().isMarkedForDelete()){
+                            if(logger.isDebugEnabled())
+                                logger.debug("saving row: "+ByteBufferUtil.string(row.key.key));
+                                
                             termDocFreqBuffer.put(term, columns);
-
+                        }
+                    }else{
+                        logger.debug("Skipped column");
                     }
                 }
                 catch (UnsupportedEncodingException e)
