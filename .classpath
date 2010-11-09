@@ -4,19 +4,6 @@
 	<classpathentry kind="src" path="test"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/3"/>
-	<classpathentry kind="lib" path="lib/lucene-analyzers-2.9.1.jar"/>
-	<classpathentry kind="lib" path="lib/lucene-core-2.9.1-javadoc.jar"/>
-	<classpathentry kind="lib" path="lib/lucene-core-2.9.1-sources.jar"/>
-	<classpathentry kind="lib" path="lib/lucene-core-2.9.1.jar" sourcepath="lib/lucene-core-2.9.1-sources.jar"/>
-	<classpathentry kind="lib" path="lib/lucene-highlighter-2.9.1.jar"/>
-	<classpathentry kind="lib" path="lib/lucene-memory-2.9.1.jar"/>
-	<classpathentry kind="lib" path="lib/lucene-misc-2.9.1.jar"/>
-	<classpathentry kind="lib" path="lib/lucene-queries-2.9.1.jar"/>
-	<classpathentry kind="lib" path="lib/lucene-snowball-2.9.1.jar"/>
-	<classpathentry kind="lib" path="lib/lucene-spellchecker-2.9.1.jar"/>
-	<classpathentry kind="lib" path="lib/solr-commons-csv-1.4.0.jar"/>
-	<classpathentry kind="lib" path="lib/solr-core-1.4.0.jar" sourcepath="/Users/jake/workspace/lucandra/lib/solr-core-1.4.0-sources.jar"/>
-	<classpathentry kind="lib" path="lib/solr-solrj-1.4.0.jar"/>
 	<classpathentry kind="lib" path="lib/slf4j-api-1.5.8.jar"/>
 	<classpathentry kind="lib" path="lib/slf4j-log4j12-1.5.8.jar"/>
 	<classpathentry kind="lib" path="lib/log4j-1.2.14.jar"/>
@@ -29,7 +16,6 @@
 	<classpathentry kind="lib" path="lib/jetty-6.1.6.jar"/>
 	<classpathentry kind="lib" path="lib/jetty-util-6.1.6.jar"/>
 	<classpathentry kind="lib" path="lib/servlet-api-2.5-6.1.6.jar"/>
-	<classpathentry kind="lib" path="lib/solr-core-1.4.0-sources.jar"/>
 	<classpathentry kind="lib" path="lib/stax-api-1.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/wstx-asl-3.2.7.jar"/>
 	<classpathentry kind="lib" path="lib/ant-1.6.5.jar"/>
@@ -63,5 +49,19 @@
 	<classpathentry kind="lib" path="lib/apache-cassandra-0.7.0-beta3.jar" sourcepath="/cassandra-trunk"/>
 	<classpathentry kind="lib" path="lib/junit-4.6.jar"/>
 	<classpathentry kind="lib" path="solandra-app"/>
+	<classpathentry kind="lib" path="lib/lucene-analyzers-2.9.3.jar"/>
+	<classpathentry kind="lib" path="lib/lucene-core-2.9.3-javadoc.jar"/>
+	<classpathentry kind="lib" path="lib/lucene-core-2.9.3-sources.jar"/>
+	<classpathentry kind="lib" path="lib/lucene-core-2.9.3.jar"/>
+	<classpathentry kind="lib" path="lib/lucene-highlighter-2.9.3.jar"/>
+	<classpathentry kind="lib" path="lib/lucene-memory-2.9.3.jar"/>
+	<classpathentry kind="lib" path="lib/lucene-misc-2.9.3.jar"/>
+	<classpathentry kind="lib" path="lib/lucene-queries-2.9.3.jar"/>
+	<classpathentry kind="lib" path="lib/lucene-snowball-2.9.3.jar"/>
+	<classpathentry kind="lib" path="lib/lucene-spellchecker-2.9.3.jar"/>
+	<classpathentry kind="lib" path="lib/solr-commons-csv-1.4.1.jar"/>
+	<classpathentry kind="lib" path="lib/solr-core-1.4.1-sources.jar"/>
+	<classpathentry kind="lib" path="lib/solr-core-1.4.1.jar" sourcepath="/Users/jake/workspace/Lucandra/lib/solr-core-1.4.1-sources.jar"/>
+	<classpathentry kind="lib" path="lib/solr-solrj-1.4.1.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

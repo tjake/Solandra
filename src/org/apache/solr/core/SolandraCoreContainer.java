@@ -8,6 +8,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -20,7 +21,9 @@ import org.apache.cassandra.db.filter.QueryPath;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.log4j.Logger;
+import org.apache.solr.request.SolrRequestHandler;
 import org.apache.solr.schema.IndexSchema;
+import org.apache.solr.util.plugin.SolrCoreAware;
 
 public class SolandraCoreContainer extends CoreContainer {
     private static final Logger logger = Logger.getLogger(SolandraCoreContainer.class);
@@ -116,7 +119,16 @@ public class SolandraCoreContainer extends CoreContainer {
             IndexSchema schema = new IndexSchema(solrConfig, indexName, stream);
             
             core = new SolrCore(indexName, "/tmp",solrConfig,schema, null);
-                 
+
+            //Something in solr 1.4.1 requires this inform
+            for(Map.Entry<String, SolrRequestHandler>  e : core.getRequestHandlers().entrySet())
+            {                
+                if(e.getValue() instanceof SolrCoreAware)
+                {             
+                    ((SolrCoreAware) e.getValue()).inform(core);
+                }
+            }
+            
             logger.debug("Loaded core from cassandra: "+indexName);
             
             cache.put(indexName, core);

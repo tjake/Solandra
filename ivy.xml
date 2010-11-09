@@ -25,8 +25,8 @@
     <dependency org="org.slf4j" name="slf4j-log4j12" rev="1.5.8" conf="* -> *,!sources,!javadoc"/>
     <dependency org="commons-lang" name="commons-lang" rev="2.4" conf="* -> *,!sources,!javadoc"/>
     <dependency org="commons-collections" name="commons-collections" rev="3.2.1" conf="* -> *,!sources,!javadoc"/>
-    <dependency org="org.apache.lucene" name="lucene-core" rev="2.9.1" conf="*"/>
-    <dependency org="org.apache.solr" name="solr-core" rev="1.4.0" conf="* -> *,!javadoc"/>
+    <dependency org="org.apache.lucene" name="lucene-core" rev="2.9.3" conf="*"/>
+    <dependency org="org.apache.solr" name="solr-core" rev="1.4.1" conf="* -> *,!javadoc"/>
     <dependency org="org.mortbay.jetty" name="jetty" rev="6.1.6" conf="* -> *,!sources,!javadoc" />
     <dependency org="org.mortbay.jetty" name="jetty-util" rev="6.1.6" conf="* -> *,!sources,!javadoc" />
     <dependency org="org.mortbay.jetty" name="jsp-2.1" rev="6.1.6" conf="* -> *,!sources,!javadoc" />

@@ -116,6 +116,7 @@ public class SolandraDispatchFilter extends SolrDispatchFilter {
           sreq.getContext().put("solandra-index", path.substring( 1, idx ));
         }
         
+        
         super.execute(req, handler, sreq, rsp);
     }
 
