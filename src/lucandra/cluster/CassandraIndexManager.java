@@ -585,7 +585,7 @@ public class CassandraIndexManager extends AbstractIndexManager
                 }
 
                 //can we still use this shard?
-                if (offsetLookup.get(offset+1) != null )
+                if (offsetLookup.get(offset)+1 < offsetSlots )
                 {
                     picked[pickedShard] = nodes;
                     pickedShard++;

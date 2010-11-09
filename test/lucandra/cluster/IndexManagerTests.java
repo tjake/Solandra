@@ -59,7 +59,7 @@ public class IndexManagerTests
         long startTime = System.currentTimeMillis();
         
         //Add
-        for(int i=0; i<CassandraUtils.maxDocsPerShard; i++)
+        for(int i=0; i<CassandraUtils.maxDocsPerShard*2; i++)
         {
             long id = idx.getNextId(indexName, "i"+i);
               
