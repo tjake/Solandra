@@ -34,8 +34,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import lucandra.cluster.IndexManagerService;
-
 public class WikipediaImporter {
 
     private ExecutorService threadPool;
@@ -54,9 +52,7 @@ public class WikipediaImporter {
         size = 0;
 
         WikipediaIndexWorker.hosts.addAll(Arrays.asList(hosts.split(",")));
-        
-        IndexManagerService.instance.resetCounter("wikassandra");
-        
+                
         startTime = System.currentTimeMillis();
         lastTime = System.currentTimeMillis();
     }
