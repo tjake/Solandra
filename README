@@ -23,10 +23,10 @@ From the Solandra base directory:
   - mkdir /tmp/cassandra-data  
   - ant
   - cd solandra-app; run_server.sh &
-  - cassandra-cli --host=localhost --port=9160 --batch < solandra.cml
+  - cassandra-cli --host=localhost --port=9160 --batch < schema.cml
   
 Now that Solandra is running you you run the demo
   - cd reuters-demo
   - ./1-download_data.sh
   - ./2-import_data.sh  
-  - open demo.html in your favorite browser 
+  - open website/index.html in your favorite browser 
