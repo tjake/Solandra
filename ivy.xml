@@ -23,6 +23,8 @@
     <dependency org="junit" name="junit" rev="4.6" conf="* -> *,!sources,!javadoc" />
     <dependency org="org.slf4j" name="slf4j-api" rev="1.5.8" conf="* -> *,!sources,!javadoc"/>
     <dependency org="org.slf4j" name="slf4j-log4j12" rev="1.5.8" conf="* -> *,!sources,!javadoc"/>
+    <dependency org="org.antlr" name="antlr" rev="3.2" conf="* -> *,!sources,!javadoc" />
+    <dependency org="commons-cli" name="commons-cli" rev="1.1" conf="* -> *,!sources,!javadoc"/>
     <dependency org="commons-lang" name="commons-lang" rev="2.4" conf="* -> *,!sources,!javadoc"/>
     <dependency org="commons-collections" name="commons-collections" rev="3.2.1" conf="* -> *,!sources,!javadoc"/>
     <dependency org="org.apache.lucene" name="lucene-core" rev="2.9.3" conf="*"/>
@@ -41,6 +43,7 @@
     <dependency org="com.reardencommerce" name="clhm-production" rev="1.0" conf="* -> *,!sources,!javadoc"/>
     <dependency org="com.google.guava" name="guava" rev="r07" conf="* -> *,!sources,!javadoc"/>
     <dependency org="org.cliffc.high_scale_lib" name="high-scale-lib" rev="1.0" conf="* -> *,!sources,!javadoc"/>
+    <dependency org="jline" name="jline" rev="0.9.94" conf="* -> *,!sources,!javadoc"/>
 
     <dependency org="org.apache.avro" name="avro" rev="1.4.0" conf="* -> *,!sources,!javadoc">       
       <exclude module="ant"/>
