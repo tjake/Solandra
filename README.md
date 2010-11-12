@@ -7,7 +7,7 @@ documents are stored and disributed using Cassandra's data model.
 
 Solandra makes managing and dynamically growing Solr simple(r). 
 
-For more information please see the wiki: https://github.com/tjake/Lucandra/wiki
+For more information please see the [wiki](https://github.com/tjake/Lucandra/wiki)
 
 ####Requirements:####
 
@@ -45,4 +45,4 @@ Now that Solandra is running you can run the demo:
 Solandra uses Solr's built in distributed searching meachanism, 
 most of it's limitations covered here: 
 
-http://wiki.apache.org/solr/DistributedSearch#Distributed_Searching_Limitations
+[http://wiki.apache.org/solr/DistributedSearch#Distributed_Searching_Limitations](http://wiki.apache.org/solr/DistributedSearch#Distributed_Searching_Limitations)
