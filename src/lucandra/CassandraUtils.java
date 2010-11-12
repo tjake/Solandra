@@ -1,5 +1,5 @@
 /**
- * Copyright 2009 T Jake Luciani
+ * Copyright T Jake Luciani
  * 
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file

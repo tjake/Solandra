@@ -1,5 +1,5 @@
 /**
- * Copyright 2010 Todd Nine
+ * Copyright Todd Nine
  * 
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
