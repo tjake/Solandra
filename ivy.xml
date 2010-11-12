@@ -31,8 +31,6 @@
     <dependency org="org.mortbay.jetty" name="jetty-util" rev="6.1.6" conf="* -> *,!sources,!javadoc" />
     <dependency org="org.mortbay.jetty" name="jsp-2.1" rev="6.1.6" conf="* -> *,!sources,!javadoc" />
 
-    <!--<dependency org="com.cloudera.zookeeper" name="zookeeper" rev="3.3.1-10" conf="* -> *,!sources,!javadoc"/>-->
-
     <dependency org="snakeyaml" name="snakeyaml" rev="1.6" conf="* -> *,!sources,!javadoc" />
     <dependency org="org.safehaus.jug" name="jug-asl" rev="2.0.0" conf="* -> *,!sources,!javadoc" />
     <dependency org="libthrift" name="libthrift" rev="0.5" conf="* -> *,!sources,!javadoc" />
@@ -60,9 +58,6 @@
       <exclude module="slf4j-api"/>
       <exclude module="checkstyle"/>
     </dependency>
-    <!--<dependency org="com.cloudera.hadoop" name="hadoop-core" rev="0.20.2-320"/>
-	<dependency org="com.cloudera.hadoop" name="hadoop-streaming" rev="0.20.2-320"/>
-	<dependency org="net.sf.jopt-simple" name="jopt-simple" rev="3.2"/> -->
 
     <dependency org="net.java.dev.jna" name="jna" rev="3.2.7"/>
   </dependencies>

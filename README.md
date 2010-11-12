@@ -20,7 +20,7 @@ Java >= 1.6
 The following will guide you through setting up a single node instance of Solandra.
 
 From the Solandra base directory:
-  - mkdir /tmp/cassandra-data  
+  - mkdir /tmp/cassandra
   - ant
   - cd solandra-app; run_server.sh &
   - cassandra-cli --host=localhost --port=9160 --batch < schema.cml
