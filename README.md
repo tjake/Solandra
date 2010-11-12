@@ -24,9 +24,9 @@ From the Solandra base directory:
   - mkdir /tmp/cassandra
   - ant
   - cd solandra-app; run_server.sh &
-  - cassandra-cli --host=localhost --port=9160 --batch < schema.cml
+  - $CASSANDRA_HOME/bin/cassandra-cli --host=localhost --port=9160 --batch < schema.cml
   
-Now that Solandra is running you you run the demo
+Now that Solandra is running you can run the demo
   
   - cd reuters-demo
   - ./1-download_data.sh
