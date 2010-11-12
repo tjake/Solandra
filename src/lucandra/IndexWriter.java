@@ -352,12 +352,17 @@ public class IndexWriter {
 
         List<Row> rows = CassandraUtils.robustRead(key, CassandraUtils.metaColumnPath, Arrays.asList(CassandraUtils.documentMetaFieldBytes), ConsistencyLevel.ONE);
         
-        if (rows.isEmpty())
+        if (rows.isEmpty() || rows.get(0).cf == null )
             return; // nothing to delete
 
+        IColumn metaCol = rows.get(0).cf.getColumn(CassandraUtils.documentMetaFieldBytes);
+        if(metaCol == null)
+            return;
+        
+        
         List<Term> terms;
         try {
-            terms = (List<Term>) CassandraUtils.fromBytes(rows.get(0).cf.getColumn(CassandraUtils.documentMetaFieldBytes).value());
+            terms = (List<Term>) CassandraUtils.fromBytes(metaCol.value());
         } catch (IOException e) {
             throw new RuntimeException(e);
         } catch (ClassNotFoundException e) {

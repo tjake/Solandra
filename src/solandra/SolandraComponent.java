@@ -29,7 +29,7 @@ import java.util.Set;
 
 import lucandra.CassandraUtils;
 import lucandra.IndexReader;
-import lucandra.cluster.AbstractIndexManager;
+import lucandra.cluster.CassandraIndexManager;
 import lucandra.cluster.IndexManagerService;
 
 import org.apache.cassandra.db.Table;
@@ -123,7 +123,7 @@ public class SolandraComponent extends SearchComponent
             // find number of shards
             long docId = IndexManagerService.instance.getMaxId(indexName);
 
-            int numShards = AbstractIndexManager.getShardFromDocId(docId);
+            int numShards = CassandraIndexManager.getShardFromDocId(docId);
 
             //run local
             if(numShards == 0) {

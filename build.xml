@@ -18,10 +18,10 @@
  ~ specific language governing permissions and limitations
  ~ under the License.
  -->
-<project name="lucandra" default="dist" basedir="."
+<project name="solandra" default="dist" basedir="."
          xmlns:ivy="antlib:org.apache.ivy.ant">
 
-        <description>Lucandra</description>
+        <description>Solandra</description>
 
         <property name="src"           location="src" />
         <property name="test"          location="test" />
@@ -33,7 +33,7 @@
         <property name="cassandra.base" location="${basedir}"/>
 
         <property name="solr.app"       location="solandra-app"/>
-        <property name="solr.resources" location="solr-resources"/>
+        <property name="solr.resources" location="resources"/>
 
         <!-- ivy properties -->
         <property name="ivy.version" value="2.1.0" />
@@ -104,7 +104,7 @@
 
         <!-- ===========================  -->
 
-        <path id="lucandra.classpath">
+        <path id="solandra.classpath">
           <pathelement location="${build.classes}"/>
           <pathelement location="${build.test.classes}"/>
           <pathelement location="${config}"/>
@@ -129,14 +129,14 @@
 
           <javac debug="true" destdir="${build.classes}">
             <src path="${src}"/>
-            <classpath refid="lucandra.classpath"/>
+            <classpath refid="solandra.classpath"/>
           </javac>
         </target>
 
         <target name="compile.tests" depends="compile">
           <javac debug="true" destdir="${build.test.classes}">
             <src path="${test}"/>
-            <classpath refid="lucandra.classpath"/>
+            <classpath refid="solandra.classpath"/>
           </javac>
         </target>
 
@@ -145,35 +145,36 @@
           <echo message="running tests"/>
           <mkdir dir="${build}/output"/>
           <junit fork="on" failureproperty="testfailed">
-            <classpath refid="lucandra.classpath"/>
+            <classpath refid="solandra.classpath"/>
             <formatter type="xml" usefile="true"/>
             <formatter type="brief" usefile="false"/>
 
             <batchtest todir="${build}/output">
               <fileset dir="${build.test.classes}" includes="**/SolandraTest*" />
             </batchtest>
-            <jvmarg value="-Dsolr.solr.home=solr-example/solr"/>
+            <jvmarg value="-Dsolr.solr.home=${solr.resources}"/>
             <jvmarg value="-Xmx1G"/>
           </junit>
           <fail if="testfailed" message="Some test(s) failed."/>
         </target>
 
-        <target name="lucandra.jar" depends="compile,compile.tests">
-          <jar jarfile="lucandra.jar" basedir="${build.classes}" />
-          <jar jarfile="lucandra-tests.jar" basedir="${build.test.classes}" />
+        <target name="solandra.jar" depends="compile,compile.tests">
+          <jar jarfile="solandra.jar" basedir="${build.classes}" />
+          <jar jarfile="solandra-tests.jar" basedir="${build.test.classes}" />
         </target>
 
         <target name="clean">
           <delete dir="${build}" />
           <delete dir="${lib}" />
           <delete dir="${solr.app}" />
-          <delete file="lucandra.jar" />
-          <delete file="lucandra-tests.jar" />
+          <delete file="solandra.jar" />
+          <delete file="solandra-tests.jar" />
+          <delete file="solandra.war" />
         </target>
 
         <!-- ============================= -->
-        <target name="war" depends="lucandra.jar">
-          <war destfile="solr.war"
+        <target name="war" depends="solandra.jar">
+          <war destfile="solandra.war"
                webxml="${solr.resources}/web.xml">
             <lib dir="${lib}">
               <exclude name="jetty*.jar" />
@@ -189,7 +190,7 @@
 	    <classes dir="${solr.resources}">
 	      <include name="*.properties"/>
 	    </classes>
-            <lib file="lucandra.jar"/>
+            <lib file="solandra.jar"/>
           </war>
         </target>
         <target name="dist" depends="war">
@@ -205,12 +206,12 @@
           <copy todir="${solr.app}/etc">
             <fileset dir="${solr.resources}" includes="jetty.xml,jetty-logging.xml,webdefault.xml"/>
           </copy>
-          <copy file="solr.war" tofile="${solr.app}/webapps/solr.war"/>
+          <copy file="solandra.war" tofile="${solr.app}/webapps/solandra.war"/>
           <copy todir="${solr.app}/solr/conf" overwrite="false">
-            <fileset dir="${solr.resources}" includes="solrconfig.xml,schema.xml"/>
+            <fileset dir="${solr.resources}" includes="solrconfig.xml,schema.xml,*.txt"/>
           </copy>
           <chmod dir="${solr.app}/solr/conf" perm="644" includes="**,*"/>
-          <copy file="${solr.resources}/log4j.properties" tofile="${solr.app}/log4j.properties"/>
+          <!-- <copy file="${solr.resources}/log4j.properties" tofile="${solr.app}/log4j.properties"/>  -->
           <copy file="${solr.resources}/run_server.sh" tofile="${solr.app}/run_server.sh"/>
           <chmod dir="${solr.app}" perm="755" includes="run_server.sh"/>
           <copy file="${solr.resources}/start.jar" tofile="${solr.app}/start.jar"/>

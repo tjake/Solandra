@@ -52,7 +52,7 @@
 	<classpathentry kind="lib" path="lib/lucene-analyzers-2.9.3.jar"/>
 	<classpathentry kind="lib" path="lib/lucene-core-2.9.3-javadoc.jar"/>
 	<classpathentry kind="lib" path="lib/lucene-core-2.9.3-sources.jar"/>
-	<classpathentry kind="lib" path="lib/lucene-core-2.9.3.jar"/>
+	<classpathentry kind="lib" path="lib/lucene-core-2.9.3.jar" sourcepath="/Users/jake/workspace/Lucandra/lib/lucene-core-2.9.3-sources.jar"/>
 	<classpathentry kind="lib" path="lib/lucene-highlighter-2.9.3.jar"/>
 	<classpathentry kind="lib" path="lib/lucene-memory-2.9.3.jar"/>
 	<classpathentry kind="lib" path="lib/lucene-misc-2.9.3.jar"/>

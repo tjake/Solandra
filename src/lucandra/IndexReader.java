@@ -375,9 +375,6 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     @Override
     public int maxDoc() {
-        // if (numDocs == null)
-        // numDocs();
-
         return numDocs + 1;
     }
 
@@ -426,15 +423,17 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     @Override
     public TermEnum terms(Term term) throws IOException {
 
-        LucandraTermEnum termEnum = getTermEnumCache().get(term);
-
-        if (termEnum == null)
+        TermEnum termEnum = getTermEnumCache().get(term);
+        
+        if (termEnum == null){
             termEnum = new LucandraTermEnum(this);
-
-        if (!termEnum.skipTo(term)) // if found in the cache then reset,
-            // otherwise init.
-            termEnum = null;
-
+            logger.debug("Creating new TermEnum for: "+term);
+        }else{
+            logger.debug("Using Cached TermEnum for: "+term);
+        }
+        
+        termEnum.skipTo(term);
+        
         return termEnum;
     }
 

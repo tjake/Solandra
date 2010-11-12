@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import lucandra.CassandraUtils;
-import lucandra.cluster.AbstractIndexManager;
+import lucandra.cluster.CassandraIndexManager;
 import lucandra.cluster.IndexManagerService;
 
 import org.apache.cassandra.db.IColumn;
@@ -125,8 +125,8 @@ public class SolandraIndexWriter extends UpdateHandler
                 docId = IndexManagerService.instance.getNextId(indexName, key);
             }
             
-            int shard     = AbstractIndexManager.getShardFromDocId(docId);
-            int shardedId = AbstractIndexManager.getShardedDocId(docId);
+            int shard     = CassandraIndexManager.getShardFromDocId(docId);
+            int shardedId = CassandraIndexManager.getShardedDocId(docId);
             indexName = core.getName()+"~"+shard;
             
             if(logger.isDebugEnabled())
@@ -203,8 +203,8 @@ public class SolandraIndexWriter extends UpdateHandler
                if(col != null){
                    ByteBuffer idCol = col.getSubColumns().iterator().next().name();
                    Long  id  = Long.valueOf(ByteBufferUtil.string(idCol));                   
-                   int shard = AbstractIndexManager.getShardFromDocId(id);
-                   int sid   = AbstractIndexManager.getShardedDocId(id);
+                   int shard = CassandraIndexManager.getShardFromDocId(id);
+                   int sid   = CassandraIndexManager.getShardedDocId(id);
                    
                    ByteBuffer sidName = ByteBuffer.wrap(String.valueOf(sid).getBytes());
                    

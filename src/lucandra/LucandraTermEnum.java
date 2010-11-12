@@ -23,36 +23,26 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.concurrent.TimeoutException;
 
 import org.apache.cassandra.db.IColumn;
 import org.apache.cassandra.db.ReadCommand;
 import org.apache.cassandra.db.Row;
 import org.apache.cassandra.db.SliceByNamesReadCommand;
 import org.apache.cassandra.db.SliceFromReadCommand;
-import org.apache.cassandra.service.StorageProxy;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.ConsistencyLevel;
-import org.apache.cassandra.thrift.InvalidRequestException;
-import org.apache.cassandra.thrift.UnavailableException;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.cassandra.utils.FBUtilities;
 import org.apache.log4j.Logger;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.TermEnum;
 
-/**
- * 
- * @author jake
- * 
- */
 public class LucandraTermEnum extends TermEnum
 {
 
@@ -66,17 +56,15 @@ public class LucandraTermEnum extends TermEnum
     private Map<Term, IColumn[]>                 termDocsCache;
 
     // number of sequential terms to read initially
-    private final int                            maxInitSize    = 2;
-    private final int                            maxChunkSize   = 1024;
+    private final int                            maxInitSize    = 4;
+    private final int                            maxChunkSize   = 64;
     private int                                  actualInitSize = -1;
     private Term                                 initTerm       = null;
     private Term                                 chunkBoundryTerm;
     private String                               currentField   = null;
     private int                                  chunkCount     = 0;
-
-    private final Term                           finalTerm      = new Term(CassandraUtils.delimeter,
-                                                                        CassandraUtils.finalToken);
-
+    
+    
     private static final Logger                  logger         = Logger.getLogger(LucandraTermEnum.class);
 
     public LucandraTermEnum(IndexReader indexReader)
@@ -117,52 +105,62 @@ public class LucandraTermEnum extends TermEnum
 
         if (termBuffer == null)
         {
-            skipTo(new Term(""));
+           
+            //start at the top, or loop over starting position
+            if(initTerm == null )
+                skipTo(new Term(""));
+            else 
+                skipTo(initTerm);
         }
 
         termPosition++;
 
         boolean hasNext = termPosition < termBuffer.length;
 
-        if (hasNext && termBuffer[termPosition].equals(finalTerm))
-        {
-            termPosition++;
-            hasNext = termPosition < termBuffer.length;
-        }
-
         if (!hasNext)
         {
-
             // if we've already done init try grabbing more
             if ((chunkCount == 1 && actualInitSize == maxInitSize)
                     || (chunkCount > 1 && actualInitSize == maxChunkSize))
             {
                 loadTerms(chunkBoundryTerm);
-                hasNext = termBuffer.length > 0;
+
+                hasNext = termBuffer == null ? false : termBuffer.length > 0;             
             }
+            
             else if ((chunkCount == 1 && actualInitSize < maxInitSize)
                     || (chunkCount > 1 && actualInitSize < maxChunkSize))
             {
-                hasNext = false;
-
-                loadTerms(initTerm); // start over at top (for facets)
+                termBuffer = null;
+                termPosition = 0;
             }
-
-            termPosition = 0;
         }
-
+    
         return hasNext;
     }
 
     @Override
     public Term term()
     {
+        if(termBuffer == null || termBuffer.length <= termPosition)
+            return null;
+            
+        if(logger.isDebugEnabled())
+                logger.debug("Term: "+termBuffer[termPosition]);
+        
         return termBuffer[termPosition];
     }
 
     private void loadTerms(Term skipTo)
     {
 
+        termDocFreqBuffer = null;
+        
+        
+        if(skipTo == null)
+            return;
+        
+        //incase this enum is re-used, track where we begin
         if (initTerm == null)
             initTerm = skipTo;
 
@@ -175,52 +173,54 @@ public class LucandraTermEnum extends TermEnum
         try
         {
             startTerm = ByteBuffer.wrap(skipTo.text().getBytes("UTF-8"));
-
         }
         catch (UnsupportedEncodingException e1)
         {
             throw new RuntimeException("JVM doesn't support UTF-8", e1);
         }
 
-        // ending term. the initial query we don't care since
-        // we only pull 2 terms, also we don't
-        ByteBuffer endTerm = FBUtilities.EMPTY_BYTE_BUFFER;
-
-        // The boundary condition for this search. currently the field.
-        ByteBuffer boundryTerm = CassandraUtils.finalTokenBytes;
-
-        if ((!skipTo.equals(chunkBoundryTerm) || termPosition == 0) && termCache != null)
+       
+        //in cache?
+        if (termCache != null)
         {
-            termDocFreqBuffer = termCache.subMap(skipTo, termCache.lastKey());
+            
+            //We've already passed the boundry, check cache
+            if(skipTo.equals(chunkBoundryTerm) && chunkCount > 1 && actualInitSize < maxChunkSize)
+            {
+                termDocFreqBuffer = termCache.tailMap(skipTo);         
+            }
+            
+            if(skipTo.equals(initTerm))
+            {
+                termDocFreqBuffer = termCache;
+            }
+            
+            else if(!skipTo.equals(chunkBoundryTerm))
+            {
+                termDocFreqBuffer = termCache.tailMap(skipTo);
+            }
+            
+            if(logger.isDebugEnabled() && termDocFreqBuffer == null && !skipTo.equals(chunkBoundryTerm))
+            {
+                logger.debug(skipTo+" not in term cache");
+            }
         }
-        else
-        {
-            termDocFreqBuffer = null;
-        }
+        
 
         if (termDocFreqBuffer != null)
         {
 
             termBuffer = termDocFreqBuffer.keySet().toArray(new Term[] {});
-            termPosition = 0;
-
-            logger.debug("Found " + startTerm + " in cache");
+            termPosition = 0;          
+            
+            if(logger.isDebugEnabled())
+                logger.debug("Found " + skipTo + " in cache :"+termBuffer.length);
+            
             return;
         }
         else if (chunkCount > 1 && actualInitSize < maxChunkSize)
         {
-
-            // include last term
-            if (skipTo.equals(chunkBoundryTerm) && termCache.containsKey(skipTo))
-            {
-                termBuffer = new Term[] { skipTo };
-                termDocFreqBuffer = termCache.subMap(skipTo, termCache.lastKey());
-            }
-            else
-            {
-                termBuffer = new Term[] {};
-            }
-
+            termBuffer = null;
             termPosition = 0;
             return; // done!
         }
@@ -237,17 +237,11 @@ public class LucandraTermEnum extends TermEnum
             try
             {
                 startTerm = ByteBuffer.wrap(chunkBoundryTerm.text().getBytes("UTF-8"));
-
             }
             catch (UnsupportedEncodingException e)
             {
                 throw new RuntimeException("JVM doesn't support UTF-8", e);
             }
-
-            // After first pass use the boundary term, since we know on pass 2
-            // we are using the OPP
-            endTerm = boundryTerm;
-
         }
 
         long start = System.currentTimeMillis();
@@ -256,8 +250,10 @@ public class LucandraTermEnum extends TermEnum
 
         ColumnParent columnFamily = new ColumnParent(CassandraUtils.metaInfoColumnFamily);
 
+        
+        //Scan range of terms in this field
         List<Row> rows = CassandraUtils.robustRead(ConsistencyLevel.ONE, 
-                new SliceFromReadCommand(CassandraUtils.keySpace, fieldKey, columnFamily, startTerm, endTerm, false, count));
+                new SliceFromReadCommand(CassandraUtils.keySpace, fieldKey, columnFamily, startTerm, FBUtilities.EMPTY_BYTE_BUFFER, false, count));
 
         ColumnParent columnParent = new ColumnParent(CassandraUtils.termVecColumnFamily);
 
@@ -297,7 +293,7 @@ public class LucandraTermEnum extends TermEnum
         if (logger.isDebugEnabled())
         {
             logger.debug("Found " + rows.size() + " keys in range:" + ByteBufferUtil.string(startTerm) + " to "
-                    + ByteBufferUtil.string(endTerm) + " in " + (System.currentTimeMillis() - start) + "ms");
+                    + ByteBufferUtil.string(FBUtilities.EMPTY_BYTE_BUFFER) + " in " + (System.currentTimeMillis() - start) + "ms");
 
         }
 
@@ -360,32 +356,35 @@ public class LucandraTermEnum extends TermEnum
             if (!termDocFreqBuffer.isEmpty())
             {
                 chunkBoundryTerm = termDocFreqBuffer.lastKey();
+                if(logger.isDebugEnabled())
+                    logger.debug("Chunk boundry is: "+chunkBoundryTerm);
             }
         }
 
-        // add a final key (excluded in submap below)
-        termDocFreqBuffer.put(finalTerm, null);
-
         // put in cache
-        for (Term termKey : termDocFreqBuffer.keySet())
+        termBuffer = termDocFreqBuffer.keySet().toArray(new Term[] {});
+        boolean setOnce = false;
+        
+        for (Term termKey : termBuffer)
         {
-
-            if (termCache == null)
+            if (!setOnce && termCache == null)
             {
                 termCache = termDocFreqBuffer;
             }
-            else
+            else if(!setOnce)
             {
                 termCache.putAll(termDocFreqBuffer);
-            }
+            } 
+            
+            setOnce = true;
 
+            //mark the cache for each term
             indexReader.addTermEnumCache(termKey, this);
         }
 
-        // cache the initial term too
+        // cache the initial term too (incase it was a miss)
         indexReader.addTermEnumCache(skipTo, this);
 
-        termBuffer = termDocFreqBuffer.keySet().toArray(new Term[] {});
 
         termPosition = 0;
 
@@ -445,11 +444,11 @@ public class LucandraTermEnum extends TermEnum
         // Memoize
         IColumn[] docIds = null;
 
-        // if(termDocsCache != null)
-        // docIds = termDocsCache.get(term);
+        if(termDocsCache != null)
+            docIds = termDocsCache.get(term);
 
-        // if(docIds != null)
-        // return docIds;
+        if(docIds != null)
+            return docIds;
 
         Collection<IColumn> termDocs = termDocFreqBuffer.get(term);
 
@@ -458,17 +457,12 @@ public class LucandraTermEnum extends TermEnum
 
         docIds = termDocs.toArray(new IColumn[] {});
 
-        // if(termDocsCache == null)
-        // termDocsCache = new HashMap<Term,IColumn[]>();
+        if(termDocsCache == null)
+            termDocsCache = new HashMap<Term,IColumn[]>();
 
-        // termDocsCache.put(term, docIds);
+        termDocsCache.put(term, docIds);
 
         return docIds;
-    }
-
-    public Set<Term> getCachedTerms()
-    {
-        return termCache.keySet();
     }
 
 }

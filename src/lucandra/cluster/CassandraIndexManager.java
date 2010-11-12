@@ -35,7 +35,7 @@ import org.apache.log4j.Logger;
 
 
 //Instead of grabbing all of them just grab a contiguous slab via offset
-public class CassandraIndexManager extends AbstractIndexManager
+public class CassandraIndexManager
 {
   
     //To increase throughput we distribute docs across a number of shards at once
@@ -224,6 +224,9 @@ public class CassandraIndexManager extends AbstractIndexManager
         // find the max shard
         ShardInfo shards = getShardInfo(indexName);
 
+        if(shards.shards.isEmpty())
+            return 0;
+        
         int highest = shards.shards.lastKey();
 
         return (CassandraUtils.maxDocsPerShard * highest);
@@ -268,8 +271,11 @@ public class CassandraIndexManager extends AbstractIndexManager
         return StorageService.instance.getTokenMetadata().getToken(FBUtilities.getLocalAddress()).toString();
     }
 
-    public long getNextId(String indexName, String key)
-    {      
+    public long getNextId(String indexName, String key, RowMutation[] rowMutations)
+    {
+        if(rowMutations.length != 3)
+            throw new IllegalArgumentException("rowMutations must be length 3");
+        
         String myToken = getToken();
         ShardInfo shards = null;
         NodeInfo nodes[] = null;
@@ -304,7 +310,7 @@ public class CassandraIndexManager extends AbstractIndexManager
 
         // Permanently link the key to the id
         ByteBuffer keyKey = CassandraUtils.hashKeyBytes((indexName+"~"+key).getBytes(), CassandraUtils.delimeterBytes, "keys".getBytes());
-        Long          val = new Long(idInfo.id + (idInfo.node.shard * CassandraUtils.maxDocsPerShard));
+        Long val = new Long(idInfo.id + (idInfo.node.shard * CassandraUtils.maxDocsPerShard));
         ByteBuffer  idVal = ByteBuffer.wrap(val.toString().getBytes());
 
         RowMutation rm2 = new RowMutation(CassandraUtils.keySpace, keyKey);
@@ -312,11 +318,25 @@ public class CassandraIndexManager extends AbstractIndexManager
                 System.currentTimeMillis());
 
         // Update last offset info for this shard
-        RowMutation rm3 = updateNodeOffset(indexName+"~"+idInfo.node.shard, getToken(), idInfo.node, idInfo.offset);
-        CassandraUtils.robustInsert(ConsistencyLevel.ONE, rm, rm2, rm3);
-
+        RowMutation rm3 = updateNodeOffset(indexName+"~"+idInfo.node.shard, myToken, idInfo.node, idInfo.offset);
+      
+        rowMutations[0] = rm;
+        rowMutations[1] = rm2;
+        rowMutations[2] = rm3;
+        
+        return val;
+    }
+    
+    public long getNextId(String indexName, String key)
+    {      
+      
+        RowMutation[] rms = new RowMutation[3]; 
+        
+        Long val = getNextId(indexName, key, rms);
+        
         //TODO: Delayed Insert!
         //Checks for more recent updates and disregards the older ones
+        CassandraUtils.robustInsert(ConsistencyLevel.ONE, rms);
         
         return val;
     }
@@ -700,4 +720,11 @@ public class CassandraIndexManager extends AbstractIndexManager
         return array;
     }
 
+    public static int getShardFromDocId(long docId){
+        return (int) Math.floor(docId / CassandraUtils.maxDocsPerShard);
+    }
+
+    public static int getShardedDocId(long docId){
+        return (int) docId % CassandraUtils.maxDocsPerShard;
+    }
 }

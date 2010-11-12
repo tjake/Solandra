@@ -1,0 +1,160 @@
+* {
+  padding: 0;
+  margin: 0;
+} 
+
+body {
+  background: #fff url(../images/header.gif) repeat-x;
+  color: #333;
+  font-family: Verdana, Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  line-height: 18px;
+}
+img {
+  border: none;
+}
+a {
+  color: #6998f0;
+  text-decoration: none;
+}
+a:hover {
+  color: #000;
+  text-decoration: underline;
+}
+
+#wrap {
+  width: 1000px;
+  margin: 0px auto;
+}
+.clear {
+  clear: both;
+}
+
+/* header */
+
+#header {
+  height: 90px;
+}
+#header h1 {
+  padding: 20px 0 5px 10px;
+  font-size: 20px;
+  letter-spacing: -2px;
+}
+#header h2 {
+  padding-left: 10px;
+  color: #666;
+  font-size: 14px;
+  font-weight: 100;
+}
+
+/* right */
+
+.right {
+  float: right;
+  width: 538px;
+  padding: 10px 20px 10px 40px;
+  border-left: 1px solid #aaa;
+  text-align: justify;
+}
+.right h2 {
+  padding: 15px 0 5px 0;
+  color: #B4241B;
+  font-size: 20px;
+  font-weight: 100;
+  letter-spacing: -2px;
+}
+#result a {
+  margin-right: 5px;
+}
+#navigation {
+  border-bottom: 1px solid #000;
+}
+#pager,
+#pager-header {
+  display: inline;
+}
+#pager li,
+.links li {
+  list-style-type: none;
+  display: inline;
+}
+#selection {
+  padding: 10px 15px 0;
+}
+#selection li {
+  list-style-type: none;
+}
+#docs {
+  padding-top: 1px;
+}
+
+/* left */
+
+.left {
+  float: left;
+  width: 390px;
+  padding: 0 0 10px 10px;
+}
+.left h2 {
+  clear: left;
+  padding-top: 20px;
+  color: #333;
+  font-size: 13px;
+}
+#search input {
+  width: 350px;
+}
+#calendar {
+  width: 160px;
+}
+#search_help {
+  font-size: 80%;
+}
+.tagcloud {
+  padding: 10px 15px 0;
+}
+.tagcloud_item {
+  float: left;
+  display: block;
+  margin-right: 4px;
+  color: #6998f0;
+}
+.tagcloud_item:hover {
+  color: #f00;
+}
+
+/* tagcloud */
+
+a.tagcloud_size_0 {
+font-size: 80%;
+}
+a.tagcloud_size_1 {
+font-size: 90%;
+}
+a.tagcloud_size_2 {
+font-size: 100%;
+}Rst
+a.tagcloud_size_3 {
+font-size: 110%;
+}
+a.tagcloud_size_4 {
+font-size: 120%;
+}
+a.tagcloud_size_5 {
+font-size: 130%;
+}
+a.tagcloud_size_6 {
+font-size: 140%;
+}
+a.tagcloud_size_7 {
+font-size: 150%
+}
+a.tagcloud_size_8 {
+font-size: 160%;
+}
+a.tagcloud_size_9 {
+font-size: 170%;
+}
+a.tagcloud_size_10 {
+font-size: 180%;
+}

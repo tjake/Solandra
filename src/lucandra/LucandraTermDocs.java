@@ -136,7 +136,8 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
     
         termDocs = this.termEnum.getTermDocFreq();
         
-        logger.info("seeked out "+termDocs.length);
+        if(logger.isDebugEnabled())
+            logger.debug("seeked out "+termDocs.length);
         
         docPosition = -1;
     }
@@ -186,7 +187,8 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         int pos = termPositionArray[termPosition];
         termPosition++;
         
-        logger.debug("Doc: "+doc()+", Position: "+pos);
+        if(logger.isDebugEnabled())
+            logger.debug("Doc: "+doc()+", Position: "+pos);
 
         return pos;
     }

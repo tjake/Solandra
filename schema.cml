@@ -1,0 +1,11 @@
+create keyspace L with replication_factor=1 and placement_strategy='org.apache.cassandra.locator.SimpleStrategy' 
+
+use L 
+
+create column family Docs with comparator=BytesType and keys_cached=10000000  and rows_cached=1000 and comment='Stores the document and field data for each doc with docId as key'
+
+create column family TI with comparator = 'lucandra.VIntType' and column_type = Super and keys_cached = 10000000 and rows_cached = 1000 and comment = 'Stores term information with indexName/field/term as composite key'
+
+create column family TL with comparator = BytesType and keys_cached = 1000000 and rows_cached = 1000 and comment = 'Stores ordered list of terms for a given field with indexName/field as composite key'
+
+create column family SI with comparator = BytesType and column_type = Super and keys_cached = 100000 and rows_cached = 1000 and comment = 'Stores solr and index id information'

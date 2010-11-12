@@ -159,26 +159,6 @@ public class CassandraUtils
             System.exit(3);
         }
         
-        // Check for Lucandra schema
-        // if not there then load from yaml
-        if (DatabaseDescriptor.getTableDefinition(keySpace) == null)
-            try
-            {
-                StorageService.instance.loadSchemaFromYAML();
-            }
-            catch (ConfigurationException e)
-            {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-                System.exit(3);
-            }
-            catch (IOException e)
-            {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-                System.exit(4);
-            }
-
     }
 
     public static byte[] createColumnName(Term term)

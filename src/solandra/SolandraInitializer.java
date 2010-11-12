@@ -17,20 +17,12 @@ public class SolandraInitializer extends Initializer {
    
     @Override
     public CoreContainer initialize() throws IOException, ParserConfigurationException, SAXException {
-          
-        SolrConfig cfg = solrConfigFilename == null ?
-                new SolrConfig(SolrConfig.DEFAULT_CONF_FILE,null) :
-                new SolrConfig(solrConfigFilename,null);
-
-                
-        CoreContainer cores = new SolandraCoreContainer(cfg);
-       
-        
+                      
+        CoreContainer cores = new SolandraCoreContainer(solrConfigFilename == null ? SolrConfig.DEFAULT_CONF_FILE : solrConfigFilename);
+             
         //Startup cassandra
         CassandraUtils.startup();
         
         return cores;
     }
- 
-
 }
