@@ -2,7 +2,7 @@ Solandra
 ========
 Solandra is a real-time distributed search engine built on [Apache Solr](http://lucene.apache.org) and [Apache Cassandra](http://cassandra.apache.org).
 
-At it's core Solandra is a tight integration of Solr and Cassandra, meaning within a single JVM both Solr and Cassandra are running, and 
+At its core Solandra is a tight integration of Solr and Cassandra, meaning within a single JVM both Solr and Cassandra are running, and 
 documents are stored and disributed using Cassandra's data model. 
 
 Solandra makes managing and dynamically growing Solr simple(r). 
