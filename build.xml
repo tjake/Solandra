@@ -107,7 +107,8 @@
         <path id="solandra.classpath">
           <pathelement location="${build.classes}"/>
           <pathelement location="${build.test.classes}"/>
-          <pathelement location="${config}"/>
+          <pathelement location="${resources}"/>
+          <pathelement location="${resources}/solr"/>
           <fileset dir="${lib}">
             <include name="**/*.jar" />
           </fileset>
@@ -150,9 +151,9 @@
             <formatter type="brief" usefile="false"/>
 
             <batchtest todir="${build}/output">
-              <fileset dir="${build.test.classes}" includes="**/SolandraTest*" />
+              <fileset dir="${build.test.classes}" includes="**/SolandraTests.class" />
             </batchtest>
-            <jvmarg value="-Dsolr.solr.home=${resources}"/>
+
             <jvmarg value="-Xmx1G"/>
           </junit>
           <fail if="testfailed" message="Some test(s) failed."/>
