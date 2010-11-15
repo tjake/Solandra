@@ -409,7 +409,7 @@ public class CassandraUtils {
         mutationList.add(mutation);       
     }
     
-    public static void robustBatchInsert(Cassandra.Iface client, Map<ByteBuffer,Map<String,List<Mutation>>> mutationMap) {
+    public static void robustBatchInsert(IndexContext context, Map<ByteBuffer,Map<String,List<Mutation>>> mutationMap) {
 
         // Should use a circut breaker here
         boolean try_again = false;
@@ -419,7 +419,7 @@ public class CassandraUtils {
             try {
                 attempts++;
                 try_again = false;
-                client.batch_mutate(mutationMap, ConsistencyLevel.ONE);
+                context.getClient().batch_mutate(mutationMap, context.getConsistencyLevel());
                 
                 mutationMap.clear();
                 //if(logger.isDebugEnabled())

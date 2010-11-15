@@ -22,9 +22,11 @@ package solandra;
 import java.io.IOException;
 
 import lucandra.CassandraUtils;
+import lucandra.IndexContext;
 import lucandra.IndexReader;
 
 import org.apache.cassandra.thrift.Cassandra;
+import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.lucene.store.Directory;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.SolrException.ErrorCode;
@@ -85,7 +87,7 @@ public class SolandraIndexReaderFactory extends IndexReaderFactory {
 
         
                 
-        return new IndexReader(indexName, client);        
+        return new IndexReader(indexName, new IndexContext(client, ConsistencyLevel.ONE));        
     }
 
 }

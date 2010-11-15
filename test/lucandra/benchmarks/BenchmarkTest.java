@@ -6,10 +6,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import lucandra.CassandraUtils;
+import lucandra.IndexContext;
 import lucandra.IndexReader;
 import lucandra.IndexWriter;
 
 import org.apache.cassandra.thrift.Cassandra;
+import org.apache.cassandra.thrift.ConsistencyLevel;
+import org.apache.cassandra.thrift.Cassandra.Iface;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
@@ -25,6 +28,7 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.util.Version;
 import org.apache.thrift.transport.TTransportException;
+import org.junit.Ignore;
 
 public class BenchmarkTest {
 
@@ -39,14 +43,17 @@ public class BenchmarkTest {
     private static String text = "this is a benchmark of lucandra";
     private static String queryString = "text:benchmark";
     private static Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_CURRENT);
-    private static Cassandra.Iface client;
+    private static IndexContext context;
     private static int   threadId = 0;
     private static final Query query;
     private static final Document doc;
 
     static {
         try {
-            client = CassandraUtils.createConnection();
+        	Iface testConnection = CassandraUtils.createConnection();
+
+    		context = new IndexContext(testConnection, ConsistencyLevel.ONE);
+    		
             query = new QueryParser(Version.LUCENE_CURRENT, "text", analyzer).parse(queryString);
             doc = new Document();
             doc.add(new Field("text", text, Store.YES, Index.ANALYZED, TermVector.WITH_POSITIONS_OFFSETS));
@@ -62,8 +69,8 @@ public class BenchmarkTest {
          
         return new Runnable() {
 
-            private final IndexReader indexReader = new IndexReader(indexName, client);
-            private final IndexWriter indexWriter = new IndexWriter(indexName, client);
+            private final IndexReader indexReader = new IndexReader(indexName, context);
+            private final IndexWriter indexWriter = new IndexWriter(indexName, context);
             private final IndexSearcher indexSearcher = new IndexSearcher(indexReader);
             private final int myThreadId = threadId++;
             

@@ -61,7 +61,7 @@ import org.apache.thrift.TException;
 public class IndexWriter {
 
     private final byte[] indexName;
-    private final Cassandra.Iface client;
+    private final IndexContext context;
     private final ColumnPath docAllColumnPath;
     private boolean autoCommit;
     private static final ThreadLocal<Map<ByteBuffer,Map<String,List<Mutation>>>> mutationMap = new ThreadLocal<Map<ByteBuffer,Map<String,List<Mutation>>>>();
@@ -70,14 +70,14 @@ public class IndexWriter {
     
     private static final Logger logger = Logger.getLogger(IndexWriter.class);
 
-    public IndexWriter(String indexName, Cassandra.Iface client) {
+    public IndexWriter(String indexName, IndexContext context) {
 
         try {
             this.indexName = indexName.getBytes("UTF-8");
         } catch (UnsupportedEncodingException e) {
             throw new RuntimeException("JVM does not support UTF-8");
         }
-        this.client = client;
+        this.context = context;
         autoCommit  = true;
         docAllColumnPath = new ColumnPath(CassandraUtils.docColumnFamily);
             
@@ -267,12 +267,12 @@ public class IndexWriter {
        
         
         if(autoCommit)
-            CassandraUtils.robustBatchInsert(client, getMutationMap());    
+            CassandraUtils.robustBatchInsert(context, getMutationMap());    
     }
 
     public void deleteDocuments(Query query) throws CorruptIndexException, IOException {
         
-        IndexReader   reader   = new IndexReader(new String(indexName),client);
+        IndexReader   reader   = new IndexReader(new String(indexName),context);
         IndexSearcher searcher = new IndexSearcher(reader);
        
         TopDocs results = searcher.search(query,1000);
@@ -308,7 +308,7 @@ public class IndexWriter {
             ColumnParent cp = new ColumnParent(CassandraUtils.termVecColumnFamily);
             ByteBuffer key = CassandraUtils.hashKeyBytes(indexName,CassandraUtils.delimeterBytes,term.field().getBytes("UTF-8"), CassandraUtils.delimeterBytes, term.text().getBytes("UTF-8"));
             
-            List<ColumnOrSuperColumn> docs = client.get_slice(key, cp, new SlicePredicate().setSlice_range(new SliceRange(CassandraUtils.emptyByteArray, CassandraUtils.emptyByteArray, true,Integer.MAX_VALUE)), ConsistencyLevel.ONE);
+            List<ColumnOrSuperColumn> docs = context.getClient().get_slice(key, cp, new SlicePredicate().setSlice_range(new SliceRange(CassandraUtils.emptyByteArray, CassandraUtils.emptyByteArray, true,Integer.MAX_VALUE)), context.getConsistencyLevel());
                 
             //delete by documentId
             for(ColumnOrSuperColumn docInfo : docs){
@@ -341,7 +341,7 @@ public class IndexWriter {
         
         ByteBuffer key =  CassandraUtils.hashKeyBytes(indexName,CassandraUtils.delimeterBytes,docIdBytes);
         
-        ColumnOrSuperColumn column = client.get(key, CassandraUtils.metaColumnPath, ConsistencyLevel.ONE);
+        ColumnOrSuperColumn column = context.getClient().get(key, CassandraUtils.metaColumnPath, context.getConsistencyLevel());
         
         List<Term> terms = (List<Term>) CassandraUtils.fromBytes(column.column.value);
     
@@ -353,14 +353,14 @@ public class IndexWriter {
         }
            
         if(autoCommit)
-            CassandraUtils.robustBatchInsert(client, getMutationMap());
+            CassandraUtils.robustBatchInsert(context, getMutationMap());
         
         //finally delete ourselves
         ByteBuffer selfKey = CassandraUtils.hashKeyBytes(indexName,CassandraUtils.delimeterBytes,docIdBytes);
         
         
         //FIXME: once cassandra batch mutation supports slice predicates in deletions
-        client.remove(selfKey, docAllColumnPath, System.currentTimeMillis(), ConsistencyLevel.ONE);
+        context.getClient().remove(selfKey, docAllColumnPath, System.currentTimeMillis(), context.getConsistencyLevel());
 
         
     }
@@ -387,7 +387,7 @@ public class IndexWriter {
     
     public void commit(){
         if(!autoCommit)
-            CassandraUtils.robustBatchInsert(client, getMutationMap());
+            CassandraUtils.robustBatchInsert(context, getMutationMap());
     }
     
     private Map<ByteBuffer,Map<String,List<Mutation>>> getMutationMap() {

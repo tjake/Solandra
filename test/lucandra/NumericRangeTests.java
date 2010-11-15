@@ -19,21 +19,17 @@
  */
 package lucandra;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.Cassandra.Iface;
 import org.apache.lucene.analysis.SimpleAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
-import org.apache.lucene.document.NumericField;
 import org.apache.lucene.document.Field.Index;
 import org.apache.lucene.document.Field.Store;
+import org.apache.lucene.document.NumericField;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.IndexSearcher;
@@ -51,7 +47,7 @@ import org.junit.Test;
  * @author Todd Nine
  * 
  */
-public class NumericRangeTests {
+public class NumericRangeTests extends LucandraTestHelper{
 
     
     private static Iface connection;
@@ -63,70 +59,63 @@ public class NumericRangeTests {
     private static long high;
     private static String indexName = Long.toHexString(System.currentTimeMillis());
 
-    
-    @BeforeClass
-    public static void writeIndexes() throws TTransportException, CorruptIndexException, IOException {
-        
+    static {
+        try{
     	
-        connection  = CassandraUtils.createConnection();
-
-        //clean up indexes before we run our test
-        cleanIndexes();
-        
-        low = 1277266160637L;
-        mid = low + 1000;
-        high = mid + 1000;
-
-        
-
-        first = new Document();
-        first.add(new Field("Id", "first", Store.YES, Index.ANALYZED));
-        
-
-        NumericField numeric = new NumericField("long", 
-                Store.YES, true);
-        numeric.setLongValue(low);
-        first.add(numeric);
-
-        second = new Document();
-        second.add(new Field("Id", "second", Store.YES, Index.ANALYZED));
-
-        numeric = new NumericField("long",  Store.YES, true);
-        numeric.setLongValue(mid);
-        second.add(numeric);
-
-        third = new Document();
-        third.add(new Field("Id", "third", Store.YES, Index.ANALYZED));
-
-        numeric = new NumericField("long",  Store.YES, true);
-        numeric.setLongValue(high);
-        third.add(numeric);
-        
-        IndexWriter writer = new IndexWriter(indexName,connection);
-        //writer.setAutoCommit(false);
-
-        SimpleAnalyzer analyzer = new SimpleAnalyzer();
-
-        writer.addDocument(first, analyzer);
-        writer.addDocument(second, analyzer);
-        writer.addDocument(third, analyzer);
-
-        //writer.commit();
+        	setupServer();
+	        connection  = CassandraUtils.createConnection();
+	
+	        //clean up indexes before we run our test
+	     
+	        
+	        low = 1277266160637L;
+	        mid = low + 1000;
+	        high = mid + 1000;
+	
+	        
+	
+	        first = new Document();
+	        first.add(new Field("Id", "first", Store.YES, Index.ANALYZED));
+	        
+	
+	        NumericField numeric = new NumericField("long", 
+	                Store.YES, true);
+	        numeric.setLongValue(low);
+	        first.add(numeric);
+	
+	        second = new Document();
+	        second.add(new Field("Id", "second", Store.YES, Index.ANALYZED));
+	
+	        numeric = new NumericField("long",  Store.YES, true);
+	        numeric.setLongValue(mid);
+	        second.add(numeric);
+	
+	        third = new Document();
+	        third.add(new Field("Id", "third", Store.YES, Index.ANALYZED));
+	
+	        numeric = new NumericField("long",  Store.YES, true);
+	        numeric.setLongValue(high);
+	        third.add(numeric);
+	        
+	        IndexWriter writer = new IndexWriter(indexName,context);
+	        //writer.setAutoCommit(false);
+	
+	        SimpleAnalyzer analyzer = new SimpleAnalyzer();
+	
+	        writer.addDocument(first, analyzer);
+	        writer.addDocument(second, analyzer);
+	        writer.addDocument(third, analyzer);
+	
+	        //writer.commit();
         
     
-
+        }catch(Exception e){
+        	throw new RuntimeException(e);
+        }
         
     }
 
-    @AfterClass
-    public static void cleanIndexes() throws CorruptIndexException, IOException, TTransportException {
-        
-        
-        IndexWriter writer = new IndexWriter(indexName, connection);
-        writer.deleteDocuments(new Term("Id", "first"));
-        writer.deleteDocuments(new Term("Id", "second"));
-        writer.deleteDocuments(new Term("Id", "third"));
-    }
+ 
 
     @Test
     public void testLongRangeInclusive() throws Exception {
@@ -135,7 +124,7 @@ public class NumericRangeTests {
         NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
                  mid, null, true, true);
 
-        IndexReader reader = new IndexReader(indexName, connection);
+        IndexReader reader = new IndexReader(indexName, context);
 
         IndexSearcher searcher = new IndexSearcher(reader);
 
@@ -165,7 +154,7 @@ public class NumericRangeTests {
         NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
                  mid, null, false, true);
 
-        IndexReader reader = new IndexReader(indexName, connection);
+        IndexReader reader = new IndexReader(indexName, context);
 
         IndexSearcher searcher = new IndexSearcher(reader);
 
@@ -193,7 +182,7 @@ public class NumericRangeTests {
         NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
                  null, mid, true, false);
 
-        IndexReader reader = new IndexReader(indexName, connection);
+        IndexReader reader = new IndexReader(indexName, context);
 
         IndexSearcher searcher = new IndexSearcher(reader);
 
@@ -222,7 +211,7 @@ public class NumericRangeTests {
         NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
                  null, mid, true, true);
 
-        IndexReader reader = new IndexReader(indexName, connection);
+        IndexReader reader = new IndexReader(indexName, context);
 
         IndexSearcher searcher = new IndexSearcher(reader);
 
@@ -252,7 +241,7 @@ public class NumericRangeTests {
                  Long.MIN_VALUE, null, true, true);
 
         
-        IndexReader reader = new IndexReader(indexName, connection);
+        IndexReader reader = new IndexReader(indexName, context);
 
         IndexSearcher searcher = new IndexSearcher(reader);
 
@@ -282,7 +271,7 @@ public class NumericRangeTests {
         NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
                  null, Long.MAX_VALUE, true, true);
 
-        IndexReader reader = new IndexReader(indexName, connection);
+        IndexReader reader = new IndexReader(indexName, context);
 
         IndexSearcher searcher = new IndexSearcher(reader);
 
@@ -311,7 +300,7 @@ public class NumericRangeTests {
 
         NumericRangeQuery query = NumericRangeQuery.newLongRange("long",1L, null, true, true);
 
-        IndexReader reader = new IndexReader(indexName, connection);
+        IndexReader reader = new IndexReader(indexName, context);
 
         IndexSearcher searcher = new IndexSearcher(reader);
 

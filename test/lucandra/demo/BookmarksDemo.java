@@ -25,10 +25,12 @@ import java.io.FileReader;
 import java.io.IOException;
 
 import lucandra.CassandraUtils;
+import lucandra.IndexContext;
 import lucandra.IndexReader;
 import lucandra.IndexWriter;
 
 import org.apache.cassandra.thrift.Cassandra;
+import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.SimpleAnalyzer;
 import org.apache.lucene.document.Document;
@@ -49,18 +51,19 @@ import org.apache.thrift.transport.TTransportException;
 public class BookmarksDemo {
 
     // Connect to casssssssssandra
-    private static Cassandra.Iface client;
+    private static IndexContext context;
     static {
         try {
-            client = CassandraUtils.createConnection();
+        	Cassandra.Iface client = CassandraUtils.createConnection();
+            context = new IndexContext(client, ConsistencyLevel.ONE);
         } catch (TTransportException e) {
             System.err.println("Error connecting to Cassandra: "+e.getMessage());
             System.exit(2);
         }
     }
 
-    private static IndexWriter indexWriter = new IndexWriter("bookmarks", client);
-    private static IndexReader indexReader = new IndexReader("bookmarks", client);
+    private static IndexWriter indexWriter = new IndexWriter("bookmarks", context);
+    private static IndexReader indexReader = new IndexReader("bookmarks", context);
     private static IndexSearcher indexSearcher = new IndexSearcher(indexReader);
     private static Analyzer analyzer = new SimpleAnalyzer();
 

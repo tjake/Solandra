@@ -31,10 +31,8 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.cassandra.thrift.ColumnParent;
-import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.KeyRange;
 import org.apache.cassandra.thrift.KeySlice;
@@ -71,7 +69,7 @@ public class LucandraTermEnum extends TermEnum {
     private String currentField = null;
     private int chunkCount = 0;
 
-    private final Cassandra.Iface client;
+    private final IndexContext context;
     private final Term finalTerm = new Term(CassandraUtils.delimeter, CassandraUtils.finalToken);
 
     private static final Logger logger = Logger.getLogger(LucandraTermEnum.class);
@@ -79,7 +77,7 @@ public class LucandraTermEnum extends TermEnum {
     public LucandraTermEnum(IndexReader indexReader) {
         this.indexReader = indexReader;
         this.indexName = indexReader.getIndexName();
-        this.client = indexReader.getClient();
+        this.context = indexReader.getClient();
         this.termPosition = 0;
     }
 
@@ -248,7 +246,7 @@ public class LucandraTermEnum extends TermEnum {
         
         List<KeySlice> columns;
         try {
-            columns = client.get_range_slices(columnParent, slicePredicate, kr, ConsistencyLevel.ONE);
+            columns = context.getClient().get_range_slices(columnParent, slicePredicate, kr, context.getConsistencyLevel());
         } catch (InvalidRequestException e) {
             throw new RuntimeException(e);
         } catch (TException e) {
@@ -368,7 +366,7 @@ public class LucandraTermEnum extends TermEnum {
 
         List<ColumnOrSuperColumn> columsList = null;
         try {
-            columsList = client.get_slice(key, parent, slicePredicate, ConsistencyLevel.ONE);
+            columsList = context.getClient().get_slice(key, parent, slicePredicate, context.getConsistencyLevel());
         } catch (InvalidRequestException e) {
             throw new RuntimeException(e);
         } catch (UnavailableException e) {
