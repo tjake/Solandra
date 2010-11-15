@@ -19,8 +19,9 @@
  */
 package lucandra;
 
-import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.cassandra.thrift.Cassandra.Iface;
@@ -30,15 +31,16 @@ import org.apache.lucene.document.Field;
 import org.apache.lucene.document.Field.Index;
 import org.apache.lucene.document.Field.Store;
 import org.apache.lucene.document.NumericField;
-import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.Term;
+import org.apache.lucene.search.BooleanClause.Occur;
+import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.NumericRangeQuery;
 import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.Sort;
+import org.apache.lucene.search.SortField;
+import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
-import org.apache.thrift.transport.TTransportException;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
@@ -47,279 +49,372 @@ import org.junit.Test;
  * @author Todd Nine
  * 
  */
-public class NumericRangeTests extends LucandraTestHelper{
-
-    
-    private static Iface connection;
-    private static Document first;
-    private static Document second;
-    private static Document third;
-    private static long low;
-    private static long mid;
-    private static long high;
-    private static String indexName = Long.toHexString(System.currentTimeMillis());
-
-    static {
-        try{
-    	
-        	setupServer();
-	        connection  = CassandraUtils.createConnection();
-	
-	        //clean up indexes before we run our test
-	     
-	        
-	        low = 1277266160637L;
-	        mid = low + 1000;
-	        high = mid + 1000;
-	
-	        
-	
-	        first = new Document();
-	        first.add(new Field("Id", "first", Store.YES, Index.ANALYZED));
-	        
-	
-	        NumericField numeric = new NumericField("long", 
-	                Store.YES, true);
-	        numeric.setLongValue(low);
-	        first.add(numeric);
-	
-	        second = new Document();
-	        second.add(new Field("Id", "second", Store.YES, Index.ANALYZED));
-	
-	        numeric = new NumericField("long",  Store.YES, true);
-	        numeric.setLongValue(mid);
-	        second.add(numeric);
-	
-	        third = new Document();
-	        third.add(new Field("Id", "third", Store.YES, Index.ANALYZED));
-	
-	        numeric = new NumericField("long",  Store.YES, true);
-	        numeric.setLongValue(high);
-	        third.add(numeric);
-	        
-	        IndexWriter writer = new IndexWriter(indexName,context);
-	        //writer.setAutoCommit(false);
-	
-	        SimpleAnalyzer analyzer = new SimpleAnalyzer();
-	
-	        writer.addDocument(first, analyzer);
-	        writer.addDocument(second, analyzer);
-	        writer.addDocument(third, analyzer);
-	
-	        //writer.commit();
-        
-    
-        }catch(Exception e){
-        	throw new RuntimeException(e);
-        }
-        
-    }
+public class NumericRangeTests extends LucandraTestHelper {
 
- 
+	private static final String LONG = "long";
+	private static final String STRING1 = "str1";
+	private static final String STRING2 = "str2";
 
-    @Test
-    public void testLongRangeInclusive() throws Exception {
+	private static final String STRING1_VAL = "testval1";
+	private static final String STRING2_VAL = "testval2";
 
+	private static Iface connection;
+	private static Document first;
+	private static Document second;
+	private static Document third;
+	private static long low;
+	private static long mid;
+	private static long high;
+	private static String indexName = Long.toHexString(System
+			.currentTimeMillis());
 
-        NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
-                 mid, null, true, true);
+	static {
+		try {
 
-        IndexReader reader = new IndexReader(indexName, context);
+			setupServer();
+			connection = CassandraUtils.createConnection();
 
-        IndexSearcher searcher = new IndexSearcher(reader);
+			// clean up indexes before we run our test
 
-        TopDocs docs = searcher.search(query, 1000);
+			low = 1277266160637L;
+			mid = low + 1000;
+			high = mid + 1000;
 
-        assertEquals(2, docs.totalHits);
+			first = new Document();
+			first.add(new Field("Id", "first", Store.YES, Index.ANALYZED));
 
+			NumericField numeric = new NumericField(LONG, Store.YES, true);
+			numeric.setLongValue(low);
+			first.add(numeric);
+			first.add(new Field(STRING1, STRING1_VAL, Store.NO,
+					Index.NOT_ANALYZED));
+			first.add(new Field(STRING2, STRING2_VAL, Store.NO,
+					Index.NOT_ANALYZED));
 
-        Set<String> results = new HashSet<String>();
+			second = new Document();
+			second.add(new Field("Id", "second", Store.YES, Index.ANALYZED));
 
-        for (ScoreDoc doc : docs.scoreDocs) {
-            Document returned = searcher.doc(doc.doc);
-            results.add(returned.get("Id"));
-        }
+			numeric = new NumericField(LONG, Store.YES, true);
+			numeric.setLongValue(mid);
+			second.add(numeric);
+			second.add(new Field(STRING1, STRING1_VAL, Store.NO,
+					Index.NOT_ANALYZED));
+			second.add(new Field(STRING2, STRING2_VAL, Store.NO,
+					Index.NOT_ANALYZED));
 
-        assertTrue(results.contains("second"));
+			third = new Document();
+			third.add(new Field("Id", "third", Store.YES, Index.ANALYZED));
 
-        assertTrue(results.contains("third"));
+			numeric = new NumericField(LONG, Store.YES, true);
+			numeric.setLongValue(high);
+			third.add(numeric);
+			third.add(new Field(STRING1, STRING1_VAL, Store.NO,
+					Index.NOT_ANALYZED));
+			third.add(new Field(STRING2, STRING2_VAL, Store.NO,
+					Index.NOT_ANALYZED));
 
-    }
+			IndexWriter writer = new IndexWriter(indexName, context);
+			// writer.setAutoCommit(false);
 
-    @Test
-    public void testLongRangeExclusive() throws Exception {
+			SimpleAnalyzer analyzer = new SimpleAnalyzer();
 
-        // now we'll query from the middle inclusive
+			writer.addDocument(first, analyzer);
+			writer.addDocument(second, analyzer);
+			writer.addDocument(third, analyzer);
 
-        NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
-                 mid, null, false, true);
+			// writer.commit();
 
-        IndexReader reader = new IndexReader(indexName, context);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
 
-        IndexSearcher searcher = new IndexSearcher(reader);
+	}
 
-        TopDocs docs = searcher.search(query, 1000);
+	@Test
+	public void testLongRangeInclusive() throws Exception {
 
+		NumericRangeQuery query = NumericRangeQuery.newLongRange(LONG, mid,
+				null, true, true);
 
-        assertEquals(1, docs.totalHits);
+		IndexReader reader = new IndexReader(indexName, context);
 
-        Set<String> results = new HashSet<String>();
+		IndexSearcher searcher = new IndexSearcher(reader);
 
-        for (ScoreDoc doc : docs.scoreDocs) {
-            Document returned = searcher.doc(doc.doc);
-            results.add(returned.get("Id"));
-        }
+		TopDocs docs = searcher.search(query, 1000);
 
-        assertTrue(results.contains("third"));
+		assertEquals(2, docs.totalHits);
 
-    }
-    
-    @Test
-    public void testLongRangeLessExclusive() throws Exception {
+		Set<String> results = new HashSet<String>();
 
-        // now we'll query from the middle inclusive
+		for (ScoreDoc doc : docs.scoreDocs) {
+			Document returned = searcher.doc(doc.doc);
+			results.add(returned.get("Id"));
+		}
 
-        NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
-                 null, mid, true, false);
+		assertTrue(results.contains("second"));
 
-        IndexReader reader = new IndexReader(indexName, context);
+		assertTrue(results.contains("third"));
 
-        IndexSearcher searcher = new IndexSearcher(reader);
+	}
 
-        TopDocs docs = searcher.search(query, 1000);
+	@Test
+	public void testLongRangeExclusive() throws Exception {
 
-        assertEquals(1, docs.totalHits);
+		// now we'll query from the middle inclusive
 
-        Set<String> results = new HashSet<String>();
+		NumericRangeQuery query = NumericRangeQuery.newLongRange(LONG, mid,
+				null, false, true);
 
-        for (ScoreDoc doc : docs.scoreDocs) {
-            Document returned = searcher.doc(doc.doc);
-            results.add(returned.get("Id"));
-        }
+		IndexReader reader = new IndexReader(indexName, context);
 
-        assertTrue(results.contains("first"));
+		IndexSearcher searcher = new IndexSearcher(reader);
 
+		TopDocs docs = searcher.search(query, 1000);
 
-    }
+		assertEquals(1, docs.totalHits);
 
-    
-    @Test
-    public void testLongRangeLessInclusive() throws Exception {
+		Set<String> results = new HashSet<String>();
 
-        // now we'll query from the middle inclusive
+		for (ScoreDoc doc : docs.scoreDocs) {
+			Document returned = searcher.doc(doc.doc);
+			results.add(returned.get("Id"));
+		}
 
-        NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
-                 null, mid, true, true);
+		assertTrue(results.contains("third"));
 
-        IndexReader reader = new IndexReader(indexName, context);
+	}
 
-        IndexSearcher searcher = new IndexSearcher(reader);
+	@Test
+	public void testLongRangeLessExclusive() throws Exception {
 
-        TopDocs docs = searcher.search(query, 1000);
+		// now we'll query from the middle inclusive
 
-        assertEquals(2, docs.totalHits);
+		NumericRangeQuery query = NumericRangeQuery.newLongRange(LONG, null,
+				mid, true, false);
 
-        Set<String> results = new HashSet<String>();
+		IndexReader reader = new IndexReader(indexName, context);
 
-        for (ScoreDoc doc : docs.scoreDocs) {
-            Document returned = searcher.doc(doc.doc);
-            results.add(returned.get("Id"));
-        }
+		IndexSearcher searcher = new IndexSearcher(reader);
 
-        assertTrue(results.contains("first"));
-        assertTrue(results.contains("second"));
+		TopDocs docs = searcher.search(query, 1000);
 
-    }
+		assertEquals(1, docs.totalHits);
 
-    
-    @Test
-    public void testLongRangeMinValueAll() throws Exception {
+		Set<String> results = new HashSet<String>();
 
-        // now we'll query from the middle inclusive
+		for (ScoreDoc doc : docs.scoreDocs) {
+			Document returned = searcher.doc(doc.doc);
+			results.add(returned.get("Id"));
+		}
 
-        NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
-                 Long.MIN_VALUE, null, true, true);
+		assertTrue(results.contains("first"));
 
-        
-        IndexReader reader = new IndexReader(indexName, context);
+	}
 
-        IndexSearcher searcher = new IndexSearcher(reader);
+	@Test
+	public void testLongRangeLessInclusive() throws Exception {
 
-        TopDocs docs = searcher.search(query, 1000);
+		// now we'll query from the middle inclusive
 
-        assertEquals(3, docs.totalHits);
+		NumericRangeQuery query = NumericRangeQuery.newLongRange(LONG, null,
+				mid, true, true);
 
-        Set<String> results = new HashSet<String>();
+		IndexReader reader = new IndexReader(indexName, context);
 
-        for (ScoreDoc doc : docs.scoreDocs) {
-            Document returned = searcher.doc(doc.doc);
-            results.add(returned.get("Id"));
-        }
+		IndexSearcher searcher = new IndexSearcher(reader);
 
-        assertTrue(results.contains("first"));
-        assertTrue(results.contains("second"));
-        assertTrue(results.contains("third"));
+		TopDocs docs = searcher.search(query, 1000);
 
+		assertEquals(2, docs.totalHits);
 
-    }
-    
-    @Test
-    public void testLongRangeMaxAll() throws Exception {
+		Set<String> results = new HashSet<String>();
 
-        // now we'll query from the middle inclusive
+		for (ScoreDoc doc : docs.scoreDocs) {
+			Document returned = searcher.doc(doc.doc);
+			results.add(returned.get("Id"));
+		}
 
-        NumericRangeQuery query = NumericRangeQuery.newLongRange("long",
-                 null, Long.MAX_VALUE, true, true);
+		assertTrue(results.contains("first"));
+		assertTrue(results.contains("second"));
 
-        IndexReader reader = new IndexReader(indexName, context);
+	}
 
-        IndexSearcher searcher = new IndexSearcher(reader);
+	@Test
+	public void testLongRangeMinValueAll() throws Exception {
 
-        TopDocs docs = searcher.search(query, 1000);
+		// now we'll query from the middle inclusive
 
-        assertEquals(3, docs.totalHits);
+		NumericRangeQuery query = NumericRangeQuery.newLongRange(LONG,
+				Long.MIN_VALUE, null, true, true);
 
-        Set<String> results = new HashSet<String>();
+		IndexReader reader = new IndexReader(indexName, context);
 
-        for (ScoreDoc doc : docs.scoreDocs) {
-            Document returned = searcher.doc(doc.doc);
-            results.add(returned.get("Id"));
-        }
+		IndexSearcher searcher = new IndexSearcher(reader);
 
-        assertTrue(results.contains("first"));
-        assertTrue(results.contains("second"));
-        assertTrue(results.contains("third"));
+		TopDocs docs = searcher.search(query, 1000);
 
-    }
-    
+		assertEquals(3, docs.totalHits);
 
-    @Test
-    public void testLongRangeZeroAll() throws Exception {
+		Set<String> results = new HashSet<String>();
 
-        // now we'll query from the middle inclusive
+		for (ScoreDoc doc : docs.scoreDocs) {
+			Document returned = searcher.doc(doc.doc);
+			results.add(returned.get("Id"));
+		}
 
-        NumericRangeQuery query = NumericRangeQuery.newLongRange("long",1L, null, true, true);
+		assertTrue(results.contains("first"));
+		assertTrue(results.contains("second"));
+		assertTrue(results.contains("third"));
 
-        IndexReader reader = new IndexReader(indexName, context);
+	}
 
-        IndexSearcher searcher = new IndexSearcher(reader);
+	@Test
+	public void testLongRangeMaxAll() throws Exception {
 
-        TopDocs docs = searcher.search(query, 1000);
+		// now we'll query from the middle inclusive
 
-        assertEquals(3, docs.totalHits);
+		NumericRangeQuery query = NumericRangeQuery.newLongRange(LONG, null,
+				Long.MAX_VALUE, true, true);
 
-        Set<String> results = new HashSet<String>();
+		IndexReader reader = new IndexReader(indexName, context);
 
-        for (ScoreDoc doc : docs.scoreDocs) {
-            Document returned = searcher.doc(doc.doc);
-            results.add(returned.get("Id"));
-        }
+		IndexSearcher searcher = new IndexSearcher(reader);
 
-        assertTrue(results.contains("first"));
-        assertTrue(results.contains("second"));
-        assertTrue(results.contains("third"));
+		TopDocs docs = searcher.search(query, 1000);
 
+		assertEquals(3, docs.totalHits);
 
-    }
+		Set<String> results = new HashSet<String>();
+
+		for (ScoreDoc doc : docs.scoreDocs) {
+			Document returned = searcher.doc(doc.doc);
+			results.add(returned.get("Id"));
+		}
+
+		assertTrue(results.contains("first"));
+		assertTrue(results.contains("second"));
+		assertTrue(results.contains("third"));
+
+	}
+
+	@Test
+	public void testLongRangeZeroAll() throws Exception {
+
+		// now we'll query from the middle inclusive
+
+		NumericRangeQuery query = NumericRangeQuery.newLongRange(LONG, 1L,
+				null, true, true);
+
+		IndexReader reader = new IndexReader(indexName, context);
+
+		IndexSearcher searcher = new IndexSearcher(reader);
+
+		TopDocs docs = searcher.search(query, 1000);
+
+		assertEquals(3, docs.totalHits);
+
+		Set<String> results = new HashSet<String>();
+
+		for (ScoreDoc doc : docs.scoreDocs) {
+			Document returned = searcher.doc(doc.doc);
+			results.add(returned.get("Id"));
+		}
+
+		assertTrue(results.contains("first"));
+		assertTrue(results.contains("second"));
+		assertTrue(results.contains("third"));
+
+	}
+
+	@Test
+	public void testDocumentOrdering() throws Exception {
+
+		// now we'll query from the middle inclusive
+
+		BooleanQuery query = new BooleanQuery();
+
+		query.add(new TermQuery(new Term(STRING1, STRING1_VAL)), Occur.SHOULD);
+
+		query.add(new TermQuery(new Term(STRING2, "randomval")), Occur.SHOULD);
+
+		// sort by long descending
+		SortField sort = new SortField(LONG, SortField.LONG, true);
+
+		IndexReader reader = new IndexReader(indexName, context);
+
+		IndexSearcher searcher = new IndexSearcher(reader);
+
+		TopDocs docs = searcher.search(query, null, 1000, new Sort(sort));
+
+		assertEquals(3, docs.totalHits);
+
+		List<String> results = new ArrayList<String>();
+
+		for (ScoreDoc doc : docs.scoreDocs) {
+			Document returned = searcher.doc(doc.doc);
+			results.add(returned.get("Id"));
+		}
+
+		assertEquals("third", results.get(0));
+		assertEquals("second", results.get(1));
+		assertEquals("first", results.get(2));
+
+	}
+
+	@Test
+	public void testDocumentOrderingSearchTwice() throws Exception {
+
+		// now we'll query from the middle inclusive
+
+		BooleanQuery query = new BooleanQuery();
+
+		query.add(new TermQuery(new Term(STRING1, STRING1_VAL)), Occur.SHOULD);
+
+		query.add(new TermQuery(new Term(STRING2, "randomval")), Occur.SHOULD);
+
+		// sort by long descending
+		SortField sort = new SortField(LONG, SortField.LONG, true);
+
+		IndexReader reader = new IndexReader(indexName, context);
+
+		IndexSearcher searcher = new IndexSearcher(reader);
+
+		TopDocs docs = searcher.search(query, null, 1000, new Sort(sort));
+
+		assertEquals(3, docs.totalHits);
+
+		List<String> results = new ArrayList<String>();
+
+		for (ScoreDoc doc : docs.scoreDocs) {
+			Document returned = searcher.doc(doc.doc);
+			results.add(returned.get("Id"));
+		}
+
+		assertEquals("third", results.get(0));
+		assertEquals("second", results.get(1));
+		assertEquals("first", results.get(2));
+
+		query = new BooleanQuery();
+
+		query.add(new TermQuery(new Term(STRING1, "fooval")), Occur.SHOULD);
+
+		query.add(new TermQuery(new Term(STRING2, STRING2_VAL)), Occur.SHOULD);
+
+		docs = searcher.search(query, null, 1000, new Sort(sort));
+
+		assertEquals(3, docs.totalHits);
+
+		results = new ArrayList<String>();
+
+		for (ScoreDoc doc : docs.scoreDocs) {
+			Document returned = searcher.doc(doc.doc);
+			results.add(returned.get("Id"));
+		}
+
+		assertEquals("third", results.get(0));
+		assertEquals("second", results.get(1));
+		assertEquals("first", results.get(2));
+
+	}
 
 }
