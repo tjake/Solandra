@@ -399,6 +399,10 @@ public class NumericRangeTests extends LucandraTestHelper {
 		query.add(new TermQuery(new Term(STRING1, "fooval")), Occur.SHOULD);
 
 		query.add(new TermQuery(new Term(STRING2, STRING2_VAL)), Occur.SHOULD);
+		
+//		reader.reopen();
+		
+		searcher = new IndexSearcher(reader);
 
 		docs = searcher.search(query, null, 1000, new Sort(sort));
 
