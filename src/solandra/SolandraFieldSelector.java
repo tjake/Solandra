@@ -1,6 +1,5 @@
 package solandra;
 
-import java.nio.ByteBuffer;
 import java.util.List;
 
 import org.apache.lucene.document.FieldSelector;
@@ -9,9 +8,9 @@ import org.apache.lucene.document.FieldSelectorResult;
 public class SolandraFieldSelector implements FieldSelector {
 
     List<Integer> otherDocsToCache;
-    List<ByteBuffer> fieldNames;
+    List<byte[]> fieldNames;
     
-    public SolandraFieldSelector(List<Integer> otherDocsToCache, List<ByteBuffer> fieldNames){
+    public SolandraFieldSelector(List<Integer> otherDocsToCache, List<byte[]> fieldNames){
         this.otherDocsToCache = otherDocsToCache;
         this.fieldNames = fieldNames;
     }
@@ -20,7 +19,7 @@ public class SolandraFieldSelector implements FieldSelector {
         return otherDocsToCache;
     }
     
-    public List<ByteBuffer> getFieldNames(){
+    public List<byte[]> getFieldNames(){
         return fieldNames;
     }
     

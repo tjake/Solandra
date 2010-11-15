@@ -6,12 +6,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import lucandra.CassandraUtils;
-import lucandra.IndexContext;
 import lucandra.IndexReader;
 import lucandra.IndexWriter;
 
 import org.apache.cassandra.thrift.Cassandra;
-import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
@@ -27,9 +25,7 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.util.Version;
 import org.apache.thrift.transport.TTransportException;
-import org.junit.Ignore;
 
-@Ignore("Not a unit test")
 public class BenchmarkTest {
 
     private enum Type {
@@ -66,10 +62,8 @@ public class BenchmarkTest {
          
         return new Runnable() {
 
-        	IndexContext	context = new IndexContext(client,  ConsistencyLevel.ONE);
-    		
-            private final IndexReader indexReader = new IndexReader(indexName, context);
-            private final IndexWriter indexWriter = new IndexWriter(indexName, context);
+            private final IndexReader indexReader = new IndexReader(indexName, client);
+            private final IndexWriter indexWriter = new IndexWriter(indexName, client);
             private final IndexSearcher indexSearcher = new IndexSearcher(indexReader);
             private final int myThreadId = threadId++;
             

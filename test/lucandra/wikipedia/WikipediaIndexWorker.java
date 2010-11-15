@@ -25,13 +25,12 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import lucandra.CassandraUtils;
-import lucandra.IndexContext;
 import lucandra.IndexWriter;
 
 import org.apache.cassandra.thrift.Cassandra;
-import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.TokenRange;
 import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.cjk.CJKAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
@@ -47,15 +46,13 @@ public class WikipediaIndexWorker implements Callable<Integer> {
     private static ConcurrentLinkedQueue<lucandra.IndexWriter> allClients = new ConcurrentLinkedQueue<IndexWriter>();
     private static ThreadLocal<lucandra.IndexWriter> clientPool = new ThreadLocal<lucandra.IndexWriter>();
     private static ThreadLocal<Integer> batchCount = new ThreadLocal<Integer>();
-    
-    private static String keySpace = System.getProperty("cassandra.keyspace","Lucandra");
 
     // get ring info
     private static List<TokenRange> ring;
     static {
         try {
             Cassandra.Iface client = CassandraUtils.createConnection();
-            ring = client.describe_ring(keySpace);
+            ring = client.describe_ring(CassandraUtils.keySpace);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -87,8 +84,6 @@ public class WikipediaIndexWorker implements Callable<Integer> {
 
     private lucandra.IndexWriter getIndexWriter() throws TTransportException {
         lucandra.IndexWriter indexWriter = clientPool.get();
-        
-        
 
         if (indexWriter == null) {
 
@@ -96,9 +91,7 @@ public class WikipediaIndexWorker implements Callable<Integer> {
             List<String> endpoints = ring.get(r.nextInt(ring.size())).endpoints;
             String endpoint = endpoints.get(r.nextInt(endpoints.size()));
 
-            IndexContext context = new IndexContext(CassandraUtils.createRobustConnection(endpoint, 9160, false, keySpace, false), ConsistencyLevel.ONE);
-            
-            indexWriter = new lucandra.IndexWriter("wikipedia", context);
+            indexWriter = new lucandra.IndexWriter("wikipedia", CassandraUtils.createRobustConnection(endpoint, 9160, false, false));
             clientPool.set(indexWriter);
 
             indexWriter.setAutoCommit(false);

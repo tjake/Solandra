@@ -22,16 +22,15 @@ package solandra;
 import java.io.IOException;
 
 import lucandra.CassandraUtils;
-import lucandra.IndexContext;
 import lucandra.IndexReader;
 
-import org.apache.cassandra.thrift.Cassandra.Iface;
-import org.apache.cassandra.thrift.ConsistencyLevel;
+import org.apache.cassandra.thrift.Cassandra;
 import org.apache.lucene.store.Directory;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.SolrException.ErrorCode;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.core.IndexReaderFactory;
+import org.apache.thrift.transport.TTransportException;
 
 public class SolandraIndexReaderFactory extends IndexReaderFactory {  
         
@@ -71,10 +70,22 @@ public class SolandraIndexReaderFactory extends IndexReaderFactory {
     @Override
     public IndexReader newReader(Directory indexDir, boolean readOnly) throws IOException {
         
-    	Iface client = 	CassandraUtils.createRobustConnection(cassandraHost, cassandraPort, cassandraFramed,"Lucandra", true);
-		IndexContext context = new IndexContext(client, ConsistencyLevel.ONE);
+        Cassandra.Iface client;
+       
+       
+        /*try {
+            client = CassandraUtils.createConnection(cassandraHost,cassandraPort,cassandraFramed);
+        } catch (TTransportException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+            throw new IOException();
+        }  */
+        
+        client = CassandraUtils.createRobustConnection(cassandraHost,cassandraPort,cassandraFramed,true);
+
+        
                 
-        return new IndexReader(indexName, context);        
+        return new IndexReader(indexName, client);        
     }
 
 }

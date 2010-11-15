@@ -25,65 +25,52 @@ import java.util.List;
 import java.util.Random;
 
 import org.apache.cassandra.thrift.Cassandra;
-import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.TokenRange;
 import org.apache.cassandra.thrift.UnavailableException;
+import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 import org.apache.thrift.transport.TTransportException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
- * This wraps the underlying Cassandra thrift client and attempts to handle
- * disconnect errors.
+ * This wraps the underlying Cassandra thrift client and attempts to handle disconnect errors.
  * 
- * On disconnect, if it cannot reconnect to the same host then it will use a
- * different host from the ring, which it periodically checks for updates to.
+ * On disconnect, if it cannot reconnect to the same host then it will use a different host from the ring,
+ * which it periodically checks for updates to.
  * 
- * This incorporates the CircuitBreaker pattern so not to overwhelm the network
- * with reconnect attempts.
+ * This incorporates the CircuitBreaker pattern so not to overwhelm the network with reconnect attempts.
  * 
  * This proxy also manages a client connection per thread.
  * 
  * @author jake
- * @author Todd Nine
- * 
+ *
  */
-public class CassandraProxyClient implements
-		java.lang.reflect.InvocationHandler {
+public class CassandraProxyClient implements java.lang.reflect.InvocationHandler {
 
-	private static final Logger logger = LoggerFactory.getLogger(CassandraProxyClient.class);
-	private String host;
-	private int port;
-	private final boolean framed;
-	private String keyspace;
-	private final boolean randomizeConnections;
-	private static ThreadLocal<Cassandra.Iface> clientPool = new ThreadLocal<Cassandra.Iface>();
-	private long lastPoolCheck;
-	private List<TokenRange> ring;
-	private static ThreadLocal<CircuitBreaker> circuitBreakerPool = new ThreadLocal<CircuitBreaker>();
+    private static final Logger logger = Logger.getLogger(CassandraProxyClient.class);
+    private String host;
+    private int port;
+    private final boolean framed;
+    private final boolean randomizeConnections;
+    private static ThreadLocal<Cassandra.Iface> clientPool = new ThreadLocal<Cassandra.Iface>();
+    private long lastPoolCheck;
+    private List<TokenRange> ring;
+    private static ThreadLocal<CircuitBreaker> circuitBreakerPool = new ThreadLocal<CircuitBreaker>();
+    
+    public static Cassandra.Iface newInstance(String host, int port, boolean framed, boolean randomizeConnections) {
+                    
+        return (Cassandra.Iface) java.lang.reflect.Proxy.newProxyInstance(Cassandra.Client.class.getClassLoader(), Cassandra.Client.class.getInterfaces(), new CassandraProxyClient(host,port,framed,randomizeConnections));
+    }
 
-	public static Cassandra.Iface newInstance(String host, int port,
-			boolean framed, String keyspace, boolean randomizeConnections) {
+    private CassandraProxyClient(String host, int port, boolean framed, boolean randomizeConnections) {
+        
+        this.host = host;
+        this.port = port;
+        this.framed = framed;
+        this.randomizeConnections = randomizeConnections;
+        lastPoolCheck  = 0;              
 
-		return (Cassandra.Iface) java.lang.reflect.Proxy.newProxyInstance(
-				Cassandra.Client.class.getClassLoader(), Cassandra.Client.class
-						.getInterfaces(), new CassandraProxyClient(host, port,
-						framed, keyspace, randomizeConnections));
-	}
-
-	private CassandraProxyClient(String host, int port, boolean framed,
-			String keyspace, boolean randomizeConnections) {
-
-		this.host = host;
-		this.port = port;
-		this.framed = framed;
-		this.randomizeConnections = randomizeConnections;
-		this.keyspace = keyspace;
-		lastPoolCheck = 0;
-
-		checkRing();
-	}
+        checkRing();
+    }
 
     private CircuitBreaker getCircuitBreaker(){
         CircuitBreaker breaker = circuitBreakerPool.get();
@@ -115,8 +102,7 @@ public class CassandraProxyClient implements
         return client;
     }
     
-    private void setClient(Cassandra.Iface client)
-    {
+    private void setClient(Cassandra.Iface client){
         clientPool.set(client);
     }
     
@@ -135,7 +121,7 @@ public class CassandraProxyClient implements
         if( (now - lastPoolCheck) > 60*1000){
             try {
                 if(breaker.allow()){
-                    ring = client.describe_ring(keyspace);
+                    ring = client.describe_ring(CassandraUtils.keySpace);
                     lastPoolCheck = now;
 	       
                     breaker.success();
@@ -143,43 +129,41 @@ public class CassandraProxyClient implements
             } catch (TException e) {
                 breaker.failure();
                 attemptReconnect();
-            } catch (InvalidRequestException e) {
-               throw new RuntimeException(e);
             }
         }
         
     }
     
     private Cassandra.Iface attemptReconnect(){
-	            
-	        Cassandra.Client client;
-	        CircuitBreaker   breaker = getCircuitBreaker();
-	        
-	        //first try to connect to the same host as before
-	        if(!randomizeConnections || ring == null || ring.size() == 0) {
-	            
-	            try {
-	                client = CassandraUtils.createConnection(host, port, framed, keyspace);
-	                breaker.success();
-	                logger.info("Connected to cassandra at "+host+":"+port);
-	                return client;
-	            } catch (TTransportException e) {            
-	                logger.warn("Connection failed to Cassandra node: "+host+":"+port);
-	            }
-	        }
-	        
-	        //this is bad
-	        if(ring == null || ring.size() == 0){ 
-	            logger.warn("No cassandra ring information found, no other nodes to connect to");
-	            return null;
-	        }
-	        
-	        //pick a different node from the ring
-	        Random r = new Random();
-	        
-	        List<String> endpoints = ring.get(r.nextInt(ring.size())).endpoints;
-	        String endpoint = endpoints.get(r.nextInt(endpoints.size()));
 
+            
+        Cassandra.Client client;
+        CircuitBreaker   breaker = getCircuitBreaker();
+        
+        //first try to connect to the same host as before
+        if(!randomizeConnections || ring == null || ring.size() == 0) {
+            
+            try {
+                client = CassandraUtils.createConnection(host, port, framed);
+                breaker.success();
+                logger.info("Connected to cassandra at "+host+":"+port);
+                return client;
+            } catch (TTransportException e) {            
+                logger.warn("Connection failed to Cassandra node: "+host+":"+port);
+            }
+        }
+        
+        //this is bad
+        if(ring == null || ring.size() == 0){ 
+            logger.warn("No cassandra ring information found, no other nodes to connect to");
+            return null;
+        }
+        
+        //pick a different node from the ring
+        Random r = new Random();
+        
+        List<String> endpoints = ring.get(r.nextInt(ring.size())).endpoints;
+        String endpoint = endpoints.get(r.nextInt(endpoints.size()));
 
         if(!randomizeConnections){
             //only one node (myself)
@@ -195,7 +179,7 @@ public class CassandraProxyClient implements
         }
         
         try {
-            client = CassandraUtils.createConnection(endpoint, port, framed, keyspace);
+            client = CassandraUtils.createConnection(endpoint, port, framed);
             //host = endpoint;
             breaker.success();
         
@@ -203,7 +187,7 @@ public class CassandraProxyClient implements
             logger.warn("Failed connecting to a different cassandra node in this ring: "+endpoint+":"+port);
             
             try {
-                client = CassandraUtils.createConnection(host, port, framed, keyspace);
+                client = CassandraUtils.createConnection(host, port, framed);
                 breaker.success();
                 logger.info("Connected to cassandra at "+host+":"+port);
                 return client;
@@ -241,9 +225,8 @@ public class CassandraProxyClient implements
                 if(breaker.allow()){                
                     result = m.invoke(client, args);
                     breaker.success();
-                    return result;
+		    return result;
                 }else{
-                    
                     while(!breaker.allow()){
                         Thread.sleep(1050); //sleep and try again
                     }

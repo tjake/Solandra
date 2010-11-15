@@ -20,11 +20,11 @@
 package solandra;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.log4j.Logger;
 import org.apache.lucene.document.FieldSelector;
 import org.apache.solr.handler.component.ResponseBuilder;
 import org.apache.solr.handler.component.SearchComponent;
@@ -32,12 +32,10 @@ import org.apache.solr.highlight.SolrHighlighter;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.DocIterator;
 import org.apache.solr.search.DocList;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
     
 public class SolandraReopenComponent extends SearchComponent {
 
-    private static final  Logger logger = LoggerFactory.getLogger(SolandraReopenComponent.class);
+    private static final Logger logger = Logger.getLogger(SolandraReopenComponent.class);
     
     public String getDescription() {
        return "Reopens Lucandra readers";
@@ -79,14 +77,14 @@ public class SolandraReopenComponent extends SearchComponent {
         
         if(docIds.size() > 0){
             
-            List<ByteBuffer> fieldFilter = null;
+            List<byte[]> fieldFilter = null;
             Set<String> returnFields = rb.rsp.getReturnFields();
             if(returnFields != null) {
               
               // copy return fields list
-              fieldFilter = new ArrayList<ByteBuffer>(returnFields.size());
+              fieldFilter = new ArrayList<byte[]>(returnFields.size());
               for(String field : returnFields){
-                  fieldFilter.add(ByteBuffer.wrap(field.getBytes()));
+                  fieldFilter.add(field.getBytes());
               }
               
               
@@ -95,13 +93,13 @@ public class SolandraReopenComponent extends SearchComponent {
               if(highligher.isHighlightingEnabled(rb.req.getParams())) {
                 for(String field: highligher.getHighlightFields(rb.getQuery(), rb.req, null)) 
                   if(!returnFields.contains(field))
-                      fieldFilter.add(ByteBuffer.wrap(field.getBytes()));        
+                      fieldFilter.add(field.getBytes());        
               }
               // fetch unique key if one exists.
               SchemaField keyField = rb.req.getSearcher().getSchema().getUniqueKeyField();
               if(null != keyField)
                   if(!returnFields.contains(keyField))
-                      fieldFilter.add(ByteBuffer.wrap(keyField.getName().getBytes()));  
+                      fieldFilter.add(keyField.getName().getBytes());  
             }
             
     

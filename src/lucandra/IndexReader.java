@@ -19,57 +19,47 @@
  */
 package lucandra;
 
-import static lucandra.ByteHelper.getBytes;
-
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.Column;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.cassandra.thrift.ColumnParent;
+import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.SlicePredicate;
 import org.apache.cassandra.thrift.SliceRange;
 import org.apache.cassandra.thrift.SuperColumn;
+import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.SimpleAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
+import org.apache.lucene.document.FieldSelector;
 import org.apache.lucene.document.Field.Index;
 import org.apache.lucene.document.Field.Store;
-import org.apache.lucene.document.FieldSelector;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.IndexWriter;
-import org.apache.lucene.index.IndexWriter.MaxFieldLength;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.TermDocs;
 import org.apache.lucene.index.TermEnum;
 import org.apache.lucene.index.TermFreqVector;
 import org.apache.lucene.index.TermPositions;
 import org.apache.lucene.index.TermVectorMapper;
+import org.apache.lucene.index.IndexWriter.MaxFieldLength;
 import org.apache.lucene.search.Similarity;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.LockObtainFailedException;
 import org.apache.lucene.store.RAMDirectory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import solandra.SolandraFieldSelector;
 
-
-/**
- * @author jake
- * @author Todd Nine
- *
- */
 public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     private final static int numDocs = 1000000;
@@ -88,27 +78,24 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         }
     }
 
-
-
-    private final byte[] indexName;
-    private final IndexContext context;
-
+    private final String indexName;
+    private final Cassandra.Iface client;
     
-    private final ThreadLocal<Map<byte[], Integer>> docIdToDocIndex = new ThreadLocal<Map<byte[], Integer>>();
-    private final ThreadLocal<Map<Integer, byte[]>> docIndexToDocId = new ThreadLocal<Map<Integer, byte[]>>();
+    private final ThreadLocal<Map<String, Integer>> docIdToDocIndex = new ThreadLocal<Map<String, Integer>>();
+    private final ThreadLocal<Map<Integer, String>> docIndexToDocId = new ThreadLocal<Map<Integer, String>>();
     private final ThreadLocal<Map<Integer, Document>> documentCache = new ThreadLocal<Map<Integer, Document>>();
     private final ThreadLocal<AtomicInteger> docCounter = new ThreadLocal<AtomicInteger>();
     private final ThreadLocal<Map<Term, LucandraTermEnum>> termEnumCache = new ThreadLocal<Map<Term, LucandraTermEnum>>();
     private final ThreadLocal<Map<String,byte[]>> fieldNorms = new ThreadLocal<Map<String, byte[]>>();
+    private final static ThreadLocal<Object>  fieldCacheRefs  = new ThreadLocal<Object>();
+
     
-    private static final  Logger logger = LoggerFactory.getLogger(IndexReader.class);
+    private static final Logger logger = Logger.getLogger(IndexReader.class);
 
-    public IndexReader(String name, IndexContext context) {
+    public IndexReader(String name, Cassandra.Iface client) {
         super();
-        this.indexName = getBytes(name);
-        this.context = context;
-
-
+        this.indexName = name;
+        this.client = client; 
     }
 
     public synchronized IndexReader reopen() throws CorruptIndexException, IOException {
@@ -118,6 +105,19 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         return this;
     }
 
+    @Override
+    public Object getFieldCacheKey() {
+        
+        Object ref = fieldCacheRefs.get();
+        
+        if(ref == null){           
+            ref = new Integer(1);
+            fieldCacheRefs.set(ref);     
+        }
+        
+        return ref;        
+    }
+    
     public void clearCache() {
         
         if(docCounter.get() != null) docCounter.get().set(0);
@@ -126,6 +126,8 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         if(termEnumCache.get() != null) termEnumCache.get().clear();
         if(documentCache.get() != null) documentCache.get().clear();
         if(fieldNorms.get() != null) fieldNorms.get().clear();
+        if (fieldCacheRefs.get() != null)
+            fieldCacheRefs.set(new Integer(1));
     }
     
     protected void doClose() throws IOException {
@@ -183,19 +185,17 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
             return doc;
         }
 
-        byte[] docId = getDocIndexToDocId().get(docNum);
+        String docId = getDocIndexToDocId().get(docNum);
 
-        if (docId == null){
+        if (docId == null)
             return null;
-        }
 
+        Map<Integer, String> keyMap = new HashMap<Integer, String>();
 
-        Map<byte[], byte[]> keyMap = new ConcurrentSkipListMap<byte[], byte[]>(CassandraUtils.byteArrayComparator);
-
-        keyMap.put(CassandraUtils.hashKeyBytes(indexName, CassandraUtils.delimeterBytes , docId), docId);
+        keyMap.put(docNum, CassandraUtils.hashKey(indexName + CassandraUtils.delimeter + docId));
 
         
-        List<ByteBuffer> fieldNames = null;
+        List<byte[]> fieldNames = null;
         
         // Special field selector used to carry list of other docIds to cache in
         // Parallel for Solr Performance  
@@ -213,23 +213,23 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
                 if (getDocumentCache().containsKey(otherDocNum))
                     continue;
 
-                byte[] docKey = getDocIndexToDocId().get(otherDocNum);
+                String docKey = getDocIndexToDocId().get(otherDocNum);
 
                 if (docKey == null)
                     continue;
 
-                keyMap.put(CassandraUtils.hashKeyBytes(indexName, CassandraUtils.delimeterBytes, docKey), docKey);
+                keyMap.put(otherDocNum, CassandraUtils.hashKey(indexName + CassandraUtils.delimeter + docKey));
             }           
         }
         
         ColumnParent columnParent = new ColumnParent();
-         columnParent.setColumn_family(context.getDocumentColumnFamily());
+        columnParent.setColumn_family(CassandraUtils.docColumnFamily);
 
         SlicePredicate slicePredicate = new SlicePredicate();
         
         if (fieldNames == null || fieldNames.size() == 0) {
             // get all columns ( except this skips meta info )
-        	slicePredicate.setSlice_range(new SliceRange(ByteBuffer.wrap(new byte[] {}), ByteBuffer.wrap(CassandraUtils.finalTokenBytes), false, 100));
+            slicePredicate.setSlice_range(new SliceRange(new byte[] {}, CassandraUtils.finalToken.getBytes("UTF-8"), false, 100));
         } else {
             
             slicePredicate.setColumn_names(fieldNames);
@@ -239,29 +239,15 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         long start = System.currentTimeMillis();
 
         try {
-        	
-        	
-//        	byte[][] test = keyMap.keySet().toArray(new byte[][]{});
-        	
-        	List<ByteBuffer> keys = new ArrayList<ByteBuffer>(keyMap.size());
-        	
-        	for(byte[] key: keyMap.keySet()){
-        		keys.add(ByteBuffer.wrap(key));
-        	}
-        	
-        	//TODO TN check why this is a 2d array
-            Map<ByteBuffer, List<ColumnOrSuperColumn>> docMap = context.getClient().multiget_slice(keys, columnParent, slicePredicate, context.getConsistencyLevel());
+            Map<String, List<ColumnOrSuperColumn>> docMap = client.multiget_slice(CassandraUtils.keySpace, Arrays.asList(keyMap.values().toArray(
+                    new String[] {})), columnParent, slicePredicate, ConsistencyLevel.ONE);
 
-            if(keyMap.size() != docMap.size()){
-                logger.warn("Missing documents in multiget_slice call");
-            }
-            
-            for (Map.Entry<ByteBuffer, List<ColumnOrSuperColumn>> entry : docMap.entrySet()) {
+            for (Map.Entry<Integer, String> key : keyMap.entrySet()) {
 
-                List<ColumnOrSuperColumn> cols = entry.getValue();
+                List<ColumnOrSuperColumn> cols = docMap.get(key.getValue());
 
                 if (cols == null) {
-                    logger.warn("Missing document in multiget_slice for: " + new String(entry.getKey().array(),"UTF-8"));
+                    logger.warn("Missing document in multiget_slice for: " + key.getValue());
                     continue;
                 }
 
@@ -270,28 +256,28 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
                 for (ColumnOrSuperColumn col : cols) {
 
                     Field field = null;
-                    String fieldName = new String(col.column.getName());
+                    String fieldName = new String(col.column.name);
 
                     //Incase __META__ slips through
-                    if(Arrays.equals(col.column.getName(),CassandraUtils.documentMetaField.getBytes())){
+                    if(Arrays.equals(col.column.name,CassandraUtils.documentMetaField.getBytes())){
                         logger.debug("Filtering out __META__ key");
                         continue;
                     }
                     
                     byte[] value;
 
-                    if (col.column.getValue()[col.column.getValue().length - 1] != Byte.MAX_VALUE && col.column.getValue()[col.column.getValue().length - 1] != Byte.MIN_VALUE) {
+                    if (col.column.value[col.column.value.length - 1] != Byte.MAX_VALUE && col.column.value[col.column.value.length - 1] != Byte.MIN_VALUE) {
                         throw new CorruptIndexException("Lucandra field is not properly encoded: "+docId+"("+fieldName+")");
                    
-                    } else if (col.column.getValue()[col.column.getValue().length - 1] == Byte.MAX_VALUE) { //Binary
-                        value = new byte[col.column.getValue().length - 1];
-                        System.arraycopy(col.column.getValue(), 0, value, 0, col.column.getValue().length - 1);
+                    } else if (col.column.value[col.column.value.length - 1] == Byte.MAX_VALUE) { //Binary
+                        value = new byte[col.column.value.length - 1];
+                        System.arraycopy(col.column.value, 0, value, 0, col.column.value.length - 1);
 
                         field = new Field(fieldName, value, Store.YES);
                         cacheDoc.add(field);
-                    } else if (col.column.getValue()[col.column.getValue().length - 1] == Byte.MIN_VALUE) { //String
-                        value = new byte[col.column.getValue().length - 1];
-                        System.arraycopy(col.column.getValue(), 0, value, 0, col.column.getValue().length - 1);
+                    } else if (col.column.value[col.column.value.length - 1] == Byte.MIN_VALUE) { //String
+                        value = new byte[col.column.value.length - 1];
+                        System.arraycopy(col.column.value, 0, value, 0, col.column.value.length - 1);
                         
                         //Check for multi-fields
                         String fieldString = new String(value,"UTF-8");
@@ -308,17 +294,15 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
                             cacheDoc.add(field);
                         }
                     }
+
+                    
                 }
                 
                 //Mark the required doc
-                int thisDocNum = getDocumentNumber(keyMap.get(entry.getKey().array()));
-                
-                if(thisDocNum == docNum){
-
+                if(key.getKey().equals(docNum))
                     doc = cacheDoc;
-                }
                 
-                getDocumentCache().put(thisDocNum,cacheDoc);
+                getDocumentCache().put(key.getKey(),cacheDoc);
             }
 
             long end = System.currentTimeMillis();
@@ -328,7 +312,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
             return doc;
 
         } catch (Exception e) {
-            throw new IOException(e);
+            throw new IOException(e.getLocalizedMessage());
         }
 
     }
@@ -341,9 +325,9 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     @Override
     public TermFreqVector getTermFreqVector(int docNum, String field) throws IOException {
 
-        byte[] docId = getDocIndexToDocId().get(docNum);
+        String docId = getDocIndexToDocId().get(docNum);
 
-        TermFreqVector termVector = new lucandra.TermFreqVector(indexName, field, docId, context);
+        TermFreqVector termVector = new lucandra.TermFreqVector(indexName, field, docId, client);
 
         return termVector;
     }
@@ -434,16 +418,14 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     }
 
     public int addDocument(SuperColumn docInfo, String field) {
-        byte[] id =  docInfo.getName();
-        
-        if(logger.isDebugEnabled()){
-            try {
-                logger.debug("adding docId "+new String(id,"UTF-8"));
-            } catch (UnsupportedEncodingException e) {
-                throw new RuntimeException(e);
-            }
+
+        String id;
+        try {
+            id = new String(docInfo.name, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            throw new IllegalStateException("Cant make docId a string");
         }
-        
+
         Integer idx = getDocIdToDocIndex().get(id);
 
         if (idx == null) {
@@ -457,11 +439,11 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
             
             Byte norm = null;
             for(Column c : docInfo.columns){
-                if(Arrays.equals(c.getName(), CassandraUtils.normsKey.getBytes())){
-                    if(c.getValue().length != 1)
+                if(Arrays.equals(c.name, CassandraUtils.normsKey.getBytes())){
+                    if(c.value.length != 1)
                         throw new IllegalStateException("Norm for field "+field+" must be a single byte");
                     
-                    norm = c.getValue()[0];
+                    norm = c.value[0];
                 }                 
             }
             
@@ -470,26 +452,17 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
             
             byte[] norms = getFieldNorms().get(field);
             
+            if (norms == null) 
+                norms = new byte[1024];                         
 
-            if (norms == null) {
-
-                norms = new byte[1024];
-
-                norms[idx] = norm; 
-            } else {
-
-                // extend array
-                if ((idx + 1) >= norms.length) {
-
-                    byte[] _norms = new byte[(norms.length * 2) < numDocs ? (norms.length * 2) : (numDocs + 1)];
-                    System.arraycopy(norms, 0, _norms, 0, norms.length);
-                    norms = _norms;
-                }
-
-                // find next empty position
-                norms[idx] = norm;
-
+            while(norms.length <= idx && norms.length < numDocs ){
+                byte[] _norms = new byte[(norms.length * 2) < numDocs ? (norms.length * 2) : (numDocs + 1)];
+                System.arraycopy(norms, 0, _norms, 0, norms.length);
+                norms = _norms;           
             }
+
+            // find next empty position
+            norms[idx] = norm;
 
             getFieldNorms().put(field, norms);            
         }
@@ -498,20 +471,26 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     }
     
     public int getDocumentNumber(byte[] docId){
-       
-        return getDocIdToDocIndex().get(docId);
+        String id;
+        try {
+            id = new String(docId, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            throw new IllegalStateException("Cant make docId a string");
+        }
+        
+        return getDocIdToDocIndex().get(id);
     }
     
-    public byte[] getDocumentId(int docNum) {
+    public String getDocumentId(int docNum) {
         return getDocIndexToDocId().get(docNum);
     }
 
-    public byte[] getIndexName() {
+    public String getIndexName() {
         return indexName;
     }
 
-    public IndexContext getIndexContext() {
-        return context;
+    public Cassandra.Iface getClient() {
+        return client;
     }
 
     public LucandraTermEnum checkTermCache(Term term) {
@@ -544,22 +523,22 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
        return true;
     }
 
-    public Map<Integer, byte[]> getDocIndexToDocId() {
-        Map<Integer, byte[]> c = docIndexToDocId.get();
+    public Map<Integer, String> getDocIndexToDocId() {
+        Map<Integer, String> c = docIndexToDocId.get();
         
         if(c == null){
-            c = new HashMap<Integer,byte[]>();
+            c = new HashMap<Integer,String>();
             docIndexToDocId.set(c);
         }
         
         return c;
     }
     
-    private Map<byte[],Integer> getDocIdToDocIndex(){
-        Map<byte[], Integer> c = docIdToDocIndex.get();
-
+    private Map<String,Integer> getDocIdToDocIndex(){
+        Map<String, Integer> c = docIdToDocIndex.get();
+        
         if(c == null){
-            c = new ConcurrentSkipListMap<byte[],Integer>(CassandraUtils.byteArrayComparator);
+            c = new HashMap<String,Integer>();
             docIdToDocIndex.set(c);
         }
         
