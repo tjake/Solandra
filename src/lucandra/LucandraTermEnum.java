@@ -232,7 +232,7 @@ public class LucandraTermEnum extends TermEnum {
 
         termDocFreqBuffer = new TreeMap<Term, List<ColumnOrSuperColumn>>();
 
-        ColumnParent columnParent = new ColumnParent(CassandraUtils.termVecColumnFamily);        
+        ColumnParent columnParent = new ColumnParent(context.getTermColumnFamily());        
         SlicePredicate slicePredicate = new SlicePredicate();
        
         KeyRange kr = new KeyRange();
@@ -344,7 +344,7 @@ public class LucandraTermEnum extends TermEnum {
     void loadFilteredTerms(Term term, List<ByteBuffer> docNums)  {
         long start = System.currentTimeMillis();
         ColumnParent parent = new ColumnParent();
-        parent.setColumn_family(CassandraUtils.termVecColumnFamily);
+        parent.setColumn_family(context.getTermColumnFamily());
 
         ByteBuffer key;
         try {

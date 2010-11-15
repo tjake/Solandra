@@ -79,7 +79,7 @@ public class IndexWriter {
         }
         this.context = context;
         autoCommit  = true;
-        docAllColumnPath = new ColumnPath(CassandraUtils.docColumnFamily);
+        docAllColumnPath = new ColumnPath(context.getDocumentColumnFamily());
             
     }
 
@@ -222,7 +222,7 @@ public class IndexWriter {
                         termEntry.getValue().put(CassandraUtils.normsKey, bnorm );
                     }
                     
-                    CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.termVecColumnFamily, docId, key, null,termEntry.getValue());                    
+                    CassandraUtils.addToMutationMap(getMutationMap(), context.getTermColumnFamily(), docId, key, null,termEntry.getValue());                    
                 }
             }
 
@@ -237,7 +237,7 @@ public class IndexWriter {
                 termMap.put(CassandraUtils.termFrequencyKey, CassandraUtils.emptyArray);
                 termMap.put(CassandraUtils.positionVectorKey, CassandraUtils.emptyArray);
                 
-                CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.termVecColumnFamily, docId, key, null,termMap);
+                CassandraUtils.addToMutationMap(getMutationMap(), context.getTermColumnFamily(), docId, key, null,termMap);
                
             }
 
@@ -254,7 +254,7 @@ public class IndexWriter {
                 
                 ByteBuffer key = CassandraUtils.hashKeyBytes(indexName,CassandraUtils.delimeterBytes,docId);
                 
-                CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.docColumnFamily, field.name().getBytes("UTF-8"), key, value, null);
+                CassandraUtils.addToMutationMap(getMutationMap(), context.getDocumentColumnFamily(), field.name().getBytes("UTF-8"), key, value, null);
                             
             }
         }
@@ -262,7 +262,7 @@ public class IndexWriter {
         //Finally, Store meta-data so we can delete this document
         ByteBuffer key = CassandraUtils.hashKeyBytes(indexName,CassandraUtils.delimeterBytes,docId);
         
-        CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.docColumnFamily, CassandraUtils.documentMetaField.getBytes(), key, CassandraUtils.toBytes(allIndexedTerms), null);
+        CassandraUtils.addToMutationMap(getMutationMap(), context.getDocumentColumnFamily(), CassandraUtils.documentMetaField.getBytes(), key, CassandraUtils.toBytes(allIndexedTerms), null);
         
        
         
@@ -305,7 +305,7 @@ public class IndexWriter {
     public void deleteDocuments(Term term) throws CorruptIndexException, IOException {
         try {
                        
-            ColumnParent cp = new ColumnParent(CassandraUtils.termVecColumnFamily);
+            ColumnParent cp = new ColumnParent(context.getTermColumnFamily());
             ByteBuffer key = CassandraUtils.hashKeyBytes(indexName,CassandraUtils.delimeterBytes,term.field().getBytes("UTF-8"), CassandraUtils.delimeterBytes, term.text().getBytes("UTF-8"));
             
             List<ColumnOrSuperColumn> docs = context.getClient().get_slice(key, cp, new SlicePredicate().setSlice_range(new SliceRange(CassandraUtils.emptyByteArray, CassandraUtils.emptyByteArray, true,Integer.MAX_VALUE)), context.getConsistencyLevel());
@@ -341,7 +341,7 @@ public class IndexWriter {
         
         ByteBuffer key =  CassandraUtils.hashKeyBytes(indexName,CassandraUtils.delimeterBytes,docIdBytes);
         
-        ColumnOrSuperColumn column = context.getClient().get(key, CassandraUtils.metaColumnPath, context.getConsistencyLevel());
+        ColumnOrSuperColumn column = context.getClient().get(key, context.getMetaColumnPath(), context.getConsistencyLevel());
         
         List<Term> terms = (List<Term>) CassandraUtils.fromBytes(column.column.value);
     
@@ -349,7 +349,7 @@ public class IndexWriter {
             
             key = CassandraUtils.hashKeyBytes(indexName,CassandraUtils.delimeterBytes,term.field().getBytes("UTF-8"), CassandraUtils.delimeterBytes, term.text().getBytes("UTF-8"));
             
-            CassandraUtils.addToMutationMap(getMutationMap(), CassandraUtils.termVecColumnFamily, docIdBytes, key, null, null);                                        
+            CassandraUtils.addToMutationMap(getMutationMap(), context.getTermColumnFamily(), docIdBytes, key, null, null);                                        
         }
            
         if(autoCommit)

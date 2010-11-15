@@ -64,8 +64,8 @@ import org.apache.thrift.transport.TTransportException;
 public class CassandraUtils {
 
     public static final String keySpace            = System.getProperty("lucandra.keyspace", "Lucandra");
-    public static final String termVecColumnFamily = "TermInfo";
-    public static final String docColumnFamily     = "Documents";
+//    public static final String termVecColumnFamily = "TermInfo";
+//    public static final String docColumnFamily     = "Documents";
     
     public static final String positionVectorKey   = "Position";
     public static final String offsetVectorKey     = "Offsets";
@@ -95,11 +95,11 @@ public class CassandraUtils {
     
     public static final boolean indexHashingEnabled = Boolean.valueOf(System.getProperty("index.hashing","true"));
     
-    public static final ColumnPath metaColumnPath;
+//    public static final ColumnPath metaColumnPath;
     static{
         try {
             delimeterBytes = delimeter.getBytes("UTF-8");
-            metaColumnPath = new ColumnPath(CassandraUtils.docColumnFamily).setColumn(documentMetaField.getBytes());
+//            metaColumnPath = new ColumnPath(context.getDocumentColumnFamily()).setColumn(documentMetaField.getBytes());
             finalTokenBytes = ByteBuffer.wrap(finalToken.getBytes("UTF-8"));
             normsKeyBytes = ByteBuffer.wrap(normsKey.getBytes());
             documentMetaFieldBytes = ByteBuffer.wrap(documentMetaField.getBytes());

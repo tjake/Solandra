@@ -45,7 +45,7 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
         // Get all terms
         ColumnOrSuperColumn column;
         try {
-            column = context.getClient().get( key, CassandraUtils.metaColumnPath, context.getConsistencyLevel());
+            column = context.getClient().get( key, context.getMetaColumnPath(), context.getConsistencyLevel());
 
             List<Term> allTermList = (List<Term>) CassandraUtils.fromBytes(column.column.value);
             List<ByteBuffer> keys        = new ArrayList<ByteBuffer>();
@@ -65,7 +65,7 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
 
             
             //Fetch all term vectors in this field
-            Map<ByteBuffer, List<ColumnOrSuperColumn>> allTermInfo = context.getClient().multiget_slice( keys, new ColumnParent(CassandraUtils.termVecColumnFamily).setSuper_column(docId), new SlicePredicate().setSlice_range(new SliceRange(CassandraUtils.emptyByteArray, CassandraUtils.emptyByteArray, false, Integer.MAX_VALUE)), ConsistencyLevel.ONE);
+            Map<ByteBuffer, List<ColumnOrSuperColumn>> allTermInfo = context.getClient().multiget_slice( keys, new ColumnParent(context.getTermColumnFamily()).setSuper_column(docId), new SlicePredicate().setSlice_range(new SliceRange(CassandraUtils.emptyByteArray, CassandraUtils.emptyByteArray, false, Integer.MAX_VALUE)), ConsistencyLevel.ONE);
             
             terms         = new String[allTermInfo.size()];
             freqVec       = new int[allTermInfo.size()];

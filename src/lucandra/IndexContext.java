@@ -39,7 +39,7 @@ public class IndexContext {
 	private final ConsistencyLevel consistencyLevel;
 	private final String termColumnFamily;
 	private final String documentColumnFamily;
-	private final ColumnPath documentPath;
+//	private final ColumnPath documentPath;
 	private final ColumnPath metaColumnPath;
 
 	public IndexContext(Iface client, ConsistencyLevel consistencyLevel,
@@ -50,17 +50,10 @@ public class IndexContext {
 		this.termColumnFamily = termColumnFamily;
 		this.documentColumnFamily = documentColumnFamily;
 
-		try {
-			this.documentPath = new ColumnPath(documentColumnFamily)
-					.setColumn(CassandraUtils.documentMetaField
-							.getBytes("UTF-8"));
-			this.metaColumnPath = new ColumnPath(documentColumnFamily)
-					.setColumn(CassandraUtils.documentMetaField
-							.getBytes("UTF-8"));
-		} catch (UnsupportedEncodingException e) {
-			// should never happen
-			throw new RuntimeException(e);
-		}
+		//			this.documentPath = new ColumnPath(documentColumnFamily)
+//					.setColumn(CassandraUtils.documentMetaField
+//							.getBytes("UTF-8"));
+		 metaColumnPath = new ColumnPath(documentColumnFamily).setColumn(CassandraUtils.documentMetaField.getBytes());
 	}
 
 	public IndexContext(Iface client, ConsistencyLevel consistencyLevel) {
@@ -95,13 +88,6 @@ public class IndexContext {
 		return documentColumnFamily;
 	}
 
-	/**
-	 * 
-	 * @return
-	 */
-	public ColumnPath getDocumentColumnPath() {
-		return documentPath;
-	}
 
 	/**
 	 * 
