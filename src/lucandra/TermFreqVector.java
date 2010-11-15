@@ -113,7 +113,7 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
             }
 
             readCommands.add(new SliceFromReadCommand(CassandraUtils.keySpace, key, new ColumnParent().setColumn_family(CassandraUtils.termVecColumnFamily)
-                    .setSuper_column( CassandraUtils.writeVInt(docI)), FBUtilities.EMPTY_BYTE_BUFFER, FBUtilities.EMPTY_BYTE_BUFFER, false, 1024));
+                    .setSuper_column((ByteBuffer) CassandraUtils.writeVInt(docI)), FBUtilities.EMPTY_BYTE_BUFFER, FBUtilities.EMPTY_BYTE_BUFFER, false, 1024));
         }
 
         try {
