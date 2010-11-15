@@ -67,6 +67,7 @@ public class NumericRangeTests {
     @BeforeClass
     public static void writeIndexes() throws TTransportException, CorruptIndexException, IOException {
         
+    	
         connection  = CassandraUtils.createConnection();
 
         //clean up indexes before we run our test

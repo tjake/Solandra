@@ -20,6 +20,7 @@
 package lucandra;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -44,11 +45,11 @@ public class LucandraFilter extends Filter {
     public DocIdSet getDocIdSet(IndexReader reader) throws IOException {
         OpenBitSet result = new OpenBitSet(reader.maxDoc());
 
-        Map<Integer, String> filterMap = ((lucandra.IndexReader) reader).getDocIndexToDocId();
+        Map<Integer, ByteBuffer> filterMap = ((lucandra.IndexReader) reader).getDocIndexToDocId();
         
        
-        List<String> filteredValues = new ArrayList<String>();
-        for(Map.Entry<Integer, String> entry : filterMap.entrySet()){          
+        List<ByteBuffer> filteredValues = new ArrayList<ByteBuffer>();
+        for(Map.Entry<Integer, ByteBuffer> entry : filterMap.entrySet()){          
             filteredValues.add(entry.getValue());
         }
 

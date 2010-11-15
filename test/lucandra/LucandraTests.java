@@ -19,16 +19,9 @@
  */
 package lucandra;
 
-import java.util.List;
-
 import junit.framework.TestCase;
 
 import org.apache.cassandra.thrift.Cassandra;
-import org.apache.cassandra.thrift.ColumnParent;
-import org.apache.cassandra.thrift.ConsistencyLevel;
-import org.apache.cassandra.thrift.KeySlice;
-import org.apache.cassandra.thrift.SlicePredicate;
-import org.apache.cassandra.thrift.SliceRange;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.cjk.CJKAnalyzer;
@@ -52,7 +45,7 @@ import org.apache.lucene.search.highlight.SimpleHTMLFormatter;
 import org.apache.lucene.search.highlight.TokenSources;
 import org.apache.lucene.util.Version;
 
-public class LucandraTests extends TestCase {
+public class LucandraTests extends LucandraTestHelper {
 
     private static final String indexName = String.valueOf(System.nanoTime());
     private static final Analyzer analyzer = new CJKAnalyzer(Version.LUCENE_CURRENT);
@@ -62,11 +55,14 @@ public class LucandraTests extends TestCase {
     private static Cassandra.Iface client;
     static {
         try {
+        	setupServer();
             client = CassandraUtils.createConnection();
         } catch (Exception e) {
             e.printStackTrace();
             fail(e.getLocalizedMessage());
         }
+        
+      
     }
 
     private static final IndexWriter indexWriter = new IndexWriter(indexName, client);
@@ -84,27 +80,6 @@ public class LucandraTests extends TestCase {
         doc2.add(f2);
         indexWriter.addDocument(doc2, analyzer);
 
-        String start = CassandraUtils.hashKey(indexName + CassandraUtils.delimeter + "key" + CassandraUtils.delimeter);
-        String finish = "";
-        
-        ColumnParent columnParent = new ColumnParent(CassandraUtils.termVecColumnFamily);
-        SlicePredicate slicePredicate = new SlicePredicate();
-
-        // Get all columns
-        SliceRange sliceRange = new SliceRange(new byte[] {}, new byte[] {}, true, Integer.MAX_VALUE);
-        slicePredicate.setSlice_range(sliceRange);
-
-        List<KeySlice> columns = client.get_range_slice(CassandraUtils.keySpace, columnParent, slicePredicate, start, finish, 5000, ConsistencyLevel.ONE);
-
-        int matchingColumns = 0;
-        for(KeySlice ks : columns){
-            String termStr = ks.getKey().substring(ks.getKey().indexOf(CassandraUtils.delimeter) + CassandraUtils.delimeter.length());
-            Term term = CassandraUtils.parseTerm(termStr);
-            
-            if(term.field().equals("key") && ks.getKey().equals(CassandraUtils.hashKey(indexName+CassandraUtils.delimeter+term.field()+CassandraUtils.delimeter+term.text())))
-                matchingColumns++;
-              
-        }
 
         // Index 10 documents to test order
         for (int i = 300; i >= 200; i--) {
@@ -120,11 +95,6 @@ public class LucandraTests extends TestCase {
         d3.add(new Field("key", new String("samefield"), Field.Store.YES, Field.Index.ANALYZED));
         d3.add(new Field("url", "http://www.google.com", Field.Store.YES, Field.Index.NOT_ANALYZED));
         indexWriter.addDocument(d3, analyzer);
-
-        
-        //
-        assertEquals(5, matchingColumns);
-        assertEquals(104, indexWriter.docCount());
         
     }
 
@@ -426,7 +396,6 @@ public class LucandraTests extends TestCase {
     }
     
     public void testLucandraTermDocs() throws Exception {
-       
         IndexWriter indexWriter = new IndexWriter(indexName, client);
  
         int docSize = 100;
@@ -461,4 +430,6 @@ public class LucandraTests extends TestCase {
         TopDocs topDocs = searcher.search(query, 1000);
         assertEquals(topDocs.totalHits, docSize);
     }
+    
+    
 }

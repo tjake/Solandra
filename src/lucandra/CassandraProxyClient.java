@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Random;
 
 import org.apache.cassandra.thrift.Cassandra;
+import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.TokenRange;
 import org.apache.cassandra.thrift.UnavailableException;
 import org.apache.log4j.Logger;
@@ -102,7 +103,8 @@ public class CassandraProxyClient implements java.lang.reflect.InvocationHandler
         return client;
     }
     
-    private void setClient(Cassandra.Iface client){
+    private void setClient(Cassandra.Iface client)
+    {
         clientPool.set(client);
     }
     
@@ -129,6 +131,8 @@ public class CassandraProxyClient implements java.lang.reflect.InvocationHandler
             } catch (TException e) {
                 breaker.failure();
                 attemptReconnect();
+            } catch (InvalidRequestException e) {
+               throw new RuntimeException(e);
             }
         }
         
@@ -225,8 +229,9 @@ public class CassandraProxyClient implements java.lang.reflect.InvocationHandler
                 if(breaker.allow()){                
                     result = m.invoke(client, args);
                     breaker.success();
-		    return result;
+                    return result;
                 }else{
+                    
                     while(!breaker.allow()){
                         Thread.sleep(1050); //sleep and try again
                     }
