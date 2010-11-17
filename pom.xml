@@ -2,7 +2,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>lucandra</groupId>
 	<artifactId>lucandra</artifactId>
-	<version>1.0.0-0.7.0-beta3</version>
+	<version>1.0.1-1.7.0-beta3-SNAPSHOT</version>
 	<properties>
 		<lucene.version>2.9.3</lucene.version>
 		<solr.version>1.4.0</solr.version>
