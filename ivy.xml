@@ -21,8 +21,8 @@
 
   <dependencies>
     <dependency org="junit" name="junit" rev="4.6" conf="* -> *,!sources,!javadoc" />
-    <dependency org="org.slf4j" name="slf4j-api" rev="1.5.8" conf="* -> *,!sources,!javadoc"/>
-    <dependency org="org.slf4j" name="slf4j-log4j12" rev="1.5.8" conf="* -> *,!sources,!javadoc"/>
+    <dependency org="org.slf4j" name="slf4j-api" rev="1.6.1" conf="* -> *,!sources,!javadoc"/>
+    <dependency org="org.slf4j" name="slf4j-log4j12" rev="1.6.1" conf="* -> *,!sources,!javadoc"/>
     <dependency org="org.antlr" name="antlr" rev="3.2" conf="* -> *,!sources,!javadoc" />
     <dependency org="commons-cli" name="commons-cli" rev="1.1" conf="* -> *,!sources,!javadoc"/>
     <dependency org="commons-lang" name="commons-lang" rev="2.4" conf="* -> *,!sources,!javadoc"/>
