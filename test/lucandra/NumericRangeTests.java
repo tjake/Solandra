@@ -23,10 +23,11 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
-import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.Cassandra.Iface;
 import org.apache.lucene.analysis.SimpleAnalyzer;
 import org.apache.lucene.document.Document;
@@ -36,10 +37,15 @@ import org.apache.lucene.document.Field.Index;
 import org.apache.lucene.document.Field.Store;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.Term;
+import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.NumericRangeQuery;
 import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.Sort;
+import org.apache.lucene.search.SortField;
+import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.thrift.transport.TTransportException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -52,6 +58,12 @@ import org.junit.Test;
  * 
  */
 public class NumericRangeTests {
+    private static final String LONG = "long";
+    private static final String STRING1 = "str1";
+    private static final String STRING2 = "str2";
+
+    private static final String STRING1_VAL = "testval1";
+    private static final String STRING2_VAL = "testval2";
 
     
     private static Iface connection;
@@ -80,8 +92,10 @@ public class NumericRangeTests {
 
         first = new Document();
         first.add(new Field("Id", "first", Store.YES, Index.ANALYZED));
-        
+        first.add(new Field(STRING1,STRING1_VAL, Store.NO, Index.NOT_ANALYZED));
+        first.add(new Field(STRING2,STRING2_VAL, Store.NO, Index.NOT_ANALYZED));
 
+        
         NumericField numeric = new NumericField("long", 
                 Store.YES, true);
         numeric.setLongValue(low);
@@ -89,14 +103,20 @@ public class NumericRangeTests {
 
         second = new Document();
         second.add(new Field("Id", "second", Store.YES, Index.ANALYZED));
+        second.add(new Field(STRING1,STRING1_VAL, Store.NO, Index.NOT_ANALYZED));
+        second.add(new Field(STRING2,STRING2_VAL, Store.NO, Index.NOT_ANALYZED));
 
+        
         numeric = new NumericField("long",  Store.YES, true);
         numeric.setLongValue(mid);
         second.add(numeric);
 
         third = new Document();
         third.add(new Field("Id", "third", Store.YES, Index.ANALYZED));
+        third.add(new Field(STRING1,STRING1_VAL, Store.NO, Index.NOT_ANALYZED));
+        third.add(new Field(STRING2,STRING2_VAL, Store.NO, Index.NOT_ANALYZED));
 
+        
         numeric = new NumericField("long",  Store.YES, true);
         numeric.setLongValue(high);
         third.add(numeric);
@@ -328,8 +348,67 @@ public class NumericRangeTests {
         assertTrue(results.contains("first"));
         assertTrue(results.contains("second"));
         assertTrue(results.contains("third"));
+    }
+    
+    @Test
+    public void testDocumentOrderingSearchTwice() throws Exception {
 
+        // now we'll query from the middle inclusive
+
+        BooleanQuery query = new BooleanQuery();
+
+        query.add(new TermQuery(new Term(STRING1, STRING1_VAL)), Occur.SHOULD);
+
+        query.add(new TermQuery(new Term(STRING2, "randomval")), Occur.SHOULD);
+
+        // sort by long descending
+        SortField sort = new SortField(LONG, SortField.LONG, true);
+
+        IndexReader reader = new IndexReader(indexName, connection);
+
+        IndexSearcher searcher = new IndexSearcher(reader);
+
+        TopDocs docs = searcher.search(query, null, 1000, new Sort(sort));
+
+        assertEquals(3, docs.totalHits);
+
+        List<String> results = new ArrayList<String>();
+
+        for (ScoreDoc doc : docs.scoreDocs) {
+            Document returned = searcher.doc(doc.doc);
+            results.add(returned.get("Id"));
+        }
+
+        assertEquals("third", results.get(0));
+        assertEquals("second", results.get(1));
+        assertEquals("first", results.get(2));
+
+        query = new BooleanQuery();
+
+        query.add(new TermQuery(new Term(STRING1, "fooval")), Occur.SHOULD);
+
+        query.add(new TermQuery(new Term(STRING2, STRING2_VAL)), Occur.SHOULD);
+        
+        reader.reopen();
+        
+        searcher = new IndexSearcher(reader);
+
+        docs = searcher.search(query, null, 1000, new Sort(sort));
+
+        assertEquals(3, docs.totalHits);
+
+        results = new ArrayList<String>();
+
+        for (ScoreDoc doc : docs.scoreDocs) {
+            Document returned = searcher.doc(doc.doc);
+            results.add(returned.get("Id"));
+        }
+
+        assertEquals("third", results.get(0));
+        assertEquals("second", results.get(1));
+        assertEquals("first", results.get(2));
 
     }
+
 
 }

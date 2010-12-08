@@ -132,8 +132,7 @@ public class LucandraTests extends TestCase {
         
         for(int i=0; i<fields.length; i++){          
             assertEquals(tests[i],fields[i].stringValue());
-        }        
-               
+        }                     
     }
 
     public void testKeywordField() throws Exception {
@@ -144,8 +143,7 @@ public class LucandraTests extends TestCase {
         TermQuery tq = new TermQuery(new Term("url", "http://www.google.com"));
         TopDocs topDocs = searcher.search(tq, 10);
         
-        assertEquals(topDocs.totalHits,1);
-        
+        assertEquals(topDocs.totalHits,1);      
     }
     
     public void testDelete() throws Exception {

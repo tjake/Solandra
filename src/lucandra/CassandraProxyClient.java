@@ -153,7 +153,7 @@ public class CassandraProxyClient implements java.lang.reflect.InvocationHandler
                 logger.info("Connected to cassandra at "+host+":"+port);
                 return client;
             } catch (TTransportException e) {            
-                logger.warn("Connection failed to Cassandra node: "+host+":"+port);
+                logger.warn("Connection failed to Cassandra node: "+host+":"+port+" "+e.getMessage());
             }
         }
         
