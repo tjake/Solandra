@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.cassandra.thrift.Cassandra;
@@ -111,7 +112,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         Object ref = fieldCacheRefs.get();
         
         if(ref == null){           
-            ref = new Integer(1);
+            ref = UUID.randomUUID();
             fieldCacheRefs.set(ref);     
         }
         
@@ -127,7 +128,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         if(documentCache.get() != null) documentCache.get().clear();
         if(fieldNorms.get() != null) fieldNorms.get().clear();
         if (fieldCacheRefs.get() != null)
-            fieldCacheRefs.set(new Integer(1));
+            fieldCacheRefs.set(UUID.randomUUID());
     }
     
     protected void doClose() throws IOException {

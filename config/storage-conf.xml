@@ -180,7 +180,7 @@
   </DataFileDirectories>
   <CalloutLocation>/var/lib/cassandra/callouts</CalloutLocation>
   <StagingFileDirectory>/var/lib/cassandra/staging</StagingFileDirectory>
-
+  <SavedCachesDirectory>/var/lib/cassandra/saved_caches</SavedCachesDirectory>
 
   <!--
    ~ Addresses of hosts that are deemed contact points. Cassandra nodes
