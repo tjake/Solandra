@@ -153,19 +153,6 @@ public class SolandraCoreContainer extends CoreContainer {
             IndexSchema schema = new IndexSchema(solrConfig, indexName, stream);
             
             core = new SolrCore(indexName, "/tmp",solrConfig,schema, null);
-
-//            //Something in solr 1.4.1 requires this inform
-//            for(Map.Entry<String, SolrRequestHandler>  e : core.getRequestHandlers().entrySet())
-//            {                
-//                if(e.getValue() instanceof SolrCoreAware)
-//                {             
-//                    ((SolrCoreAware) e.getValue()).inform(core);
-//                }
-//            
-//                if(e.getValue() instanceof ResourceLoaderAware ) {
-//                    ((ResourceLoaderAware) e.getValue()).inform(core.getResourceLoader());
-//                }          
-//            }
             
             logger.debug("Loaded core from cassandra: "+indexName);
             

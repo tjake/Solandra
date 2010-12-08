@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
+import java.util.UUID;
 
 import org.apache.cassandra.db.IColumn;
 import org.apache.cassandra.db.ReadCommand;
@@ -130,7 +131,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
             docsHit.get().clear(0, numDocs);
         
         if (fieldCacheRefs.get() != null)
-            fieldCacheRefs.set(new Integer(1));
+            fieldCacheRefs.set(UUID.randomUUID());
         
         
     }
@@ -324,7 +325,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         Object ref = fieldCacheRefs.get();
         
         if(ref == null){           
-            ref = new Integer(1);
+            ref = UUID.randomUUID();
             fieldCacheRefs.set(ref);     
         }
         
