@@ -149,7 +149,7 @@ public class SolandraComponent extends SearchComponent
                     throw new IOException("can't locate index");
 
                 InetAddress addr = addrs.get(random.nextInt(addrs.size()));
-                String shard = addr.getHostAddress() + ":8983/solr/" + indexName + "~" + i;
+                String shard = addr.getHostAddress() + ":8983/solandra/" + indexName + "~" + i;
 
                 logger.info("Adding shard(" + indexName + "): " + shard);
 
