@@ -373,7 +373,9 @@ public class CassandraUtils {
                 mutationMap.clear();
                 //if(logger.isDebugEnabled())
                 //    logger.debug("Inserted in " + (startTime - System.currentTimeMillis()) / 1000 + "ms");
-            } catch (TException e) {
+            } catch(TTransportException e) { 
+                try_again = true;
+            } catch (TException e) {                
                 throw new RuntimeException(e);
             } catch (InvalidRequestException e) {
                 throw new RuntimeException(e);

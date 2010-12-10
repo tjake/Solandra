@@ -225,7 +225,7 @@ public class CassandraProxyClient implements java.lang.reflect.InvocationHandler
                 if(breaker.allow()){                
                     result = m.invoke(client, args);
                     breaker.success();
-		    return result;
+                    return result;
                 }else{
                     while(!breaker.allow()){
                         Thread.sleep(1050); //sleep and try again
