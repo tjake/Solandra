@@ -438,30 +438,23 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         return termEnum;
     }
 
-    public void addDocumentNormalizations(Collection<IColumn> allDocs, String field) {
+    public void addDocumentNormalizations(LucandraTermInfo[] allDocs, String field) {
 
         Map<String, byte[]> fieldNorms = getFieldNorms();
        
         byte[] norms = fieldNorms.get(field);
 
-        for (IColumn docInfo : allDocs) {
+        for (LucandraTermInfo docInfo : allDocs) {
 
-            int idx = CassandraUtils.readVInt(docInfo.name());
+            int idx = docInfo.docId;
 
             if (idx > numDocs)
                 throw new IllegalStateException("numDocs reached");
 
             getDocsHit().set(idx);
             
-            Byte norm = null;
-            IColumn normCol = docInfo.getSubColumn(CassandraUtils.normsKeyBytes);
-            if (normCol != null) {
-                if (normCol.value().remaining() != 1)
-                    throw new IllegalStateException("Norm for field '" + field + "' must be a single byte, currently "+normCol.value().remaining());
-
-                norm = normCol.value().array()[normCol.value().position() +  normCol.value().arrayOffset()];
-            }
-
+            Byte norm = docInfo.norm;
+           
             if (norm == null)
                 norm = defaultNorm;
 

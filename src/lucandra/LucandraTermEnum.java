@@ -35,6 +35,7 @@ import org.apache.cassandra.db.ReadCommand;
 import org.apache.cassandra.db.Row;
 import org.apache.cassandra.db.SliceByNamesReadCommand;
 import org.apache.cassandra.db.SliceFromReadCommand;
+import org.apache.cassandra.db.SuperColumn;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.utils.ByteBufferUtil;
@@ -53,7 +54,7 @@ public class LucandraTermEnum extends TermEnum
     private Term[]                               termBuffer;
     private SortedMap<Term, Collection<IColumn>> termDocFreqBuffer;
     private SortedMap<Term, Collection<IColumn>> termCache;
-    private Map<Term, IColumn[]>                 termDocsCache;
+    private Map<Term, LucandraTermInfo[]>        termDocsCache;
 
     // number of sequential terms to read initially
     private final int                            maxInitSize    = 4;
@@ -433,8 +434,28 @@ public class LucandraTermEnum extends TermEnum
         logger.debug("loadFilterdTerms: " + term + "(" + termBuffer.length + ") took " + (end - start) + "ms");
 
     }
-
-    public final IColumn[] getTermDocFreq()
+    
+    public LucandraTermInfo[] convertTermInfo(Collection<IColumn> docs)
+    {
+        
+        LucandraTermInfo termInfo[] = new LucandraTermInfo[docs.size()];
+        
+        int i=0;
+        for(IColumn col : docs)
+        {
+            if(i==0 && col instanceof SuperColumn)
+                throw new IllegalStateException("TermInfo ColumnFamily is a of type Super: This is no longer supported, please see NEWS.txt");
+            
+            termInfo[i] = new LucandraTermInfo(CassandraUtils.readVInt(col.name()), col.value());
+            i++;
+        }
+        
+        
+        return termInfo;    
+    }
+    
+    
+    public final LucandraTermInfo[] getTermDocFreq()
     {
         if (termBuffer.length == 0)
             return null;
@@ -442,7 +463,7 @@ public class LucandraTermEnum extends TermEnum
         Term term = termBuffer[termPosition];
 
         // Memoize
-        IColumn[] docIds = null;
+        LucandraTermInfo[] docIds = null;
 
         if(termDocsCache != null)
             docIds = termDocsCache.get(term);
@@ -450,15 +471,14 @@ public class LucandraTermEnum extends TermEnum
         if(docIds != null)
             return docIds;
 
-        Collection<IColumn> termDocs = termDocFreqBuffer.get(term);
+        docIds = convertTermInfo(termDocFreqBuffer.get(term));
 
         // set normalizations
-        indexReader.addDocumentNormalizations(termDocs, currentField);
+        indexReader.addDocumentNormalizations(docIds, currentField);
 
-        docIds = termDocs.toArray(new IColumn[] {});
-
+       
         if(termDocsCache == null)
-            termDocsCache = new HashMap<Term,IColumn[]>();
+            termDocsCache = new HashMap<Term,LucandraTermInfo[]>();
 
         termDocsCache.put(term, docIds);
 

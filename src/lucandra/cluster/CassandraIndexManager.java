@@ -677,9 +677,11 @@ public class CassandraIndexManager
         ByteBuffer shardKey = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, "shards".getBytes());
         RowMutation rm = new RowMutation(CassandraUtils.keySpace, shardKey);
 
-        rm.add(new QueryPath(CassandraUtils.schemaInfoColumnFamily, ByteBuffer.wrap(String.valueOf(node.shard)
-                .getBytes()), ByteBuffer.wrap(myToken.getBytes())), ByteBuffer.wrap(String.valueOf(offset).getBytes()),
-                System.currentTimeMillis());
+        rm.add(new QueryPath(CassandraUtils.schemaInfoColumnFamily, 
+                             ByteBuffer.wrap(String.valueOf(node.shard).getBytes()), 
+                             ByteBuffer.wrap(myToken.getBytes())), 
+               ByteBuffer.wrap(String.valueOf(offset).getBytes()),
+               System.currentTimeMillis());
 
         // update locally
         node.nodes.put(myToken, offset);

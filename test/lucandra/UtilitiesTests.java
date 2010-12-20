@@ -28,7 +28,7 @@ public class UtilitiesTests extends TestCase
 {   
     public void testVInt()
     {
-        ByteBuffer ibytes = CassandraUtils.writeVInt(1977);
+        ByteBuffer ibytes = ByteBuffer.wrap(CassandraUtils.writeVInt(1977));
         
         assertEquals(1977, CassandraUtils.readVInt(ibytes));
     }

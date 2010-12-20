@@ -98,7 +98,7 @@ public class IndexWriter {
         docNumber = docNumber % CassandraUtils.maxDocsPerShard;
         
        
-        ByteBuffer docId = CassandraUtils.writeVInt(docNumber);
+        ByteBuffer docId = ByteBuffer.wrap(CassandraUtils.writeVInt(docNumber));
         int position = 0;
 
         for (Fieldable field : (List<Fieldable>) doc.getFields()) {
@@ -226,9 +226,8 @@ public class IndexWriter {
                         term.getValue().put(CassandraUtils.normsKeyBytes, bnorm);
                     }
 
-                    CassandraUtils.addMutations(getMutationList(), CassandraUtils.termVecColumnFamily, docId, key, null, term.getValue());
-                    CassandraUtils.addMutations(getMutationList(), CassandraUtils.metaInfoColumnFamily, term.getKey().text().getBytes("UTF-8"), termkey, FBUtilities.EMPTY_BYTE_BUFFER, null);
-                    
+                    CassandraUtils.addMutations(getMutationList(), CassandraUtils.termVecColumnFamily, docId, key, new LucandraTermInfo(docNumber, term.getValue()).serialize());
+                    CassandraUtils.addMutations(getMutationList(), CassandraUtils.metaInfoColumnFamily, term.getKey().text().getBytes("UTF-8"), termkey, FBUtilities.EMPTY_BYTE_BUFFER);             
                 }
             }
 
@@ -247,8 +246,8 @@ public class IndexWriter {
                 termMap.put(CassandraUtils.termFrequencyKeyBytes, CassandraUtils.emptyArray);
                 termMap.put(CassandraUtils.positionVectorKeyBytes, CassandraUtils.emptyArray);
 
-                CassandraUtils.addMutations(getMutationList(), CassandraUtils.termVecColumnFamily, docId, key, null, termMap);
-                CassandraUtils.addMutations(getMutationList(), CassandraUtils.metaInfoColumnFamily, field.stringValue().getBytes("UTF-8"), termkey, FBUtilities.EMPTY_BYTE_BUFFER, null);
+                CassandraUtils.addMutations(getMutationList(), CassandraUtils.termVecColumnFamily, docId, key, new LucandraTermInfo(docNumber, termMap).serialize());
+                CassandraUtils.addMutations(getMutationList(), CassandraUtils.metaInfoColumnFamily, field.stringValue().getBytes("UTF-8"), termkey, FBUtilities.EMPTY_BYTE_BUFFER);
             }
 
             // Stores each field as a column under this doc key
@@ -283,12 +282,12 @@ public class IndexWriter {
 
         // Store each field as a column under this docId
         for (Map.Entry<String, byte[]> field : fieldCache.entrySet()) {
-            CassandraUtils.addMutations(getMutationList(), CassandraUtils.docColumnFamily, field.getKey().getBytes("UTF-8"), key, field.getValue(), null);
+            CassandraUtils.addMutations(getMutationList(), CassandraUtils.docColumnFamily, field.getKey().getBytes("UTF-8"), key, field.getValue());
         }
 
         // Finally, Store meta-data so we can delete this document
         CassandraUtils.addMutations(getMutationList(), CassandraUtils.docColumnFamily, CassandraUtils.documentMetaFieldBytes, key, CassandraUtils
-                .toBytes(allIndexedTerms), null);
+                .toBytes(allIndexedTerms));
 
         if (isAutoCommit()) {
             CassandraUtils.robustInsert(ConsistencyLevel.ONE, getMutationList().values().toArray(new RowMutation[]{}));
@@ -378,12 +377,12 @@ public class IndexWriter {
                 throw new RuntimeException("JVM doesn't support UTF-8", e);
             }
 
-            CassandraUtils.addMutations(getMutationList(), CassandraUtils.termVecColumnFamily, docId, key, (ByteBuffer)null, null);
+            CassandraUtils.addMutations(getMutationList(), CassandraUtils.termVecColumnFamily, docId, key, (ByteBuffer)null);
         }
 
         // finally delete ourselves
         ByteBuffer selfKey = CassandraUtils.hashKeyBytes(getIndexName().getBytes(), CassandraUtils.delimeterBytes, docId);
-        CassandraUtils.addMutations(getMutationList(), CassandraUtils.docColumnFamily, (ByteBuffer)null, selfKey, (ByteBuffer)null, null);
+        CassandraUtils.addMutations(getMutationList(), CassandraUtils.docColumnFamily, (ByteBuffer)null, selfKey, (ByteBuffer)null);
 
         if (isAutoCommit()){
             CassandraUtils.robustInsert(ConsistencyLevel.ONE, getMutationList().values().toArray(new RowMutation[]{}));
@@ -392,9 +391,7 @@ public class IndexWriter {
     }
 
     public void updateDocument(Term updateTerm, Document doc, Analyzer analyzer, int docNumber) throws CorruptIndexException, IOException {
-
-        
-        
+     
         deleteDocuments(updateTerm);
         addDocument(doc, analyzer, docNumber);
 

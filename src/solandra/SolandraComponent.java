@@ -141,7 +141,7 @@ public class SolandraComponent extends SearchComponent
             {
                 ByteBuffer subIndex = CassandraUtils.hashBytes((indexName + "~" + i).getBytes());
                 Token<?> t = StorageService.getPartitioner().getToken(subIndex);
-                List<InetAddress> addrs = Table.open(CassandraUtils.keySpace).replicationStrategy
+                List<InetAddress> addrs = Table.open(CassandraUtils.keySpace).getReplicationStrategy()
                         .getNaturalEndpoints(t);
 
                 // pick a replica at random

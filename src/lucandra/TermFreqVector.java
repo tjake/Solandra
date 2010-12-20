@@ -34,6 +34,7 @@ import org.apache.cassandra.db.SliceByNamesReadCommand;
 import org.apache.cassandra.db.SliceFromReadCommand;
 import org.apache.cassandra.service.StorageProxy;
 import org.apache.cassandra.thrift.ColumnParent;
+import org.apache.cassandra.thrift.ColumnPath;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.UnavailableException;
@@ -112,8 +113,7 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
                 throw new RuntimeException("JVM doesn't support UTF-8",e);
             }
 
-            readCommands.add(new SliceFromReadCommand(CassandraUtils.keySpace, key, new ColumnParent().setColumn_family(CassandraUtils.termVecColumnFamily)
-                    .setSuper_column((ByteBuffer) CassandraUtils.writeVInt(docI)), FBUtilities.EMPTY_BYTE_BUFFER, FBUtilities.EMPTY_BYTE_BUFFER, false, 1024));
+            readCommands.add(new SliceByNamesReadCommand(CassandraUtils.keySpace, key, new ColumnParent().setColumn_family(CassandraUtils.termVecColumnFamily), Arrays.asList(ByteBuffer.wrap(CassandraUtils.writeVInt(docI)))));
         }
 
         try {
@@ -149,22 +149,21 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
             terms[i] = t.text();
 
             // Find the offsets and positions
-            IColumn positionVector = null;
-            IColumn offsetVector   = null;
+            LucandraTermInfo termInfo = null;
             
             if(row.cf != null){
-                positionVector = row.cf.getSortedColumns().iterator().next().getSubColumn(CassandraUtils.positionVectorKeyBytes);
-                offsetVector   = row.cf.getSortedColumns().iterator().next().getSubColumn(CassandraUtils.offsetVectorKeyBytes);
+                termInfo = new LucandraTermInfo(0, row.cf.getSortedColumns().iterator().next().value());
+                
+                termPositions[i] = termInfo.positions;
             }
             
-            termPositions[i] = positionVector == null ? new int[] {} : CassandraUtils.byteArrayToIntArray(positionVector.value());
             freqVec[i] = termPositions[i].length;
 
-            if (offsetVector == null) {
+            if (termInfo == null || !termInfo.hasOffsets) {
                 termOffsets[i] = TermVectorOffsetInfo.EMPTY_OFFSET_INFO;
             } else {
 
-                int[] offsets = CassandraUtils.byteArrayToIntArray(offsetVector.value());
+                int[] offsets = termInfo.offsets;
 
                 termOffsets[i] = new TermVectorOffsetInfo[freqVec[i]];
                 for (int j = 0, k = 0; j < offsets.length; j += 2, k++) {

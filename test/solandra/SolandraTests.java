@@ -77,7 +77,7 @@ public class SolandraTests {
                 @Override
                 public void run() {
                     try {
-                        JettySolandraRunner jetty = new JettySolandraRunner("/solr", port);
+                        JettySolandraRunner jetty = new JettySolandraRunner("/solandra", port);
                         jetty.start();
                     } catch (Exception ex) {
                         ex.printStackTrace();
@@ -88,7 +88,7 @@ public class SolandraTests {
 
             // Wait for ping
             // A raw term query type doesn't check the schema
-            URL url = new URL("http://localhost:" + port + "/solr/select?q={!raw+f=junit_test_query}ping");
+            URL url = new URL("http://localhost:" + port + "/solandra/select?q={!raw+f=junit_test_query}ping");
 
             Exception ex = null;
             // Wait for a total of 20 seconds: 100 tries, 200 milliseconds each
@@ -104,7 +104,7 @@ public class SolandraTests {
                     continue;
                 }
 
-                solrClient = new CommonsHttpSolrServer("http://localhost:" + port + "/solr/" + indexName);
+                solrClient = new CommonsHttpSolrServer("http://localhost:" + port + "/solandra/" + indexName);
                 return;
             }
         } catch (Throwable t) {
@@ -121,7 +121,7 @@ public class SolandraTests {
     @Test
     public void setAddSchema() throws Exception {
 
-        URL url = new URL("http://localhost:" + port + "/solr/schema/" + indexName);
+        URL url = new URL("http://localhost:" + port + "/solandra/schema/" + indexName);
 
         // write
         try {

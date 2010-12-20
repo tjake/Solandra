@@ -75,7 +75,7 @@ public class CassandraUtils
     
     public static final int                  maxDocsPerShard        = (int) Math.pow(2, 17);
 
-    public static final List<Number>         emptyArray             = Arrays.asList(new Number[] { 0 });
+    public static final List<Number>         emptyArray             = Arrays.asList(new Number[] {});
     public static final String               delimeter              = new String("\uffff");
     public static final byte[]               delimeterBytes;
 
@@ -219,31 +219,21 @@ public class CassandraUtils
         if (intVector.get(0) instanceof Byte)
             return ByteBuffer.wrap(new byte[] { intVector.get(0).byteValue() });
 
-        ByteBuffer buffer = ByteBuffer.allocate(4 * intVector.size());
+        
+       
+        ByteBuffer buffer = ByteBuffer.allocate(4 * (intVector.size()+1));
 
+        //Number of int's
+        buffer.putInt(intVector.size());
+        
         for (Number i : intVector)
         {
             buffer.putInt(i.intValue());
         }
-        buffer.rewind();
+        buffer.flip();
         return buffer;
     }
 
-    public static boolean compareByteArrays(byte[] a, byte[] b)
-    {
-
-        if (a.length != b.length)
-            return false;
-
-        for (int i = 0; i < a.length; i++)
-        {
-            if (a[i] != b[i])
-                return false;
-        }
-
-        return true;
-
-    }
 
     public static final int[] byteArrayToIntArray(ByteBuffer b)
     {
@@ -263,42 +253,24 @@ public class CassandraUtils
         return intArray;
     }
 
-    public static final byte[] encodeLong(long l)
-    {
-        ByteBuffer buffer = ByteBuffer.allocate(8);
+   
 
-        buffer.putLong(l);
-        
-        return buffer.array();
-    }
-
-    public static final long decodeLong(byte[] bytes)
-    {
-
-        if (bytes.length != 8)
-            throw new RuntimeException("must be 8 bytes");
-
-        ByteBuffer buffer = ByteBuffer.wrap(bytes);
-
-        return buffer.getLong();
-    }
-
-    
+ 
 
     public static void addMutations(Map<ByteBuffer, RowMutation> mutationList, String columnFamily, byte[] column,
-            ByteBuffer key, byte[] value, Map<ByteBuffer, List<Number>> superColumns)
+            ByteBuffer key, byte[] value)
     {
-        addMutations(mutationList, columnFamily, ByteBuffer.wrap(column), key, ByteBuffer.wrap(value), superColumns);
+        addMutations(mutationList, columnFamily, ByteBuffer.wrap(column), key, ByteBuffer.wrap(value));
     }
 
     public static void addMutations(Map<ByteBuffer, RowMutation> mutationList, String columnFamily, byte[] column,
-            ByteBuffer key, ByteBuffer value, Map<ByteBuffer, List<Number>> superColumns)
+            ByteBuffer key, ByteBuffer value)
     {
-        addMutations(mutationList, columnFamily, ByteBuffer.wrap(column), key, value, superColumns);
+        addMutations(mutationList, columnFamily, ByteBuffer.wrap(column), key, value);
     }
 
     public static void addMutations(Map<ByteBuffer, RowMutation> mutationList, String columnFamily, ByteBuffer column,
-            ByteBuffer key, ByteBuffer value, Map<ByteBuffer, List<Number>> superColumns)
+            ByteBuffer key, ByteBuffer value)
     {
 
         // Find or create row mutation
@@ -311,12 +283,12 @@ public class CassandraUtils
             mutationList.put(key, rm);
         }
 
-        if (value == null && superColumns == null)
+        if (value == null)
         { // remove
 
             if (column != null)
             {
-                rm.delete(new QueryPath(columnFamily, column), System.currentTimeMillis());
+                rm.delete(new QueryPath(columnFamily, null, column), System.currentTimeMillis());
             }
             else
             {
@@ -327,21 +299,8 @@ public class CassandraUtils
         else
         { // insert
 
-            if (superColumns == null)
-            {
-
-                rm.add(new QueryPath(columnFamily, null, column), value, System.currentTimeMillis());
-
-            }
-            else
-            {
-
-                for (Map.Entry<ByteBuffer, List<Number>> e : superColumns.entrySet())
-                {
-                    rm.add(new QueryPath(columnFamily, column, e.getKey()), intVectorToByteArray(e.getValue()), System
-                            .currentTimeMillis());
-                }
-            }
+            rm.add(new QueryPath(columnFamily, null, column), value, System.currentTimeMillis());
+        
         }
     }
 
@@ -365,6 +324,7 @@ public class CassandraUtils
             {
 
             }
+     
 
             try
             {
@@ -516,14 +476,32 @@ public class CassandraUtils
         return ByteBuffer.wrap(hashedKey);
     }
 
-    public static int readVInt(ByteBuffer buf)
+    public static int mreadVInt(ByteBuffer buf)
     {       
         int length = buf.remaining();
-
+        
         if(length == 0)
             return 0;
         
-        byte b = buf.array()[buf.position() + buf.arrayOffset()];
+        byte b = buf.get();
+        int i = b & 0x7F;
+        for (int pos = 1, shift = 7; (b & 0x80) != 0 && pos < length; shift += 7, pos++)
+        {
+            b = buf.get();
+            i |= (b & 0x7F) << shift;
+        }
+
+        return i;
+    }
+    
+    public static int readVInt(ByteBuffer buf)
+    {       
+        int length = buf.remaining();
+        
+        if(length == 0)
+            return 0;
+        
+        byte b = buf.array()[buf.position()+buf.arrayOffset()];
         int i = b & 0x7F;
         for (int pos = 1, shift = 7; (b & 0x80) != 0 && pos < length; shift += 7, pos++)
         {
@@ -534,7 +512,7 @@ public class CassandraUtils
         return i;
     }
 
-    public static ByteBuffer writeVInt(int i)
+    public static byte[] writeVInt(int i)
     {
         int length = 0;
         int p = i;
@@ -556,6 +534,6 @@ public class CassandraUtils
         }
         buf[pos] = (byte) i;
 
-        return ByteBuffer.wrap(buf);
+        return buf;
     }
 }

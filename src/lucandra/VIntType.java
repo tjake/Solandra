@@ -22,6 +22,7 @@ package lucandra;
 import java.nio.ByteBuffer;
 
 import org.apache.cassandra.db.marshal.AbstractType;
+import org.apache.cassandra.db.marshal.MarshalException;
 
 public class VIntType extends AbstractType {
 
@@ -53,6 +54,12 @@ public class VIntType extends AbstractType {
         if(i1 == i2) return 0;
         
         return i1 < i2 ?  -1 : 1;
+    }
+
+
+    public void validate(ByteBuffer bytes) throws MarshalException
+    {
+        
     }
 
 }
