@@ -305,10 +305,7 @@ public class IndexWriter {
         for (int i = 0; i < results.totalHits; i++) {
             ScoreDoc doc = results.scoreDocs[i];
 
-            byte[] docId = Integer.toHexString(doc.doc).getBytes();
-
-            deleteLucandraDocument(docId);
-
+            deleteLucandraDocument(doc.doc);
         }
 
     }
@@ -331,7 +328,7 @@ public class IndexWriter {
                     Collection<IColumn> columns = row.cf.getSortedColumns();
                 
                     for (IColumn col : columns) {
-                        deleteLucandraDocument(Integer.toHexString(CassandraUtils.readVInt(col.name())).getBytes());
+                        deleteLucandraDocument(CassandraUtils.readVInt(col.name()));
                     }
                 }
             }
@@ -345,8 +342,10 @@ public class IndexWriter {
         }
     }
 
-    private void deleteLucandraDocument(byte[] docId) {
+    private void deleteLucandraDocument(int docNumber) {
 
+        byte[] docId = Integer.toHexString(docNumber).getBytes();
+        
         ByteBuffer key = CassandraUtils.hashKeyBytes(getIndexName().getBytes(), CassandraUtils.delimeterBytes, docId);
 
         List<Row> rows = CassandraUtils.robustRead(key, CassandraUtils.metaColumnPath, Arrays.asList(CassandraUtils.documentMetaFieldBytes), ConsistencyLevel.ONE);
@@ -377,7 +376,7 @@ public class IndexWriter {
                 throw new RuntimeException("JVM doesn't support UTF-8", e);
             }
 
-            CassandraUtils.addMutations(getMutationList(), CassandraUtils.termVecColumnFamily, docId, key, (ByteBuffer)null);
+            CassandraUtils.addMutations(getMutationList(), CassandraUtils.termVecColumnFamily, CassandraUtils.writeVInt(docNumber), key, (ByteBuffer)null);
         }
 
         // finally delete ourselves

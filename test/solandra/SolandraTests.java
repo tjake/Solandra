@@ -154,6 +154,12 @@ public class SolandraTests {
             stream.close();
 
             assertEquals(schemaXml, xml);
+            
+            SolrQuery q = new SolrQuery().setQuery("*:*").addField("*").addField("score");
+
+            QueryResponse r = solrClient.query(q);
+            assertEquals(0, r.getResults().getNumFound());
+            
         } catch (IOException e) {
             e.printStackTrace();
             fail();
@@ -161,6 +167,30 @@ public class SolandraTests {
 
     }
 
+    @Test
+    public void testOneDocument() throws Exception
+    {
+        SolrInputDocument doc = new SolrInputDocument();
+
+        doc.addField("title", "test1");
+        doc.addField("url", "http://www.test.com");
+        doc.addField("text", "this is a test of Solandra");
+        doc.addField("price", 1000);
+        
+        solrClient.add(doc);
+        
+        SolrQuery q = new SolrQuery().setQuery("text:Solandra").addField("*").addField("score");
+
+        QueryResponse r = solrClient.query(q);
+        assertEquals(1, r.getResults().getNumFound());
+        
+        solrClient.deleteById("http://www.test.com");
+        
+         r = solrClient.query(q);
+        assertEquals(0, r.getResults().getNumFound());
+    }
+    
+    
     @Test
     public void testAddData() throws Exception {
 
@@ -179,7 +209,6 @@ public class SolandraTests {
         doc.addField("url", "http://www.test2.com");
         doc.addField("text", "this is a test2 of Solandra");
         doc.addField("price", 10000);
-
 
         solrClient.add(doc);
 

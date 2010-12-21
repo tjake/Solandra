@@ -119,10 +119,15 @@ public class SolandraIndexWriter extends UpdateHandler
             if(docId != null)
             {
                 isUpdate = true;
+                if(logger.isDebugEnabled())
+                    logger.debug("update for document "+docId);
             } 
             else
             {
                 docId = IndexManagerService.instance.getNextId(indexName, key);
+                
+                if(logger.isDebugEnabled())
+                    logger.debug("new document "+docId);
             }
             
             int shard     = CassandraIndexManager.getShardFromDocId(docId);
@@ -185,7 +190,8 @@ public class SolandraIndexWriter extends UpdateHandler
   
         Term term = idTerm.createTerm(idFieldType.toInternal(cmd.id));
 
-        logger.info("Deleting term: "+term);
+        if(logger.isDebugEnabled())
+            logger.debug("Deleting term: "+term);
         
         ByteBuffer keyKey = CassandraUtils.hashKeyBytes((core.getName()+"~"+term.text()).getBytes(), CassandraUtils.delimeterBytes, "keys".getBytes());
         ByteBuffer keyCol= ByteBuffer.wrap(term.text().getBytes());
@@ -219,7 +225,7 @@ public class SolandraIndexWriter extends UpdateHandler
                    rm.delete(new QueryPath(CassandraUtils.schemaInfoColumnFamily, keyCol), System.currentTimeMillis()-10);
                    
                    //Delete docId so it can be reused
-                   //TODO: update shard info with docid
+                   //TODO: update shard info with this docid
                    ByteBuffer idKey = CassandraUtils.hashKeyBytes(subIndex.getBytes(), CassandraUtils.delimeterBytes, "ids".getBytes());
                    RowMutation rm2 = new RowMutation(CassandraUtils.keySpace, idKey);
                    rm2.delete(new QueryPath(CassandraUtils.schemaInfoColumnFamily, sidName), System.currentTimeMillis()-10);

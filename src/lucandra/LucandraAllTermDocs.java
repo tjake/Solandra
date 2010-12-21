@@ -147,6 +147,9 @@ public class LucandraAllTermDocs implements TermDocs
         
         Row row = rows.get(0);
 
+        if(row == null || row.cf == null)
+            return;
+        
         for(IColumn sc : row.cf.getSortedColumns()){
             Integer id   = Integer.valueOf(ByteBufferUtil.string(sc.name()));
             

@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import lucandra.CassandraUtils;
 import lucandra.IndexReader;
@@ -46,6 +47,8 @@ import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.DocIterator;
 import org.apache.solr.search.DocList;
 import org.apache.solr.search.SolrIndexReader;
+
+import com.google.common.collect.MapMaker;
 
 public class SolandraComponent extends SearchComponent
 {
@@ -84,10 +87,9 @@ public class SolandraComponent extends SearchComponent
         // Only applies to my lucandra index readers
         if (rb.req.getSearcher().getIndexReader().getVersion() != Long.MAX_VALUE)
             return;
-
-        // Fixme: this is quite hacky, but the only way to make it work
-        // without altering solr. neeeds reopen!
-        rb.req.getSearcher().getIndexReader().directory();
+        
+        //Reopen the reader to get the latest updates
+        ((SolrIndexReader)rb.req.getSearcher().getIndexReader()).getWrappedReader().reopen();
 
         // If this is a shard request then no need to do anything
         if (rb.req.getParams().getBool(ShardParams.IS_SHARD, false))
@@ -97,8 +99,7 @@ public class SolandraComponent extends SearchComponent
             if (indexName == null)
                 throw new IOException("Missing core name");
 
-            IndexReader reader = (IndexReader) ((SolrIndexReader) rb.req.getSearcher().getIndexReader())
-                    .getWrappedReader();
+            IndexReader reader = (IndexReader) ((SolrIndexReader) rb.req.getSearcher().getIndexReader()).getWrappedReader();
 
             reader.setIndexName(indexName);
 
@@ -141,8 +142,7 @@ public class SolandraComponent extends SearchComponent
             {
                 ByteBuffer subIndex = CassandraUtils.hashBytes((indexName + "~" + i).getBytes());
                 Token<?> t = StorageService.getPartitioner().getToken(subIndex);
-                List<InetAddress> addrs = Table.open(CassandraUtils.keySpace).getReplicationStrategy()
-                        .getNaturalEndpoints(t);
+                List<InetAddress> addrs = Table.open(CassandraUtils.keySpace).getReplicationStrategy().getNaturalEndpoints(t);
 
                 // pick a replica at random
                 if (addrs.isEmpty())
@@ -163,12 +163,13 @@ public class SolandraComponent extends SearchComponent
 
     public void process(ResponseBuilder rb) throws IOException
     {
-
+        
         DocList list = rb.getResults().docList;
 
         DocIterator it = list.iterator();
 
         List<Integer> docIds = new ArrayList<Integer>(list.size());
+        
         while (it.hasNext())
             docIds.add(it.next());
 

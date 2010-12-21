@@ -91,8 +91,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     private final static ThreadLocal<Map<String, byte[]>>            fieldNorms = new ThreadLocal<Map<String, byte[]>>();
     private final static ThreadLocal<OpenBitSet>                        docsHit = new ThreadLocal<OpenBitSet>();
     private final static ThreadLocal<Object>                    fieldCacheRefs  = new ThreadLocal<Object>();
-    
-    
+        
     private static final Logger logger = Logger.getLogger(IndexReader.class);
 
     public IndexReader(String name) {
@@ -100,7 +99,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         setIndexName(name);
     }
 
-    public synchronized IndexReader reopen() throws CorruptIndexException, IOException {
+    public synchronized IndexReader reopen() throws CorruptIndexException, IOException {       
         clearCache();
 
         return this;
@@ -132,8 +131,6 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         
         if (fieldCacheRefs.get() != null)
             fieldCacheRefs.set(UUID.randomUUID());
-        
-        
     }
 
     protected void doClose() throws IOException {
@@ -484,6 +481,12 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     
 
     public void setIndexName(String name) {
+        
+        String currentName = indexName.get();
+
+        if(currentName == null || !currentName.equals(name))
+            clearCache();
+            
         indexName.set(name);
     }
 
@@ -497,8 +500,6 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     @Override
     public Directory directory() {
-        clearCache();
-
         return mockDirectory;
     }
 

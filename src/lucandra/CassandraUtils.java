@@ -277,9 +277,7 @@ public class CassandraUtils
         RowMutation rm = mutationList.get(key);
         if (rm == null)
         {
-
             rm = new RowMutation(CassandraUtils.keySpace, key);
-
             mutationList.put(key, rm);
         }
 
@@ -300,7 +298,7 @@ public class CassandraUtils
         { // insert
 
             rm.add(new QueryPath(columnFamily, null, column), value, System.currentTimeMillis());
-        
+    
         }
     }
 

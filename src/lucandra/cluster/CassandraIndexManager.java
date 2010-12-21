@@ -25,6 +25,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -246,8 +247,25 @@ public class CassandraIndexManager
         if(shards.shards.isEmpty())
             return 0;
         
-        int highest = shards.shards.lastKey();
-
+        int highest = 0;
+        
+        //Find the highest *used* slab
+        //loop is ordered by slab number
+        for(Map.Entry<Integer, NodeInfo> e : shards.shards.entrySet())
+        {    
+            Integer currentOffset = null;
+            for(Map.Entry<String, Integer> e1 : e.getValue().nodes.entrySet())
+            {
+                if(e1.getValue() > 0){           
+                    currentOffset = e1.getValue();
+                    break;
+                }
+            }
+            
+            if(currentOffset != null)
+                highest = e.getKey();
+        }
+        
         return (CassandraUtils.maxDocsPerShard * highest);
     }
 
@@ -274,10 +292,15 @@ public class CassandraIndexManager
 
                 if (col != null)
                 {
-                    ByteBuffer idVal = col.getSubColumns().iterator().next().name();
-                    Long id = Long.valueOf(ByteBufferUtil.string(idVal));
+                    Collection<IColumn> subCols = col.getSubColumns();
+                    
+                    if(subCols != null && !subCols.isEmpty())
+                    {
+                        ByteBuffer idVal = col.getSubColumns().iterator().next().name();
+                        Long id = Long.valueOf(ByteBufferUtil.string(idVal));
 
-                    return id;
+                        return id;
+                    }
                 }
             }
         }
@@ -427,6 +450,8 @@ public class CassandraIndexManager
                     public int compare(IdInfo o1, IdInfo o2)
                     {
                         if (o1.offset == o2.offset)
+                        //{
+                        //    if(o1.node.shard)
                             return 0;
 
                         if (o1.offset < o2.offset)

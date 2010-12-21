@@ -58,11 +58,11 @@ public class BenchmarkTest {
         try {
             return new Runnable() {
 
-                private final CommonsHttpSolrServer solrClient = new CommonsHttpSolrServer(url + ":" + port + "/solr/"+indexName);
+                private CommonsHttpSolrServer solrClient;
+                                
                 private final SolrQuery q = new SolrQuery().setQuery(queryString).addFacetField("type").setSortField("id", ORDER.asc);
                 //private final SolrQuery q = new SolrQuery().setQuery(queryString).setSortField("id", ORDER.asc);
                 //private final SolrQuery q = new SolrQuery().setQuery(queryString);
-
                 
                 private final int myThreadId = threadId++;
                 
@@ -76,6 +76,15 @@ public class BenchmarkTest {
                 }
                 
                 public void run() {
+                    
+                    try{
+                        if(indexName.equals(""))
+                            solrClient = new CommonsHttpSolrServer(url + ":" + port +  "/solr");
+                        else
+                            solrClient = new CommonsHttpSolrServer(url + ":" + port +  "/solandra/"+indexName);
+                    }catch(MalformedURLException e){
+                        
+                    }
                     
                     try {
                         switch (type) {
@@ -97,9 +106,7 @@ public class BenchmarkTest {
                     } finally {
 
                     }
-                }
-                
-               
+                }             
 
                 private void read() throws SolrServerException {
 
@@ -153,7 +160,7 @@ public class BenchmarkTest {
                         System.err.println("Documents found: " + total);
                 }
             };
-        } catch (MalformedURLException e) {
+        } catch (Throwable e) {
             e.printStackTrace();
             throw new RuntimeException(e);
         }
