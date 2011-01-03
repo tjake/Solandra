@@ -19,7 +19,7 @@
 #
 #Increase this to increase the number of shards loaded at once
 #
-SHARDS_AT_ONCE="2"
+SHARDS_AT_ONCE="1"
 
 #
 #Log to stderr

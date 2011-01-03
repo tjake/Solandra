@@ -256,7 +256,9 @@ public class LucandraTermEnum extends TermEnum
 
         if (rows == null || rows.size() != 1)
             throw new RuntimeException("Missing field meta info");
-
+        else if(logger.isDebugEnabled())
+            logger.debug("Found "+rows.size()+" terms under field "+skipTo.field());
+        
         // Collect read commands
         Collection<IColumn> columns;
         if (rows.get(0).cf == null)

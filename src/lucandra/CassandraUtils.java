@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.UnsupportedEncodingException;
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Arrays;
@@ -65,7 +66,9 @@ public class CassandraUtils
     public static final String               normsKey               = "N";
     
     public static final String               schemaKey              = "S";
+    public static final String               cachedCol              = "CC";
     
+    public static final ByteBuffer           cachedColBytes         = ByteBuffer.wrap(cachedCol.getBytes());
     public static final ByteBuffer           positionVectorKeyBytes = ByteBuffer.wrap(positionVectorKey.getBytes());
     public static final ByteBuffer           offsetVectorKeyBytes   = ByteBuffer.wrap(offsetVectorKey.getBytes());
     public static final ByteBuffer           termFrequencyKeyBytes  = ByteBuffer.wrap(termFrequencyKey.getBytes());
@@ -90,6 +93,8 @@ public class CassandraUtils
     public static final boolean              indexHashingEnabled    = Boolean.valueOf(System.getProperty(
             "index.hashing", "true"));
     
+    //how often to check for cache invalidation
+    public static int   cacheInvalidationInterval = 1000;//ms
   
     public static final QueryPath            metaColumnPath;
 
@@ -110,7 +115,7 @@ public class CassandraUtils
         }
     }
 
-    public static final int                  keySigBytes            = FBUtilities.md5hash(documentMetaFieldBytes).toString().length();
+    public static final int                  keySigBytes            = md5hash(documentMetaFieldBytes).toString().length();
 
     private static final Logger              logger                 = Logger.getLogger(CassandraUtils.class);
 
@@ -157,8 +162,7 @@ public class CassandraUtils
         {
             logger.error("Cassandra not started after 1 hour");
             System.exit(3);
-        }
-        
+        }       
     }
 
     public static byte[] createColumnName(Term term)
@@ -184,6 +188,8 @@ public class CassandraUtils
         }
     }
 
+    
+    
     public static Term parseTerm(String termStr)
     {
 
@@ -411,11 +417,16 @@ public class CassandraUtils
         return ByteBuffer.wrap(baos.toByteArray());
     }
 
-    public static ByteBuffer hashBytes(byte[] key)
+    public static BigInteger md5hash(ByteBuffer data)
     {
+        byte[] result = FBUtilities.hash(data);
+        BigInteger hash = new BigInteger(result);
+        return hash.abs();        
+    }
     
-        
-        return ByteBufferUtil.bytes(FBUtilities.md5hash(ByteBuffer.wrap(key)).toString()+delimeter);
+    public static ByteBuffer hashBytes(byte[] key)
+    {      
+        return ByteBufferUtil.bytes(md5hash(ByteBuffer.wrap(key)).toString()+delimeter);
     }
 
     public static ByteBuffer hashKeyBytes(byte[]... keys)

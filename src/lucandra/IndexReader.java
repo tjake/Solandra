@@ -21,20 +21,11 @@ package lucandra;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.StringTokenizer;
-import java.util.UUID;
+import java.util.*;
 
-import org.apache.cassandra.db.IColumn;
-import org.apache.cassandra.db.ReadCommand;
-import org.apache.cassandra.db.Row;
-import org.apache.cassandra.db.SliceByNamesReadCommand;
-import org.apache.cassandra.db.SliceFromReadCommand;
+import com.google.common.collect.MapMaker;
+
+import org.apache.cassandra.db.*;
 import org.apache.cassandra.service.StorageProxy;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.ConsistencyLevel;
@@ -47,15 +38,9 @@ import org.apache.lucene.document.Field;
 import org.apache.lucene.document.FieldSelector;
 import org.apache.lucene.document.Field.Index;
 import org.apache.lucene.document.Field.Store;
-import org.apache.lucene.index.CorruptIndexException;
-import org.apache.lucene.index.IndexCommit;
+import org.apache.lucene.index.*;
 import org.apache.lucene.index.IndexWriter;
-import org.apache.lucene.index.Term;
-import org.apache.lucene.index.TermDocs;
-import org.apache.lucene.index.TermEnum;
 import org.apache.lucene.index.TermFreqVector;
-import org.apache.lucene.index.TermPositions;
-import org.apache.lucene.index.TermVectorMapper;
 import org.apache.lucene.index.IndexWriter.MaxFieldLength;
 import org.apache.lucene.search.Similarity;
 import org.apache.lucene.store.Directory;
@@ -84,13 +69,10 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         }
     }
 
-    private final static InheritableThreadLocal<String>               indexName = new InheritableThreadLocal<String>();
-
-    private final static ThreadLocal<Map<Integer, Document>>      documentCache = new ThreadLocal<Map<Integer, Document>>();
-    private final static ThreadLocal<Map<Term, LucandraTermEnum>> termEnumCache = new ThreadLocal<Map<Term, LucandraTermEnum>>();
-    private final static ThreadLocal<Map<String, byte[]>>            fieldNorms = new ThreadLocal<Map<String, byte[]>>();
-    private final static ThreadLocal<OpenBitSet>                        docsHit = new ThreadLocal<OpenBitSet>();
-    private final static ThreadLocal<Object>                    fieldCacheRefs  = new ThreadLocal<Object>();
+    private final static ThreadLocal<String>            indexName = new ThreadLocal<String>();
+    private final static ThreadLocal<ReaderCache>     activeCache = new ThreadLocal<ReaderCache>();
+    private final static Map<String, ReaderCache>     globalCache = new MapMaker().makeMap();
+    
         
     private static final Logger logger = Logger.getLogger(IndexReader.class);
 
@@ -115,24 +97,42 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         return reopen();
     }
 
-    public synchronized void clearCache() {
+    public void clearCache() {
 
-        if (termEnumCache.get() != null)
-            termEnumCache.get().clear();
-        
-        if (documentCache.get() != null)
-            documentCache.get().clear();
-        
-        if (fieldNorms.get() != null)
-            fieldNorms.get().clear();
-        
-        if (docsHit.get() != null)
-            docsHit.get().clear(0, numDocs);
-        
-        if (fieldCacheRefs.get() != null)
-            fieldCacheRefs.set(UUID.randomUUID());
+        String activeIndex = getIndexName();
+       
+        if(activeIndex != null) {
+            globalCache.remove(activeIndex);         
+            activeCache.remove();
+        }
     }
 
+    public ReaderCache getCache()
+    {
+        
+        String      activeIndex = getIndexName();
+        
+        if(activeIndex == null)
+            throw new IllegalStateException();     
+        
+        ReaderCache cache = activeCache.get();
+            
+        if(cache != null)
+            return cache;
+        else  
+            cache = globalCache.get(activeIndex);        
+    
+        if(cache == null)
+        {
+            cache = new ReaderCache(activeIndex);
+            globalCache.put(activeIndex, cache);
+        }
+            
+        activeCache.set(cache);
+        
+        return cache;
+    }
+    
     protected void doClose() throws IOException {
         clearCache();
     }
@@ -155,7 +155,9 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     public int docFreq(Term term) throws IOException {
 
-        LucandraTermEnum termEnum = getTermEnumCache().get(term);
+        Map<Term, LucandraTermEnum> termEnumCache = getCache().termEnum;
+        
+        LucandraTermEnum termEnum = termEnumCache.get(term);
         if (termEnum == null) {
 
             long start = System.currentTimeMillis();
@@ -168,7 +170,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
             if(logger.isDebugEnabled())
                 logger.debug("docFreq("+term+") took: " + (end - start) + "ms, found"+termEnum.docFreq());
 
-            getTermEnumCache().put(term, termEnum);
+            termEnumCache.put(term, termEnum);
         }
 
         return termEnum.docFreq();
@@ -178,7 +180,10 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
         String indexName = getIndexName();
         
-        Document doc = getDocumentCache().get(docNum);
+        Map<Integer,Document> documentCache = getCache().documents;
+        
+        
+        Document doc = documentCache.get(docNum);
 
         if (doc != null) {
             logger.debug("Found doc in cache");
@@ -203,7 +208,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
                 if (otherDocNum == docNum)
                     continue;
 
-                if (getDocumentCache().containsKey(otherDocNum))
+                if (documentCache.containsKey(otherDocNum))
                     continue;
 
                 byte[] docKey = Integer.toHexString(otherDocNum).getBytes();
@@ -219,7 +224,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         columnParent.setColumn_family(CassandraUtils.docColumnFamily);
 
         long start = System.currentTimeMillis();
-
+        
         try {
 
             List<Row> rows = null;
@@ -259,7 +264,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
                     // Incase __META__ slips through
                     if (ByteBufferUtil.compare(col.name(), CassandraUtils.documentMetaField.getBytes()) == 0) {
-                        logger.debug("Filtering out __META__ key");
+                        logger.warn("Filtering out __META__ key");
                         continue;
                     }
 
@@ -301,7 +306,10 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
                 if (key.getKey().equals(docNum))
                     doc = cacheDoc;
 
-                getDocumentCache().put(key.getKey(), cacheDoc);
+                // only cache complete docs
+                if (fieldNames == null || fieldNames.size() == 0 ) 
+                    documentCache.put(key.getKey(), cacheDoc);
+                
             }
 
             long end = System.currentTimeMillis();
@@ -319,14 +327,8 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     @Override
     public Object getFieldCacheKey() {
         
-        Object ref = fieldCacheRefs.get();
-        
-        if(ref == null){           
-            ref = UUID.randomUUID();
-            fieldCacheRefs.set(ref);     
-        }
-        
-        return ref;        
+        return getCache().fieldCacheKey;      
+    
     }
 
     @Override
@@ -378,7 +380,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     @Override
     public byte[] norms(String field) throws IOException {
-        return getFieldNorms().get(field);
+        return getCache().fieldNorms.get(field);
     }
 
     @Override
@@ -421,7 +423,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     @Override
     public TermEnum terms(Term term) throws IOException {
 
-        TermEnum termEnum = getTermEnumCache().get(term);
+        TermEnum termEnum = getCache().termEnum.get(term);
         
         if (termEnum == null){
             termEnum = new LucandraTermEnum(this);
@@ -437,7 +439,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     public void addDocumentNormalizations(LucandraTermInfo[] allDocs, String field) {
 
-        Map<String, byte[]> fieldNorms = getFieldNorms();
+        Map<String, byte[]> fieldNorms = getCache().fieldNorms;
        
         byte[] norms = fieldNorms.get(field);
 
@@ -485,17 +487,17 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         String currentName = indexName.get();
 
         if(currentName == null || !currentName.equals(name))
-            clearCache();
+            activeCache.remove();
             
         indexName.set(name);
     }
 
     public LucandraTermEnum checkTermCache(Term term) {
-        return getTermEnumCache().get(term);
+        return getCache().termEnum.get(term);
     }
 
     public void addTermEnumCache(Term term, LucandraTermEnum termEnum) {
-        getTermEnumCache().put(term, termEnum);
+        getCache().termEnum.put(term, termEnum);
     }
 
     @Override
@@ -517,50 +519,10 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     public boolean isCurrent() {
         return true;
     }
-
-    private Map<Term, LucandraTermEnum> getTermEnumCache() {
-        Map<Term, LucandraTermEnum> c = termEnumCache.get();
-
-        if (c == null) {
-            c = new HashMap<Term, LucandraTermEnum>();
-            termEnumCache.set(c);
-        }
-
-        return c;
-    }
-
-    private Map<Integer, Document> getDocumentCache() {
-        Map<Integer, Document> c = documentCache.get();
-
-        if (c == null) {
-            c = new HashMap<Integer, Document>();
-            documentCache.set(c);
-        }
-
-        return c;
-    }
-
-    public Map<String, byte[]> getFieldNorms() {
-        Map<String, byte[]> c = fieldNorms.get();
-
-        if (c == null) {
-            c = new HashMap<String, byte[]>(10);
-            fieldNorms.set(c);
-        }
-
-        return c;
-    }
     
-    public OpenBitSet getDocsHit(){
-        OpenBitSet h = docsHit.get();
-        
-        if(h == null){
-            h = new OpenBitSet(numDocs);
-            
-            docsHit.set(h);
-        }
-        
-        return h;
+    public OpenBitSet getDocsHit()
+    {       
+        return getCache().docHits;
     }
     
 

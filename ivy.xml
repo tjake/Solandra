@@ -36,7 +36,7 @@
     <dependency org="snakeyaml" name="snakeyaml" rev="1.6" conf="* -> *,!sources,!javadoc" />
     <dependency org="org.safehaus.jug" name="jug-asl" rev="2.0.0" conf="* -> *,!sources,!javadoc" />
     <dependency org="libthrift" name="libthrift" rev="0.5" conf="* -> *,!sources,!javadoc" />
-    <dependency org="org.apache.cassandra" name="apache-cassandra" rev="0.7.0-rc2" conf="* -> *,!sources,!javadoc">
+    <dependency org="org.apache.cassandra" name="apache-cassandra" rev="0.7.0-rc4" conf="* -> *,!sources,!javadoc">
        <exclude module="hadoop-core"/>
        <exclude module="hadoop-streaming"/>
        <exclude module="avro"/>

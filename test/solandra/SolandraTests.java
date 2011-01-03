@@ -66,6 +66,8 @@ public class SolandraTests {
     @BeforeClass
     public static void setUpBeforeClass() {
 
+        CassandraUtils.cacheInvalidationInterval = 0; //real-time
+        
         try {
             // start cassandra
             CassandraUtils.startup();
@@ -186,7 +188,7 @@ public class SolandraTests {
         
         solrClient.deleteById("http://www.test.com");
         
-         r = solrClient.query(q);
+        r = solrClient.query(q);
         assertEquals(0, r.getResults().getNumFound());
     }
     

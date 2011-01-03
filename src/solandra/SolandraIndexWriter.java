@@ -22,8 +22,10 @@ package solandra;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
 import lucandra.CassandraUtils;
@@ -36,6 +38,7 @@ import org.apache.cassandra.db.RowMutation;
 import org.apache.cassandra.db.filter.QueryPath;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.utils.ByteBufferUtil;
+import org.apache.cassandra.utils.FBUtilities;
 import org.apache.log4j.Logger;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.MatchAllDocsQuery;
@@ -46,16 +49,15 @@ import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.core.SolrCore;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.QueryParsing;
-import org.apache.solr.update.AddUpdateCommand;
-import org.apache.solr.update.CommitUpdateCommand;
-import org.apache.solr.update.DeleteUpdateCommand;
-import org.apache.solr.update.MergeIndexesCommand;
-import org.apache.solr.update.RollbackUpdateCommand;
-import org.apache.solr.update.UpdateHandler;
+import org.apache.solr.update.*;
 
 public class SolandraIndexWriter extends UpdateHandler
 {
-
+    //To manage cached reads
+    private static final LinkedBlockingQueue<String> flushQueue = new LinkedBlockingQueue<String>();
+    private final ExecutorService flushMonitor = Executors.newSingleThreadExecutor();
+    
+    
     private final lucandra.IndexWriter writer;
     private final static Logger        logger                          = Logger.getLogger(SolandraIndexWriter.class);
 
@@ -81,9 +83,50 @@ public class SolandraIndexWriter extends UpdateHandler
 
         try
         {
-
             writer = new lucandra.IndexWriter();
 
+            flushMonitor.execute(new Runnable() {            
+                
+                public void run()
+                {
+                    Map<String,Long> lastCoreFlush = new HashMap<String,Long>();
+                    
+                    while(true)
+                    {
+                        try
+                        {
+                            String core = flushQueue.take();
+                            
+                            //if(CassandraUtils.cacheInvalidationInterval == 0)
+                            //    continue;
+                            
+                            Long lastFlush = lastCoreFlush.get(core);
+                            if(lastFlush == null || lastFlush <= (System.currentTimeMillis() - CassandraUtils.cacheInvalidationInterval))
+                            {                               
+                                flush(core);
+                                lastCoreFlush.put(core, System.currentTimeMillis());
+                                logger.info("Flushed cache: "+core);
+                            }
+                            
+                        }
+                        catch (InterruptedException e)
+                        {
+                            continue;
+                        }   
+                    }                   
+                }
+                
+                private void flush(String core)
+                {
+                    ByteBuffer cacheKey = CassandraUtils.hashKeyBytes((core).getBytes(), CassandraUtils.delimeterBytes, "cache".getBytes());
+                                   
+                    RowMutation rm = new RowMutation(CassandraUtils.keySpace, cacheKey);
+                    rm.add(new QueryPath(CassandraUtils.schemaInfoColumnFamily, CassandraUtils.cachedColBytes, CassandraUtils.cachedColBytes), FBUtilities.EMPTY_BYTE_BUFFER, System.currentTimeMillis());                   
+                    CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm);
+                }
+                
+            });
+        
         }
         catch (Exception e)
         {
@@ -148,6 +191,9 @@ public class SolandraIndexWriter extends UpdateHandler
 
             rc = 1;
             
+            //Notify readers
+            SolandraIndexWriter.flushQueue.add(indexName);
+            
        }finally {
             if (rc != 1) {
                 numErrors.incrementAndGet();
@@ -164,9 +210,10 @@ public class SolandraIndexWriter extends UpdateHandler
         // hehe
     }
 
+    //TODO: flush all sub-index caches?
     public void commit(CommitUpdateCommand cmd) throws IOException
     {
-        // hehe
+        
     }
 
     public void delete(DeleteUpdateCommand cmd) throws IOException
@@ -231,6 +278,11 @@ public class SolandraIndexWriter extends UpdateHandler
                    rm2.delete(new QueryPath(CassandraUtils.schemaInfoColumnFamily, sidName), System.currentTimeMillis()-10);
                    
                    CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm, rm2);
+                   
+                   
+                   
+                   //Notify readers
+                   SolandraIndexWriter.flushQueue.add(subIndex);
                }
             }        
         }
@@ -254,6 +306,7 @@ public class SolandraIndexWriter extends UpdateHandler
             throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, "operation not supported" + cmd);
         }
 
+        
         boolean madeIt = false;
         boolean delAll = false;
         try
@@ -287,7 +340,6 @@ public class SolandraIndexWriter extends UpdateHandler
 
     public int mergeIndexes(MergeIndexesCommand cmd) throws IOException
     {
-        // haha
         return 0;
     }
 
@@ -351,5 +403,11 @@ public class SolandraIndexWriter extends UpdateHandler
     {
         return core.getVersion();
     }
+    
+    private void clearCache(String core)
+    {
+        SolandraIndexWriter.flushQueue.add(core);
+    }
+    
 
 }
