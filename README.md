@@ -29,8 +29,7 @@ From the Solandra base directory:
   
   - mkdir /tmp/cassandra-data
   - ant
-  - cd solandra-app; ./start-solandra.sh &
-  - cd cassandra-tools; ./cassandra-cli --host=localhost --port=9160 --batch < solandra.cml
+  - cd solandra-app; ./start-solandra.sh -b #(-b adds the solandra specific cassandra schema)
   
 Now that Solandra is running you can run the demo:
   

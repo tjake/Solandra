@@ -21,11 +21,6 @@
 #
 SHARDS_AT_ONCE="2"
 
-#
-#Log to stderr
-#
-USE_STDERR=$1
-
 if [ "x$SOLANDRA_INCLUDE" = "x" ]; then
     for include in /usr/share/solandra/solandra.in.sh \
                    /usr/local/share/solandra/solandra.in.sh \
@@ -49,13 +44,88 @@ else
 fi
 
 
+# Parse any command line options.
+args=`getopt fbhdsp: "$@"`
+eval set -- "$args"
+
+while true; do
+    case "$1" in
+        -p)
+            pidfile="$2"
+            shift 2
+        ;;
+        -f)
+            foreground="yes"
+            shift
+        ;;
+        -h)
+            echo "Usage: $0 [-f] [-h] [-b] [-d] [-s num] [-p pidfile]"
+	    echo "  -f : run in foreground"
+	    echo "  -h : prints this help message"
+	    echo "  -b : adds solandra's cassandra schema"
+	    echo "  -d : enables debuging port and logs to the foreground"
+	    echo "  -s : specify the number of shards to write to at once (default: 2)"
+            exit 0
+        ;;
+        -b)
+            schema="yes"
+            shift
+        ;;
+        -d)
+            debug="yes"
+            shift
+        ;;
+        -s)
+            SHARDS_AT_ONCE="$2"
+            shift 2
+        ;;
+        --)
+            shift
+            break
+        ;;
+        *)
+            echo "Error parsing arguments! $1 $2" >&2
+            exit 1
+        ;;
+    esac
+done
+
+#boostrap schema?
+if [ "x$schema" != "x" ]
+then
+    foreground=""
+    debug="" 
+fi
+
 #debug mode?
-if ! test -n "$USE_STDERR"
+if [ "x$debug" == "x" ]
 then
     LOGGING="etc/jetty-logging.xml"
 else
+    foreground="yes"
     JVM_OPTS="$JVM_OPTS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=1044"
 fi
 
-java $JVM_OPTS -Dshards.at.once=$SHARDS_AT_ONCE -jar start.jar $LOGGING etc/jetty.xml
+if [ "x$pidpath" != "x" ]; then
+    solandra_parms="$solandra_parms -Dcassandra-pidfile=$pidpath"
+fi
+    
+# The solandra-foreground option will tell Cassandra not
+# to close stdout/stderr, but it's up to us not to background.
+if [ "x$foreground" != "x" ]; then
+    solandra_parms="$solandra_parms -Dcassandra-foreground=yes"
+    exec $JAVA $JVM_OPTS $solandra_parms -Dshards.at.once=$SHARDS_AT_ONCE -jar start.jar $LOGGING etc/jetty.xml
+# Startup Solandra, background it, and write the pid.
+else
+    exec $JAVA $JVM_OPTS $solandra_parms -Dshards.at.once=$SHARDS_AT_ONCE -jar start.jar $LOGGING etc/jetty.xml <&- &
+    [ ! -z $pidfile ] && printf "%d" $! > $pidfile
+fi
 
+if [ "x$schema" != "x" ]
+then
+    sleep 1
+    echo "Waiting 10 seconds for solandra to start before bootstrapping schema..."
+    sleep 10
+    cd cassandra-tools && ./cassandra-cli --host=localhost < solandra.cml
+    echo "Solandra ready"
+fi
