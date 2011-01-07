@@ -180,6 +180,7 @@ public class SolandraTests {
         doc.addField("price", 1000);
         
         solrClient.add(doc);
+        solrClient.commit(true,true);
         
         SolrQuery q = new SolrQuery().setQuery("text:Solandra").addField("*").addField("score");
 
@@ -233,6 +234,8 @@ public class SolandraTests {
 
         
         solrClient.add(doc);
+        
+        solrClient.commit(true,true);
     }
 
     @Test
@@ -293,6 +296,8 @@ public class SolandraTests {
     public void testDeleteTerm() throws Exception {
          
         solrClient.deleteById("http://www.test4.com");
+        solrClient.commit(true,true);
+
         
         SolrQuery q = new SolrQuery().setQuery("*:*").addField("*").addField("score");
 
@@ -311,7 +316,9 @@ public class SolandraTests {
         doc.addField("price", 1000);
         
         solrClient.add(doc);
+        solrClient.commit(true,true);
 
+        
         SolrQuery q = new SolrQuery().setQuery("text:\u5639\u563b").addField("*").addField("score");
 
         QueryResponse r = solrClient.query(q);

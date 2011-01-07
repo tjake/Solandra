@@ -124,8 +124,14 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     
         if(cache == null)
         {
-            cache = new ReaderCache(activeIndex);
-            globalCache.put(activeIndex, cache);
+            synchronized (activeIndex.intern())
+            {
+                if(cache == null)
+                {
+                    cache = new ReaderCache(activeIndex);
+                    globalCache.put(activeIndex, cache);
+                }
+            }
         }
             
         activeCache.set(cache);
@@ -482,12 +488,8 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     
     
 
-    public void setIndexName(String name) {
-        
-        String currentName = indexName.get();
-
-        if(currentName == null || !currentName.equals(name))
-            activeCache.remove();
+    public void setIndexName(String name) {  
+        activeCache.remove();
             
         indexName.set(name);
     }

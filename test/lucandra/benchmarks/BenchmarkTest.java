@@ -60,7 +60,7 @@ public class BenchmarkTest {
 
                 private CommonsHttpSolrServer solrClient;
                                 
-                private final SolrQuery q = new SolrQuery().setQuery(queryString).addFacetField("type").setSortField("id", ORDER.asc);
+                private final SolrQuery q = new SolrQuery().setQuery(queryString).addFacetField("type").setSortField("id", ORDER.asc).addField("*");
                 //private final SolrQuery q = new SolrQuery().setQuery(queryString).setSortField("id", ORDER.asc);
                 //private final SolrQuery q = new SolrQuery().setQuery(queryString);
                 
@@ -130,9 +130,10 @@ public class BenchmarkTest {
 
                     for (int i = 0; i < numLoops; i++) {
                        
-                        solrClient.add(getDocument());
-                        solrClient.commit(true,true);
+                        solrClient.add(getDocument());                      
                     }
+                    
+                    solrClient.commit(true,true);
                 }
 
                 private void both() throws SolrServerException, IOException {

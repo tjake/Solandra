@@ -110,7 +110,7 @@ public class LucandraTermEnum extends TermEnum
             // start at the top, or loop over starting position
             if (initTerm == null)
                 skipTo(new Term(""));
-            else
+            //else
                 skipTo(initTerm);
         }
 
