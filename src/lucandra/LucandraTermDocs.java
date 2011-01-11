@@ -23,12 +23,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 
-import org.apache.cassandra.db.IColumn;
 import org.apache.log4j.Logger;
-import org.apache.lucene.index.Term;
-import org.apache.lucene.index.TermDocs;
-import org.apache.lucene.index.TermEnum;
-import org.apache.lucene.index.TermPositions;
+import org.apache.lucene.index.*;
 
 public class LucandraTermDocs implements TermDocs, TermPositions
 {
@@ -49,8 +45,7 @@ public class LucandraTermDocs implements TermDocs, TermPositions
 
     public void close() throws IOException
     {
-        // TODO Auto-generated method stub
-
+        
     }
 
     public int doc()
@@ -97,43 +92,18 @@ public class LucandraTermDocs implements TermDocs, TermPositions
     public void seek(Term term) throws IOException
     {
 
-        // on a new term so check cached
-        LucandraTermEnum tmp = indexReader.checkTermCache(term);
-        if (tmp == null)
+        if (termEnum.skipTo(term))
         {
-
-            if (termEnum.skipTo(term))
+            if (termEnum.term().equals(term))
             {
-                if (termEnum.term().compareTo(term) == 0)
-                {
-                    termDocs = termEnum.getTermDocFreq();
-                }
-                else
-                {
-                    termDocs = null;
-                }
+                termDocs = termEnum.getTermDocFreq();
             }
-        }
-        else
-        {
-            termEnum = tmp;
-            if (termEnum.skipTo(term))
-            {
-
-                if (termEnum.term().equals(term))
-                {
-                    termDocs = termEnum.getTermDocFreq();
-                }
-                else
-                {
-                    termDocs = null;
-                }
-            }
-            else
+            else    
             {
                 termDocs = null;
             }
         }
+       
 
         docPosition = -1;
     }
@@ -160,13 +130,9 @@ public class LucandraTermDocs implements TermDocs, TermPositions
     public LucandraTermInfo[] filteredSeek(Term term, List<ByteBuffer> docNums)
     {
 
-        termEnum.loadFilteredTerms(term, docNums);
+        termDocs = termEnum.loadFilteredTerms(term, docNums);
 
-        if (termEnum.getTermDocFreq() == null)
-            termDocs = null;
-        else
-            termDocs = termEnum.getTermDocFreq();
-
+       
         docPosition = -1;
         return termDocs;
     }

@@ -49,6 +49,7 @@ import org.apache.cassandra.thrift.UnavailableException;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.cassandra.utils.FBUtilities;
 import org.apache.log4j.Logger;
+import org.apache.lucene.document.Fieldable;
 import org.apache.lucene.index.Term;
 
 public class CassandraUtils
@@ -165,10 +166,14 @@ public class CassandraUtils
         }       
     }
 
-    public static byte[] createColumnName(Term term)
+    public static ByteBuffer createColumnName(Fieldable field)
     {
-
-        return createColumnName(term.field(), term.text());
+        return ByteBuffer.wrap(createColumnName(field.name(), field.stringValue()));
+    }
+    
+    public static ByteBuffer createColumnName(Term term)
+    {
+        return ByteBuffer.wrap(createColumnName(term.field(), term.text()));
     }
 
     public static byte[] createColumnName(String field, String text)

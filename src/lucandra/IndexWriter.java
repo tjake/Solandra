@@ -89,7 +89,8 @@ public class IndexWriter {
 
        
         byte[] indexNameBytes = indexName.getBytes();
-        
+        ByteBuffer indexTermsKey = CassandraUtils.hashKeyBytes(indexNameBytes, CassandraUtils.delimeterBytes, "terms".getBytes());
+
         List<Term> allIndexedTerms = new ArrayList<Term>();
         Map<String, byte[]> fieldCache = new HashMap<String, byte[]>(1024);
 
@@ -227,7 +228,9 @@ public class IndexWriter {
                     }
 
                     CassandraUtils.addMutations(getMutationList(), CassandraUtils.termVecColumnFamily, docId, key, new LucandraTermInfo(docNumber, term.getValue()).serialize());
-                    CassandraUtils.addMutations(getMutationList(), CassandraUtils.metaInfoColumnFamily, term.getKey().text().getBytes("UTF-8"), termkey, FBUtilities.EMPTY_BYTE_BUFFER);             
+                   
+                    //Store all terms under a row
+                    CassandraUtils.addMutations(getMutationList(), CassandraUtils.metaInfoColumnFamily, CassandraUtils.createColumnName(term.getKey()), indexTermsKey, FBUtilities.EMPTY_BYTE_BUFFER);             
                 }
             }
 
@@ -236,18 +239,19 @@ public class IndexWriter {
                 Term term = new Term(field.name(), field.stringValue());
                 allIndexedTerms.add(term);
 
-                ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, field.name().getBytes(),
-                        CassandraUtils.delimeterBytes, field.stringValue().getBytes("UTF-8"));
-
-                ByteBuffer termkey = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, field.name().getBytes());
-                
+                ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes(),    CassandraUtils.delimeterBytes, 
+                                                             field.name().getBytes(), CassandraUtils.delimeterBytes, 
+                                                             field.stringValue().getBytes("UTF-8"));                
                 
                 Map<ByteBuffer, List<Number>> termMap = new ConcurrentSkipListMap<ByteBuffer, List<Number>>();
                 termMap.put(CassandraUtils.termFrequencyKeyBytes, CassandraUtils.emptyArray);
                 termMap.put(CassandraUtils.positionVectorKeyBytes, CassandraUtils.emptyArray);
 
                 CassandraUtils.addMutations(getMutationList(), CassandraUtils.termVecColumnFamily, docId, key, new LucandraTermInfo(docNumber, termMap).serialize());
-                CassandraUtils.addMutations(getMutationList(), CassandraUtils.metaInfoColumnFamily, field.stringValue().getBytes("UTF-8"), termkey, FBUtilities.EMPTY_BYTE_BUFFER);
+               
+
+                //Store all terms under a row
+                CassandraUtils.addMutations(getMutationList(), CassandraUtils.metaInfoColumnFamily, CassandraUtils.createColumnName(field), indexTermsKey, FBUtilities.EMPTY_BYTE_BUFFER);
             }
 
             // Stores each field as a column under this doc key

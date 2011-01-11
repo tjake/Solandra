@@ -98,19 +98,19 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     }
 
     public void clearCache() {
-
+        
         String activeIndex = getIndexName();
        
         if(activeIndex != null) {
             globalCache.remove(activeIndex);         
-            activeCache.remove();
         }
+        
+        activeCache.remove();
     }
 
     public ReaderCache getCache()
     {
-        
-        String      activeIndex = getIndexName();
+        String activeIndex = getIndexName();
         
         if(activeIndex == null)
             throw new IllegalStateException();     
@@ -126,6 +126,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         {
             synchronized (activeIndex.intern())
             {
+                cache = globalCache.get(activeIndex); 
                 if(cache == null)
                 {
                     cache = new ReaderCache(activeIndex);
@@ -161,25 +162,17 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
     public int docFreq(Term term) throws IOException {
 
-        Map<Term, LucandraTermEnum> termEnumCache = getCache().termEnum;
+        LucandraTermInfo[] docs = getCache().termCache.get(term);
         
-        LucandraTermEnum termEnum = termEnumCache.get(term);
-        if (termEnum == null) {
+        if(docs != null)
+            return docs.length;
+        
+        LucandraTermEnum termEnum = new LucandraTermEnum(this);
 
-            long start = System.currentTimeMillis();
-
-            termEnum = new LucandraTermEnum(this);
-            termEnum.skipTo(term);
-
-            long end = System.currentTimeMillis();
-
-            if(logger.isDebugEnabled())
-                logger.debug("docFreq("+term+") took: " + (end - start) + "ms, found"+termEnum.docFreq());
-
-            termEnumCache.put(term, termEnum);
-        }
-
-        return termEnum.docFreq();
+        if(termEnum.skipTo(term) && termEnum.term().equals(term))
+            return termEnum.docFreq();
+        
+        return 0;
     }
 
     public Document document(int docNum, FieldSelector selector) throws CorruptIndexException, IOException {
@@ -208,7 +201,8 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
             List<Integer> otherDocIds = ((SolandraFieldSelector) selector).getOtherDocsToCache();
             fieldNames = ((SolandraFieldSelector) selector).getFieldNames();
 
-            logger.debug("Going to bulk load " + otherDocIds.size() + " documents");
+            if(logger.isDebugEnabled())
+                logger.debug("Going to bulk load " + otherDocIds.size() + " documents");
 
             for (Integer otherDocNum : otherDocIds) {
                 if (otherDocNum == docNum)
@@ -320,7 +314,8 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
 
             long end = System.currentTimeMillis();
 
-            logger.debug("Document read took: " + (end - start) + "ms");
+            if(logger.isDebugEnabled())
+                logger.debug("Document read took: " + (end - start) + "ms");
 
             return doc;
 
@@ -429,15 +424,8 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
     @Override
     public TermEnum terms(Term term) throws IOException {
 
-        TermEnum termEnum = getCache().termEnum.get(term);
-        
-        if (termEnum == null){
-            termEnum = new LucandraTermEnum(this);
-            logger.debug("Creating new TermEnum for: "+term);
-        }else{
-            logger.debug("Using Cached TermEnum for: "+term);
-        }
-        
+        TermEnum termEnum = new LucandraTermEnum(this);
+       
         termEnum.skipTo(term);
         
         return termEnum;
@@ -494,13 +482,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         indexName.set(name);
     }
 
-    public LucandraTermEnum checkTermCache(Term term) {
-        return getCache().termEnum.get(term);
-    }
-
-    public void addTermEnumCache(Term term, LucandraTermEnum termEnum) {
-        getCache().termEnum.put(term, termEnum);
-    }
+    
 
     @Override
     public Directory directory() {

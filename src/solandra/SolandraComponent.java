@@ -141,12 +141,10 @@ public class SolandraComponent extends SearchComponent
             IndexReader reader = (IndexReader) ((SolrIndexReader) rb.req.getSearcher().getIndexReader()).getWrappedReader();
 
             reader.setIndexName(indexName);
+            
             if(flushCache(indexName))
                 reader.reopen();
             
-            
-            logger.debug(indexName);
-
             return;
         }
 

@@ -185,12 +185,11 @@ public class SolandraTests {
         SolrQuery q = new SolrQuery().setQuery("text:Solandra").addField("*").addField("score");
 
         QueryResponse r = solrClient.query(q);
-        assertEquals(1, r.getResults().getNumFound());
-        
+             
         solrClient.deleteById("http://www.test.com");
         
         r = solrClient.query(q);
-        assertEquals(0, r.getResults().getNumFound());
+        assertEquals(0, r.getResults().getNumFound());        
     }
     
     
@@ -238,6 +237,8 @@ public class SolandraTests {
         solrClient.commit(true,true);
     }
 
+    
+    
     @Test
     public void testAllSearch() throws Exception {
 
@@ -249,6 +250,8 @@ public class SolandraTests {
 
     @Test
     public void testHighlight() throws Exception {
+        System.err.println("STARTING HIGHLIGHT TEST");
+
         SolrQuery q = new SolrQuery().setQuery("text:Solandra").addHighlightField("text");
 
         QueryResponse r = solrClient.query(q);
@@ -264,6 +267,9 @@ public class SolandraTests {
 
     @Test
     public void testFacets() throws Exception {
+        System.err.println("STARTING FACETS TEST");
+
+        
         SolrQuery q = new SolrQuery().setQuery("text:Solandra").addFacetField("title");
 
         QueryResponse r = solrClient.query(q);
@@ -277,6 +283,9 @@ public class SolandraTests {
     
     @Test
     public void testNumericSort() throws Exception {
+        System.err.println("STARTING NUMERIC SORT TEST");
+
+        
         SolrQuery q = new SolrQuery().setQuery("price:[8 TO 1003]").addField("*").addField("score");
 
         QueryResponse r = solrClient.query(q);
@@ -289,6 +298,8 @@ public class SolandraTests {
 
         System.err.println("STARTING UNICODE TEST");
         QueryResponse r = solrClient.query(q);
+      
+        System.err.println("ENDING UNICODE TEST");
         assertEquals(1, r.getResults().getNumFound());
     }
  

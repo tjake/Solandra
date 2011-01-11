@@ -22,17 +22,16 @@ package lucandra;
 import java.util.Map;
 import java.util.UUID;
 
-import org.apache.lucene.document.Document;
-import org.apache.lucene.index.Term;
-import org.apache.lucene.util.OpenBitSet;
-
 import com.google.common.collect.MapMaker;
+
+import org.apache.lucene.document.Document;
+import org.apache.lucene.util.OpenBitSet;
 
 public class ReaderCache
 {
     public final String indexName;
     public final Map<Integer, Document> documents;
-    public final Map<Term, LucandraTermEnum> termEnum;
+    public final TermCache termCache;
     public final Map<String, byte[]>  fieldNorms;
     public final OpenBitSet docHits;
     public final Object fieldCacheKey;
@@ -41,10 +40,10 @@ public class ReaderCache
     {
         this.indexName = indexName;
         
-        documents  = new MapMaker().makeMap();
-        termEnum   = new MapMaker().makeMap();
-        fieldNorms = new MapMaker().makeMap();
-        docHits    = new OpenBitSet(CassandraUtils.maxDocsPerShard);
+        documents           = new MapMaker().makeMap();
+        termCache           = new TermCache(indexName);
+        fieldNorms          = new MapMaker().makeMap();
+        docHits             = new OpenBitSet(CassandraUtils.maxDocsPerShard);
         
         fieldCacheKey = UUID.randomUUID();
     }
