@@ -23,11 +23,10 @@ public class TermCache
     private final static ColumnParent            fieldColumnFamily = new ColumnParent(CassandraUtils.metaInfoColumnFamily);
     private final static Logger                  logger = Logger.getLogger(TermCache.class);
     
-    public final String                                       indexName;
-    public final ByteBuffer                                   termsListKey;
-    public final int                                          bufferSize = 16;
+    public final String                                               indexName;
+    public final ByteBuffer                                           termsListKey;
     public final ConcurrentSkipListMap<Term, LucandraTermInfo[]>      termList;
-    public final ConcurrentSkipListMap<Term, Pair<Term,Term>> termQueryBoundries;
+    public final ConcurrentSkipListMap<Term, Pair<Term,Term>>         termQueryBoundries;
   
 
     public TermCache(String indexName)
@@ -50,7 +49,9 @@ public class TermCache
     {
         
         Pair<Term,Term> range = null;
-            
+        
+        int bufferSize = termList.isEmpty() ? 4 : 64;
+           
         //verify we've buffered sufficiently        
         Map.Entry<Term, Pair<Term,Term>> tailEntry = termQueryBoundries.ceilingEntry(skip);
         boolean needsBuffering = true;
@@ -67,7 +68,7 @@ public class TermCache
         
         if(needsBuffering)
         {
-            range = bufferTerms(skip);    
+            range = bufferTerms(skip, bufferSize);    
         }
         
         if(skip.compareTo(range.left) >= 0 && (!range.right.equals(emptyTerm)) && skip.compareTo(range.right) <= 0)
@@ -104,8 +105,10 @@ public class TermCache
         return termInfo;
     }
     
-    public Pair<Term,Term> bufferTerms(Term startTerm)
+    public Pair<Term,Term> bufferTerms(Term startTerm, int bufferSize)
     {
+        assert bufferSize > 0;
+        
         long start = System.currentTimeMillis();
               
         // Scan range of terms in this field (reversed, so we have a exit point)

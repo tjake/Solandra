@@ -106,6 +106,7 @@ public class SolandraComponent extends SearchComponent
                     rows.get(0).cf.getColumn(CassandraUtils.cachedColBytes).getSubColumn(CassandraUtils.cachedColBytes).timestamp() >= lastCheck)
             {
                 logger.info("Flushed cache: "+indexName);
+                
                 return true;
             }
         }
@@ -118,7 +119,7 @@ public class SolandraComponent extends SearchComponent
     {
 
         // Only applies to my lucandra index readers
-        if (rb.req.getSearcher().getIndexReader().getVersion() != Long.MAX_VALUE)
+        if (!(((SolrIndexReader) rb.req.getSearcher().getIndexReader()).getWrappedReader() instanceof lucandra.IndexReader))
             return;
         
         if(!hasSolandraSchema.get())
@@ -156,7 +157,8 @@ public class SolandraComponent extends SearchComponent
         }
         else
         {
-            logger.info("core: " + indexName);
+            if(logger.isDebugEnabled())
+                logger.debug("core: " + indexName);
         }
 
         if (rb.shards == null)
@@ -173,9 +175,11 @@ public class SolandraComponent extends SearchComponent
 
                 String subIndex = indexName+"~0";
                 reader.setIndexName(subIndex);
-                if(flushCache(subIndex))
-                    reader.reopen();
                 
+                if(flushCache(subIndex))
+                {
+                    reader.reopen();                
+                }
                 return;
             }
             
@@ -195,7 +199,8 @@ public class SolandraComponent extends SearchComponent
                 InetAddress addr = addrs.get(random.nextInt(addrs.size()));
                 String shard = addr.getHostAddress() + ":8983/solandra/" + indexName + "~" + i;
 
-                logger.info("Adding shard(" + indexName + "): " + shard);
+                if(logger.isDebugEnabled())
+                    logger.debug("Adding shard(" + indexName + "): " + shard);
 
                 shards[i] = shard;
             }
@@ -217,7 +222,8 @@ public class SolandraComponent extends SearchComponent
         while (it.hasNext())
             docIds.add(it.next());
 
-        logger.debug("Fetching " + docIds.size() + " Docs");
+        if(logger.isDebugEnabled())
+            logger.debug("Fetching " + docIds.size() + " Docs");
 
         if (docIds.size() > 0)
         {

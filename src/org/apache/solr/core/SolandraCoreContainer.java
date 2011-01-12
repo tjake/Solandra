@@ -69,7 +69,8 @@ public class SolandraCoreContainer extends CoreContainer {
     @Override
     public SolrCore getCore(String name) {
        
-        logger.info("Loading Solandra core: "+name);
+        if(logger.isDebugEnabled())
+            logger.debug("Loading Solandra core: "+name);
         
         SolrCore core = null;
         
@@ -130,7 +131,8 @@ public class SolandraCoreContainer extends CoreContainer {
 
         if (core == null) {
             // get from cassandra
-            logger.info("loading indexInfo for: "+ indexName);
+            if(logger.isDebugEnabled())
+                logger.debug("loading indexInfo for: "+ indexName);
             
             List<Row> rows = CassandraUtils.robustRead(ByteBuffer.wrap((indexName+"/schema").getBytes()), queryPath, 
             										  Arrays.asList(CassandraUtils.schemaKeyBytes), 

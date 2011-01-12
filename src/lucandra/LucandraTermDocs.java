@@ -84,7 +84,8 @@ public class LucandraTermDocs implements TermDocs, TermPositions
             freqs[i] = freq();
         }
 
-        logger.debug("read " + i);
+        if(logger.isDebugEnabled())
+            logger.debug("read " + i);
 
         return i;
     }
@@ -167,9 +168,6 @@ public class LucandraTermDocs implements TermDocs, TermPositions
 
     public int nextPosition() throws IOException
     {
-
-        logger.debug("In nextPosition()");
-
         if (termPositionArray == null)
             return -1;
 

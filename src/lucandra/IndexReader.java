@@ -170,25 +170,27 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         LucandraTermEnum termEnum = new LucandraTermEnum(this);
 
         if(termEnum.skipTo(term) && termEnum.term().equals(term))
+        {         
             return termEnum.docFreq();
+        }
         
         return 0;
     }
 
     public Document document(int docNum, FieldSelector selector) throws CorruptIndexException, IOException {
-
-        String indexName = getIndexName();
-        
-        Map<Integer,Document> documentCache = getCache().documents;
-        
-        
+    
+        Map<Integer,Document> documentCache = getCache().documents;        
         Document doc = documentCache.get(docNum);
 
         if (doc != null) {
-            logger.debug("Found doc in cache");
+            if(logger.isDebugEnabled())
+                logger.debug("Found doc in cache");
+            
             return doc;
         }
 
+        String indexName = getIndexName();
+        
         List<ByteBuffer> fieldNames = null;
 
         Map<Integer, ByteBuffer> keyMap = new HashMap<Integer, ByteBuffer>();
@@ -431,12 +433,13 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         return termEnum;
     }
 
-    public void addDocumentNormalizations(LucandraTermInfo[] allDocs, String field) {
+    public void addDocumentNormalizations(LucandraTermInfo[] allDocs, String field, ReaderCache cache) {
 
-        Map<String, byte[]> fieldNorms = getCache().fieldNorms;
-       
-        byte[] norms = fieldNorms.get(field);
-
+        
+        
+        byte[]       norms = cache.fieldNorms.get(field);
+        OpenBitSet docHits = cache.docHits;
+        
         for (LucandraTermInfo docInfo : allDocs) {
 
             int idx = docInfo.docId;
@@ -444,28 +447,24 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
             if (idx > numDocs)
                 throw new IllegalStateException("numDocs reached");
 
-            getDocsHit().set(idx);
-            
             Byte norm = docInfo.norm;
-           
+            
             if (norm == null)
                 norm = defaultNorm;
-
-            if (norms == null) 
-                norms = new byte[1024];                         
-
-            while(norms.length <= idx && norms.length < numDocs ){
-                byte[] _norms = new byte[(norms.length * 2) < numDocs ? (norms.length * 2) : (numDocs + 1)];
-                System.arraycopy(norms, 0, _norms, 0, norms.length);
-                norms = _norms;           
-            }
-
+                        
+            //Check for cached reads
+            if(norms != null && norms.length > idx && norms[idx] == norm)
+                continue;
             
-            // find next empty position
+            docHits.fastSet(idx);
+                  
+            if (norms == null) 
+                norms = new byte[numDocs];                        
+            
             norms[idx] = norm;          
         }
         
-        fieldNorms.put(field, norms);
+        cache.fieldNorms.put(field, norms);
     }
 
     public String getIndexName() {

@@ -38,6 +38,7 @@ public class LucandraTermEnum extends TermEnum
     //Shared info for a given index
     private final IndexReader        indexReader;
     private final String             indexName;
+    private final ReaderCache        readerCache;
     private final TermCache          termCache;
     
     //Local info this enum 
@@ -52,7 +53,8 @@ public class LucandraTermEnum extends TermEnum
     {
         this.indexReader = indexReader;
         indexName        = indexReader.getIndexName();
-        termCache        = indexReader.getCache().termCache; 
+        readerCache      = indexReader.getCache();
+        termCache        = readerCache.termCache; 
     }
 
     public boolean skipTo(Term term) throws IOException
@@ -60,8 +62,7 @@ public class LucandraTermEnum extends TermEnum
         if (term == null)
             return false;
         
-        termView = termCache.skipTo(term);      
-        
+        termView         = termCache.skipTo(term);            
         currentTermEntry = termView.firstEntry();
         
         return currentTermEntry != null;
@@ -125,7 +126,7 @@ public class LucandraTermEnum extends TermEnum
 
         
         // set normalizations
-        indexReader.addDocumentNormalizations(docIds, term.field());
+        indexReader.addDocumentNormalizations(docIds, term.field(), readerCache);
 
         return docIds;
     }
@@ -154,11 +155,11 @@ public class LucandraTermEnum extends TermEnum
  
         LucandraTermInfo[] termInfo = null;
  
-        if (rows != null && rows.size() > 0 && rows.get(0) != null && rows.get(0).cf != null
-                && rows.get(0).cf.getSortedColumns() != null && rows.get(0).cf.getSortedColumns().size() > 0)
-        {      
+        if (rows != null && rows.size() > 0 && rows.get(0) != null && rows.get(0).cf != null)
+        {     
             termInfo = TermCache.convertTermInfo(rows.get(0).cf.getSortedColumns());
         }
+        
         long end = System.currentTimeMillis();
         
         if(logger.isDebugEnabled())

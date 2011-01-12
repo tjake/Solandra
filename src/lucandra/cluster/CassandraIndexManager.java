@@ -64,7 +64,7 @@ public class CassandraIndexManager
     
     private int[]                           randomSeq;
     private final Map<Integer,Integer>      offsetLookup = new HashMap<Integer,Integer>(CassandraUtils.maxDocsPerShard); //maps ids to offsets
-    private final int                       reserveSlabSize = (int)Math.pow(2, 7);
+    private final int                       reserveSlabSize = (int)Math.pow(2, 10);
     private final int                       offsetSlots     = CassandraUtils.maxDocsPerShard/reserveSlabSize;
     private final int                       expirationTime  = 60;  // seconds
 
@@ -423,6 +423,10 @@ public class CassandraIndexManager
 
                         expired.add(id);
                     }
+                    else
+                    {
+                        break; 
+                    }
                 }
 
                 if (expired != null)
@@ -552,11 +556,15 @@ public class CassandraIndexManager
 
                 // we won!
                 if (winningToken != null && ByteBufferUtil.string(winningToken).equals(myToken))
-                {                    
+                {             
+                    int numReserved = 0;
                     for(int i=offset; i == offset || i % reserveSlabSize != 0; i++)
                     {                   
                         rsvpd.add(new IdInfo(node, i, i));
+                        numReserved++;
                     }
+                    
+                    //logger.info("Reserved "+numReserved);
                 } 
                 else
                 {
@@ -624,7 +632,7 @@ public class CassandraIndexManager
 
         assert shards != null;
 
-        synchronized (shards)
+       // synchronized (shards)
         {
             String myToken = getToken();
 

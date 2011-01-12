@@ -23,14 +23,15 @@ import java.io.IOException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import lucandra.CassandraUtils;
 import lucandra.cluster.CassandraIndexManager;
 import lucandra.cluster.IndexManagerService;
+
+import com.google.common.collect.MapMaker;
 
 import org.apache.cassandra.db.IColumn;
 import org.apache.cassandra.db.Row;
@@ -76,7 +77,10 @@ public class SolandraIndexWriter extends UpdateHandler
     AtomicLong                         numDocsPending                  = new AtomicLong();
     AtomicLong                         numErrors                       = new AtomicLong();
     AtomicLong                         numErrorsCumulative             = new AtomicLong();
-
+    
+    private static ConcurrentMap<String, AtomicInteger> bufferedWrites                = new MapMaker().makeMap();
+    private static final int writeTreshold   = 16;
+    
     public SolandraIndexWriter(SolrCore core)
     {
         super(core);
@@ -102,7 +106,7 @@ public class SolandraIndexWriter extends UpdateHandler
                             
                             Long lastFlush = lastCoreFlush.get(core);
                             if(lastFlush == null || lastFlush <= (System.currentTimeMillis() - CassandraUtils.cacheInvalidationInterval))
-                            {                               
+                            {                                              
                                 flush(core);
                                 lastCoreFlush.put(core, System.currentTimeMillis());
                                 logger.info("Flushed cache: "+core);
@@ -118,6 +122,9 @@ public class SolandraIndexWriter extends UpdateHandler
                 
                 private void flush(String core)
                 {
+                    //Make sure all writes are in for this core
+                    writer.commit(core);
+                    
                     ByteBuffer cacheKey = CassandraUtils.hashKeyBytes((core).getBytes(), CassandraUtils.delimeterBytes, "cache".getBytes());
                                    
                     RowMutation rm = new RowMutation(CassandraUtils.keySpace, cacheKey);
@@ -157,7 +164,8 @@ public class SolandraIndexWriter extends UpdateHandler
            String key       = cmd.getIndexedId(schema);
            
             Long docId =  IndexManagerService.instance.getId(indexName, key);
-                
+            RowMutation[] rms = null;    
+            
             boolean isUpdate = false;
             if(docId != null)
             {
@@ -167,7 +175,10 @@ public class SolandraIndexWriter extends UpdateHandler
             } 
             else
             {
-                docId = IndexManagerService.instance.getNextId(indexName, key);
+                
+                rms = new RowMutation[3]; 
+                
+                docId = IndexManagerService.instance.getNextId(indexName, key, rms);
                 
                 if(logger.isDebugEnabled())
                     logger.debug("new document "+docId);
@@ -180,19 +191,18 @@ public class SolandraIndexWriter extends UpdateHandler
             if(logger.isDebugEnabled())
                 logger.debug("Adding "+shardedId+" to "+indexName);
             
-            writer.setIndexName(indexName);
                        
             Term idTerm = this.idTerm.createTerm(cmd.indexedId);
                        
             if(isUpdate)
-                writer.updateDocument(idTerm, cmd.getLuceneDocument(schema), schema.getAnalyzer(), shardedId);                
+                writer.updateDocument(indexName, idTerm, cmd.getLuceneDocument(schema), schema.getAnalyzer(), shardedId, false);                
             else
-                writer.addDocument(cmd.getLuceneDocument(schema), schema.getAnalyzer(), shardedId);
+                writer.addDocument(indexName, cmd.getLuceneDocument(schema), schema.getAnalyzer(), shardedId, false, rms);
 
             rc = 1;
             
             //Notify readers
-            SolandraIndexWriter.flushQueue.add(indexName);
+            tryCommit(indexName);
             
        }finally {
             if (rc != 1) {
@@ -214,6 +224,12 @@ public class SolandraIndexWriter extends UpdateHandler
     public void commit(CommitUpdateCommand cmd) throws IOException
     {
         
+    }
+    
+    public void commit(String indexName)
+    {      
+        writer.commit(indexName);
+        SolandraIndexWriter.flushQueue.add(indexName);
     }
 
     public void delete(DeleteUpdateCommand cmd) throws IOException
@@ -264,8 +280,7 @@ public class SolandraIndexWriter extends UpdateHandler
                    String subIndex = core.getName() + "~" + shard;
                   
                    //Delete all terms/fields/etc
-                   writer.setIndexName(subIndex);
-                   writer.deleteDocuments(term);
+                   writer.deleteDocuments(subIndex,term,false);
                    
                    //Delete key -> docId lookup
                    RowMutation rm = new RowMutation(CassandraUtils.keySpace, keyKey);
@@ -282,7 +297,7 @@ public class SolandraIndexWriter extends UpdateHandler
                    
                    
                    //Notify readers
-                   SolandraIndexWriter.flushQueue.add(subIndex);
+                   tryCommit(subIndex);
                }
             }        
         }
@@ -321,7 +336,8 @@ public class SolandraIndexWriter extends UpdateHandler
             }
             else
             {
-                writer.deleteDocuments(q);
+                //FIXME
+                writer.deleteDocuments("",q,false);
             }
 
             madeIt = true;
@@ -404,10 +420,32 @@ public class SolandraIndexWriter extends UpdateHandler
         return core.getVersion();
     }
     
-    private void clearCache(String core)
+    private void tryCommit(String indexName)
     {
-        SolandraIndexWriter.flushQueue.add(core);
+        AtomicInteger times = bufferedWrites.get(indexName);
+        
+        if(times == null)
+        {
+            synchronized (indexName.intern())
+            {
+                 times = bufferedWrites.get(indexName);
+                 if(times == null)
+                 {
+                     times = new AtomicInteger(0);
+                     bufferedWrites.put(indexName, times);
+                 }           
+            }
+        }
+        
+        int t = times.incrementAndGet();
+        
+        if(t > writeTreshold)
+        {
+            writer.commit(indexName);
+            times.set(0);
+        }
+        
+        SolandraIndexWriter.flushQueue.add(indexName);
     }
-    
 
 }
