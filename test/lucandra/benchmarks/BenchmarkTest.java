@@ -31,6 +31,7 @@ import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.SolrQuery.ORDER;
 import org.apache.solr.client.solrj.impl.CommonsHttpSolrServer;
+import org.apache.solr.client.solrj.impl.StreamingUpdateSolrServer;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.SolrInputDocument;
 
@@ -52,7 +53,8 @@ public class BenchmarkTest {
     private static String url = "http://localhost";
     private static String[] types = new String[]{"1","2","3","4","5","6","7","8","9","10"};
     private static Random  random = new Random(System.currentTimeMillis()); 
-
+    private static CommonsHttpSolrServer streamingClient = null;
+    
     private static Runnable getRunnable() {
 
         try {
@@ -75,13 +77,39 @@ public class BenchmarkTest {
                     return doc;
                 }
                 
+                private CommonsHttpSolrServer getStreamingServer(String url) throws MalformedURLException
+                {
+                    
+                    if(streamingClient == null)
+                    {
+                        synchronized (url.intern())
+                        {
+                            if(streamingClient == null)
+                            {
+                                streamingClient =  new StreamingUpdateSolrServer(url, 1024, 10);
+                            }
+                        }
+                    }                 
+                    
+                    return streamingClient;
+                }
+                
                 public void run() {
                     
                     try{
+                        
+                        String fullUrl;
+                        
                         if(indexName.equals(""))
-                            solrClient = new CommonsHttpSolrServer(url + ":" + port +  "/solr");
+                            fullUrl = url + ":" + port +  "/solr";
                         else
-                            solrClient = new CommonsHttpSolrServer(url + ":" + port +  "/solandra/"+indexName);
+                            fullUrl = url + ":" + port +  "/solandra/"+indexName;
+                        
+                        if(type == Type.write)
+                            solrClient = getStreamingServer(fullUrl);
+                        else
+                            solrClient = new CommonsHttpSolrServer(fullUrl);
+                        
                     }catch(MalformedURLException e){
                         
                     }
@@ -167,6 +195,9 @@ public class BenchmarkTest {
         }
     }
 
+    
+    
+    
     private static void usage() {
 
         System.err.print(BenchmarkTest.class.getSimpleName() + " [--clients=<client-count>] [--loops=<loop-count>] [--type=<test-type>]\n"

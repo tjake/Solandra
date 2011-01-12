@@ -454,8 +454,6 @@ public class CassandraIndexManager
                     public int compare(IdInfo o1, IdInfo o2)
                     {
                         if (o1.offset == o2.offset)
-                        //{
-                        //    if(o1.node.shard)
                             return 0;
 
                         if (o1.offset < o2.offset)
@@ -632,7 +630,7 @@ public class CassandraIndexManager
 
         assert shards != null;
 
-       // synchronized (shards)
+        synchronized (shards)
         {
             String myToken = getToken();
 

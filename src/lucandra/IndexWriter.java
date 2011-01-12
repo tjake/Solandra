@@ -24,9 +24,9 @@ import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.util.*;
-import java.util.concurrent.*;
-
-import com.google.common.collect.MapMaker;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.cassandra.db.*;
 import org.apache.cassandra.service.StorageProxy;
@@ -46,7 +46,7 @@ import org.apache.lucene.search.*;
 
 public class IndexWriter
 {
-    private static final ConcurrentMap<String, LinkedBlockingQueue<RowMutation>>  mutationList = new MapMaker().makeMap();
+    private static final Map<String, LinkedBlockingQueue<RowMutation>>  mutationList = new HashMap<String, LinkedBlockingQueue<RowMutation>>();
     private Similarity                                     similarity   = Similarity.getDefault();
     private static final Logger                            logger       = Logger.getLogger(IndexWriter.class);
 

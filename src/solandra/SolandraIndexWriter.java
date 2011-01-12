@@ -59,7 +59,7 @@ public class SolandraIndexWriter extends UpdateHandler
     private final ExecutorService flushMonitor = Executors.newSingleThreadExecutor();
     
     
-    private final lucandra.IndexWriter writer;
+    private final static lucandra.IndexWriter writer                   = new lucandra.IndexWriter();               
     private final static Logger        logger                          = Logger.getLogger(SolandraIndexWriter.class);
 
     // stats
@@ -78,7 +78,7 @@ public class SolandraIndexWriter extends UpdateHandler
     AtomicLong                         numErrors                       = new AtomicLong();
     AtomicLong                         numErrorsCumulative             = new AtomicLong();
     
-    private static ConcurrentMap<String, AtomicInteger> bufferedWrites                = new MapMaker().makeMap();
+    private static final Map<String, AtomicInteger> bufferedWrites     = new MapMaker().makeMap();
     private static final int writeTreshold   = 16;
     
     public SolandraIndexWriter(SolrCore core)
@@ -87,7 +87,6 @@ public class SolandraIndexWriter extends UpdateHandler
 
         try
         {
-            writer = new lucandra.IndexWriter();
 
             flushMonitor.execute(new Runnable() {            
                 
@@ -99,19 +98,31 @@ public class SolandraIndexWriter extends UpdateHandler
                     {
                         try
                         {
-                            String core = flushQueue.take();
+                            String core = flushQueue.poll(CassandraUtils.cacheInvalidationInterval, TimeUnit.MILLISECONDS);
                             
-                            //if(CassandraUtils.cacheInvalidationInterval == 0)
-                            //    continue;
-                            
-                            Long lastFlush = lastCoreFlush.get(core);
-                            if(lastFlush == null || lastFlush <= (System.currentTimeMillis() - CassandraUtils.cacheInvalidationInterval))
-                            {                                              
-                                flush(core);
-                                lastCoreFlush.put(core, System.currentTimeMillis());
-                                logger.info("Flushed cache: "+core);
+                            if(core != null)
+                            {
+                                                              
+                                Long lastFlush = lastCoreFlush.get(core);
+                                if(lastFlush == null || lastFlush <= (System.currentTimeMillis() - CassandraUtils.cacheInvalidationInterval))
+                                {                                              
+                                    flush(core);
+                                    lastCoreFlush.put(core, System.currentTimeMillis());
+                                    logger.info("Flushed cache: "+core);
+                                }                        
                             }
-                            
+                            else
+                            {
+                                
+                                for(Map.Entry<String, AtomicInteger> entry : bufferedWrites.entrySet())
+                                {
+                                    if(entry.getValue().intValue() > 0)
+                                    {
+                                        writer.commit(entry.getKey());
+                                        entry.getValue().set(0);
+                                    }
+                                }                       
+                            }
                         }
                         catch (InterruptedException e)
                         {
@@ -176,6 +187,7 @@ public class SolandraIndexWriter extends UpdateHandler
             else
             {
                 
+                //FIXME: posting ID mutations with doc is buggy
                 rms = new RowMutation[3]; 
                 
                 docId = IndexManagerService.instance.getNextId(indexName, key, rms);
@@ -203,7 +215,6 @@ public class SolandraIndexWriter extends UpdateHandler
             
             //Notify readers
             tryCommit(indexName);
-            
        }finally {
             if (rc != 1) {
                 numErrors.incrementAndGet();
@@ -298,6 +309,7 @@ public class SolandraIndexWriter extends UpdateHandler
                    
                    //Notify readers
                    tryCommit(subIndex);
+                   //commit(subIndex);
                }
             }        
         }
@@ -441,11 +453,8 @@ public class SolandraIndexWriter extends UpdateHandler
         
         if(t > writeTreshold)
         {
-            writer.commit(indexName);
+            commit(indexName);
             times.set(0);
         }
-        
-        SolandraIndexWriter.flushQueue.add(indexName);
     }
-
 }
