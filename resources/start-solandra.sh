@@ -98,12 +98,12 @@ then
 fi
 
 #debug mode?
-if [ "x$debug" == "x" ]
+if [ "x$debug" != "x" ]
 then
-    LOGGING="etc/jetty-logging.xml"
-else
     foreground="yes"
     JVM_OPTS="$JVM_OPTS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=1044"
+else
+    LOGGING="etc/jetty-logging.xml"
 fi
 
 if [ "x$pidpath" != "x" ]; then
