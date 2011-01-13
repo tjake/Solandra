@@ -86,7 +86,7 @@ public class BenchmarkTest {
                         {
                             if(streamingClient == null)
                             {
-                                streamingClient =  new StreamingUpdateSolrServer(url, 1024, 10);
+                                streamingClient =  new StreamingUpdateSolrServer(url, 512, numClients);
                             }
                         }
                     }                 
@@ -180,11 +180,13 @@ public class BenchmarkTest {
                         } else {
                             
                             solrClient.add(getDocument());
-                            solrClient.commit(true,true);
+                          
                         }
 
                     }
 
+                    solrClient.commit(true,true);
+                    
                     if (myThreadId == 0)
                         System.err.println("Documents found: " + total);
                 }

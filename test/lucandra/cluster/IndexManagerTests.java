@@ -19,19 +19,10 @@
  */
 package lucandra.cluster;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
+import java.util.concurrent.*;
 
 import lucandra.CassandraUtils;
 
@@ -71,14 +62,14 @@ public class IndexManagerTests
     public void testCassandraIncrement()
     {
         
-        CassandraIndexManager idx = new CassandraIndexManager(4);
+        CassandraIndexManager idx = new CassandraIndexManager(1);
         
         Set<Long> all = new HashSet<Long>(CassandraUtils.maxDocsPerShard);
         
         long startTime = System.currentTimeMillis();
         
         //Add
-        for(int i=0; i<CassandraUtils.maxDocsPerShard*2; i++)
+        for(int i=0; i<CassandraUtils.maxDocsPerShard; i++)
         {
             long id = idx.getNextId(indexName, "i"+i);
               
@@ -90,6 +81,9 @@ public class IndexManagerTests
                 startTime = endTime;         
             }
         }
+        
+        
+        assertEquals(0, CassandraIndexManager.getShardFromDocId(idx.getMaxId(indexName)));
         
         //Update
         for(int i=0; i<CassandraUtils.maxDocsPerShard; i++)
@@ -117,7 +111,8 @@ public class IndexManagerTests
 
         ExecutorService svc = Executors.newFixedThreadPool(16);
         
-        
+        final TestCassandraIndexManager idx = new TestCassandraIndexManager(1);
+
         
         List<Callable<Set<Long>>> callables = new ArrayList<Callable<Set<Long>>>();
         for(int i=0; i<16; i++){
@@ -125,7 +120,6 @@ public class IndexManagerTests
                 
                 public Set<Long> call()
                 {
-                    final TestCassandraIndexManager idx = new TestCassandraIndexManager(4);
 
                    long startTime = System.currentTimeMillis();
                     

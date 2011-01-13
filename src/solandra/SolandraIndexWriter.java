@@ -174,7 +174,7 @@ public class SolandraIndexWriter extends UpdateHandler
            String indexName = core.getName();
            String key       = cmd.getIndexedId(schema);
            
-            Long docId =  IndexManagerService.instance.getId(indexName, key);
+            Long docId = IndexManagerService.instance.getId(indexName, key);
             RowMutation[] rms = null;    
             
             boolean isUpdate = false;
@@ -187,7 +187,6 @@ public class SolandraIndexWriter extends UpdateHandler
             else
             {
                 
-                //FIXME: posting ID mutations with doc is buggy
                 rms = new RowMutation[3]; 
                 
                 docId = IndexManagerService.instance.getNextId(indexName, key, rms);

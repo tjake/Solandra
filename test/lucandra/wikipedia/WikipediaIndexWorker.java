@@ -42,7 +42,6 @@ public class WikipediaIndexWorker implements Callable<Integer> {
     private static final Random r = new Random();
     
     static int port = 8983;
-    static int batchSize = 4;
     
     //Add shutdown hook for batched commits to complete
     static {
@@ -87,11 +86,6 @@ public class WikipediaIndexWorker implements Callable<Integer> {
             indexWriter = new CommonsHttpSolrServer("http://"+hosts.get(r.nextInt(hosts.size()))+":" + port + "/solr/wikassandra");
 
             clientPool.set(indexWriter);
-
-            List<SolrInputDocument> docs = new ArrayList<SolrInputDocument>(batchSize);
-            
-            docBuffer.set(docs);
-            allDocBuffers.add(docs);
         }
 
         return indexWriter;
@@ -110,14 +104,8 @@ public class WikipediaIndexWorker implements Callable<Integer> {
         
         doc.addField("url", article.url);
         
-        List<SolrInputDocument> docs = docBuffer.get();
-        docs.add(doc);
-        
-        if (docs.size() == batchSize) {
-            indexWriter.add(docs);
-            docs.clear();
-        }
-        
+        indexWriter.add(doc);
+         
         return article.getSize();
     }
 

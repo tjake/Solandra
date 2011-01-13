@@ -467,8 +467,6 @@ public class IndexWriter
         // Take and write
         try
         {
-           
-
             CassandraUtils.robustInsert(ConsistencyLevel.ONE, rows.toArray(new RowMutation[]{}));
 
             success = true;
