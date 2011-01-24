@@ -33,43 +33,7 @@
     <dependency org="org.mortbay.jetty" name="jetty-util" rev="6.1.6" conf="* -> *,!sources,!javadoc" />
     <dependency org="org.mortbay.jetty" name="jsp-2.1" rev="6.1.6" conf="* -> *,!sources,!javadoc" />
 
-    <dependency org="snakeyaml" name="snakeyaml" rev="1.6" conf="* -> *,!sources,!javadoc" />
-    <dependency org="org.safehaus.jug" name="jug-asl" rev="2.0.0" conf="* -> *,!sources,!javadoc" />
-    <dependency org="libthrift" name="libthrift" rev="0.5" conf="* -> *,!sources,!javadoc" />
-    <dependency org="org.apache.cassandra" name="apache-cassandra" rev="0.7.0-rc4" conf="* -> *,!sources,!javadoc">
-       <exclude module="hadoop-core"/>
-       <exclude module="hadoop-streaming"/>
-       <exclude module="avro"/>
-    </dependency>
-
-
-    <dependency org="com.thoughtworks.paranamer" name="paranamer-ant" rev="2.1" conf="* -> *,!sources,!javadoc"/>
-    <dependency org="commons-logging" name="commons-logging" rev="1.1.1" conf="* -> *,!sources,!javadoc"/>
-    <dependency org="com.reardencommerce" name="clhm-production" rev="1.0" conf="* -> *,!sources,!javadoc"/>
-    <dependency org="com.google.guava" name="guava" rev="r07" conf="* -> *,!sources,!javadoc"/>
-    <dependency org="org.cliffc.high_scale_lib" name="high-scale-lib" rev="1.0" conf="* -> *,!sources,!javadoc"/>
-    <dependency org="jline" name="jline" rev="0.9.94" conf="* -> *,!sources,!javadoc"/>
-
-    <dependency org="org.apache.avro" name="avro" rev="1.4.0" conf="* -> *,!sources,!javadoc">       
-      <exclude module="ant"/>
-      <exclude module="core"/>
-      <exclude module="ant-eclipse"/>
-      <exclude module="hadoop-core"/>
-      <exclude module="hadoop-streaming"/>
-      <exclude module="apache-rat"/>
-      <exclude module="maven-ant-tasks"/>
-      <exclude module="apache-rat"/>
-      <exclude module="javacc"/>
-      <exclude module="netty"/>
-      <exclude module="jetty"/>
-      <exclude module="paranamer-ant"/>
-      <exclude module="velocity"/>
-      <exclude module="slf4j-simple"/>
-      <exclude module="slf4j-api"/>
-      <exclude module="checkstyle"/>
-    </dependency>
-
-    <dependency org="net.java.dev.jna" name="jna" rev="3.2.7"/>
+    <dependency org="org.apache.cassandra" name="cassandra-all" rev="0.7.0" conf="* -> *,!sources,!javadoc" />
   </dependencies>
 </ivy-module>
 
