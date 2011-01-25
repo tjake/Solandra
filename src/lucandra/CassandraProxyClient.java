@@ -151,6 +151,7 @@ public class CassandraProxyClient implements java.lang.reflect.InvocationHandler
                 client = CassandraUtils.createConnection(host, port, framed);
                 breaker.success();
                 logger.info("Connected to cassandra at "+host+":"+port);
+                setClient(client);
                 return client;
             } catch (TTransportException e) {            
                 logger.warn("Connection failed to Cassandra node: "+host+":"+port+" "+e.getMessage());
@@ -186,7 +187,7 @@ public class CassandraProxyClient implements java.lang.reflect.InvocationHandler
             client = CassandraUtils.createConnection(endpoint, port, framed);
             //host = endpoint;
             breaker.success();
-        
+            logger.info("Connected to cassandra at "+endpoint+":"+port);               
         } catch (TTransportException e) {            
             logger.warn("Failed connecting to a different cassandra node in this ring: "+endpoint+":"+port);
             
@@ -194,7 +195,6 @@ public class CassandraProxyClient implements java.lang.reflect.InvocationHandler
                 client = CassandraUtils.createConnection(host, port, framed);
                 breaker.success();
                 logger.info("Connected to cassandra at "+host+":"+port);
-                return client;
             } catch (TTransportException e2) {            
                 logger.warn("Connection failed to Cassandra node: "+host+":"+port);
             }
@@ -203,7 +203,6 @@ public class CassandraProxyClient implements java.lang.reflect.InvocationHandler
         }
          
         
-        logger.info("Connected to cassandra at "+endpoint+":"+port);       
         setClient(client);
         return client;
     }

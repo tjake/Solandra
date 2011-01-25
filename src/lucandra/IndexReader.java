@@ -434,7 +434,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
             termEnum = new LucandraTermEnum(this);
         
         if( !termEnum.skipTo(term) ) //if found in the cache then reset, otherwise init.
-            termEnum = null;
+            return EmptyTermEnum.INSTANCE;
         
 
         return termEnum;
@@ -618,4 +618,25 @@ public class IndexReader extends org.apache.lucene.index.IndexReader {
         return c;
     }
     
+     private static class EmptyTermEnum extends TermEnum {
+        private static final TermEnum INSTANCE = new EmptyTermEnum();
+
+         private EmptyTermEnum() {
+        }
+
+        public boolean next() {
+           return false;
+        }
+
+        public Term term() {
+           return null;
+        }
+
+        public int docFreq() {
+           return 0;
+        }
+       
+        public void close() {
+        }
+     }
 }

@@ -425,10 +425,12 @@ public class CassandraUtils {
                 //if(logger.isDebugEnabled())
                 //    logger.debug("Inserted in " + (startTime - System.currentTimeMillis()) / 1000 + "ms");
             } catch (TTransportException e) {
-		try_again = true;
+               try_again = true;
             } catch (TException e) {
-		throw new RuntimeException(e);
+               mutationMap.clear();
+               throw new RuntimeException(e);
             } catch (InvalidRequestException e) {
+               mutationMap.clear();
                 throw new RuntimeException(e);
             } catch (UnavailableException e) {
                 try_again = true;
@@ -439,7 +441,8 @@ public class CassandraUtils {
         
         //fail
         if(try_again){
-            throw new RuntimeException("Insert still failed after 10 attempts");
+           mutationMap.clear();
+           throw new RuntimeException("Insert still failed after 10 attempts");
         }
     }
     

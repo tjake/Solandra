@@ -287,7 +287,7 @@ public class IndexWriter {
             } catch (InvalidRequestException e) {
                 throw new RuntimeException(e);
             } catch (NotFoundException e) {
-                throw new RuntimeException(e);
+//                throw new RuntimeException(e);
             } catch (UnavailableException e) {
                 throw new RuntimeException(e);
             } catch (TimedOutException e) {
@@ -311,13 +311,14 @@ public class IndexWriter {
             List<ColumnOrSuperColumn> docs = client.get_slice(key, cp, new SlicePredicate().setSlice_range(new SliceRange(CassandraUtils.emptyByteArray, CassandraUtils.emptyByteArray, true,Integer.MAX_VALUE)), ConsistencyLevel.ONE);
                 
             //delete by documentId
+            if (docs != null) {
             for(ColumnOrSuperColumn docInfo : docs){
                 ByteBuffer docId = docInfo.getSuper_column().name;
                 
                 logger.debug(new String(docId.array(), docId.position()+docId.arrayOffset(), docId.remaining(),"UTF-8"));
                 deleteLucandraDocument(docId);
             }
-                              
+            }          
         } catch (InvalidRequestException e) {
             throw new RuntimeException(e);
         } catch (UnavailableException e) {
@@ -327,7 +328,7 @@ public class IndexWriter {
         } catch (TimedOutException e) {
             throw new RuntimeException(e);
         } catch (NotFoundException e) {
-            throw new RuntimeException(e);
+//            throw new RuntimeException(e);
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }  

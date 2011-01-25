@@ -237,97 +237,121 @@ public class LucandraTermEnum extends TermEnum {
         ColumnParent columnParent = new ColumnParent(CassandraUtils.termVecColumnFamily);        
         SlicePredicate slicePredicate = new SlicePredicate();
        
-        KeyRange kr = new KeyRange();
-        kr.setStart_key(startTerm);
-        kr.setEnd_key(endTerm);
-        kr.setCount(count);
+        boolean readMore = true;
+        while (readMore) {
+           KeyRange kr = new KeyRange();
+           kr.setStart_key(startTerm);
+           kr.setEnd_key(endTerm);
+           kr.setCount(count);
 
-        // Get all columns
-        SliceRange sliceRange = new SliceRange(CassandraUtils.emptyByteArray, CassandraUtils.emptyByteArray, true, Integer.MAX_VALUE);
-        slicePredicate.setSlice_range(sliceRange);
+           // Get all columns
+           SliceRange sliceRange = new SliceRange(CassandraUtils.emptyByteArray, CassandraUtils.emptyByteArray, true, Integer.MAX_VALUE);
+           slicePredicate.setSlice_range(sliceRange);
         
-        List<KeySlice> columns;
-        try {
-            columns = client.get_range_slices(columnParent, slicePredicate, kr, ConsistencyLevel.ONE);
-        } catch (InvalidRequestException e) {
-            throw new RuntimeException(e);
-        } catch (TException e) {
-            throw new RuntimeException(e);
-        } catch (UnavailableException e) {
-            throw new RuntimeException(e);
-        } catch (TimedOutException e) {
-            throw new RuntimeException(e);
-        }
+           List<KeySlice> columns;
+           try {
+               columns = client.get_range_slices(columnParent, slicePredicate, kr, ConsistencyLevel.ONE);
+           } catch (InvalidRequestException e) {
+               throw new RuntimeException(e);
+           } catch (TException e) {
+               throw new RuntimeException(e);
+           } catch (UnavailableException e) {
+               throw new RuntimeException(e);
+           } catch (TimedOutException e) {
+               throw new RuntimeException(e);
+           }
 
-        // term to start with next time
-        actualInitSize = columns.size();
-        
-        if(logger.isDebugEnabled()){
-            try {
-                logger.debug("Found " + columns.size() + " keys in range:" + 
+           // term to start with next time
+           if (columns != null) {
+              actualInitSize = columns.size();
+              if(logger.isDebugEnabled()){
+                 try {
+					logger.debug("Found " + columns.size() + " keys in range:" + 
                        new String(startTerm.array(),"UTF-8") + " to " + 
                        new String(endTerm.array(),"UTF-8") + " in " + 
                        (System.currentTimeMillis() - start) + "ms");
-                
-            } catch (UnsupportedEncodingException e1) {
-                throw new RuntimeException(e1);
-            }
-        }
+                 } catch (UnsupportedEncodingException e1) {
+                    throw new RuntimeException(e1);
+                 }
+              }
+           } else {
+              actualInitSize = 0;
+           }
 
-        if (actualInitSize > 0) {
-            for (KeySlice entry : columns) {
+           // We found less than what we asked for, so there is nothing left to read after this...
+           if (actualInitSize < kr.getCount()) {
+	      readMore =  false;
+           }
+
+           if (actualInitSize > 0) {
+              ByteBuffer readMoreFrom = null;
+              for (KeySlice entry : columns) {
    
-                String key;
+                 String key;
                
-                try {
+                 try {
                     key = new String(entry.getKey(),"UTF-8");
-                } catch (UnsupportedEncodingException e) {
+                 } catch (UnsupportedEncodingException e) {
                     throw new RuntimeException("This JVM doesn't support UTF-8");
-                }
+                 }
                 
-                // term keys look like wikipedia/body/wiki
-                String termStr = key.substring(key.indexOf(CassandraUtils.delimeter) + CassandraUtils.delimeter.length());
-                Term term = CassandraUtils.parseTerm(termStr);                 
+                 // term keys look like wikipedia/body/wiki
+                 String termStr = key.substring(key.indexOf(CassandraUtils.delimeter) + CassandraUtils.delimeter.length());
+                 Term term = CassandraUtils.parseTerm(termStr);                 
+                 
+                 logger.debug(termStr + " has " + entry.getColumns().size());
                 
-                logger.debug(termStr + " has " + entry.getColumns().size());
-                
-                //check for tombstone keys or incorrect keys (from RP)
-                try {
-                    if(entry.getColumns().size() > 0 && term.field().equals(skipTo.field()) &&
-                            //from this index
-                            entry.key.equals(CassandraUtils.hashKeyBytes(indexName,CassandraUtils.delimeterBytes,term.field().getBytes("UTF-8"),CassandraUtils.delimeterBytes,term.text().getBytes("UTF-8")))){
-                        
-                        termDocFreqBuffer.put(term, entry.getColumns());
+
+                 //check for tombstone keys or incorrect keys (from RP)
+                 try {
+                    readMoreFrom = CassandraUtils.hashKeyBytes(
+                          indexName,  CassandraUtils.delimeterBytes, term.field().getBytes("UTF-8"), 
+                          CassandraUtils.delimeterBytes, entry.getKey());
+                    
+                    if(term.field().equals(skipTo.field()) &&
+                    //from this index
+                          entry.key.equals(CassandraUtils.hashKeyBytes(indexName, CassandraUtils.delimeterBytes, term.field().getBytes("UTF-8"), CassandraUtils.delimeterBytes, term.text().getBytes("UTF-8")))){
+                       if (entry.getColumns().size() > 0) {
+                          readMore = false; // Found atleast one non tombstone key, so no need to read again
+                          termDocFreqBuffer.put(term, entry.getColumns());
+                       }
+                    } else {
+                       readMore = false; // Found a different key, so no need to read again
                     }
-                } catch (UnsupportedEncodingException e) {
+                 } catch (UnsupportedEncodingException e) {
                     throw new RuntimeException(e);
-                }
-            }
+                 }
+                 startTerm = readMoreFrom;
+              }
 
-            if(!termDocFreqBuffer.isEmpty()){
-                chunkBoundryTerm = termDocFreqBuffer.lastKey();
-            }
+           }
         }
+        if(!termDocFreqBuffer.isEmpty()){
+             chunkBoundryTerm = termDocFreqBuffer.lastKey();
+         }
 
-        // add a final key (excluded in submap below)
-        termDocFreqBuffer.put(finalTerm, null);
+           // add a final key (excluded in submap below)
+           termDocFreqBuffer.put(finalTerm, null);
 
-        // put in cache
-        for (Term termKey : termDocFreqBuffer.keySet()) {
+          // put in cache
+           for (Term termKey : termDocFreqBuffer.keySet()) {
 
-            if (termCache == null) {
-                termCache = termDocFreqBuffer;
-            } else {
-                termCache.putAll(termDocFreqBuffer);
-            }
+               if (termCache == null) {
+                   termCache = termDocFreqBuffer;
+               } else {
+                  termCache.putAll(termDocFreqBuffer);
+               }
 
-            indexReader.addTermEnumCache(termKey, this);
-        }
+               indexReader.addTermEnumCache(termKey, this);
+           }
+
+          termBuffer = termDocFreqBuffer.keySet().toArray(new Term[] {});
+//        } else {
+//          termBuffer = new Term[] {};
+//        }
 
         // cache the initial term too
         indexReader.addTermEnumCache(skipTo, this);
-
-        termBuffer = termDocFreqBuffer.keySet().toArray(new Term[] {});
 
         termPosition = 0;
 
