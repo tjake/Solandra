@@ -212,6 +212,7 @@ public class LucandraTermEnum extends TermEnum {
 
         // The first time we grab just a few keys
         int count = maxInitSize;
+        boolean readMore = true;
 
         // otherwise we grab all the rest of the keys
         if (chunkBoundryTerm != null) {
@@ -227,7 +228,7 @@ public class LucandraTermEnum extends TermEnum {
             
             //After first pass use the boundary term, since we know on pass 2 we are using the OPP
             endTerm = boundryTerm;
-            
+            readMore = false;
         }
 
         long start = System.currentTimeMillis();
@@ -237,8 +238,7 @@ public class LucandraTermEnum extends TermEnum {
         ColumnParent columnParent = new ColumnParent(CassandraUtils.termVecColumnFamily);        
         SlicePredicate slicePredicate = new SlicePredicate();
        
-        boolean readMore = true;
-        while (readMore) {
+        do {
            KeyRange kr = new KeyRange();
            kr.setStart_key(startTerm);
            kr.setEnd_key(endTerm);
@@ -306,7 +306,7 @@ public class LucandraTermEnum extends TermEnum {
                  try {
                     readMoreFrom = CassandraUtils.hashKeyBytes(
                           indexName,  CassandraUtils.delimeterBytes, term.field().getBytes("UTF-8"), 
-                          CassandraUtils.delimeterBytes, entry.getKey());
+                          CassandraUtils.delimeterBytes, term.text().getBytes("UTF-8"));
                     
                     if(term.field().equals(skipTo.field()) &&
                     //from this index
@@ -325,7 +325,8 @@ public class LucandraTermEnum extends TermEnum {
               }
 
            }
-        }
+        } while (readMore);
+        
         if(!termDocFreqBuffer.isEmpty()){
              chunkBoundryTerm = termDocFreqBuffer.lastKey();
          }
