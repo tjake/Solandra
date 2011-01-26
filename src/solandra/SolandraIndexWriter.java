@@ -47,6 +47,7 @@ import org.apache.lucene.search.Query;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.common.util.SimpleOrderedMap;
+import org.apache.solr.core.SolandraCoreContainer;
 import org.apache.solr.core.SolrCore;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.QueryParsing;
@@ -78,7 +79,7 @@ public class SolandraIndexWriter extends UpdateHandler
     AtomicLong                         numErrors                       = new AtomicLong();
     AtomicLong                         numErrorsCumulative             = new AtomicLong();
     
-    private static final Map<String, AtomicInteger> bufferedWrites     = new MapMaker().makeMap();
+    private static final ConcurrentMap<String, AtomicInteger> bufferedWrites     = new MapMaker().makeMap();
     private static final int writeTreshold   = 16;
     
     public SolandraIndexWriter(SolrCore core)
@@ -118,7 +119,7 @@ public class SolandraIndexWriter extends UpdateHandler
                                 {
                                     if(entry.getValue().intValue() > 0)
                                     {
-                                        writer.commit(entry.getKey());
+                                        writer.commit(entry.getKey(), false);
                                         entry.getValue().set(0);
                                     }
                                 }                       
@@ -134,12 +135,12 @@ public class SolandraIndexWriter extends UpdateHandler
                 private void flush(String core)
                 {
                     //Make sure all writes are in for this core
-                    writer.commit(core);
+                    writer.commit(core, false);
                     
                     ByteBuffer cacheKey = CassandraUtils.hashKeyBytes((core).getBytes(), CassandraUtils.delimeterBytes, "cache".getBytes());
                                    
                     RowMutation rm = new RowMutation(CassandraUtils.keySpace, cacheKey);
-                    rm.add(new QueryPath(CassandraUtils.schemaInfoColumnFamily, CassandraUtils.cachedColBytes, CassandraUtils.cachedColBytes), FBUtilities.EMPTY_BYTE_BUFFER, System.currentTimeMillis());                   
+                    rm.add(new QueryPath(CassandraUtils.schemaInfoColumnFamily, CassandraUtils.cachedColBytes, CassandraUtils.cachedColBytes), FBUtilities.EMPTY_BYTE_BUFFER, System.nanoTime());                   
                     CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm);
                 }
                 
@@ -171,7 +172,7 @@ public class SolandraIndexWriter extends UpdateHandler
 
        try{
            
-           String indexName = core.getName();
+           String indexName = SolandraCoreContainer.coreInfo.get().indexName;
            String key       = cmd.getIndexedId(schema);
            
             Long docId = IndexManagerService.instance.getId(indexName, key);
@@ -181,8 +182,8 @@ public class SolandraIndexWriter extends UpdateHandler
             if(docId != null)
             {
                 isUpdate = true;
-                if(logger.isDebugEnabled())
-                    logger.debug("update for document "+docId);
+                //if(logger.isDebugEnabled())
+                    logger.info("update for document "+docId);
             } 
             else
             {
@@ -197,7 +198,9 @@ public class SolandraIndexWriter extends UpdateHandler
             
             int shard     = CassandraIndexManager.getShardFromDocId(docId);
             int shardedId = CassandraIndexManager.getShardedDocId(docId);
-            indexName = core.getName()+"~"+shard;
+            indexName = indexName+"~"+shard;
+            
+            //logger.info("adding doc to"+indexName);
             
             if(logger.isDebugEnabled())
                 logger.debug("Adding "+shardedId+" to "+indexName);
@@ -233,17 +236,31 @@ public class SolandraIndexWriter extends UpdateHandler
     //TODO: flush all sub-index caches?
     public void commit(CommitUpdateCommand cmd) throws IOException
     {
+      
+        commitCommands.incrementAndGet();
         
+        String indexName = SolandraCoreContainer.coreInfo.get().indexName;
+        long maxId = IndexManagerService.instance.getMaxId(indexName);
+        int maxShard = CassandraIndexManager.getShardFromDocId(maxId);
+        
+        for(int i=0; i<=maxShard; i++)
+        {
+            logger.info("committing "+indexName+"~"+i);
+            commit(indexName+"~"+i, true);
+        }
     }
     
-    public void commit(String indexName)
+    public void commit(String indexName, boolean blocked)
     {      
-        writer.commit(indexName);
+        writer.commit(indexName, blocked);
+        
         SolandraIndexWriter.flushQueue.add(indexName);
     }
 
     public void delete(DeleteUpdateCommand cmd) throws IOException
     {
+        String indexName = SolandraCoreContainer.coreInfo.get().indexName;
+        
         deleteByIdCommands.incrementAndGet();
         deleteByIdCommandsCumulative.incrementAndGet();
 
@@ -266,7 +283,7 @@ public class SolandraIndexWriter extends UpdateHandler
         if(logger.isDebugEnabled())
             logger.debug("Deleting term: "+term);
         
-        ByteBuffer keyKey = CassandraUtils.hashKeyBytes((core.getName()+"~"+term.text()).getBytes(), CassandraUtils.delimeterBytes, "keys".getBytes());
+        ByteBuffer keyKey = CassandraUtils.hashKeyBytes((indexName+"~"+term.text()).getBytes(), CassandraUtils.delimeterBytes, "keys".getBytes());
         ByteBuffer keyCol= ByteBuffer.wrap(term.text().getBytes());
     
         List<Row> rows = CassandraUtils.robustRead(keyKey, new QueryPath(CassandraUtils.schemaInfoColumnFamily), Arrays.asList(keyCol), ConsistencyLevel.QUORUM);
@@ -287,20 +304,20 @@ public class SolandraIndexWriter extends UpdateHandler
                    
                    ByteBuffer sidName = ByteBuffer.wrap(String.valueOf(sid).getBytes());
                    
-                   String subIndex = core.getName() + "~" + shard;
+                   String subIndex = indexName + "~" + shard;
                   
                    //Delete all terms/fields/etc
                    writer.deleteDocuments(subIndex,term,false);
                    
                    //Delete key -> docId lookup
                    RowMutation rm = new RowMutation(CassandraUtils.keySpace, keyKey);
-                   rm.delete(new QueryPath(CassandraUtils.schemaInfoColumnFamily, keyCol), System.currentTimeMillis()-10);
+                   rm.delete(new QueryPath(CassandraUtils.schemaInfoColumnFamily, keyCol), System.nanoTime());
                    
                    //Delete docId so it can be reused
                    //TODO: update shard info with this docid
                    ByteBuffer idKey = CassandraUtils.hashKeyBytes(subIndex.getBytes(), CassandraUtils.delimeterBytes, "ids".getBytes());
                    RowMutation rm2 = new RowMutation(CassandraUtils.keySpace, idKey);
-                   rm2.delete(new QueryPath(CassandraUtils.schemaInfoColumnFamily, sidName), System.currentTimeMillis()-10);
+                   rm2.delete(new QueryPath(CassandraUtils.schemaInfoColumnFamily, sidName), System.nanoTime());
                    
                    CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm, rm2);
                    
@@ -308,7 +325,6 @@ public class SolandraIndexWriter extends UpdateHandler
                    
                    //Notify readers
                    tryCommit(subIndex);
-                   //commit(subIndex);
                }
             }        
         }
@@ -443,7 +459,7 @@ public class SolandraIndexWriter extends UpdateHandler
                  if(times == null)
                  {
                      times = new AtomicInteger(0);
-                     bufferedWrites.put(indexName, times);
+                     bufferedWrites.putIfAbsent(indexName, times);
                  }           
             }
         }
@@ -452,7 +468,7 @@ public class SolandraIndexWriter extends UpdateHandler
         
         if(t > writeTreshold)
         {
-            commit(indexName);
+            commit(indexName, false);
             times.set(0);
         }
     }

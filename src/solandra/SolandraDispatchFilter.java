@@ -56,12 +56,13 @@ public class SolandraDispatchFilter extends SolrDispatchFilter
             ServletException
     {
 
+        
         HttpServletRequest req = (HttpServletRequest) request;
         HttpServletResponse resp = (HttpServletResponse) response;
 
         String indexName = "";
         String path = req.getServletPath();
-
+        
         if (req.getPathInfo() != null)
         {
             // this lets you handle /update/commit when /update is a servlet
@@ -161,7 +162,7 @@ public class SolandraDispatchFilter extends SolrDispatchFilter
 
         int idx = path.indexOf("/", 1);
         if (idx > 1)
-        {
+        {         
             // try to get the corename as a request parameter first
             sreq.getContext().put("solandra-index", path.substring(1, idx));
         }

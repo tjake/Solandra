@@ -24,14 +24,16 @@ import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.util.*;
-import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import com.google.common.collect.MapMaker;
 
 import org.apache.cassandra.db.*;
 import org.apache.cassandra.service.StorageProxy;
 import org.apache.cassandra.thrift.*;
 import org.apache.cassandra.utils.FBUtilities;
+import org.apache.cassandra.utils.Pair;
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
@@ -46,9 +48,12 @@ import org.apache.lucene.search.*;
 
 public class IndexWriter
 {
-    private static final Map<String, LinkedBlockingQueue<RowMutation>>  mutationList = new HashMap<String, LinkedBlockingQueue<RowMutation>>();
-    private Similarity                                     similarity   = Similarity.getDefault();
-    private static final Logger                            logger       = Logger.getLogger(IndexWriter.class);
+    private static final ConcurrentMap<String, Pair<AtomicInteger, LinkedBlockingQueue<RowMutation>>> mutationList = new MapMaker()
+                                                                                                                           .makeMap();
+    private Similarity                                                                                similarity   = Similarity
+                                                                                                                           .getDefault();
+    private static final Logger                                                                       logger       = Logger
+                                                                                                                           .getLogger(IndexWriter.class);
 
     public IndexWriter()
     {
@@ -56,8 +61,8 @@ public class IndexWriter
     }
 
     @SuppressWarnings("unchecked")
-    public void addDocument(String indexName, Document doc, Analyzer analyzer, int docNumber, boolean autoCommit, RowMutation rms[])
-            throws CorruptIndexException, IOException
+    public void addDocument(String indexName, Document doc, Analyzer analyzer, int docNumber, boolean autoCommit,
+            RowMutation rms[]) throws CorruptIndexException, IOException
     {
 
         Map<ByteBuffer, RowMutation> workingMutations = new HashMap<ByteBuffer, RowMutation>();
@@ -296,23 +301,26 @@ public class IndexWriter
         CassandraUtils.addMutations(workingMutations, CassandraUtils.docColumnFamily,
                 CassandraUtils.documentMetaFieldBytes, key, CassandraUtils.toBytes(allIndexedTerms));
 
-        if(rms != null)
+        if (rms != null)
         {
-            LinkedBlockingQueue<RowMutation> mutationQ = getMutationQueue(indexName);
-            
-            mutationQ.addAll(Arrays.asList(rms));
-            mutationQ.addAll(workingMutations.values());
+            Pair<AtomicInteger, LinkedBlockingQueue<RowMutation>> mutationQ = getMutationQueue(indexName);
+
+            List<RowMutation> rows = new ArrayList(Arrays.asList(rms));
+            rows.addAll(workingMutations.values());
+
+            mutationQ.right.addAll(rows);
         }
         else
-        {            
+        {
             appendMutations(indexName, workingMutations);
         }
-        
+
         if (autoCommit)
-            commit(indexName);
+            commit(indexName, false);
     }
 
-    public void deleteDocuments(String indexName, Query query, boolean autoCommit) throws CorruptIndexException, IOException
+    public void deleteDocuments(String indexName, Query query, boolean autoCommit) throws CorruptIndexException,
+            IOException
     {
 
         IndexReader reader = new IndexReader(indexName);
@@ -329,7 +337,8 @@ public class IndexWriter
 
     }
 
-    public void deleteDocuments(String indexName, Term term, boolean autoCommit) throws CorruptIndexException, IOException
+    public void deleteDocuments(String indexName, Term term, boolean autoCommit) throws CorruptIndexException,
+            IOException
     {
         try
         {
@@ -429,15 +438,16 @@ public class IndexWriter
         CassandraUtils.addMutations(workingMutations, CassandraUtils.docColumnFamily, (ByteBuffer) null, selfKey,
                 (ByteBuffer) null);
 
-        
+        logger.info("Deleted all terms for: " + docNumber);
+
         appendMutations(indexName, workingMutations);
 
         if (autoCommit)
-            commit(indexName);
+            commit(indexName, false);
     }
 
-    public void updateDocument(String indexName, Term updateTerm, Document doc, Analyzer analyzer, int docNumber, boolean autoCommit)
-            throws CorruptIndexException, IOException
+    public void updateDocument(String indexName, Term updateTerm, Document doc, Analyzer analyzer, int docNumber,
+            boolean autoCommit) throws CorruptIndexException, IOException
     {
 
         deleteDocuments(indexName, updateTerm, autoCommit);
@@ -452,65 +462,88 @@ public class IndexWriter
 
     }
 
-    
     // write completed mutations
-    public void commit(String indexName)
-    {    
+    public void commit(String indexName, boolean blocked)
+    {
 
-        LinkedBlockingQueue<RowMutation> mutationQ = getMutationQueue(indexName);
-        
+        Pair<AtomicInteger, LinkedBlockingQueue<RowMutation>> mutationQ = getMutationQueue(indexName);
+
         boolean success = false;
 
         List<RowMutation> rows = new ArrayList<RowMutation>();
-        mutationQ.drainTo(rows);
-        
+
         // Take and write
         try
         {
-            CassandraUtils.robustInsert(ConsistencyLevel.ONE, rows.toArray(new RowMutation[]{}));
+            while (blocked && mutationQ.left.get() > 0)
+            {
+                Thread.sleep(20);
+            }
+
+            // marked active write
+            mutationQ.left.incrementAndGet();
+
+            mutationQ.right.drainTo(rows);
+
+            if (rows.isEmpty())
+            {
+                logger.info("Nothing to write for :" + indexName);
+                return;
+            }
+
+            CassandraUtils.robustInsert(ConsistencyLevel.ONE, rows.toArray(new RowMutation[] {}));
 
             success = true;
+        }
+        catch (InterruptedException e)
+        {
+            // handled below
         }
         finally
         {
 
             // If write failed, add them back for another attempt
             if (!success)
-                mutationQ.addAll(rows);
+            {
+                if (rows != null)
+                    mutationQ.right.addAll(rows);
+            }
+            else
+            {
+                logger.info("wrote " + rows.size());
+            }
+
+            // Mark we are done.
+            mutationQ.left.decrementAndGet();
         }
 
     }
 
     // append complete mutations to the list
     private void appendMutations(String indexName, Map<ByteBuffer, RowMutation> mutations)
-    {       
-        
-        LinkedBlockingQueue<RowMutation> mutationQ = getMutationQueue(indexName);
-        
-        mutationQ.addAll(mutations.values());
+    {
+
+        Pair<AtomicInteger, LinkedBlockingQueue<RowMutation>> mutationQ = getMutationQueue(indexName);
+
+        mutationQ.right.addAll(mutations.values());
     }
 
-    
-    private LinkedBlockingQueue<RowMutation> getMutationQueue(String indexName)
+    private Pair<AtomicInteger, LinkedBlockingQueue<RowMutation>> getMutationQueue(String indexName)
     {
-        
-        LinkedBlockingQueue<RowMutation> mutationQ = mutationList.get(indexName);
-        
-        if(mutationQ == null)
+
+        Pair<AtomicInteger, LinkedBlockingQueue<RowMutation>> mutationQ = mutationList.get(indexName);
+
+        if (mutationQ == null)
         {
-         
-            synchronized (indexName.intern())
-            {
-                mutationQ = mutationList.get(indexName);
-                
-                if(mutationQ == null)
-                {
-                    mutationQ = new LinkedBlockingQueue<RowMutation>();
-                    mutationList.put(indexName, mutationQ);
-                }
-            }           
+            mutationQ = new Pair<AtomicInteger, LinkedBlockingQueue<RowMutation>>(new AtomicInteger(0),
+                    new LinkedBlockingQueue<RowMutation>());
+            Pair<AtomicInteger, LinkedBlockingQueue<RowMutation>> liveQ = mutationList
+                    .putIfAbsent(indexName, mutationQ);
+
+            if (liveQ != null)
+                mutationQ = liveQ;
         }
-        
-        return mutationQ;      
-    }  
+
+        return mutationQ;
+    }
 }

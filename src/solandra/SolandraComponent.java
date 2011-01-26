@@ -56,7 +56,7 @@ public class SolandraComponent extends SearchComponent
     private static AtomicBoolean hasSolandraSchema = new AtomicBoolean(false);
     private static final Logger logger = Logger.getLogger(SolandraComponent.class);
     private final Random        random;
-    private static Map<String,Long> cacheCheck = new MapMaker().makeMap();
+    private final static Map<String,Long> cacheCheck = new MapMaker().makeMap();
     
     public SolandraComponent()
     {
@@ -90,7 +90,7 @@ public class SolandraComponent extends SearchComponent
         
         Long lastCheck = SolandraComponent.cacheCheck.get(indexName);
     
-        if(lastCheck == null || lastCheck < (System.currentTimeMillis() - CassandraUtils.cacheInvalidationInterval))
+        if(lastCheck == null || lastCheck <= (System.currentTimeMillis() - CassandraUtils.cacheInvalidationInterval))
         {
         
             ByteBuffer keyKey = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, "cache".getBytes());
@@ -149,9 +149,9 @@ public class SolandraComponent extends SearchComponent
             return;
         }
 
-        String indexName = rb.req.getCore().getName();
+        String indexName = (String) rb.req.getContext().get("solandra-index");
 
-        if (indexName.equals(""))
+        if (indexName == null || indexName.equals(""))
         {
             return; // 
         }

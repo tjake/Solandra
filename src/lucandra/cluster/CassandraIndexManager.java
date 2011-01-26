@@ -348,7 +348,7 @@ public class CassandraIndexManager
 
         RowMutation rm = new RowMutation(CassandraUtils.keySpace, idKey);
         rm.add(new QueryPath(CassandraUtils.schemaInfoColumnFamily, idCol, ByteBuffer.wrap(myToken.getBytes())),
-                keyCol, System.currentTimeMillis());
+                keyCol, System.nanoTime());
 
         // Permanently link the key to the id
         ByteBuffer keyKey = CassandraUtils.hashKeyBytes((indexName+"~"+key).getBytes(), CassandraUtils.delimeterBytes, "keys".getBytes());
@@ -357,7 +357,7 @@ public class CassandraIndexManager
 
         RowMutation rm2 = new RowMutation(CassandraUtils.keySpace, keyKey);
         rm2.add(new QueryPath(CassandraUtils.schemaInfoColumnFamily, keyCol, idVal), FBUtilities.EMPTY_BYTE_BUFFER,
-                System.currentTimeMillis());
+                System.nanoTime());
 
         // Update last offset info for this shard
         RowMutation rm3 = updateNodeOffset(indexName+"~"+idInfo.node.shard, myToken, idInfo.node, idInfo.offset);
@@ -488,7 +488,7 @@ public class CassandraIndexManager
             ByteBuffer off = ByteBuffer.wrap(String.valueOf(nextOffset).getBytes());
 
             rm.add(new QueryPath(CassandraUtils.schemaInfoColumnFamily, id, 
-                    ByteBuffer.wrap(myToken.getBytes())), off, System.currentTimeMillis(), expirationTime);
+                    ByteBuffer.wrap(myToken.getBytes())), off, System.nanoTime(), expirationTime);
 
                 
             CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm);
@@ -753,7 +753,7 @@ public class CassandraIndexManager
                              ByteBuffer.wrap(String.valueOf(node.shard).getBytes()), 
                              ByteBuffer.wrap(myToken.getBytes())), 
                ByteBuffer.wrap(String.valueOf(offset).getBytes()),
-               System.currentTimeMillis());
+               System.nanoTime());
 
         // update locally
         AtomicInteger o = node.nodes.get(myToken);
