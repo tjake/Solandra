@@ -112,7 +112,8 @@ public class SolandraCoreContainer extends CoreContainer
     }
 
     public static String readSchemaXML(String indexName) throws IOException
-    {
+    {        
+        
         List<Row> rows = CassandraUtils.robustRead(ByteBuffer.wrap((indexName + "/schema").getBytes()), queryPath,
                 Arrays.asList(CassandraUtils.schemaKeyBytes), ConsistencyLevel.QUORUM);
 
@@ -123,7 +124,7 @@ public class SolandraCoreContainer extends CoreContainer
             throw new IllegalStateException("More than one schema found for this index");
 
         if (rows.get(0).cf == null)
-            throw new IOException("invalid index");
+            throw new IOException("invalid index: "+indexName);
 
         ByteBuffer schema = rows.get(0).cf.getColumn(CassandraUtils.schemaKeyBytes).getSubColumn(
                 CassandraUtils.schemaKeyBytes).value();
@@ -189,7 +190,7 @@ public class SolandraCoreContainer extends CoreContainer
             throw new RuntimeException(e);
         }
 
-        CassandraUtils.robustInsert(ConsistencyLevel.ONE, rm);
+        CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm);
 
         logger.debug("Wrote Schema for " + indexName);
     }
