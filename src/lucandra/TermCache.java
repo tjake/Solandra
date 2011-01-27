@@ -60,7 +60,7 @@ public class TermCache
         {
             range = tailEntry.getValue();
             
-            if(skip.compareTo(range.left) >= 0 && (!range.right.equals(emptyTerm) && skip.compareTo(range.right) <= 0))
+            if(skip.compareTo(range.left) >= 0 && (!range.right.equals(emptyTerm) && skip.compareTo(range.right) < 0))
                 needsBuffering = false;                      
         }
         

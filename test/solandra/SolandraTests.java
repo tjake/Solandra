@@ -19,15 +19,15 @@
  */
 package solandra;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -54,6 +54,10 @@ public class SolandraTests
     static String                indexName2 = String.valueOf(System.nanoTime());
     static String[]              subIndexes = new String[] { "", "one", "two", "three" };
 
+    static String                otherIndexName = String.valueOf(System.nanoTime());
+    static CommonsHttpSolrServer otherClient;
+
+    
     // Set test schema
     String                       schemaXml  = "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
                                                     + "<schema name=\"wikipedia\" version=\"1.1\">\n"
@@ -425,6 +429,304 @@ public class SolandraTests
 
         QueryResponse r = solrClient.query(q);
         assertEquals(0, r.getResults().getNumFound());
+    }
+
+    public void testWildcardSearch(CommonsHttpSolrServer solrClient) throws Exception
+    {
+        SolrQuery q = new SolrQuery().setQuery("url:[* TO *]").addField("*").addField("score");
+
+        QueryResponse r = solrClient.query(q);
+        assertEquals(3, r.getResults().getNumFound());
+    }
+    
+    @Test
+    public void setAddOtherSchema() throws Exception {
+
+        otherClient = new CommonsHttpSolrServer("http://localhost:" + port + "/solandra/"+otherIndexName);
+        
+        String otherSchema = "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n" + "<schema name=\"config\" version=\"1.2\">\n"
+                                + "<types>\n" + "<fieldType name=\"string\" class=\"solr.StrField\" sortMissingLast=\"true\" omitNorms=\"true\"/>\n"
+                                + "<fieldType name=\"long\" class=\"solr.TrieLongField\" precisionStep=\"0\" omitNorms=\"true\" positionIncrementGap=\"0\"/>\n"
+                                + "<fieldType name=\"text_ws\" class=\"solr.TextField\" positionIncrementGap=\"100\">\n"
+                                + "<analyzer><tokenizer class=\"solr.WhitespaceTokenizerFactory\"/></analyzer>\n" 
+                                + "</fieldType>\n" + "</types>\n"
+                                + "<fields>\n" + "<field name=\"messageType\" type=\"text_ws\" indexed=\"true\" stored=\"true\" required=\"true\" />\n"
+                                + "<field name=\"modTime\" type=\"long\" indexed=\"true\" stored=\"false\" required=\"false\" />\n"
+                                + "<field name=\"uuid\" type=\"string\" indexed=\"true\" stored=\"true\" required=\"true\" />\n"
+                                + "<field name=\"ownerUUID\" type=\"string\" indexed=\"true\" stored=\"true\" required=\"false\" />\n"
+                                + "<field name=\"generatorUUID\" type=\"string\" indexed=\"true\" stored=\"true\" required=\"false\" />\n"
+                                + "<field name=\"key\" type=\"string\" indexed=\"true\" stored=\"false\" required=\"false\" />\n"
+                                + "<field name=\"name\" type=\"string\" indexed=\"true\" stored=\"true\" required=\"false\" />\n"
+                                + "<field name=\"desc\" type=\"string\" indexed=\"true\" stored=\"false\" required=\"false\" />\n"
+                                + "<field name=\"defaultValue\" type=\"string\" indexed=\"true\" stored=\"false\" required=\"false\" />\n"
+                                + "<field name=\"value\" type=\"string\" indexed=\"true\" stored=\"false\" required=\"false\" />\n"
+                                + "<field name=\"attributeDef\" type=\"string\" indexed=\"true\" stored=\"false\" required=\"false\" multiValued=\"true\" />\n"
+                                + "<field name=\"instructionDef\" type=\"string\" indexed=\"true\" stored=\"false\" required=\"false\" multiValued=\"true\" />\n"
+                                + "<field name=\"attribute\" type=\"string\" indexed=\"true\" stored=\"false\" required=\"false\" multiValued=\"true\" />\n"
+                                + "<field name=\"json\" type=\"text_ws\" indexed=\"false\" stored=\"true\" />\n"
+                                + "</fields>\n" + "<uniqueKey>uuid</uniqueKey>\n" + "<defaultSearchField>uuid</defaultSearchField>\n" + "</schema>\n";  
+        
+        URL url = new URL("http://localhost:" + port + "/solandra/schema/"+otherIndexName);
+
+        // write
+        try {
+
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setDoOutput(true);
+            OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream());
+            wr.write(otherSchema);
+            wr.flush();
+            wr.close();
+            
+            System.out.println("Response Code " + conn.getResponseCode());
+            assertEquals(200, conn.getResponseCode());
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            fail();
+        }
+
+        // verify
+        try {
+            InputStream stream = url.openStream();
+
+            BufferedReader rd = new BufferedReader(new InputStreamReader(stream));
+            String line;
+            String xml = "";
+            while ((line = rd.readLine()) != null) {
+                xml += line + "\n";
+            }
+
+            stream.close();
+
+            assertEquals(otherSchema, xml);
+            
+            SolrQuery q = new SolrQuery().setQuery("*:*").addField("*").addField("score");
+
+            //
+            try {
+                QueryResponse r = otherClient.query(q);
+                assertEquals(0, r.getResults().getNumFound());
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+            
+            
+        } catch (IOException e) {
+            e.printStackTrace();
+            fail();
+        }
+
+    }
+    
+    @Test
+    public void testOneOtherDocument() throws Exception
+    {
+        String doc = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">InstructionDef</field><field name=\"ownerUUID\">550e8400-e29b-41d4-a716-446655440001</field><field name=\"generatorUUID\">550e8400-e29b-41d4-a716-446655440001</field><field name=\"key\">restart</field><field name=\"name\">Stop and Restart the Resource Manager</field><field name=\"desc\">Stop and Restart the Resource Manager</field><field name=\"uuid\">4a15da95-f8aa-4039-ba49-f057d23004fa</field><field name=\"json\">{\"InstructionDef\":{\"uuid\":\"4a15da95-f8aa-4039-ba49-f057d23004fa\",\"ownerUUID\":\"550e8400-e29b-41d4-a716-446655440001\",\"generatorUUID\":\"550e8400-e29b-41d4-a716-446655440001\",\"key\":\"restart\",\"name\":\"Stop and Restart the Resource Manager\",\"desc\":\"Stop and Restart the Resource Manager\"}}</field></doc></add>";
+        
+        URL url = new URL("http://localhost:" + port + "/solandra/"+otherIndexName+"/update?commit=true");
+
+        // write
+        try {
+
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestProperty("Content-Type", "text/xml");
+            conn.setDoOutput(true);
+            
+            OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream());
+            wr.write(doc);
+            wr.flush();
+            wr.close();
+            
+            assertEquals(200, conn.getResponseCode());
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            fail();
+        }
+        
+        SolrQuery q = new SolrQuery().setQuery("uuid:4a15da95-f8aa-4039-ba49-f057d23004fa");
+
+        QueryResponse r = otherClient.query(q);
+        assertEquals(1, r.getResults().getNumFound());        
+    }
+    
+    @Test
+    public void testAllUUIDSearch() throws Exception {
+
+        SolrQuery q = new SolrQuery().setQuery("uuid:[* TO *]");
+
+        QueryResponse r = otherClient.query(q);
+        assertEquals(1, r.getResults().getNumFound());
+    }
+    
+    @Test
+    public void testSomeOtherDocuments() throws Exception
+    {       
+        Collection<String> docs = new ArrayList<String>();
+        docs.add("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">DatapointDef</field><field name=\"ownerUUID\">675c7858-631a-4ce3-bee6-5312aa3c4b1b</field><field name=\"generatorUUID\">ff1df93f-a19f-4088-97e9-14f165aacab4</field><field name=\"key\">dp7</field><field name=\"name\">Generated datapoint 7</field><field name=\"uuid\">51c43d10-668a-4a7c-a92b-e38230a65827</field><field name=\"json\">{\"DatapointDef\":{\"attributeDefs\":{\"someAttr\":{\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"someAttr\",\"name\":\"Just a random attribute\",\"desc\":\"\"}},\"isMap\":false,\"uuid\":\"51c43d10-668a-4a7c-a92b-e38230a65827\",\"ownerUUID\":\"675c7858-631a-4ce3-bee6-5312aa3c4b1b\",\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"dp7\",\"name\":\"Generated datapoint 7\",\"desc\":\"\"}}</field></doc></add>");
+        docs.add("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">DatapointDef</field><field name=\"ownerUUID\">675c7858-631a-4ce3-bee6-5312aa3c4b1b</field><field name=\"generatorUUID\">ff1df93f-a19f-4088-97e9-14f165aacab4</field><field name=\"key\">Analog 1</field><field name=\"name\">Voltage</field><field name=\"uuid\">0bbfe967-8326-45a2-a2ea-eafe366cc56d</field><field name=\"json\">{\"DatapointDef\":{\"attributeDefs\":{\"Units\":{\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"Units\",\"name\":\"Units\",\"desc\":\"\",\"defaultValue\":\"V\"}},\"isMap\":false,\"uuid\":\"0bbfe967-8326-45a2-a2ea-eafe366cc56d\",\"ownerUUID\":\"675c7858-631a-4ce3-bee6-5312aa3c4b1b\",\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"Analog 1\",\"name\":\"Voltage\",\"desc\":\"\"}}</field></doc></add>");
+        docs.add("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">DatapointDef</field><field name=\"ownerUUID\">675c7858-631a-4ce3-bee6-5312aa3c4b1b</field><field name=\"generatorUUID\">ff1df93f-a19f-4088-97e9-14f165aacab4</field><field name=\"key\">dp6</field><field name=\"name\">Generated datapoint 6</field><field name=\"uuid\">1fbed205-8dcd-4eb3-8562-3bd55fb01759</field><field name=\"json\">{\"DatapointDef\":{\"attributeDefs\":{\"someAttr\":{\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"someAttr\",\"name\":\"Just a random attribute\",\"desc\":\"\"}},\"isMap\":false,\"uuid\":\"1fbed205-8dcd-4eb3-8562-3bd55fb01759\",\"ownerUUID\":\"675c7858-631a-4ce3-bee6-5312aa3c4b1b\",\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"dp6\",\"name\":\"Generated datapoint 6\",\"desc\":\"\"}}</field></doc></add>");
+        docs.add("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">DatapointDef</field><field name=\"ownerUUID\">675c7858-631a-4ce3-bee6-5312aa3c4b1b</field><field name=\"generatorUUID\">ff1df93f-a19f-4088-97e9-14f165aacab4</field><field name=\"key\">dp9</field><field name=\"name\">Generated datapoint 9</field><field name=\"uuid\">889c7b35-a5c0-4692-b9a1-5eacc33c9c46</field><field name=\"json\">{\"DatapointDef\":{\"attributeDefs\":{\"someAttr\":{\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"someAttr\",\"name\":\"Just a random attribute\",\"desc\":\"\"}},\"isMap\":false,\"uuid\":\"889c7b35-a5c0-4692-b9a1-5eacc33c9c46\",\"ownerUUID\":\"675c7858-631a-4ce3-bee6-5312aa3c4b1b\",\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"dp9\",\"name\":\"Generated datapoint 9\",\"desc\":\"\"}}</field></doc></add>");
+        docs.add("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">DatapointDef</field><field name=\"ownerUUID\">675c7858-631a-4ce3-bee6-5312aa3c4b1b</field><field name=\"generatorUUID\">ff1df93f-a19f-4088-97e9-14f165aacab4</field><field name=\"key\">dp8</field><field name=\"name\">Generated datapoint 8</field><field name=\"uuid\">753fdc94-04f4-4be6-abf4-028363acddfb</field><field name=\"json\">{\"DatapointDef\":{\"attributeDefs\":{\"someAttr\":{\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"someAttr\",\"name\":\"Just a random attribute\",\"desc\":\"\"}},\"isMap\":false,\"uuid\":\"753fdc94-04f4-4be6-abf4-028363acddfb\",\"ownerUUID\":\"675c7858-631a-4ce3-bee6-5312aa3c4b1b\",\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"dp8\",\"name\":\"Generated datapoint 8\",\"desc\":\"\"}}</field></doc></add>");
+        docs.add("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">DatapointDef</field><field name=\"ownerUUID\">675c7858-631a-4ce3-bee6-5312aa3c4b1b</field><field name=\"generatorUUID\">ff1df93f-a19f-4088-97e9-14f165aacab4</field><field name=\"key\">commAlarm</field><field name=\"name\">Comm Alarm</field><field name=\"uuid\">3c4752c1-9fc3-4af1-afaf-749307adb419</field><field name=\"json\">{\"DatapointDef\":{\"attributeDefs\":{\"sevLevel\":{\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"sevLevel\",\"name\":\"severity level\",\"desc\":\"\"}},\"isMap\":false,\"uuid\":\"3c4752c1-9fc3-4af1-afaf-749307adb419\",\"ownerUUID\":\"675c7858-631a-4ce3-bee6-5312aa3c4b1b\",\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"commAlarm\",\"name\":\"Comm Alarm\",\"desc\":\"\"}}</field></doc></add>");
+        docs.add("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">DatapointDef</field><field name=\"ownerUUID\">675c7858-631a-4ce3-bee6-5312aa3c4b1b</field><field name=\"generatorUUID\">ff1df93f-a19f-4088-97e9-14f165aacab4</field><field name=\"key\">Base Field 999</field><field name=\"name\">Base Field 999</field><field name=\"uuid\">5584c6ee-be2f-4ce4-95b0-227638e971ad</field><field name=\"json\">{\"DatapointDef\":{\"isMap\":false,\"uuid\":\"5584c6ee-be2f-4ce4-95b0-227638e971ad\",\"ownerUUID\":\"675c7858-631a-4ce3-bee6-5312aa3c4b1b\",\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"Base Field 999\",\"name\":\"Base Field 999\",\"desc\":\"\"}}</field></doc></add>");
+        docs.add("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">InstructionDef</field><field name=\"ownerUUID\">675c7858-631a-4ce3-bee6-5312aa3c4b1b</field><field name=\"generatorUUID\">ff1df93f-a19f-4088-97e9-14f165aacab4</field><field name=\"key\">stop</field><field name=\"name\">Overridden stop instruction</field><field name=\"desc\">Overridden stop instruction</field><field name=\"uuid\">65edf22a-0290-4517-9de5-9ea198093a13</field><field name=\"json\">{\"InstructionDef\":{\"parameterDefs\":[{\"isSelected\":true,\"key\":\"F\",\"name\":\"A simple bool parm\",\"desc\":\"Desc for simple bool parm\",\"type\":\"SimpleBool\"}],\"uuid\":\"65edf22a-0290-4517-9de5-9ea198093a13\",\"ownerUUID\":\"675c7858-631a-4ce3-bee6-5312aa3c4b1b\",\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"stop\",\"name\":\"Overridden stop instruction\",\"desc\":\"Overridden stop instruction\"}}</field></doc></add>");
+        docs.add("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">InstructionDef</field><field name=\"ownerUUID\">675c7858-631a-4ce3-bee6-5312aa3c4b1b</field><field name=\"generatorUUID\">ff1df93f-a19f-4088-97e9-14f165aacab4</field><field name=\"key\">start</field><field name=\"name\">Default start instruction.</field><field name=\"desc\">Default start instruction.</field><field name=\"uuid\">63fcbe39-dc69-4279-b942-e3ff2630cf55</field><field name=\"json\">{\"InstructionDef\":{\"uuid\":\"63fcbe39-dc69-4279-b942-e3ff2630cf55\",\"ownerUUID\":\"675c7858-631a-4ce3-bee6-5312aa3c4b1b\",\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"start\",\"name\":\"Default start instruction.\",\"desc\":\"Default start instruction.\"}}</field></doc></add>");
+        docs.add("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">InstructionDef</field><field name=\"ownerUUID\">675c7858-631a-4ce3-bee6-5312aa3c4b1b</field><field name=\"generatorUUID\">ff1df93f-a19f-4088-97e9-14f165aacab4</field><field name=\"key\">setPollRate2</field><field name=\"name\">Sets the poll rate to a new value in milliseconds.</field><field name=\"desc\">Sets the poll rate to a new value in milliseconds.</field><field name=\"uuid\">652e7f6f-00a8-4fc5-a187-7a5fe923ef0e</field><field name=\"json\">{\"InstructionDef\":{\"parameterDefs\":[{\"minValue\":0.0,\"maxValue\":86400.0,\"stepSize\":0.0,\"precision\":0,\"units\":\"ms\",\"key\":\"newRate\",\"name\":\"New Poll Rate\",\"desc\":\"New Poll Rate\",\"type\":\"Number\"}],\"uuid\":\"652e7f6f-00a8-4fc5-a187-7a5fe923ef0e\",\"ownerUUID\":\"675c7858-631a-4ce3-bee6-5312aa3c4b1b\",\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"setPollRate2\",\"name\":\"Sets the poll rate to a new value in milliseconds.\",\"desc\":\"Sets the poll rate to a new value in milliseconds.\"}}</field></doc></add>");
+        docs.add("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">InstructionDef</field><field name=\"ownerUUID\">675c7858-631a-4ce3-bee6-5312aa3c4b1b</field><field name=\"generatorUUID\">ff1df93f-a19f-4088-97e9-14f165aacab4</field><field name=\"key\">setPollRate</field><field name=\"name\">Sets the poll rate to a new value in milliseconds.</field><field name=\"desc\">Sets the poll rate to a new value in milliseconds.</field><field name=\"uuid\">d3cebc10-ed42-4ee6-9b15-523b4f2c0109</field><field name=\"json\">{\"InstructionDef\":{\"parameterDefs\":[{\"minValue\":0.0,\"maxValue\":86400.0,\"stepSize\":0.0,\"precision\":0,\"units\":\"ms\",\"key\":\"newRate\",\"name\":\"New Poll Rate\",\"desc\":\"New Poll Rate\",\"type\":\"Number\"}],\"uuid\":\"d3cebc10-ed42-4ee6-9b15-523b4f2c0109\",\"ownerUUID\":\"675c7858-631a-4ce3-bee6-5312aa3c4b1b\",\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"setPollRate\",\"name\":\"Sets the poll rate to a new value in milliseconds.\",\"desc\":\"Sets the poll rate to a new value in milliseconds.\"}}</field></doc></add>");
+        docs.add("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">InstructionDef</field><field name=\"ownerUUID\">675c7858-631a-4ce3-bee6-5312aa3c4b1b</field><field name=\"generatorUUID\">ff1df93f-a19f-4088-97e9-14f165aacab4</field><field name=\"key\">initialize</field><field name=\"name\">Inititialize the resource with the following parameters.</field><field name=\"desc\">Inititialize the resource with the following parameters.</field><field name=\"uuid\">23685857-3daa-41ea-bdbe-8d0a69ab2742</field><field name=\"json\">{\"InstructionDef\":{\"parameterDefs\":[{\"minLength\":0,\"maxLength\":20,\"key\":\"A\",\"name\":\"Position Name\",\"desc\":\"Position Name\",\"type\":\"String\"},{\"minValue\":0.0,\"maxValue\":86400.0,\"stepSize\":0.01,\"precision\":2,\"units\":\"seconds\",\"key\":\"B\",\"name\":\"UTC Time\",\"desc\":\"UTC Time\",\"type\":\"Number\"},{\"listEntries\":[\"Clockwise\",\"Counterclockwise\",\"Shortest Path\"],\"selectedEntries\":[],\"key\":\"C\",\"name\":\"Cable Wrap\",\"desc\":\"Cable Wrap\",\"type\":\"List\"},{\"key\":\"D\",\"name\":\"Some File Parm\",\"desc\":\"Desc for some file parm\",\"type\":\"File\"},{\"options\":[{\"isSelected\":false,\"key\":\"Pick Me\",\"name\":\"Pick Me\",\"desc\":\"Pick Me\",\"type\":\"SimpleBool\"},{\"isSelected\":true,\"key\":\"No, pick me\",\"name\":\"No, pick me\",\"desc\":\"Sometimes pick this guy\",\"type\":\"SimpleBool\"}],\"defaultSelectedOption\":{\"isSelected\":true,\"key\":\"No, pick me\",\"name\":\"No, pick me\",\"desc\":\"Sometimes pick this guy\",\"type\":\"SimpleBool\"},\"key\":\"E\",\"name\":\"A group bool parm\",\"desc\":\"A group bool parm\",\"type\":\"GroupBool\"},{\"isSelected\":true,\"key\":\"F\",\"name\":\"A simple bool parm\",\"desc\":\"Desc for simple bool parm\",\"type\":\"SimpleBool\"}],\"uuid\":\"23685857-3daa-41ea-bdbe-8d0a69ab2742\",\"ownerUUID\":\"675c7858-631a-4ce3-bee6-5312aa3c4b1b\",\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"initialize\",\"name\":\"Inititialize the resource with the following parameters.\",\"desc\":\"Inititialize the resource with the following parameters.\"}}</field></doc></add>");
+        docs.add("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">Resource</field><field name=\"ownerUUID\">550e8400-e29b-41d4-a716-446655440001</field><field name=\"name\">TCP Resource 1</field><field name=\"desc\">This is a TCP resource</field><field name=\"uuid\">1d751043-bff1-4ce6-9145-c28aeb6439df</field><field name=\"json\">{\"Resource\":{\"uuid\":\"1d751043-bff1-4ce6-9145-c28aeb6439df\",\"ownerUUID\":\"550e8400-e29b-41d4-a716-446655440001\",\"name\":\"TCP Resource 1\",\"desc\":\"This is a TCP resource\",\"transportUUID\":\"9186e0bc-d862-45d5-a461-a09aa52034ca\",\"translatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\"}}</field></doc></add>");
+        docs.add("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">DatapointDef</field><field name=\"ownerUUID\">1d751043-bff1-4ce6-9145-c28aeb6439df</field><field name=\"generatorUUID\">ff1df93f-a19f-4088-97e9-14f165aacab4</field><field name=\"key\">I'm a new datapoint</field><field name=\"name\">Error Rate</field><field name=\"uuid\">a36bf16e-b94e-427d-b78e-eb37f2263720</field><field name=\"json\">{\"DatapointDef\":{\"attributeDefs\":{\"Units\":{\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"Units\",\"name\":\"Units\",\"desc\":\"\",\"defaultValue\":\"Err/sec\"}},\"isMap\":false,\"uuid\":\"a36bf16e-b94e-427d-b78e-eb37f2263720\",\"ownerUUID\":\"1d751043-bff1-4ce6-9145-c28aeb6439df\",\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"I\u0027m a new datapoint\",\"name\":\"Error Rate\",\"desc\":\"\"}}</field></doc></add>");
+        docs.add("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">DatapointDef</field><field name=\"ownerUUID\">1d751043-bff1-4ce6-9145-c28aeb6439df</field><field name=\"generatorUUID\">ff1df93f-a19f-4088-97e9-14f165aacab4</field><field name=\"key\">Base Fault 1</field><field name=\"name\">Fault 1</field><field name=\"desc\">Fault 1 Description</field><field name=\"uuid\">f04d7224-3190-4379-84e8-53d7034d8a4f</field><field name=\"json\">{\"DatapointDef\":{\"attributeDefs\":{\"sevLevel\":{\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"sevLevel\",\"name\":\"severity level\",\"desc\":\"\"},\"helpText\":{\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"helpText\",\"name\":\"helpText\",\"desc\":\"If this fault occurs...run for the hills!!\"},\"units\":{\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"units\",\"name\":\"Units\",\"desc\":\"Units\"}},\"isMap\":false,\"uuid\":\"f04d7224-3190-4379-84e8-53d7034d8a4f\",\"ownerUUID\":\"1d751043-bff1-4ce6-9145-c28aeb6439df\",\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"Base Fault 1\",\"name\":\"Fault 1\",\"desc\":\"Fault 1 Description\"}}</field></doc></add>");
+        docs.add("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">DatapointDef</field><field name=\"ownerUUID\">1d751043-bff1-4ce6-9145-c28aeb6439df</field><field name=\"generatorUUID\">ff1df93f-a19f-4088-97e9-14f165aacab4</field><field name=\"key\">some key</field><field name=\"name\">My new datapoint</field><field name=\"uuid\">08bbf4b6-70b8-4da4-a3af-f75ed30a246d</field><field name=\"json\">{\"DatapointDef\":{\"attributeDefs\":{\"sevLevel\":{\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"sevLevel\",\"name\":\"severity level\",\"desc\":\"\",\"defaultValue\":\"0\"},\"resName\":{\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"resName\",\"name\":\"Resource Name\",\"desc\":\"\"}},\"instructionDef\":{\"parameterDefs\":[{\"minLength\":0,\"maxLength\":10,\"key\":\"some key\",\"name\":\"My new datapoint\",\"type\":\"String\"},{\"minValue\":0.0,\"maxValue\":255.0,\"stepSize\":0.0,\"precision\":0,\"key\":\"sevLevel\",\"name\":\"severity level\",\"type\":\"Number\"},{\"minLength\":0,\"maxLength\":10,\"key\":\"resName\",\"name\":\"Resource Name\",\"type\":\"String\"}],\"key\":\"some key\",\"name\":\"My new datapoint\",\"desc\":\"\"},\"isMap\":false,\"uuid\":\"08bbf4b6-70b8-4da4-a3af-f75ed30a246d\",\"ownerUUID\":\"1d751043-bff1-4ce6-9145-c28aeb6439df\",\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"some key\",\"name\":\"My new datapoint\",\"desc\":\"\"}}</field></doc></add>");
+        docs.add("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">InstructionDef</field><field name=\"ownerUUID\">550e8400-e29b-41d4-a716-446655440001</field><field name=\"generatorUUID\">550e8400-e29b-41d4-a716-446655440001</field><field name=\"key\">restart</field><field name=\"name\">Stop and Restart the Resource Manager</field><field name=\"desc\">Stop and Restart the Resource Manager</field><field name=\"uuid\">4a15da95-f8aa-4039-ba49-f057d23004fa</field><field name=\"json\">{\"InstructionDef\":{\"uuid\":\"4a15da95-f8aa-4039-ba49-f057d23004fa\",\"ownerUUID\":\"550e8400-e29b-41d4-a716-446655440001\",\"generatorUUID\":\"550e8400-e29b-41d4-a716-446655440001\",\"key\":\"restart\",\"name\":\"Stop and Restart the Resource Manager\",\"desc\":\"Stop and Restart the Resource Manager\"}}</field></doc></add>");
+        docs.add("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">InstructionDef</field><field name=\"ownerUUID\">550e8400-e29b-41d4-a716-446655440001</field><field name=\"generatorUUID\">550e8400-e29b-41d4-a716-446655440001</field><field name=\"key\">updateSharedModule</field><field name=\"name\">Add/Update a shared translator module</field><field name=\"desc\">Add/Update a shared translator module</field><field name=\"uuid\">90a92cd3-3e95-47d6-a3b0-a86c2f298eac</field><field name=\"json\">{\"InstructionDef\":{\"parameterDefs\":[{\"minLength\":0,\"maxLength\":36,\"key\":\"uuid\",\"name\":\"Shared Module ID\",\"desc\":\"Shared Module ID\",\"type\":\"String\"}],\"uuid\":\"90a92cd3-3e95-47d6-a3b0-a86c2f298eac\",\"ownerUUID\":\"550e8400-e29b-41d4-a716-446655440001\",\"generatorUUID\":\"550e8400-e29b-41d4-a716-446655440001\",\"key\":\"updateSharedModule\",\"name\":\"Add/Update a shared translator module\",\"desc\":\"Add/Update a shared translator module\"}}</field></doc></add>");
+        docs.add("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">InstructionDef</field><field name=\"ownerUUID\">550e8400-e29b-41d4-a716-446655440001</field><field name=\"generatorUUID\">550e8400-e29b-41d4-a716-446655440001</field><field name=\"key\">delTranslator</field><field name=\"name\">Delete a translator</field><field name=\"desc\">Delete a translator</field><field name=\"uuid\">90a817a7-6812-4cfc-a4dd-a78718971b1b</field><field name=\"json\">{\"InstructionDef\":{\"parameterDefs\":[{\"minLength\":0,\"maxLength\":36,\"key\":\"translatorUUID\",\"name\":\"Translator ID\",\"desc\":\"Translator ID\",\"type\":\"String\"}],\"uuid\":\"90a817a7-6812-4cfc-a4dd-a78718971b1b\",\"ownerUUID\":\"550e8400-e29b-41d4-a716-446655440001\",\"generatorUUID\":\"550e8400-e29b-41d4-a716-446655440001\",\"key\":\"delTranslator\",\"name\":\"Delete a translator\",\"desc\":\"Delete a translator\"}}</field></doc></add>");
+        docs.add("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">InstructionDef</field><field name=\"ownerUUID\">550e8400-e29b-41d4-a716-446655440001</field><field name=\"generatorUUID\">550e8400-e29b-41d4-a716-446655440001</field><field name=\"key\">TestInstruction</field><field name=\"name\">This is a test instruction</field><field name=\"desc\">This is a test instruction</field><field name=\"uuid\">5c87542d-bcf8-401e-b5ff-ec4b324a7ddf</field><field name=\"json\">{\"InstructionDef\":{\"parameterDefs\":[{\"minLength\":0,\"maxLength\":20,\"key\":\"A\",\"name\":\"Position Name\",\"desc\":\"Position Name\",\"type\":\"String\"},{\"minValue\":0.0,\"maxValue\":86400.0,\"stepSize\":0.01,\"precision\":2,\"units\":\"seconds\",\"key\":\"B\",\"name\":\"UTC Time\",\"desc\":\"UTC Time\",\"type\":\"Number\"},{\"listEntries\":[\"Clockwise\",\"Counterclockwise\",\"Shortest Path\"],\"selectedEntries\":[],\"key\":\"C\",\"name\":\"Cable Wrap\",\"desc\":\"Cable Wrap\",\"type\":\"List\"},{\"key\":\"D\",\"name\":\"Some File Parm\",\"desc\":\"Desc for some file parm\",\"type\":\"File\"},{\"options\":[{\"isSelected\":false,\"key\":\"Pick Me\",\"name\":\"Pick Me\",\"desc\":\"Sometimes pick this option\",\"type\":\"SimpleBool\"},{\"isSelected\":true,\"key\":\"No, pick me\",\"name\":\"No, pick me\",\"desc\":\"and other times pick this one.\",\"type\":\"SimpleBool\"}],\"defaultSelectedOption\":{\"isSelected\":true,\"key\":\"No, pick me\",\"name\":\"No, pick me\",\"desc\":\"and other times pick this one.\",\"type\":\"SimpleBool\"},\"key\":\"E\",\"name\":\"A group bool parm\",\"desc\":\"A group bool parm\",\"type\":\"GroupBool\"},{\"isSelected\":true,\"key\":\"F\",\"name\":\"A simple bool parm\",\"desc\":\"Desc for simple bool parm\",\"type\":\"SimpleBool\"}],\"uuid\":\"5c87542d-bcf8-401e-b5ff-ec4b324a7ddf\",\"ownerUUID\":\"550e8400-e29b-41d4-a716-446655440001\",\"generatorUUID\":\"550e8400-e29b-41d4-a716-446655440001\",\"key\":\"TestInstruction\",\"name\":\"This is a test instruction\",\"desc\":\"This is a test instruction\"}}</field></doc></add>");
+        docs.add("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">DatapointDef</field><field name=\"ownerUUID\">675c7858-631a-4ce3-bee6-5312aa3c4b1b</field><field name=\"generatorUUID\">ff1df93f-a19f-4088-97e9-14f165aacab4</field><field name=\"key\">Analog 2</field><field name=\"name\">Error Rate</field><field name=\"uuid\">9e834293-ae7f-4b79-8631-5daa40c1cee1</field><field name=\"json\">{\"DatapointDef\":{\"attributeDefs\":{\"Units\":{\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"Units\",\"name\":\"Units\",\"desc\":\"\",\"defaultValue\":\"Err/sec\"}},\"isMap\":false,\"uuid\":\"9e834293-ae7f-4b79-8631-5daa40c1cee1\",\"ownerUUID\":\"675c7858-631a-4ce3-bee6-5312aa3c4b1b\",\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"Analog 2\",\"name\":\"Error Rate\",\"desc\":\"\"}}</field></doc></add>");
+        docs.add("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">DatapointDef</field><field name=\"ownerUUID\">675c7858-631a-4ce3-bee6-5312aa3c4b1b</field><field name=\"generatorUUID\">ff1df93f-a19f-4088-97e9-14f165aacab4</field><field name=\"key\">dp5</field><field name=\"name\">Generated datapoint 5</field><field name=\"uuid\">a4b29317-5c85-4b15-a57f-4c816235f70f</field><field name=\"json\">{\"DatapointDef\":{\"attributeDefs\":{\"someAttr\":{\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"someAttr\",\"name\":\"Just a random attribute\",\"desc\":\"\"}},\"isMap\":false,\"uuid\":\"a4b29317-5c85-4b15-a57f-4c816235f70f\",\"ownerUUID\":\"675c7858-631a-4ce3-bee6-5312aa3c4b1b\",\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"dp5\",\"name\":\"Generated datapoint 5\",\"desc\":\"\"}}</field></doc></add>");
+        docs.add("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">DatapointDef</field><field name=\"ownerUUID\">675c7858-631a-4ce3-bee6-5312aa3c4b1b</field><field name=\"generatorUUID\">ff1df93f-a19f-4088-97e9-14f165aacab4</field><field name=\"key\">dp4</field><field name=\"name\">Generated datapoint 4</field><field name=\"uuid\">7028ad70-5d5d-435d-9573-39078b12ff69</field><field name=\"json\">{\"DatapointDef\":{\"attributeDefs\":{\"someAttr\":{\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"someAttr\",\"name\":\"Just a random attribute\",\"desc\":\"\"}},\"isMap\":false,\"uuid\":\"7028ad70-5d5d-435d-9573-39078b12ff69\",\"ownerUUID\":\"675c7858-631a-4ce3-bee6-5312aa3c4b1b\",\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"dp4\",\"name\":\"Generated datapoint 4\",\"desc\":\"\"}}</field></doc></add>");
+        docs.add("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">DatapointDef</field><field name=\"ownerUUID\">675c7858-631a-4ce3-bee6-5312aa3c4b1b</field><field name=\"generatorUUID\">ff1df93f-a19f-4088-97e9-14f165aacab4</field><field name=\"key\">Analog 0</field><field name=\"name\">Temperature</field><field name=\"uuid\">37c533aa-fd2a-4f43-af28-e4970262053b</field><field name=\"json\">{\"DatapointDef\":{\"attributeDefs\":{\"Units\":{\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"Units\",\"name\":\"Units\",\"desc\":\"\",\"defaultValue\":\"F\"},\"sevLevel\":{\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"sevLevel\",\"name\":\"severity level\",\"desc\":\"\",\"defaultValue\":\"0\"}},\"isMap\":false,\"uuid\":\"37c533aa-fd2a-4f43-af28-e4970262053b\",\"ownerUUID\":\"675c7858-631a-4ce3-bee6-5312aa3c4b1b\",\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"Analog 0\",\"name\":\"Temperature\",\"desc\":\"\"}}</field></doc></add>");
+        
+        docs.add("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">Transport</field><field name=\"ownerUUID\">550e8400-e29b-41d4-a716-446655440001</field><field name=\"generatorUUID\">550e8400-e29b-41d4-a716-446655440002</field><field name=\"name\">TCP Socket B</field><field name=\"desc\">New Transport's description</field><field name=\"uuid\">9186e0bc-d862-45d5-a461-a09aa52034ca</field><field name=\"json\">{\"Transport\":{\"uuid\":\"9186e0bc-d862-45d5-a461-a09aa52034ca\",\"ownerUUID\":\"550e8400-e29b-41d4-a716-446655440001\",\"generatorUUID\":\"550e8400-e29b-41d4-a716-446655440002\",\"name\":\"TCP Socket B\",\"desc\":\"New Transport\u0027s description\"}}</field></doc></add>");
+        docs.add("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">Transport</field><field name=\"ownerUUID\">550e8400-e29b-41d4-a716-446655440001</field><field name=\"generatorUUID\">550e8400-e29b-41d4-a716-446655440002</field><field name=\"name\">TCP Socket A</field><field name=\"desc\">New Transport's description</field><field name=\"uuid\">54a74006-dfc6-4562-8cc0-4d30e78d6eb8</field><field name=\"json\">{\"Transport\":{\"uuid\":\"54a74006-dfc6-4562-8cc0-4d30e78d6eb8\",\"ownerUUID\":\"550e8400-e29b-41d4-a716-446655440001\",\"generatorUUID\":\"550e8400-e29b-41d4-a716-446655440002\",\"name\":\"TCP Socket A\",\"desc\":\"New Transport\u0027s description\"}}</field></doc></add>");
+        docs.add("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">Transport</field><field name=\"ownerUUID\">550e8400-e29b-41d4-a716-446655440001</field><field name=\"generatorUUID\">458724cf-202e-49c3-9863-0e9c176cc27a</field><field name=\"name\">SNMP Manager</field><field name=\"desc\">This is an SNMP Manager transport</field><field name=\"uuid\">29c9d1e1-86d0-499f-801a-bd03618deb35</field><field name=\"json\">{\"Transport\":{\"uuid\":\"29c9d1e1-86d0-499f-801a-bd03618deb35\",\"ownerUUID\":\"550e8400-e29b-41d4-a716-446655440001\",\"generatorUUID\":\"458724cf-202e-49c3-9863-0e9c176cc27a\",\"name\":\"SNMP Manager\",\"desc\":\"This is an SNMP Manager transport\"}}</field></doc></add>");
+        
+        
+        URL url = new URL("http://localhost:" + port + "/solandra/"+otherIndexName+"/update?commit=true");
+
+        // write
+        try {
+            Iterator<String> it = docs.iterator();
+            while (it.hasNext()) {
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestProperty("Content-Type", "text/xml");
+                conn.setDoOutput(true);
+                 
+                
+                OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream());
+                wr.write(it.next());
+                wr.flush();
+                wr.close();
+                assertEquals(200, conn.getResponseCode());
+            }
+            
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            fail();
+        }
+        
+        SolrQuery q = new SolrQuery().setQuery("*:*").addField("*").addField("score");
+        
+        try {
+            QueryResponse r = otherClient.query(q);
+            assertEquals(27, r.getResults().getNumFound());
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+    
+    @Test
+    public void testAllUUIDSearchAgain() throws Exception {
+
+        SolrQuery q = new SolrQuery().setQuery("uuid:[* TO *]");
+
+        QueryResponse r = otherClient.query(q);
+        assertEquals(27, r.getResults().getNumFound());
+    }
+    
+    @Test
+    public void testAllMessageTypeSearch() throws Exception {
+
+        SolrQuery q = new SolrQuery().setQuery("messageType:[* TO *]");
+
+        QueryResponse r = otherClient.query(q);
+        assertEquals(27, r.getResults().getNumFound());
+    }
+    
+    @Test
+    public void testAllMessageTypeTransportSearch() throws Exception {
+
+        SolrQuery q = new SolrQuery().setQuery("messageType:Transport");
+
+        QueryResponse r = otherClient.query(q);
+        assertEquals(3, r.getResults().getNumFound());
+    }
+    
+    @Test
+    public void testAddMoreOtherDocuments() throws Exception
+    {       
+        Collection<String> docs = new ArrayList<String>();
+        docs.add("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">InstructionDef</field><field name=\"uuid\">c94641f4-6dcf-4a28-9833-f6ad1052cfd8</field><field name=\"ownerUUID\">550e8400-e29b-41d4-a716-446655440001</field><field name=\"generatorUUID\">550e8400-e29b-41d4-a716-446655440001</field><field name=\"key\">updateTranslator</field><field name=\"name\">Add/Update a translator</field><field name=\"desc\">Add/Update a translator</field><field name=\"json\">{\"InstructionDef\":{\"parameterDefs\":[{\"minLength\":0,\"maxLength\":36,\"key\":\"uuid\",\"name\":\"Translator ID\",\"desc\":\"Translator ID\",\"type\":\"String\"}],\"uuid\":\"c94641f4-6dcf-4a28-9833-f6ad1052cfd8\",\"ownerUUID\":\"550e8400-e29b-41d4-a716-446655440001\",\"generatorUUID\":\"550e8400-e29b-41d4-a716-446655440001\",\"key\":\"updateTranslator\",\"name\":\"Add/Update a translator\",\"desc\":\"Add/Update a translator\"}}</field></doc></add>");
+        docs.add("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">TransportDef</field><field name=\"uuid\">458724cf-202e-49c3-9863-0e9c176cc27a</field><field name=\"ownerUUID\">550e8400-e29b-41d4-a716-446655440001</field><field name=\"name\">SNMP Manager</field><field name=\"desc\">This transport provides SNMP Manager functionality.</field><field name=\"json\">{\"TransportDef\":{\"uuid\":\"458724cf-202e-49c3-9863-0e9c176cc27a\",\"ownerUUID\":\"550e8400-e29b-41d4-a716-446655440001\",\"name\":\"SNMP Manager\",\"version\":\"1.0.0.0\",\"desc\":\"This transport provides SNMP Manager functionality.\",\"author\":\"Ladd Asper\",\"helpText\":\"TBD\",\"numSchedulerThreads\":10,\"initializeInstructionDef\":{\"parameterDefs\":[{\"minLength\":0,\"maxLength\":0,\"defaultValue\":\"0.0.0.0\",\"key\":\"Trap IP Address\",\"name\":\"Trap IP Address\",\"desc\":\"Trap IP Address\",\"type\":\"String\"},{\"minValue\":0.0,\"maxValue\":65535.0,\"stepSize\":0.0,\"precision\":0,\"defaultValue\":\"162\",\"key\":\"Trap Port Number\",\"name\":\"Trap Port Number\",\"desc\":\"Trap Port Number\",\"type\":\"Number\"},{\"isSelected\":true,\"key\":\"Listen for traps\",\"name\":\"Listen for traps\",\"desc\":\"Listen for traps\",\"type\":\"SimpleBool\"},{\"isSelected\":true,\"key\":\"start\",\"name\":\"start\",\"desc\":\"start\",\"type\":\"SimpleBool\"}],\"key\":\"initialize\",\"name\":\"Set configuration values and initialize this transport.\",\"desc\":\"Set configuration values and initialize this transport.\"}}}</field></doc></add>");
+        URL url = new URL("http://localhost:" + port + "/solandra/"+otherIndexName+"/update?commit=true");
+
+        // write
+        try {
+            Iterator<String> it = docs.iterator();
+            while (it.hasNext()) {
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestProperty("Content-Type", "text/xml");
+                conn.setDoOutput(true);
+                 
+                
+                OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream());
+                wr.write(it.next());
+                wr.flush();
+                wr.close();
+                assertEquals(200, conn.getResponseCode());
+            }
+            
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            fail();
+        }
+        
+        SolrQuery q = new SolrQuery().setQuery("*:*").addField("*").addField("score");
+        
+        try {
+            QueryResponse r = otherClient.query(q);
+            
+            //Should only be 28 because one of the two docs is an update to an existing doc
+            assertEquals(28, r.getResults().getNumFound());
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+    
+    @Test
+    public void testAddOtherDocumentType() throws Exception
+    {
+        String doc = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">Transport</field><field name=\"uuid\">90dbf14d-009c-46a0-8264-71c81c79ec98</field><field name=\"ownerUUID\">550e8400-e29b-41d4-a716-446655440001</field><field name=\"generatorUUID\">458724cf-202e-49c3-9863-0e9c176cc27a</field><field name=\"name\">SNMP Manager</field><field name=\"desc\">This is an SNMP Manager transport</field><field name=\"json\">{\"Transport\":{\"uuid\":\"90dbf14d-009c-46a0-8264-71c81c79ec98\",\"ownerUUID\":\"550e8400-e29b-41d4-a716-446655440001\",\"generatorUUID\":\"458724cf-202e-49c3-9863-0e9c176cc27a\",\"name\":\"SNMP Manager\",\"desc\":\"This is an SNMP Manager transport\"}}</field></doc></add>";
+        
+        URL url = new URL("http://localhost:" + port + "/solandra/"+otherIndexName+"/update?commit=true");
+
+        // write
+        try {
+
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestProperty("Content-Type", "text/xml");
+            conn.setDoOutput(true);
+            
+            OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream());
+            wr.write(doc);
+            wr.flush();
+            wr.close();
+            
+            assertEquals(200, conn.getResponseCode());
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            fail();
+        }
+        
+        SolrQuery q = new SolrQuery().setQuery("messageType:Transport");
+
+        QueryResponse r = otherClient.query(q);
+        assertEquals(4, r.getResults().getNumFound());        
     }
 
 }
