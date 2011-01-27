@@ -691,7 +691,7 @@ public class SolandraTests
             QueryResponse r = otherClient.query(q);
             
             //Should only be 28 because one of the two docs is an update to an existing doc
-            assertEquals(28, r.getResults().getNumFound());
+            assertEquals(29, r.getResults().getNumFound());
         } catch (Exception ex) {
             ex.printStackTrace();
         }

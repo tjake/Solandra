@@ -109,7 +109,8 @@ public class SolandraIndexWriter extends UpdateHandler
                                 {                                              
                                     flush(core);
                                     lastCoreFlush.put(core, System.currentTimeMillis());
-                                    logger.info("Flushed cache: "+core);
+                                    if(logger.isDebugEnabled())
+                                        logger.debug("Flushed cache: "+core);
                                 }                        
                             }
                             else
@@ -217,6 +218,7 @@ public class SolandraIndexWriter extends UpdateHandler
             
             //Notify readers
             tryCommit(indexName);
+            
        }finally {
             if (rc != 1) {
                 numErrors.incrementAndGet();
@@ -245,7 +247,8 @@ public class SolandraIndexWriter extends UpdateHandler
         
         for(int i=0; i<=maxShard; i++)
         {
-            logger.info("committing "+indexName+"~"+i);
+            if(logger.isDebugEnabled())
+                logger.debug("committing "+indexName+"~"+i);
             commit(indexName+"~"+i, true);
         }
     }

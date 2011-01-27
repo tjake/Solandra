@@ -105,7 +105,8 @@ public class SolandraComponent extends SearchComponent
             if(lastCheck == null || rows == null || rows.isEmpty() || rows.get(0).cf == null ||             
                     rows.get(0).cf.getColumn(CassandraUtils.cachedColBytes).getSubColumn(CassandraUtils.cachedColBytes).timestamp() >= lastCheck)
             {
-                logger.info("Flushed cache: "+indexName);
+                if(logger.isDebugEnabled())
+                    logger.debug("Flushed cache: "+indexName);
                 
                 return true;
             }

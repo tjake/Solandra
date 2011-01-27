@@ -438,7 +438,8 @@ public class IndexWriter
         CassandraUtils.addMutations(workingMutations, CassandraUtils.docColumnFamily, (ByteBuffer) null, selfKey,
                 (ByteBuffer) null);
 
-        logger.info("Deleted all terms for: " + docNumber);
+        if(logger.isDebugEnabled())
+            logger.debug("Deleted all terms for: " + docNumber);
 
         appendMutations(indexName, workingMutations);
 
@@ -487,7 +488,8 @@ public class IndexWriter
 
             if (rows.isEmpty())
             {
-                logger.info("Nothing to write for :" + indexName);
+                if(logger.isDebugEnabled())
+                    logger.debug("Nothing to write for :" + indexName);
                 return;
             }
 
@@ -510,7 +512,8 @@ public class IndexWriter
             }
             else
             {
-                logger.info("wrote " + rows.size());
+                if(logger.isDebugEnabled())
+                    logger.debug("wrote " + rows.size());
             }
 
             // Mark we are done.
