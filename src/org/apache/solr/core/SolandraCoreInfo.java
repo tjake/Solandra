@@ -29,7 +29,7 @@ public class SolandraCoreInfo
     public final String  indexName;
     public final Integer shard;
     
-    public  final static Pattern shardPattern = Pattern.compile("^([^\\.]+)(\\.?[^~]*)~?(\\d*)$");
+    public  final static Pattern shardPattern = Pattern.compile("^([^\\.~]+)(\\.?[^~]*)~?(\\d*)$");
 
     
     public SolandraCoreInfo(String indexString)
