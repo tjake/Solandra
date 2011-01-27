@@ -117,7 +117,7 @@ public class SolandraCoreContainer extends CoreContainer
                 Arrays.asList(CassandraUtils.schemaKeyBytes), ConsistencyLevel.QUORUM);
 
         if (rows.isEmpty())
-            throw new IOException("invalid index");
+            throw new IOException("invalid index: "+indexName);
 
         if (rows.size() > 1)
             throw new IllegalStateException("More than one schema found for this index");
