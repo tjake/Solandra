@@ -36,7 +36,7 @@
         <property name="resources" location="resources"/>
 
         <!-- ivy properties -->
-        <property name="ivy.version" value="2.1.0" />
+        <property name="ivy.version" value="2.2.0" />
         <property name="ivy.dir" location="${build}/ivy" />
         <property name="ivy.jar" location="${ivy.dir}/ivy-${ivy.version}.jar"/>
         <property name="ivy.lib.dir" location="${lib}" />
