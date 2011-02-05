@@ -77,7 +77,9 @@ public class LucandraTermEnum extends TermEnum
     @Override
     public int docFreq()
     {
-        return currentTermEntry == null ? 0 : currentTermEntry.getValue().length;
+        
+        int freq = currentTermEntry == null ? 0 : currentTermEntry.getValue().length;
+        return freq;
     }
 
     @Override

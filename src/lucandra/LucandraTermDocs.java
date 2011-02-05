@@ -50,9 +50,9 @@ public class LucandraTermDocs implements TermDocs, TermPositions
 
     public int doc()
     {
-        if (docPosition < 0)
+        if(docPosition < 0)
             docPosition = 0;
-
+        
         return termDocs[docPosition].docId;
     }
 
@@ -83,10 +83,7 @@ public class LucandraTermDocs implements TermDocs, TermPositions
             docs[i] = doc();
             freqs[i] = freq();
         }
-
-        if(logger.isDebugEnabled())
-            logger.debug("read " + i);
-
+        
         return i;
     }
 
@@ -141,6 +138,13 @@ public class LucandraTermDocs implements TermDocs, TermPositions
     // this should be used to find a already loaded doc
     public boolean skipTo(int target) throws IOException
     {
+        
+        //find the target
+        if(termDocs == null)
+            return false;
+        
+        docPosition = 0;
+        
         do
         {
             if (!next())

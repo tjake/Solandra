@@ -101,7 +101,7 @@ public class TermCache
             termInfo[i] = new LucandraTermInfo(CassandraUtils.readVInt(col.name()), col.value());
             i++;
         }
-
+        
         return termInfo;
     }
     
