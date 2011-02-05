@@ -338,6 +338,14 @@ public class SolandraTests
     }
 
     
+    public void testPhraseSearch(CommonsHttpSolrServer solrClient) throws Exception
+    {
+        SolrQuery q = new SolrQuery().setQuery("text:\"test4 of Solandra\"").addField("*").addField("score");
+
+        QueryResponse r = solrClient.query(q);
+        assertEquals(1, r.getResults().getNumFound());
+    }
+
     public void testAllSearch(CommonsHttpSolrServer solrClient) throws Exception
     {
 
@@ -346,7 +354,6 @@ public class SolandraTests
         QueryResponse r = solrClient.query(q);
         assertEquals(4, r.getResults().getNumFound());
     }
-
     
     public void testHighlight(CommonsHttpSolrServer solrClient) throws Exception
     {
