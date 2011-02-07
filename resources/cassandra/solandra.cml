@@ -13,13 +13,13 @@ create column family Docs
 create column family TI 
    with comparator = 'lucandra.VIntType' and 
     keys_cached = 10000000 and
-   	rows_cached = 1000 and 
+   	rows_cached = 0 and 
    	comment = 'Stores term information with indexName/field/term as composite key';
 
 create column family TL 
    with comparator = BytesType and 
     keys_cached = 1000000 and 
-   	rows_cached = 1000 and 
+   	rows_cached = 0 and 
    	comment = 'Stores ordered list of terms for a given field with indexName/field as composite key';
 
 create column family SI 
