@@ -65,9 +65,7 @@
   <!--  <jmx /> turned off since it tracks each core -->
 
   <!-- the Solandra high-performance update handler -->
-  <updateHandler class="solandra.SolandraIndexWriter">
-     <str name="indexName">example</str>
-  </updateHandler>
+  <updateHandler class="solandra.SolandraIndexWriter"/>
 
   <!-- Use the following format to specify a custom IndexReaderFactory - allows for alternate
        IndexReader implementations.
@@ -82,9 +80,7 @@
        IndexReader implementation may cause incompatibility with ReplicationHandler and
        may cause replication to not work correctly. See SOLR-1366 for details.
   -->
-  <indexReaderFactory name="IndexReaderFactory" class="solandra.SolandraIndexReaderFactory">
-     <str name="indexName">example</str>
-  </indexReaderFactory >
+  <indexReaderFactory name="IndexReaderFactory" class="solandra.SolandraIndexReaderFactory"/>
 
 
   <query>
@@ -94,14 +90,55 @@
         An exception is thrown if exceeded.  -->
     <maxBooleanClauses>1024</maxBooleanClauses>
 
+    <!-- There are two implementations of cache available for Solr,                                                                                                                
+         LRUCache, based on a synchronized LinkedHashMap, and                                                                                                                      
+         FastLRUCache, based on a ConcurrentHashMap.  FastLRUCache has faster gets                                                                                                 
+         and slower puts in single threaded operation and thus is generally faster                                                                                                 
+         than LRUCache when the hit ratio of the cache is high (> 75%), and may be                                                                                                 
+         faster under other scenarios on multi-cpu systems. -->
+    <!-- Cache used by SolrIndexSearcher for filters (DocSets),                                                                                                                    
+         unordered sets of *all* documents that match a query.                                                                                                                     
+         When a new searcher is opened, its caches may be prepopulated                                                                                                             
+         or "autowarmed" using data from caches in the old searcher.                                                                                                               
+         autowarmCount is the number of items to prepopulate.  For LRUCache,                                                                                                       
+         the autowarmed items will be the most recently accessed items.                                                                                                            
+       Parameters:                                                                                                                                                                 
+         class - the SolrCache implementation LRUCache or FastLRUCache                                                                                                             
+         size - the maximum number of entries in the cache                                                                                                                         
+         initialSize - the initial capacity (number of entries) of                                                                                                                 
+           the cache.  (seel java.util.HashMap)                                                                                                                                    
+         autowarmCount - the number of entries to prepopulate from                                                                                                                 
+           and old cache.                                                                                                                                                          
+         -->
+   <!--  <filterCache
+      class="solr.FastLRUCache"
+      size="512"
+      initialSize="512"
+      autowarmCount="0"/> -->
+      
+       <!-- queryResultCache caches results of searches - ordered lists of                                                                                                             
+         document ids (DocList) based on a query, a sort, and the range                                                                                                            
+         of documents requested.  -->
+   <!--   <queryResultCache
+      class="solr.LRUCache"
+      size="512"
+      initialSize="512"
+      autowarmCount="0"/> -->
 
+  <!-- documentCache caches Lucene Document objects (the stored fields for each document).                                                                                         
+       Since Lucene internal document ids are transient, this cache will not be autowarmed.  -->
+   <!--   <documentCache
+      class="solr.LRUCache"
+      size="512"
+      initialSize="512"
+      autowarmCount="0"/> -->
 
     <!-- If true, stored fields that are not requested will be loaded lazily.
       This can result in a significant speed improvement if the usual case is to
       not load all stored fields, especially if the skipped fields are large
       compressed text fields.
     -->
-    <enableLazyFieldLoading>false</enableLazyFieldLoading>
+    <enableLazyFieldLoading>true</enableLazyFieldLoading>
 
 
    <!-- An optimization for use with the queryResultCache.  When a search
@@ -110,11 +147,11 @@
          requests matching documents 10 through 19, and queryWindowSize is 50,
          then documents 0 through 49 will be collected and cached.  Any further
          requests in that range can be satisfied via the cache.  -->
-    <queryResultWindowSize>0</queryResultWindowSize>
+    <queryResultWindowSize>20</queryResultWindowSize>
 
     <!-- Maximum number of documents to cache for any entry in the
          queryResultCache. -->
-    <queryResultMaxDocsCached>0</queryResultMaxDocsCached>
+    <queryResultMaxDocsCached>200</queryResultMaxDocsCached>
 
     <!-- a newSearcher event is fired whenever a new searcher is being prepared
       and there is a current searcher handling requests (aka registered).
@@ -235,35 +272,29 @@
        see http://wiki.apache.org/solr/DisMaxRequestHandler
    -->
   <requestHandler name="dismax" class="solr.SearchHandler" >
+  
+     <arr name="components">
+      <str>query</str>
+      <str>solandraComponent</str>
+      <str>facet</str>
+      <str>mlt</str>
+      <str>highlight</str>
+      <str>stats</str>
+      <str>debug</str>
+     </arr>
+     
     <lst name="defaults">
      <str name="defType">dismax</str>
      <str name="echoParams">explicit</str>
      <float name="tie">0.01</float>
      <str name="qf">
-        text^0.5 features^1.0 name^1.2 sku^1.5 id^10.0 manu^1.1 cat^1.4
-     </str>
-     <str name="pf">
-        text^0.2 features^1.1 name^1.5 manu^1.4 manu_exact^1.9
-     </str>
-     <str name="bf">
-        popularity^0.5 recip(price,1,1000,1000)^0.3
-     </str>
-     <str name="fl">
-        id,name,price,score
+       text^0.5 title^2
      </str>
      <str name="mm">
-        2&lt;-1 5&lt;-2 6&lt;90%
+       2&lt;-1 5&lt;-2 6&lt;90%
      </str>
      <int name="ps">100</int>
      <str name="q.alt">*:*</str>
-     <!-- example highlighter config, enable per-query with hl=true -->
-     <str name="hl.fl">text features name</str>
-     <!-- for this field, we want no fragmenting, just highlighting -->
-     <str name="f.name.hl.fragsize">0</str>
-     <!-- instructs Solr to return the field itself if no query terms are
-          found -->
-     <str name="f.name.hl.alternateField">name</str>
-     <str name="f.text.hl.fragmenter">regex</str> <!-- defined below -->
     </lst>
   </requestHandler>
 

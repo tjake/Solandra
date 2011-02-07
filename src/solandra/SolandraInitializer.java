@@ -25,6 +25,7 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import lucandra.CassandraUtils;
 
+import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.solr.core.CoreContainer;
 import org.apache.solr.core.SolandraCoreContainer;
 import org.apache.solr.core.SolrConfig;
@@ -40,7 +41,7 @@ public class SolandraInitializer extends Initializer {
         CoreContainer cores = new SolandraCoreContainer(solrConfigFilename == null ? SolrConfig.DEFAULT_CONF_FILE : solrConfigFilename);
              
         //Startup cassandra
-        CassandraUtils.startup();
+        CassandraUtils.startup();  
         
         return cores;
     }

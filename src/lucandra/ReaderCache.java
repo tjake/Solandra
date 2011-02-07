@@ -19,17 +19,34 @@
  */
 package lucandra;
 
-import java.nio.ByteBuffer;
+import java.util.Map;
+import java.util.UUID;
 
-import junit.framework.TestCase;
+import com.google.common.collect.MapMaker;
 
+import org.apache.lucene.document.Document;
+import org.apache.lucene.util.OpenBitSet;
 
-public class UtilitiesTests extends TestCase 
-{   
-    public void testVInt()
+public class ReaderCache
+{
+    public final String indexName;
+    public final Map<Integer, Document> documents;
+    public final TermCache termCache;
+    public final Map<String, byte[]>  fieldNorms;
+    public final OpenBitSet docHits;
+    public final Object fieldCacheKey;
+    
+    public ReaderCache(String indexName)
     {
-        ByteBuffer ibytes = CassandraUtils.writeVInt(1977);
+        this.indexName = indexName;
         
-        assertEquals(1977, CassandraUtils.readVInt(ibytes));
+        documents           = new MapMaker().makeMap();
+        termCache           = new TermCache(indexName);
+        fieldNorms          = new MapMaker().makeMap();
+        docHits             = new OpenBitSet(CassandraUtils.maxDocsPerShard);
+        
+        fieldCacheKey = UUID.randomUUID();
     }
+    
+    
 }

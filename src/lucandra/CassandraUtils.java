@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.UnsupportedEncodingException;
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Arrays;
@@ -48,6 +49,7 @@ import org.apache.cassandra.thrift.UnavailableException;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.cassandra.utils.FBUtilities;
 import org.apache.log4j.Logger;
+import org.apache.lucene.document.Fieldable;
 import org.apache.lucene.index.Term;
 
 public class CassandraUtils
@@ -65,7 +67,9 @@ public class CassandraUtils
     public static final String               normsKey               = "N";
     
     public static final String               schemaKey              = "S";
+    public static final String               cachedCol              = "CC";
     
+    public static final ByteBuffer           cachedColBytes         = ByteBuffer.wrap(cachedCol.getBytes());
     public static final ByteBuffer           positionVectorKeyBytes = ByteBuffer.wrap(positionVectorKey.getBytes());
     public static final ByteBuffer           offsetVectorKeyBytes   = ByteBuffer.wrap(offsetVectorKey.getBytes());
     public static final ByteBuffer           termFrequencyKeyBytes  = ByteBuffer.wrap(termFrequencyKey.getBytes());
@@ -75,7 +79,7 @@ public class CassandraUtils
     
     public static final int                  maxDocsPerShard        = (int) Math.pow(2, 17);
 
-    public static final List<Number>         emptyArray             = Arrays.asList(new Number[] { 0 });
+    public static final List<Number>         emptyArray             = Arrays.asList(new Number[] {});
     public static final String               delimeter              = new String("\uffff");
     public static final byte[]               delimeterBytes;
 
@@ -90,6 +94,8 @@ public class CassandraUtils
     public static final boolean              indexHashingEnabled    = Boolean.valueOf(System.getProperty(
             "index.hashing", "true"));
     
+    //how often to check for cache invalidation
+    public static int   cacheInvalidationInterval = 1000;//ms
   
     public static final QueryPath            metaColumnPath;
 
@@ -110,7 +116,7 @@ public class CassandraUtils
         }
     }
 
-    public static final int                  keySigBytes            = FBUtilities.md5hash(documentMetaFieldBytes).toString().length();
+    public static final int                  keySigBytes            = md5hash(documentMetaFieldBytes).toString().length();
 
     private static final Logger              logger                 = Logger.getLogger(CassandraUtils.class);
 
@@ -157,14 +163,17 @@ public class CassandraUtils
         {
             logger.error("Cassandra not started after 1 hour");
             System.exit(3);
-        }
-        
+        }       
     }
 
-    public static byte[] createColumnName(Term term)
+    public static ByteBuffer createColumnName(Fieldable field)
     {
-
-        return createColumnName(term.field(), term.text());
+        return ByteBuffer.wrap(createColumnName(field.name(), field.stringValue()));
+    }
+    
+    public static ByteBuffer createColumnName(Term term)
+    {
+        return ByteBuffer.wrap(createColumnName(term.field(), term.text()));
     }
 
     public static byte[] createColumnName(String field, String text)
@@ -184,6 +193,8 @@ public class CassandraUtils
         }
     }
 
+    
+    
     public static Term parseTerm(String termStr)
     {
 
@@ -219,31 +230,21 @@ public class CassandraUtils
         if (intVector.get(0) instanceof Byte)
             return ByteBuffer.wrap(new byte[] { intVector.get(0).byteValue() });
 
-        ByteBuffer buffer = ByteBuffer.allocate(4 * intVector.size());
+        
+       
+        ByteBuffer buffer = ByteBuffer.allocate(4 * (intVector.size()+1));
 
+        //Number of int's
+        buffer.putInt(intVector.size());
+        
         for (Number i : intVector)
         {
             buffer.putInt(i.intValue());
         }
-        buffer.rewind();
+        buffer.flip();
         return buffer;
     }
 
-    public static boolean compareByteArrays(byte[] a, byte[] b)
-    {
-
-        if (a.length != b.length)
-            return false;
-
-        for (int i = 0; i < a.length; i++)
-        {
-            if (a[i] != b[i])
-                return false;
-        }
-
-        return true;
-
-    }
 
     public static final int[] byteArrayToIntArray(ByteBuffer b)
     {
@@ -263,85 +264,52 @@ public class CassandraUtils
         return intArray;
     }
 
-    public static final byte[] encodeLong(long l)
-    {
-        ByteBuffer buffer = ByteBuffer.allocate(8);
+   
 
-        buffer.putLong(l);
-        
-        return buffer.array();
-    }
-
-    public static final long decodeLong(byte[] bytes)
-    {
-
-        if (bytes.length != 8)
-            throw new RuntimeException("must be 8 bytes");
-
-        ByteBuffer buffer = ByteBuffer.wrap(bytes);
-
-        return buffer.getLong();
-    }
-
-    
+ 
 
     public static void addMutations(Map<ByteBuffer, RowMutation> mutationList, String columnFamily, byte[] column,
-            ByteBuffer key, byte[] value, Map<ByteBuffer, List<Number>> superColumns)
+            ByteBuffer key, byte[] value)
     {
-        addMutations(mutationList, columnFamily, ByteBuffer.wrap(column), key, ByteBuffer.wrap(value), superColumns);
+        addMutations(mutationList, columnFamily, ByteBuffer.wrap(column), key, ByteBuffer.wrap(value));
     }
 
     public static void addMutations(Map<ByteBuffer, RowMutation> mutationList, String columnFamily, byte[] column,
-            ByteBuffer key, ByteBuffer value, Map<ByteBuffer, List<Number>> superColumns)
+            ByteBuffer key, ByteBuffer value)
     {
-        addMutations(mutationList, columnFamily, ByteBuffer.wrap(column), key, value, superColumns);
+        addMutations(mutationList, columnFamily, ByteBuffer.wrap(column), key, value);
     }
 
     public static void addMutations(Map<ByteBuffer, RowMutation> mutationList, String columnFamily, ByteBuffer column,
-            ByteBuffer key, ByteBuffer value, Map<ByteBuffer, List<Number>> superColumns)
+            ByteBuffer key, ByteBuffer value)
     {
 
         // Find or create row mutation
         RowMutation rm = mutationList.get(key);
         if (rm == null)
         {
-
             rm = new RowMutation(CassandraUtils.keySpace, key);
-
             mutationList.put(key, rm);
         }
 
-        if (value == null && superColumns == null)
+        if (value == null)
         { // remove
 
             if (column != null)
             {
-                rm.delete(new QueryPath(columnFamily, column), System.currentTimeMillis());
+                rm.delete(new QueryPath(columnFamily, null, column), System.nanoTime());
             }
             else
             {
-                rm.delete(new QueryPath(columnFamily), System.currentTimeMillis());
+                rm.delete(new QueryPath(columnFamily), System.nanoTime());
             }
 
         }
         else
         { // insert
 
-            if (superColumns == null)
-            {
-
-                rm.add(new QueryPath(columnFamily, null, column), value, System.currentTimeMillis());
-
-            }
-            else
-            {
-
-                for (Map.Entry<ByteBuffer, List<Number>> e : superColumns.entrySet())
-                {
-                    rm.add(new QueryPath(columnFamily, column, e.getKey()), intVectorToByteArray(e.getValue()), System
-                            .currentTimeMillis());
-                }
-            }
+            rm.add(new QueryPath(columnFamily, null, column), value, System.nanoTime());
+    
         }
     }
 
@@ -365,6 +333,7 @@ public class CassandraUtils
             {
 
             }
+     
 
             try
             {
@@ -453,11 +422,16 @@ public class CassandraUtils
         return ByteBuffer.wrap(baos.toByteArray());
     }
 
-    public static ByteBuffer hashBytes(byte[] key)
+    public static BigInteger md5hash(ByteBuffer data)
     {
+        byte[] result = FBUtilities.hash(data);
+        BigInteger hash = new BigInteger(result);
+        return hash.abs();        
+    }
     
-        
-        return ByteBufferUtil.bytes(FBUtilities.md5hash(ByteBuffer.wrap(key)).toString()+delimeter);
+    public static ByteBuffer hashBytes(byte[] key)
+    {      
+        return ByteBufferUtil.bytes(md5hash(ByteBuffer.wrap(key)).toString()+delimeter);
     }
 
     public static ByteBuffer hashKeyBytes(byte[]... keys)
@@ -516,14 +490,32 @@ public class CassandraUtils
         return ByteBuffer.wrap(hashedKey);
     }
 
-    public static int readVInt(ByteBuffer buf)
+    public static int mreadVInt(ByteBuffer buf)
     {       
         int length = buf.remaining();
-
+        
         if(length == 0)
             return 0;
         
-        byte b = buf.array()[buf.position() + buf.arrayOffset()];
+        byte b = buf.get();
+        int i = b & 0x7F;
+        for (int pos = 1, shift = 7; (b & 0x80) != 0 && pos < length; shift += 7, pos++)
+        {
+            b = buf.get();
+            i |= (b & 0x7F) << shift;
+        }
+
+        return i;
+    }
+    
+    public static int readVInt(ByteBuffer buf)
+    {       
+        int length = buf.remaining();
+        
+        if(length == 0)
+            return 0;
+        
+        byte b = buf.array()[buf.position()+buf.arrayOffset()];
         int i = b & 0x7F;
         for (int pos = 1, shift = 7; (b & 0x80) != 0 && pos < length; shift += 7, pos++)
         {
@@ -534,7 +526,7 @@ public class CassandraUtils
         return i;
     }
 
-    public static ByteBuffer writeVInt(int i)
+    public static byte[] writeVInt(int i)
     {
         int length = 0;
         int p = i;
@@ -556,6 +548,6 @@ public class CassandraUtils
         }
         buf[pos] = (byte) i;
 
-        return ByteBuffer.wrap(buf);
+        return buf;
     }
 }

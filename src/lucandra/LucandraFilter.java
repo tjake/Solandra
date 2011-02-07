@@ -50,7 +50,7 @@ public class LucandraFilter extends Filter {
         List<ByteBuffer> filteredValues = new ArrayList<ByteBuffer>();
         for(int i=0; i<docsHit.capacity(); i++){          
             if(docsHit.fastGet(i))
-                filteredValues.add(CassandraUtils.writeVInt(i));
+                filteredValues.add(ByteBuffer.wrap(CassandraUtils.writeVInt(i)));
         }
 
         if (filteredValues.size() == 0)
@@ -59,7 +59,7 @@ public class LucandraFilter extends Filter {
         LucandraTermDocs termDocs = (LucandraTermDocs) reader.termDocs();
 
         for (Term term : terms) {
-            IColumn[] terms = termDocs.filteredSeek(term, filteredValues);
+            LucandraTermInfo[] terms = termDocs.filteredSeek(term, filteredValues);
             // This is a conjunction and at least one value must match
             if (terms == null)
                 return null;

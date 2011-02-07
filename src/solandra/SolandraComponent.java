@@ -22,19 +22,23 @@ package solandra;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import lucandra.CassandraUtils;
 import lucandra.IndexReader;
 import lucandra.cluster.CassandraIndexManager;
 import lucandra.cluster.IndexManagerService;
 
+import com.google.common.collect.MapMaker;
+
+import org.apache.cassandra.config.DatabaseDescriptor;
+import org.apache.cassandra.db.Row;
 import org.apache.cassandra.db.Table;
+import org.apache.cassandra.db.filter.QueryPath;
 import org.apache.cassandra.dht.Token;
 import org.apache.cassandra.service.StorageService;
+import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.log4j.Logger;
 import org.apache.lucene.document.FieldSelector;
@@ -49,10 +53,11 @@ import org.apache.solr.search.SolrIndexReader;
 
 public class SolandraComponent extends SearchComponent
 {
-
+    private static AtomicBoolean hasSolandraSchema = new AtomicBoolean(false);
     private static final Logger logger = Logger.getLogger(SolandraComponent.class);
     private final Random        random;
-
+    private final static Map<String,Long> cacheCheck = new MapMaker().makeMap();
+    
     public SolandraComponent()
     {
         random = new Random(System.currentTimeMillis());
@@ -78,17 +83,55 @@ public class SolandraComponent extends SearchComponent
         return "1.0";
     }
 
+    private boolean flushCache(String indexName)
+    {   
+        //if(CassandraUtils.cacheInvalidationInterval == 0)
+        //    return true;
+        
+        Long lastCheck = SolandraComponent.cacheCheck.get(indexName);
+    
+        if(lastCheck == null || lastCheck <= (System.currentTimeMillis() - CassandraUtils.cacheInvalidationInterval))
+        {
+        
+            ByteBuffer keyKey = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, "cache".getBytes());
+
+            List<Row> rows = CassandraUtils.robustRead(keyKey, new QueryPath(CassandraUtils.schemaInfoColumnFamily), Arrays
+                    .asList(CassandraUtils.cachedColBytes), ConsistencyLevel.QUORUM);
+            
+            
+            SolandraComponent.cacheCheck.put(indexName, System.currentTimeMillis());
+            
+            
+            if(lastCheck == null || rows == null || rows.isEmpty() || rows.get(0).cf == null ||             
+                    rows.get(0).cf.getColumn(CassandraUtils.cachedColBytes).getSubColumn(CassandraUtils.cachedColBytes).timestamp() >= lastCheck)
+            {
+                if(logger.isDebugEnabled())
+                    logger.debug("Flushed cache: "+indexName);
+                
+                return true;
+            }
+        }
+    
+            
+        return false;
+    }
+    
     public void prepare(ResponseBuilder rb) throws IOException
     {
 
         // Only applies to my lucandra index readers
-        if (rb.req.getSearcher().getIndexReader().getVersion() != Long.MAX_VALUE)
+        if (!(((SolrIndexReader) rb.req.getSearcher().getIndexReader()).getWrappedReader() instanceof lucandra.IndexReader))
             return;
-
-        // Fixme: this is quite hacky, but the only way to make it work
-        // without altering solr. neeeds reopen!
-        rb.req.getSearcher().getIndexReader().directory();
-
+        
+        if(!hasSolandraSchema.get())
+        {
+            //Check is Solandra schema exists, if not die
+            if(! DatabaseDescriptor.getNonSystemTables().contains(CassandraUtils.keySpace) )
+                throw new IOException("Solandra keyspace is missing, please import then retry");
+            else
+                hasSolandraSchema.set(true);
+        }
+            
         // If this is a shard request then no need to do anything
         if (rb.req.getParams().getBool(ShardParams.IS_SHARD, false))
         {
@@ -97,25 +140,26 @@ public class SolandraComponent extends SearchComponent
             if (indexName == null)
                 throw new IOException("Missing core name");
 
-            IndexReader reader = (IndexReader) ((SolrIndexReader) rb.req.getSearcher().getIndexReader())
-                    .getWrappedReader();
+            IndexReader reader = (IndexReader) ((SolrIndexReader) rb.req.getSearcher().getIndexReader()).getWrappedReader();
 
             reader.setIndexName(indexName);
-
-            logger.debug(indexName);
-
+            
+            if(flushCache(indexName))
+                reader.reopen();
+            
             return;
         }
 
-        String indexName = rb.req.getCore().getName();
+        String indexName = (String) rb.req.getContext().get("solandra-index");
 
-        if (indexName.equals(""))
+        if (indexName == null || indexName.equals(""))
         {
             return; // 
         }
         else
         {
-            logger.info("core: " + indexName);
+            if(logger.isDebugEnabled())
+                logger.debug("core: " + indexName);
         }
 
         if (rb.shards == null)
@@ -130,7 +174,13 @@ public class SolandraComponent extends SearchComponent
                 IndexReader reader = (IndexReader) ((SolrIndexReader) rb.req.getSearcher().getIndexReader())
                 .getWrappedReader();
 
-                reader.setIndexName(indexName+"~0");
+                String subIndex = indexName+"~0";
+                reader.setIndexName(subIndex);
+                
+                if(flushCache(subIndex))
+                {
+                    reader.reopen();                
+                }
                 return;
             }
             
@@ -141,17 +191,17 @@ public class SolandraComponent extends SearchComponent
             {
                 ByteBuffer subIndex = CassandraUtils.hashBytes((indexName + "~" + i).getBytes());
                 Token<?> t = StorageService.getPartitioner().getToken(subIndex);
-                List<InetAddress> addrs = Table.open(CassandraUtils.keySpace).replicationStrategy
-                        .getNaturalEndpoints(t);
+                List<InetAddress> addrs = Table.open(CassandraUtils.keySpace).getReplicationStrategy().getNaturalEndpoints(t);
 
                 // pick a replica at random
                 if (addrs.isEmpty())
                     throw new IOException("can't locate index");
 
                 InetAddress addr = addrs.get(random.nextInt(addrs.size()));
-                String shard = addr.getHostAddress() + ":8983/solr/" + indexName + "~" + i;
+                String shard = addr.getHostAddress() + ":8983/solandra/" + indexName + "~" + i;
 
-                logger.info("Adding shard(" + indexName + "): " + shard);
+                if(logger.isDebugEnabled())
+                    logger.debug("Adding shard(" + indexName + "): " + shard);
 
                 shards[i] = shard;
             }
@@ -163,16 +213,18 @@ public class SolandraComponent extends SearchComponent
 
     public void process(ResponseBuilder rb) throws IOException
     {
-
+        
         DocList list = rb.getResults().docList;
 
         DocIterator it = list.iterator();
 
         List<Integer> docIds = new ArrayList<Integer>(list.size());
+        
         while (it.hasNext())
             docIds.add(it.next());
 
-        logger.debug("Fetching " + docIds.size() + " Docs");
+        if(logger.isDebugEnabled())
+            logger.debug("Fetching " + docIds.size() + " Docs");
 
         if (docIds.size() > 0)
         {

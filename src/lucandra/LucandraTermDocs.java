@@ -23,60 +23,50 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 
-import org.apache.cassandra.db.IColumn;
 import org.apache.log4j.Logger;
-import org.apache.lucene.index.Term;
-import org.apache.lucene.index.TermDocs;
-import org.apache.lucene.index.TermEnum;
-import org.apache.lucene.index.TermPositions;
+import org.apache.lucene.index.*;
 
-public class LucandraTermDocs implements TermDocs, TermPositions {
+public class LucandraTermDocs implements TermDocs, TermPositions
+{
 
-    private IndexReader indexReader;
-    private LucandraTermEnum termEnum;
-    private IColumn[] termDocs;
-    private int docPosition;
-    private int[] termPositionArray;
-    private int termPosition;
+    private IndexReader         indexReader;
+    private LucandraTermEnum    termEnum;
+    private LucandraTermInfo[]  termDocs;
+    private int                 docPosition;
+    private int[]               termPositionArray;
+    private int                 termPosition;
     private static final Logger logger = Logger.getLogger(LucandraTermDocs.class);
 
-    public LucandraTermDocs(IndexReader indexReader) {
+    public LucandraTermDocs(IndexReader indexReader)
+    {
         this.indexReader = indexReader;
         termEnum = new LucandraTermEnum(indexReader);
     }
 
-    public void close() throws IOException {
-        // TODO Auto-generated method stub
+    public void close() throws IOException
+    {
 
     }
 
-    public int doc() {
+    public int doc()
+    {
         if (docPosition < 0)
             docPosition = 0;
 
-        int docid = CassandraUtils.readVInt(termDocs[docPosition].name()); 
-
-        return docid;
+        return termDocs[docPosition].docId;
     }
 
-    public int freq() {
-              
-        //Find the termFrequency
-        IColumn termFrequency  = termDocs[docPosition].getSubColumn(CassandraUtils.termFrequencyKeyBytes);     
-        IColumn positionVector = termDocs[docPosition].getSubColumn(CassandraUtils.positionVectorKeyBytes);
-          
-        if(termFrequency == null){
-            throw new RuntimeException("termFrequency is missing from supercolumn");
-        }
-             
-        Integer freq      = CassandraUtils.byteArrayToInt(termFrequency.value());
-        termPositionArray =  positionVector == null ? null : CassandraUtils.byteArrayToIntArray(positionVector.value());
-        termPosition      = 0;
+    public int freq()
+    {
+        Integer freq = termDocs[docPosition].freq;
+        termPositionArray = termDocs[docPosition].positions;
+        termPosition = 0;
 
         return freq;
     }
 
-    public boolean next() throws IOException {
+    public boolean next() throws IOException
+    {
 
         if (termDocs == null)
             return false;
@@ -84,42 +74,30 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         return ++docPosition < termDocs.length;
     }
 
-    public int read(int[] docs, int[] freqs) throws IOException {
+    public int read(int[] docs, int[] freqs) throws IOException
+    {
 
         int i = 0;
-        for (; (termDocs != null && docPosition < termDocs.length && i < docs.length); i++, docPosition++) {
+        for (; (termDocs != null && docPosition < termDocs.length && i < docs.length); i++, docPosition++)
+        {
             docs[i] = doc();
             freqs[i] = freq();
         }
 
-        logger.debug("read "+i);
-        
         return i;
     }
 
-    public void seek(Term term) throws IOException {
-              
-        // on a new term so check cached
-        LucandraTermEnum tmp = indexReader.checkTermCache(term);
-        if (tmp == null) {
+    public void seek(Term term) throws IOException
+    {
 
-            if (termEnum.skipTo(term)) {
-                if (termEnum.term().compareTo(term) == 0) {
-                    termDocs = termEnum.getTermDocFreq();
-                } else {
-                    termDocs = null;
-                }
+        if (termEnum.skipTo(term))
+        {
+            if (termEnum.term().equals(term))
+            {
+                termDocs = termEnum.getTermDocFreq();
             }
-        } else {
-            termEnum = tmp;
-            if (termEnum.skipTo(term)) {
-
-                if (termEnum.term().equals(term)) {
-                    termDocs = termEnum.getTermDocFreq();
-                } else {
-                    termDocs = null;
-                }
-            } else {
+            else
+            {
                 termDocs = null;
             }
         }
@@ -127,68 +105,79 @@ public class LucandraTermDocs implements TermDocs, TermPositions {
         docPosition = -1;
     }
 
-    public void seek(TermEnum termEnum) throws IOException {
-        if (termEnum instanceof LucandraTermEnum) {
+    public void seek(TermEnum termEnum) throws IOException
+    {
+        if (termEnum instanceof LucandraTermEnum)
+        {
             this.termEnum = (LucandraTermEnum) termEnum;
-        } else {
+        }
+        else
+        {
             this.termEnum = (LucandraTermEnum) indexReader.terms(termEnum.term());
         }
-    
+
         termDocs = this.termEnum.getTermDocFreq();
-        
-        if(logger.isDebugEnabled())
-            logger.debug("seeked out "+termDocs.length);
-        
+
+        if (logger.isDebugEnabled())
+            logger.debug("seeked out " + termDocs.length);
+
         docPosition = -1;
     }
 
-    public IColumn[] filteredSeek(Term term, List<ByteBuffer> docNums){
-      
-        termEnum.loadFilteredTerms(term, docNums);
-       
-        if(termEnum.getTermDocFreq() == null)
-            termDocs = null;
-        else
-            termDocs = termEnum.getTermDocFreq();
+    public LucandraTermInfo[] filteredSeek(Term term, List<ByteBuffer> docNums)
+    {
+
+        termDocs = termEnum.loadFilteredTerms(term, docNums);
 
         docPosition = -1;
         return termDocs;
     }
-    
-    //this should be used to find a already loaded doc
-    public boolean skipTo(int target) throws IOException {
-        do {
+
+    // this should be used to find a already loaded doc
+    public boolean skipTo(int target) throws IOException
+    {
+
+        // find the target
+        if (termDocs == null)
+            return false;
+
+        docPosition = 0;
+
+        do
+        {
             if (!next())
                 return false;
-        } while (target > doc());
+        }
+        while (target > doc());
 
         return true;
     }
 
-    public byte[] getPayload(byte[] data, int offset) throws IOException {
+    public byte[] getPayload(byte[] data, int offset) throws IOException
+    {
         return null;
     }
 
-    public int getPayloadLength() {
+    public int getPayloadLength()
+    {
         return 0;
     }
 
-    public boolean isPayloadAvailable() {
+    public boolean isPayloadAvailable()
+    {
         return false;
     }
 
-    public int nextPosition() throws IOException {
-        
-        logger.debug("In nextPosition()");
-        
-        if(termPositionArray == null)
+    public int nextPosition() throws IOException
+    {
+        if (termPositionArray == null)
             return -1;
-        
+
         int pos = termPositionArray[termPosition];
         termPosition++;
-        
-        if(logger.isDebugEnabled())
-            logger.debug("Doc: "+doc()+", Position: "+pos);
+
+        if (logger.isDebugEnabled())
+            logger.debug("Doc: " + doc() + ", Position: " + pos);
 
         return pos;
     }

@@ -228,6 +228,6 @@
 
           <echo>Solandra successfully built</echo>
           <echo>You can excute the following command to start the server.</echo>
-          <echo>cd ${app}; start-solandra.sh</echo>
+          <echo>cd ${app}; start-solandra.sh -b</echo>
         </target>
 </project>

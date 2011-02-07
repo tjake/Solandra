@@ -19,20 +19,14 @@
  */
 package lucandra.wikipedia;
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.util.Arrays;
 import java.util.Queue;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
+
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.apache.solr.client.solrj.impl.StreamingUpdateSolrServer;
 
 public class WikipediaImporter {
 
@@ -194,6 +188,10 @@ public class WikipediaImporter {
 
     public static void main(String[] args) {
 
+        //Keep sol4j quiet
+        Logger log = Logger.getLogger(StreamingUpdateSolrServer.class);
+        log.setLevel(Level.WARN);
+        
         try {
 
             if (args.length > 0)

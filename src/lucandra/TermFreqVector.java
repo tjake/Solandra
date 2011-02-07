@@ -25,19 +25,13 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.TimeoutException;
 
-import org.apache.cassandra.db.IColumn;
 import org.apache.cassandra.db.ReadCommand;
 import org.apache.cassandra.db.Row;
 import org.apache.cassandra.db.SliceByNamesReadCommand;
-import org.apache.cassandra.db.SliceFromReadCommand;
-import org.apache.cassandra.service.StorageProxy;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.ConsistencyLevel;
-import org.apache.cassandra.thrift.InvalidRequestException;
-import org.apache.cassandra.thrift.UnavailableException;
-import org.apache.cassandra.utils.FBUtilities;
+import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.TermVectorOffsetInfo;
 
@@ -59,35 +53,13 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
         ReadCommand rc = new SliceByNamesReadCommand(CassandraUtils.keySpace, key, CassandraUtils.metaColumnPath, Arrays
                 .asList(CassandraUtils.documentMetaFieldBytes));
 
-        List<Row> rows = null;
-        int attempts = 0;
-        while (attempts++ < 10) {
-            try {
-                rows = StorageProxy.readProtocol(Arrays.asList(rc), ConsistencyLevel.ONE);
-                break;
-            } catch (IOException e1) {
-                throw new RuntimeException(e1);
-            } catch (UnavailableException e1) {
-                
-            } catch (TimeoutException e1) {
-                
-            } catch (InvalidRequestException e) {
-                throw new RuntimeException(e);
-            }
-
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-
-            }
+        List<Row> rows = CassandraUtils.robustRead(ConsistencyLevel.ONE, rc);
+       
+        if (rows.isEmpty()){
+            
+            return; // this docId is missing
         }
-
-        if (attempts >= 10)
-            throw new RuntimeException("Read command failed after 10 attempts");
-
-        if (rows.isEmpty())
-            return; // nothing to delete
-
+        
         List<Term> allTerms;
         try {
             allTerms = (List<Term>) CassandraUtils.fromBytes(rows.get(0).cf.getColumn(CassandraUtils.documentMetaFieldBytes).value());
@@ -112,21 +84,10 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
                 throw new RuntimeException("JVM doesn't support UTF-8",e);
             }
 
-            readCommands.add(new SliceFromReadCommand(CassandraUtils.keySpace, key, new ColumnParent().setColumn_family(CassandraUtils.termVecColumnFamily)
-                    .setSuper_column((ByteBuffer) CassandraUtils.writeVInt(docI)), FBUtilities.EMPTY_BYTE_BUFFER, FBUtilities.EMPTY_BYTE_BUFFER, false, 1024));
+            readCommands.add(new SliceByNamesReadCommand(CassandraUtils.keySpace, key, new ColumnParent().setColumn_family(CassandraUtils.termVecColumnFamily), Arrays.asList(ByteBuffer.wrap(CassandraUtils.writeVInt(docI)))));
         }
 
-        try {
-            rows = StorageProxy.readProtocol(readCommands, ConsistencyLevel.ONE);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        } catch (UnavailableException e) {
-            throw new RuntimeException(e);
-        } catch (TimeoutException e) {
-            throw new RuntimeException(e);
-        } catch (InvalidRequestException e) {
-            throw new RuntimeException(e);
-        }
+        rows = CassandraUtils.robustRead(ConsistencyLevel.ONE, readCommands.toArray(new ReadCommand[]{}));
 
         terms = new String[rows.size()];
         freqVec = new int[rows.size()];
@@ -136,12 +97,8 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
         int i = 0;
 
         for (Row row : rows) {
-            String rowKey;
-            try {
-                rowKey = new String(row.key.key.array(),row.key.key.position(),row.key.key.remaining(),"UTF-8");
-            } catch (UnsupportedEncodingException e) {
-               throw new RuntimeException("JVM does not support UTF-8");
-            }
+            String rowKey = ByteBufferUtil.string(row.key.key,CassandraUtils.UTF_8);
+           
             String termStr = rowKey.substring(rowKey.indexOf(CassandraUtils.delimeter) + CassandraUtils.delimeter.length());
 
             Term t = CassandraUtils.parseTerm(termStr);
@@ -149,22 +106,21 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
             terms[i] = t.text();
 
             // Find the offsets and positions
-            IColumn positionVector = null;
-            IColumn offsetVector   = null;
+            LucandraTermInfo termInfo = null;
             
             if(row.cf != null){
-                positionVector = row.cf.getSortedColumns().iterator().next().getSubColumn(CassandraUtils.positionVectorKeyBytes);
-                offsetVector   = row.cf.getSortedColumns().iterator().next().getSubColumn(CassandraUtils.offsetVectorKeyBytes);
+                termInfo = new LucandraTermInfo(0, row.cf.getSortedColumns().iterator().next().value());
+                
+                termPositions[i] = termInfo.positions;
             }
             
-            termPositions[i] = positionVector == null ? new int[] {} : CassandraUtils.byteArrayToIntArray(positionVector.value());
             freqVec[i] = termPositions[i].length;
 
-            if (offsetVector == null) {
+            if (termInfo == null || !termInfo.hasOffsets) {
                 termOffsets[i] = TermVectorOffsetInfo.EMPTY_OFFSET_INFO;
             } else {
 
-                int[] offsets = CassandraUtils.byteArrayToIntArray(offsetVector.value());
+                int[] offsets = termInfo.offsets;
 
                 termOffsets[i] = new TermVectorOffsetInfo[freqVec[i]];
                 for (int j = 0, k = 0; j < offsets.length; j += 2, k++) {

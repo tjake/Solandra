@@ -23,9 +23,10 @@
   </fieldType>
  </types>
  <fields>
-    <field name="url"  type="string" indexed="true"  stored="true"/>
-    <field name="title"  type="text" indexed="true"  stored="true"/>
-    <field name="text"  type="text" indexed="true"  stored="true"/>
+    <field name="url"      type="string" indexed="true"  stored="true"/>
+    <field name="title"    type="text" indexed="true"  stored="true"/>
+    <field name="text"     type="text" indexed="true"  stored="true"/>
+    <field name="category" type="string" indexed="true" stored="true"/> 
  </fields>
 
 <defaultSearchField>title</defaultSearchField>

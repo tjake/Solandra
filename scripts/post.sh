@@ -17,7 +17,7 @@
 NAME=$1
 FILE=$2
 
-URL=http://localhost:8983/solr/schema/$NAME
+URL=http://localhost:8983/solandra/schema/$NAME
 
 curl $URL --data-binary @$FILE -H 'Content-type:text/xml; charset=utf-8' 
 

@@ -31,6 +31,7 @@ import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.SolrQuery.ORDER;
 import org.apache.solr.client.solrj.impl.CommonsHttpSolrServer;
+import org.apache.solr.client.solrj.impl.StreamingUpdateSolrServer;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.SolrInputDocument;
 
@@ -52,17 +53,18 @@ public class BenchmarkTest {
     private static String url = "http://localhost";
     private static String[] types = new String[]{"1","2","3","4","5","6","7","8","9","10"};
     private static Random  random = new Random(System.currentTimeMillis()); 
-
+    private static CommonsHttpSolrServer streamingClient = null;
+    
     private static Runnable getRunnable() {
 
         try {
             return new Runnable() {
 
-                private final CommonsHttpSolrServer solrClient = new CommonsHttpSolrServer(url + ":" + port + "/solr/"+indexName);
-                private final SolrQuery q = new SolrQuery().setQuery(queryString).addFacetField("type").setSortField("id", ORDER.asc);
+                private CommonsHttpSolrServer solrClient;
+                                
+                private final SolrQuery q = new SolrQuery().setQuery(queryString).addFacetField("type").setSortField("id", ORDER.asc).addField("*");
                 //private final SolrQuery q = new SolrQuery().setQuery(queryString).setSortField("id", ORDER.asc);
                 //private final SolrQuery q = new SolrQuery().setQuery(queryString);
-
                 
                 private final int myThreadId = threadId++;
                 
@@ -75,7 +77,42 @@ public class BenchmarkTest {
                     return doc;
                 }
                 
+                private CommonsHttpSolrServer getStreamingServer(String url) throws MalformedURLException
+                {
+                    
+                    if(streamingClient == null)
+                    {
+                        synchronized (url.intern())
+                        {
+                            if(streamingClient == null)
+                            {
+                                streamingClient =  new StreamingUpdateSolrServer(url, 512, numClients);
+                            }
+                        }
+                    }                 
+                    
+                    return streamingClient;
+                }
+                
                 public void run() {
+                    
+                    try{
+                        
+                        String fullUrl;
+                        
+                        if(indexName.equals(""))
+                            fullUrl = url + ":" + port +  "/solr";
+                        else
+                            fullUrl = url + ":" + port +  "/solandra/"+indexName;
+                        
+                        if(type == Type.write)
+                            solrClient = getStreamingServer(fullUrl);
+                        else
+                            solrClient = new CommonsHttpSolrServer(fullUrl);
+                        
+                    }catch(MalformedURLException e){
+                        
+                    }
                     
                     try {
                         switch (type) {
@@ -97,9 +134,7 @@ public class BenchmarkTest {
                     } finally {
 
                     }
-                }
-                
-               
+                }             
 
                 private void read() throws SolrServerException {
 
@@ -123,9 +158,10 @@ public class BenchmarkTest {
 
                     for (int i = 0; i < numLoops; i++) {
                        
-                        solrClient.add(getDocument());
-                        solrClient.commit(true,true);
+                        solrClient.add(getDocument());                      
                     }
+                    
+                    solrClient.commit(true,true);
                 }
 
                 private void both() throws SolrServerException, IOException {
@@ -144,21 +180,26 @@ public class BenchmarkTest {
                         } else {
                             
                             solrClient.add(getDocument());
-                            solrClient.commit(true,true);
+                          
                         }
 
                     }
 
+                    solrClient.commit(true,true);
+                    
                     if (myThreadId == 0)
                         System.err.println("Documents found: " + total);
                 }
             };
-        } catch (MalformedURLException e) {
+        } catch (Throwable e) {
             e.printStackTrace();
             throw new RuntimeException(e);
         }
     }
 
+    
+    
+    
     private static void usage() {
 
         System.err.print(BenchmarkTest.class.getSimpleName() + " [--clients=<client-count>] [--loops=<loop-count>] [--type=<test-type>]\n"

@@ -17,31 +17,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package solandra;
+package org.apache.solr.core;
 
-import java.io.IOException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-import lucandra.IndexReader;
-
-import org.apache.lucene.store.Directory;
-import org.apache.solr.common.SolrException;
-import org.apache.solr.common.SolrException.ErrorCode;
-import org.apache.solr.common.util.NamedList;
-import org.apache.solr.core.IndexReaderFactory;
-
-public class SolandraIndexReaderFactory extends IndexReaderFactory {  
-        
-    private String indexName;
+public class SolandraCoreInfo
+{
     
-    public void init(NamedList args){
-        super.init(args);
+    public final String  coreName;
+    public final String  indexName;
+    public final Integer shard;
+    
+    public  final static Pattern shardPattern = Pattern.compile("^([^\\.~]+)(\\.?[^~]*)~?(\\d*)$");
+
+    
+    public SolandraCoreInfo(String indexString)
+    {
+        Matcher m = shardPattern.matcher(indexString);
         
-        indexName = "example";        
+        if(!m.find())
+            throw new RuntimeException("Invalid indexname: "+indexString);
+        
+        coreName  = m.group(1);
+        indexName = m.group(2).isEmpty() ? coreName : coreName+m.group(2);
+        shard     = m.group(3).isEmpty() ? 0 : Integer.valueOf(m.group(3));
     }
     
-    @Override
-    public IndexReader newReader(Directory indexDir, boolean readOnly) throws IOException {               
-        return new lucandra.IndexReader(indexName);        
-    }
 
 }
