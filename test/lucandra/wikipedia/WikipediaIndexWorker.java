@@ -29,6 +29,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.CommonsHttpSolrServer;
+import org.apache.solr.client.solrj.impl.StreamingUpdateSolrServer;
 import org.apache.solr.common.SolrInputDocument;
 
 public class WikipediaIndexWorker implements Callable<Integer> {
@@ -83,7 +84,7 @@ public class WikipediaIndexWorker implements Callable<Integer> {
             if(hosts.size() == 0)
                 throw new RuntimeException("no hosts defined");   
             
-            indexWriter = new CommonsHttpSolrServer("http://"+hosts.get(r.nextInt(hosts.size()))+":" + port + "/solr/wikassandra");
+            indexWriter = new StreamingUpdateSolrServer("http://"+hosts.get(r.nextInt(hosts.size()))+":" + port + "/solandra/wikassandra", 512, 64/hosts.size());
 
             clientPool.set(indexWriter);
         }
