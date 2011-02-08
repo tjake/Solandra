@@ -134,7 +134,7 @@ public class LucandraTermEnum extends TermEnum
     }
     
     
-    public LucandraTermInfo[] loadFilteredTerms(Term term, List<ByteBuffer> docNums)
+    public LucandraTermInfo[] loadFilteredTerms(Term term, List<ByteBuffer> docNums) throws IOException
     {
         long start = System.currentTimeMillis();
         ColumnParent parent = new ColumnParent();

@@ -842,12 +842,6 @@ public class SolandraTests
 
         QueryResponse r = otherClient.query(q);
         
-        Iterator<SolrDocument> it = r.getResults().iterator();
-        while(it.hasNext())
-        {
-            System.err.println(it.next());
-        }
-        
         assertEquals(7, r.getResults().getNumFound());        
     }
     
@@ -859,15 +853,8 @@ public class SolandraTests
 
         QueryResponse r = otherClient.query(q);
         
-        Iterator<SolrDocument> it = r.getResults().iterator();
-        while(it.hasNext())
-        {
-            System.err.println(it.next());
-        }
-        
-        assertEquals(7, r.getResults().getNumFound());        
-        
-        
+     
+        assertEquals(7, r.getResults().getNumFound());              
     }
     
 

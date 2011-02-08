@@ -83,7 +83,7 @@ public class SolandraComponent extends SearchComponent
         return "1.0";
     }
 
-    private boolean flushCache(String indexName)
+    private boolean flushCache(String indexName) throws IOException
     {   
         //if(CassandraUtils.cacheInvalidationInterval == 0)
         //    return true;

@@ -60,7 +60,16 @@ public class LucandraAllTermDocs implements TermDocs
         idx = 0;
         fillSize = 0;
         
-        fillDocBuffer();
+        
+        try
+        {
+            fillDocBuffer();
+        }
+        catch (IOException e)
+        {
+            logger.error(e);
+            throw new RuntimeException(e);
+        }
 
     }
 
@@ -130,7 +139,7 @@ public class LucandraAllTermDocs implements TermDocs
     {
     }
 
-    private void fillDocBuffer()
+    private void fillDocBuffer() throws IOException
     {
         
         ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, "ids".getBytes());

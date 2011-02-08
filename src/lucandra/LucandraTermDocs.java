@@ -124,7 +124,7 @@ public class LucandraTermDocs implements TermDocs, TermPositions
         docPosition = -1;
     }
 
-    public LucandraTermInfo[] filteredSeek(Term term, List<ByteBuffer> docNums)
+    public LucandraTermInfo[] filteredSeek(Term term, List<ByteBuffer> docNums) throws IOException
     {
 
         termDocs = termEnum.loadFilteredTerms(term, docNums);
