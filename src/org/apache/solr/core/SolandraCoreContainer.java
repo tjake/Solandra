@@ -207,13 +207,15 @@ public class SolandraCoreContainer extends CoreContainer
         long   maxId     = IndexManagerService.instance.getMaxId(indexName);
         int    numShards = CassandraIndexManager.getShardFromDocId(maxId);        
         
+        SolandraCoreInfo info = new SolandraCoreInfo(indexName);
+        
         StringBuilder sb = new StringBuilder();
         
         sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n");
-        sb.append("<solandraCore name=\""+indexName+"\" numSubIndexes=\""+numShards+1+"\" documentsPerSubIndex=\""+CassandraUtils.maxDocsPerShard+"\">\n");
+        sb.append("<solandraCore name=\""+indexName+"\" numSubIndexes=\""+(numShards+1)+"\" documentsPerSubIndex=\""+CassandraUtils.maxDocsPerShard+"\">\n");
         for(int i=0; i<=numShards; i++)
         {
-            ByteBuffer subIndex = CassandraUtils.hashBytes((indexName + "~" + i).getBytes());
+            ByteBuffer subIndex = CassandraUtils.hashBytes((info.indexName + "~" + i).getBytes());
 
             sb.append("  <subIndex name=\""+i+"\" token=\""+CassandraUtils.md5hash(subIndex)+"\">\n");
             
