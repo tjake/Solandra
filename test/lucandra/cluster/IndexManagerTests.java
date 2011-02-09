@@ -34,8 +34,6 @@ import lucandra.dht.RandomPartitioner;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import org.apache.cassandra.utils.ByteBufferUtil;
-
 public class IndexManagerTests
 {
     static String indexName = String.valueOf(System.nanoTime());
@@ -96,7 +94,7 @@ public class IndexManagerTests
         long startTime = System.currentTimeMillis();
 
         // Add
-        for (int i = 0; i < CassandraUtils.maxDocsPerShard; i++)
+        for (int i = 0; i < CassandraUtils.maxDocsPerShard - CassandraIndexManager.reserveSlabSize; i++)
         {
             long id = idx.getNextId(indexName, "i" + i);
 
@@ -113,7 +111,7 @@ public class IndexManagerTests
         assertEquals(0, CassandraIndexManager.getShardFromDocId(idx.getMaxId(indexName)));
 
         // Update
-        for (int i = 0; i < CassandraUtils.maxDocsPerShard; i++)
+        for (int i = 0; i < CassandraUtils.maxDocsPerShard - CassandraIndexManager.reserveSlabSize; i++)
         {
             Long id = idx.getId(indexName, "i" + i);
 

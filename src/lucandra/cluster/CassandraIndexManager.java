@@ -53,15 +53,11 @@ public class CassandraIndexManager
     protected final int                                              shardsAtOnce;
 
     private int[]                                                    randomSeq;
-    private final Map<Integer, Integer>                              offsetLookup    = new HashMap<Integer, Integer>(
-                                                                                             CassandraUtils.maxDocsPerShard);        // maps
-                                                                                                                                      // ids
-                                                                                                                                      // to
-                                                                                                                                      // offsets
-    private final int                                                reserveSlabSize = (int) Math.pow(2, 10);
+    
+    public  static final int                                         reserveSlabSize = (int) Math.pow(2, 10);
     private final int                                                offsetSlots     = CassandraUtils.maxDocsPerShard
                                                                                              / reserveSlabSize;
-    private final int                                                expirationTime  = 60;                                           // seconds
+    private final int                                                expirationTime  = 60;  // seconds
 
     private final ConcurrentMap<String, LinkedBlockingQueue<IdInfo>> indexReserves   = new MapMaker().makeMap();
     private final ConcurrentMap<String, ShardInfo>                   indexShards     = new MapMaker().makeMap();
@@ -129,15 +125,6 @@ public class CassandraIndexManager
         }
 
         randomSeq = shuffle(randomSeq, r);
-
-        for (int i = 0; i < offsetSlots; i++)
-        {
-            int start = randomSeq[i];
-            for (int j = start; j < start + reserveSlabSize; j++)
-            {
-                offsetLookup.put(j, i);
-            }
-        }
     }
 
     private ShardInfo getShardInfo(String indexName) throws IOException
@@ -343,13 +330,14 @@ public class CassandraIndexManager
             if (idInfo == null)
             {
                 attempts++;
+                //logger.info("Failed to get an ID, trying again");
                 continue;
             }
             break;
         }
 
         if (idInfo == null)
-            throw new IllegalStateException("Unable to reserve an id");
+            throw new IllegalStateException(myToken+": Unable to reserve an id");
 
         ByteBuffer idCol = ByteBuffer.wrap(String.valueOf(idInfo.id).getBytes());
         ByteBuffer keyCol = ByteBuffer.wrap(key.getBytes());
@@ -418,7 +406,8 @@ public class CassandraIndexManager
             logger.debug("in reserveIds for index " + indexName);
 
         LinkedBlockingQueue<IdInfo> currentRsvpd = indexReserves.get(indexName);
-
+        boolean hasExpired = false;
+        
         if (currentRsvpd != null)
         {
             // make sure none have timed out
@@ -442,6 +431,7 @@ public class CassandraIndexManager
             if (expired != null)
             {
                 logger.info(expired.size() + " reserved ids for " + indexName + " have expired");
+                hasExpired = true;
                 currentRsvpd.removeAll(expired);
             }
 
@@ -450,13 +440,15 @@ public class CassandraIndexManager
             if (nextId != null)
             {
 
-                // if(currentRsvpd.size() == 1)
-                // logger.info("need more ids for "+myToken);
+                if(logger.isDebugEnabled() && currentRsvpd.size() == 1)
+                   logger.debug("need more ids for "+myToken);
 
                 return nextId;
             }
         }
 
+        //Pick a new shard
+        
         Map<NodeInfo, TreeSet<IdInfo>> rsvpdByNode = new LinkedHashMap<NodeInfo, TreeSet<IdInfo>>();
 
         for (NodeInfo node : shards)
@@ -485,13 +477,24 @@ public class CassandraIndexManager
             int startingOffset = offset.get();
             int nextOffset = startingOffset;
 
-            // goto next offset marker (unless its the first)
-            if (offset.get() != randomSeq[0])
-                nextOffset = randomSeq[offsetLookup.get(startingOffset) + 1];
-
-            if (offset.get() > CassandraUtils.maxDocsPerShard)
-                throw new IllegalStateException("Invalid id marker found for shard: " + offset);
-
+            // goto next offset marker (unless its the first or last)
+            int randomSequenceOffset = getRandomSequenceOffset(startingOffset);
+            
+            if(startingOffset != randomSeq[0])
+            {
+                if(randomSequenceOffset != (offsetSlots-1))
+                {
+                    nextOffset = randomSeq[randomSequenceOffset + 1];
+                }
+                else if(!hasExpired)
+                {
+                    //Nothing we can do, move onto next shard
+                    return null;                   
+                }                  
+            }
+                   
+            //logger.info(myToken+ "  startingOffset = "+startingOffset+ ", nextOffset = "+nextOffset);
+            
             ByteBuffer key = CassandraUtils.hashKeyBytes((indexName + "~" + node.shard).getBytes(),
                     CassandraUtils.delimeterBytes, "ids".getBytes());
 
@@ -589,7 +592,8 @@ public class CassandraIndexManager
                     numReserved++;
                 }
 
-                // logger.info("Reserved "+numReserved);
+                
+                logger.info("Reserved "+numReserved+" ids for "+myToken+" shard "+node.shard+" from slot "+getRandomSequenceOffset(nextOffset));
             }
             else
             {
@@ -608,8 +612,10 @@ public class CassandraIndexManager
 
             // Someone else changed this as we were working us
             if (!offset.compareAndSet(startingOffset, nextOffset))
+            {
+                //logger.info("someone changed from under us");
                 return null;
-
+            }
         }
 
         LinkedBlockingQueue<IdInfo> newRsvpd = interleaveByNode(rsvpdByNode);
@@ -659,6 +665,23 @@ public class CassandraIndexManager
         }
     }
 
+    
+    private int getRandomSequenceOffset(int offset)
+    {
+        if(offset >= CassandraUtils.maxDocsPerShard)
+            throw new IllegalArgumentException("offset can not be > "+CassandraUtils.maxDocsPerShard);
+        
+        for(int randomSeqOffset=0; randomSeqOffset<randomSeq.length; randomSeqOffset++)
+        {
+            int randomSequenceStart = randomSeq[randomSeqOffset];
+            
+            if(randomSequenceStart <= offset && offset < randomSequenceStart+reserveSlabSize)
+                return randomSeqOffset;        
+        }
+        
+        throw new IllegalStateException("Unable to locate random sequence position for offset "+offset);
+    }
+    
     /**
      * Looks for appropriate shard to reserve ids from
      * 
@@ -689,21 +712,33 @@ public class CassandraIndexManager
 
                 // new shard for this node
                 if (offset == null)
-                {
+                {                    
                     // this means shard was started by another node
                     offset = new AtomicInteger(randomSeq[0]);
 
+                    logger.info("shard started by another node initializing with "+randomSeq[0]);
+                    
                     updateNodeOffset(shards.indexName + "~" + nodes.shard, myToken, nodes, offset.get());
                 }
 
-                // can we still use this shard?
-                if (offsetLookup.get(offset.get()) + 1 < offsetSlots)
-                {
+                int randomSeqOffset = getRandomSequenceOffset(offset.get());
+                
+                if(logger.isDebugEnabled())
+                    logger.info(myToken+": shard = "+shard.getKey()+", offset = "+offset.get()+", offsetLookup = "+randomSeqOffset+", offsetSlots =  "+offsetSlots);
+                
+                // can we still use this shard (other nodes havent gobbled up the ids)?
+                //if(randomSeqOffset+1 == offsetSlots)
+               //     logger.info(myToken+": shard = "+shard.getKey()+", offset = "+offset.get()+", offsetLookup = "+randomSeqOffset+", offsetSlots =  "+offsetSlots);
+
+                
+                if( randomSeqOffset+1 < offsetSlots)
+                {                                           
                     picked[pickedShard] = nodes;
                     pickedShard++;
                     if (pickedShard >= shardsAtOnce)
                         return picked;
                 }
+               
 
                 if (shard.getKey() > maxShard)
                     maxShard = shard.getKey();
@@ -752,11 +787,11 @@ public class CassandraIndexManager
         NodeInfo dupNodes = null;
         if ((dupNodes = shards.shards.putIfAbsent(maxShard + 1, nodes)) == null)
         {
-            logger.info("added new shard for " + indexName + " " + (maxShard + 1));
+            logger.info("added new shard for " + indexName + " " + (maxShard + 1) + " with offset "+randomSeq[0]);
 
             RowMutation rm = updateNodeOffset(indexName, getToken(), nodes, randomSeq[0]); // offset
                                                                                            // 0
-            RowMutation rm2 = updateNodeOffset(indexName + "~" + nodes.shard, getToken(), nodes, 0); // offset
+            RowMutation rm2 = updateNodeOffset(indexName + "~" + nodes.shard, getToken(), nodes, randomSeq[0]); // offset
                                                                                                      // 0
 
             CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm, rm2);
@@ -834,7 +869,7 @@ public class CassandraIndexManager
             array[j] = array[i - 1];
             array[i - 1] = tmp;
         }
-
+        
         return array;
     }
 
