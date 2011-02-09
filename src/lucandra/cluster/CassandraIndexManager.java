@@ -624,10 +624,10 @@ public class CassandraIndexManager
         {
             if (!indexReserves.replace(indexName, currentRsvpd, newRsvpd))
                 return null;
-        }
 
-        if (logger.isDebugEnabled())
-            logger.debug("Reserved " + currentRsvpd.size() + " ids for " + myToken);
+            if (logger.isDebugEnabled())
+                logger.debug("Reserved " + currentRsvpd.size() + " ids for " + myToken);
+        }
 
         return newRsvpd.poll();
     }
