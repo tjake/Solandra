@@ -216,7 +216,7 @@ public class SolandraCoreContainer extends CoreContainer
         for(int i=0; i<=numShards; i++)
         {
             ByteBuffer subIndex = CassandraUtils.hashBytes((info.indexName + "~" + i).getBytes());
-
+    
             sb.append("  <subIndex name=\""+i+"\" token=\""+CassandraUtils.md5hash(subIndex)+"\">\n");
             
             Token<?> t = StorageService.getPartitioner().getToken(subIndex);

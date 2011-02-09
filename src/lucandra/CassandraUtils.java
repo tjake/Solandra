@@ -428,7 +428,15 @@ public class CassandraUtils
     
     public static ByteBuffer hashBytes(byte[] key)
     {      
-        return ByteBufferUtil.bytes(md5hash(ByteBuffer.wrap(key)).toString()+delimeter);
+       
+            byte[] hashBytes = md5hash(ByteBuffer.wrap(key)).toString().getBytes();
+            
+            ByteBuffer hashBuf = ByteBuffer.allocate(hashBytes.length+delimeterBytes.length);
+            hashBuf.put(hashBytes);
+            hashBuf.put(delimeterBytes);
+            hashBuf.flip();
+            
+            return hashBuf;
     }
 
     public static ByteBuffer hashKeyBytes(byte[]... keys)
