@@ -252,7 +252,7 @@ public class SolandraComponent extends SearchComponent
                 // fetch unique key if one exists.
                 SchemaField keyField = rb.req.getSearcher().getSchema().getUniqueKeyField();
                 if (null != keyField)
-                    if (!returnFields.contains(keyField))
+                    if (!returnFields.contains(keyField.getName()))
                         fieldFilter.add(ByteBufferUtil.bytes(keyField.getName()));
             }
 
