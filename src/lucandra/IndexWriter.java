@@ -464,6 +464,7 @@ public class IndexWriter
     }
 
     // write completed mutations
+    @SuppressWarnings("SleepWhileHoldingLock")
     public void commit(String indexName, boolean blocked)
     {
 

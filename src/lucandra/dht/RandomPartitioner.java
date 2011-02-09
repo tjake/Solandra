@@ -21,7 +21,6 @@ package lucandra.dht;
 
 import static com.google.common.base.Charsets.UTF_8;
 
-import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 

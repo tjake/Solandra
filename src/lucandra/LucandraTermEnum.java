@@ -24,7 +24,6 @@ import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.ConcurrentNavigableMap;
-import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.cassandra.db.*;
 import org.apache.cassandra.thrift.ColumnParent;

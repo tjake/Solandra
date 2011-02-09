@@ -37,7 +37,6 @@ import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.core.SolandraCoreContainer;
 import org.apache.solr.core.SolrCore;
 import org.apache.solr.core.CoreContainer.Initializer;
-import org.apache.solr.handler.RequestHandlerBase;
 import org.apache.solr.request.BinaryQueryResponseWriter;
 import org.apache.solr.request.QueryResponseWriter;
 import org.apache.solr.request.SolrQueryRequest;
