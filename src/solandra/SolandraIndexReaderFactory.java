@@ -33,6 +33,7 @@ public class SolandraIndexReaderFactory extends IndexReaderFactory {
         
     private String indexName;
     
+    @Override
     public void init(NamedList args){
         super.init(args);
         

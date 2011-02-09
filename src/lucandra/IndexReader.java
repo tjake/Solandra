@@ -91,6 +91,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader
         setIndexName(name);
     }
 
+    @Override
     public synchronized IndexReader reopen() throws CorruptIndexException, IOException
     {
         clearCache();

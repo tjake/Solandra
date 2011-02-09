@@ -41,11 +41,13 @@ public class RandomPartitioner extends org.apache.cassandra.dht.RandomPartitione
     public static Logger      logger         = Logger.getLogger(RandomPartitioner.class);
     private static final byte DELIMITER_BYTE = ":".getBytes()[0];
 
+    @Override
     public DecoratedKey<BigIntegerToken> decorateKey(ByteBuffer key)
     {
         return new DecoratedKey<BigIntegerToken>(getToken(key), key);
     }
 
+    @Override
     public DecoratedKey<BigIntegerToken> convertFromDiskFormat(ByteBuffer fromdisk)
     {
         // find the delimiter position
@@ -66,6 +68,7 @@ public class RandomPartitioner extends org.apache.cassandra.dht.RandomPartitione
         return new DecoratedKey<BigIntegerToken>(new BigIntegerToken(token), ByteBuffer.wrap(key));
     }
 
+    @Override
     public BigIntegerToken getToken(ByteBuffer key)
     {
         int length = key.remaining();

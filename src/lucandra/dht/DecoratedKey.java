@@ -32,6 +32,7 @@ public class DecoratedKey<T extends Token> extends org.apache.cassandra.db.Decor
        
     }
 
+    @Override
     public int compareTo(org.apache.cassandra.db.DecoratedKey other)
     {
         
@@ -61,6 +62,7 @@ public class DecoratedKey<T extends Token> extends org.apache.cassandra.db.Decor
         return cmp;
     }
 
+    @Override
     public boolean equals(Object obj)
     {
         if (this == obj)
@@ -90,6 +92,7 @@ public class DecoratedKey<T extends Token> extends org.apache.cassandra.db.Decor
         return false;
     }
 
+    @Override
     public int hashCode()
     {    
          return token.hashCode() + (key == null ? 0 : key.hashCode());

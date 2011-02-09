@@ -41,6 +41,7 @@ public class LucandraFilter extends Filter {
         terms.add(term);
     }
 
+    @Override
     public DocIdSet getDocIdSet(IndexReader reader) throws IOException {
         OpenBitSet result = new OpenBitSet(reader.maxDoc());
 

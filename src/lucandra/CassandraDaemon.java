@@ -26,6 +26,7 @@ public class CassandraDaemon extends org.apache.cassandra.thrift.CassandraDaemon
     
     private CountDownLatch startedLatch = new CountDownLatch(1);
     
+    @Override
     public void start()
     {
         

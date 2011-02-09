@@ -57,6 +57,7 @@ public class LucandraTermEnum extends TermEnum
         termCache        = readerCache.termCache; 
     }
 
+    @Override
     public boolean skipTo(Term term) throws IOException
     {
         if (term == null)
