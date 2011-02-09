@@ -45,7 +45,7 @@ public class LucandraTermDocs implements TermDocs, TermPositions
 
     public void close() throws IOException
     {
-        
+
     }
 
     public int doc()
@@ -84,9 +84,6 @@ public class LucandraTermDocs implements TermDocs, TermPositions
             freqs[i] = freq();
         }
 
-        if(logger.isDebugEnabled())
-            logger.debug("read " + i);
-
         return i;
     }
 
@@ -99,12 +96,11 @@ public class LucandraTermDocs implements TermDocs, TermPositions
             {
                 termDocs = termEnum.getTermDocFreq();
             }
-            else    
+            else
             {
                 termDocs = null;
             }
         }
-       
 
         docPosition = -1;
     }
@@ -128,12 +124,11 @@ public class LucandraTermDocs implements TermDocs, TermPositions
         docPosition = -1;
     }
 
-    public LucandraTermInfo[] filteredSeek(Term term, List<ByteBuffer> docNums)
+    public LucandraTermInfo[] filteredSeek(Term term, List<ByteBuffer> docNums) throws IOException
     {
 
         termDocs = termEnum.loadFilteredTerms(term, docNums);
 
-       
         docPosition = -1;
         return termDocs;
     }
@@ -141,6 +136,13 @@ public class LucandraTermDocs implements TermDocs, TermPositions
     // this should be used to find a already loaded doc
     public boolean skipTo(int target) throws IOException
     {
+
+        // find the target
+        if (termDocs == null)
+            return false;
+
+        docPosition = 0;
+
         do
         {
             if (!next())

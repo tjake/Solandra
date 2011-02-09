@@ -1,5 +1,6 @@
 package lucandra;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -45,7 +46,7 @@ public class TermCache
         return termList.get(term);      
     }
     
-    public ConcurrentNavigableMap<Term, LucandraTermInfo[]> skipTo(Term skip)
+    public ConcurrentNavigableMap<Term, LucandraTermInfo[]> skipTo(Term skip) throws IOException
     {
         
         Pair<Term,Term> range = null;
@@ -101,11 +102,11 @@ public class TermCache
             termInfo[i] = new LucandraTermInfo(CassandraUtils.readVInt(col.name()), col.value());
             i++;
         }
-
+        
         return termInfo;
     }
     
-    public Pair<Term,Term> bufferTerms(Term startTerm, int bufferSize)
+    public Pair<Term,Term> bufferTerms(Term startTerm, int bufferSize) throws IOException
     {
         assert bufferSize > 0;
         

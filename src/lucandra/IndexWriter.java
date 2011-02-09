@@ -382,7 +382,7 @@ public class IndexWriter
         }
     }
 
-    private void deleteLucandraDocument(String indexName, int docNumber, boolean autoCommit)
+    private void deleteLucandraDocument(String indexName, int docNumber, boolean autoCommit) throws IOException
     {
 
         Map<ByteBuffer, RowMutation> workingMutations = new HashMap<ByteBuffer, RowMutation>();

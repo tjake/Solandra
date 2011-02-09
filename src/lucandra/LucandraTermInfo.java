@@ -25,7 +25,7 @@ import java.util.Map;
 
 import org.apache.cassandra.utils.ByteBufferUtil;
 
-public class LucandraTermInfo 
+public class LucandraTermInfo implements Comparable<LucandraTermInfo>
 {
     
     
@@ -204,6 +204,17 @@ public class LucandraTermInfo
         r.flip();
   
         return r;
+    }
+
+    public int compareTo(LucandraTermInfo o)
+    {
+        if(this.docId < o.docId)
+            return -1;
+        
+        if(this.docId > o.docId)
+            return 1;
+        
+        return 0;
     }
     
     
