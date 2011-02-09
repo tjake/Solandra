@@ -131,6 +131,8 @@ public class SolandraDispatchFilter extends SolrDispatchFilter
             }
         }
 
+        SolandraCoreContainer.activeRequest.set(req);
+        
         super.doFilter(request, response, chain);
     }
 

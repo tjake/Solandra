@@ -25,6 +25,8 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+
+import javax.servlet.http.HttpServletRequest;
 import javax.xml.parsers.ParserConfigurationException;
 
 import lucandra.CassandraUtils;
@@ -47,7 +49,9 @@ import org.xml.sax.SAXException;
 
 public class SolandraCoreContainer extends CoreContainer
 {
-    public  final static ThreadLocal<SolandraCoreInfo>        coreInfo = new ThreadLocal<SolandraCoreInfo>();
+    public  final static ThreadLocal<SolandraCoreInfo>        coreInfo      = new ThreadLocal<SolandraCoreInfo>();
+    public  final static ThreadLocal<HttpServletRequest>      activeRequest = new ThreadLocal<HttpServletRequest>();
+
     
     private static final Logger                              logger    = Logger.getLogger(SolandraCoreContainer.class);
     private final static InstrumentedCache<String, SolrCore> cache     = new InstrumentedCache<String, SolrCore>(1024);

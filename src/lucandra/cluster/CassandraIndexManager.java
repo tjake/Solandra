@@ -55,9 +55,8 @@ public class CassandraIndexManager
     private int[]                                                    randomSeq;
     
     public  static final int                                         reserveSlabSize = (int) Math.pow(2, 10);
-    private final int                                                offsetSlots     = CassandraUtils.maxDocsPerShard
-                                                                                             / reserveSlabSize;
-    private final int                                                expirationTime  = 60;  // seconds
+    private final int                                                offsetSlots     = CassandraUtils.maxDocsPerShard / reserveSlabSize;
+    private final int                                                expirationTime  = 120;  // seconds
 
     private final ConcurrentMap<String, LinkedBlockingQueue<IdInfo>> indexReserves   = new MapMaker().makeMap();
     private final ConcurrentMap<String, ShardInfo>                   indexShards     = new MapMaker().makeMap();
@@ -68,8 +67,7 @@ public class CassandraIndexManager
     private class ShardInfo
     {
         public final String                                   indexName;
-        public final long                                     ttl    = System.currentTimeMillis() + expirationTime
-                                                                             * 1000 - 1000;
+        public final long                                     ttl    = System.currentTimeMillis() + (expirationTime * 1000) - 1000;
         public final ConcurrentSkipListMap<Integer, NodeInfo> shards = new ConcurrentSkipListMap<Integer, NodeInfo>();
 
         public ShardInfo(String indexName)
@@ -127,13 +125,13 @@ public class CassandraIndexManager
         randomSeq = shuffle(randomSeq, r);
     }
 
-    private ShardInfo getShardInfo(String indexName) throws IOException
+    private ShardInfo getShardInfo(String indexName, boolean force) throws IOException
     {
 
         ShardInfo shards = indexShards.get(indexName);
         ShardInfo currentShards = shards;
 
-        if (shards != null)
+        if (shards != null && !force)
         {
             if (shards.ttl > System.currentTimeMillis())
             {
@@ -236,7 +234,7 @@ public class CassandraIndexManager
     public long getMaxId(String indexName) throws IOException
     {
         // find the max shard
-        ShardInfo shards = getShardInfo(indexName);
+        ShardInfo shards = getShardInfo(indexName, false);
 
         if (shards.shards.isEmpty())
             return 0;
@@ -322,7 +320,7 @@ public class CassandraIndexManager
         int attempts = 0;
         while (attempts < reserveSlabSize)
         {
-            shards = getShardInfo(indexName);
+            shards = getShardInfo(indexName, false);
             nodes = pickAShard(shards);
 
             idInfo = nextReservedId(indexName, nodes, myToken);
@@ -387,7 +385,7 @@ public class CassandraIndexManager
     public void resetCounter(String indexName) throws IOException
     {
         // update all shards to 0 for all tokens
-        ShardInfo shards = getShardInfo(indexName);
+        ShardInfo shards = getShardInfo(indexName, true);
 
         List<RowMutation> rms = new ArrayList<RowMutation>();
 
@@ -757,7 +755,7 @@ public class CassandraIndexManager
 
     private NodeInfo addNewShard(String indexName) throws IOException
     {
-        ShardInfo shards = getShardInfo(indexName);
+        ShardInfo shards = getShardInfo(indexName, true);
 
         // get max shard
         Integer maxShard = -1;

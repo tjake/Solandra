@@ -55,33 +55,33 @@ import org.apache.solr.update.*;
 
 public class SolandraIndexWriter extends UpdateHandler
 {
-    //To manage cached reads
-    private static final LinkedBlockingQueue<String> flushQueue = new LinkedBlockingQueue<String>();
-    private final ExecutorService flushMonitor = Executors.newSingleThreadExecutor();
-    
-    
-    private final static lucandra.IndexWriter writer                   = new lucandra.IndexWriter();               
-    private final static Logger        logger                          = Logger.getLogger(SolandraIndexWriter.class);
+    // To manage cached reads
+    private static final LinkedBlockingQueue<String>          flushQueue                      = new LinkedBlockingQueue<String>();
+    private final ExecutorService                             flushMonitor                    = Executors.newSingleThreadExecutor();
+
+    private final static lucandra.IndexWriter                 writer                          = new lucandra.IndexWriter();
+    private final static Logger                               logger                          = Logger.getLogger(SolandraIndexWriter.class);
 
     // stats
-    AtomicLong                         addCommands                     = new AtomicLong();
-    AtomicLong                         addCommandsCumulative           = new AtomicLong();
-    AtomicLong                         deleteByIdCommands              = new AtomicLong();
-    AtomicLong                         deleteByIdCommandsCumulative    = new AtomicLong();
-    AtomicLong                         deleteByQueryCommands           = new AtomicLong();
-    AtomicLong                         deleteByQueryCommandsCumulative = new AtomicLong();
-    AtomicLong                         expungeDeleteCommands           = new AtomicLong();
-    AtomicLong                         mergeIndexesCommands            = new AtomicLong();
-    AtomicLong                         commitCommands                  = new AtomicLong();
-    AtomicLong                         optimizeCommands                = new AtomicLong();
-    AtomicLong                         rollbackCommands                = new AtomicLong();
-    AtomicLong                         numDocsPending                  = new AtomicLong();
-    AtomicLong                         numErrors                       = new AtomicLong();
-    AtomicLong                         numErrorsCumulative             = new AtomicLong();
-    
-    private static final ConcurrentMap<String, AtomicInteger> bufferedWrites     = new MapMaker().makeMap();
-    private static final int writeTreshold   = 16;
-    
+    AtomicLong                                                addCommands                     = new AtomicLong();
+    AtomicLong                                                addCommandsCumulative           = new AtomicLong();
+    AtomicLong                                                deleteByIdCommands              = new AtomicLong();
+    AtomicLong                                                deleteByIdCommandsCumulative    = new AtomicLong();
+    AtomicLong                                                deleteByQueryCommands           = new AtomicLong();
+    AtomicLong                                                deleteByQueryCommandsCumulative = new AtomicLong();
+    AtomicLong                                                expungeDeleteCommands           = new AtomicLong();
+    AtomicLong                                                mergeIndexesCommands            = new AtomicLong();
+    AtomicLong                                                commitCommands                  = new AtomicLong();
+    AtomicLong                                                optimizeCommands                = new AtomicLong();
+    AtomicLong                                                rollbackCommands                = new AtomicLong();
+    AtomicLong                                                numDocsPending                  = new AtomicLong();
+    AtomicLong                                                numErrors                       = new AtomicLong();
+    AtomicLong                                                numErrorsCumulative             = new AtomicLong();
+
+    private static final ConcurrentMap<String, AtomicInteger> bufferedWrites                  = new MapMaker()
+                                                                                                      .makeMap();
+    private static final int                                  writeTreshold                   = 16;
+
     public SolandraIndexWriter(SolrCore core)
     {
         super(core);
@@ -89,64 +89,68 @@ public class SolandraIndexWriter extends UpdateHandler
         try
         {
 
-            flushMonitor.execute(new Runnable() {            
-                
+            flushMonitor.execute(new Runnable() {
+
                 public void run()
                 {
-                    Map<String,Long> lastCoreFlush = new HashMap<String,Long>();
-                    
-                    while(true)
+                    Map<String, Long> lastCoreFlush = new HashMap<String, Long>();
+
+                    while (true)
                     {
                         try
                         {
-                            String core = flushQueue.poll(CassandraUtils.cacheInvalidationInterval, TimeUnit.MILLISECONDS);
-                            
-                            if(core != null)
+                            String core = flushQueue.poll(CassandraUtils.cacheInvalidationInterval,
+                                    TimeUnit.MILLISECONDS);
+
+                            if (core != null)
                             {
-                                                              
+
                                 Long lastFlush = lastCoreFlush.get(core);
-                                if(lastFlush == null || lastFlush <= (System.currentTimeMillis() - CassandraUtils.cacheInvalidationInterval))
-                                {                                              
+                                if (lastFlush == null
+                                        || lastFlush <= (System.currentTimeMillis() - CassandraUtils.cacheInvalidationInterval))
+                                {
                                     flush(core);
                                     lastCoreFlush.put(core, System.currentTimeMillis());
-                                    if(logger.isDebugEnabled())
-                                        logger.debug("Flushed cache: "+core);
-                                }                        
+                                    if (logger.isDebugEnabled())
+                                        logger.debug("Flushed cache: " + core);
+                                }
                             }
                             else
                             {
-                                
-                                for(Map.Entry<String, AtomicInteger> entry : bufferedWrites.entrySet())
+
+                                for (Map.Entry<String, AtomicInteger> entry : bufferedWrites.entrySet())
                                 {
-                                    if(entry.getValue().intValue() > 0)
+                                    if (entry.getValue().intValue() > 0)
                                     {
                                         writer.commit(entry.getKey(), false);
                                         entry.getValue().set(0);
                                     }
-                                }                       
+                                }
                             }
                         }
                         catch (InterruptedException e)
                         {
                             continue;
-                        }   
-                    }                   
+                        }
+                    }
                 }
-                
+
                 private void flush(String core)
                 {
-                    //Make sure all writes are in for this core
+                    // Make sure all writes are in for this core
                     writer.commit(core, false);
-                    
-                    ByteBuffer cacheKey = CassandraUtils.hashKeyBytes((core).getBytes(), CassandraUtils.delimeterBytes, "cache".getBytes());
-                                   
+
+                    ByteBuffer cacheKey = CassandraUtils.hashKeyBytes((core).getBytes(), CassandraUtils.delimeterBytes,
+                            "cache".getBytes());
+
                     RowMutation rm = new RowMutation(CassandraUtils.keySpace, cacheKey);
-                    rm.add(new QueryPath(CassandraUtils.schemaInfoColumnFamily, CassandraUtils.cachedColBytes, CassandraUtils.cachedColBytes), FBUtilities.EMPTY_BYTE_BUFFER, System.nanoTime());                   
+                    rm.add(new QueryPath(CassandraUtils.schemaInfoColumnFamily, CassandraUtils.cachedColBytes,
+                            CassandraUtils.cachedColBytes), FBUtilities.EMPTY_BYTE_BUFFER, System.nanoTime());
                     CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm);
                 }
-                
+
             });
-        
+
         }
         catch (Exception e)
         {
@@ -154,73 +158,87 @@ public class SolandraIndexWriter extends UpdateHandler
         }
     }
 
-    public int addDoc(AddUpdateCommand cmd) throws IOException {
+    public int addDoc(AddUpdateCommand cmd) throws IOException
+    {
 
         addCommands.incrementAndGet();
         addCommandsCumulative.incrementAndGet();
         int rc = -1;
 
-        // no duplicates allowed            
+        // no duplicates allowed
         SchemaField uniqueField = core.getSchema().getUniqueKeyField();
-        
-        if(uniqueField == null)
+
+        if (uniqueField == null)
             throw new IOException("Solandra requires a unique field");
-        
+
         // if there is no ID field, use allowDups
-        if (idField == null) {
-            throw new IOException("Solandra requires a unique field");   
+        if (idField == null)
+        {
+            throw new IOException("Solandra requires a unique field");
         }
 
-       try{
+        try
+        {
+
+            String indexName = SolandraCoreContainer.coreInfo.get().indexName;
+            String key = cmd.getIndexedId(schema);
+
+            Long docId = null;
+            RowMutation[] rms = null;
+
+            //Allow this to be bypassed
+            String batchMode = SolandraCoreContainer.activeRequest.get().getParameter("batch");
+            
+            if(!cmd.allowDups && (batchMode == null || !batchMode.equals("true")))
+                docId = IndexManagerService.instance.getId(indexName, key);
            
-           String indexName = SolandraCoreContainer.coreInfo.get().indexName;
-           String key       = cmd.getIndexedId(schema);
-           
-            Long docId = IndexManagerService.instance.getId(indexName, key);
-            RowMutation[] rms = null;    
             
             boolean isUpdate = false;
-            if(docId != null)
+            if (docId != null)
             {
                 isUpdate = true;
-                //if(logger.isDebugEnabled())
-                    logger.info("update for document "+docId);
-            } 
+                // if(logger.isDebugEnabled())
+                logger.info("update for document " + docId);
+            }
             else
             {
-                
-                rms = new RowMutation[3]; 
-                
+
+                rms = new RowMutation[3];
+
                 docId = IndexManagerService.instance.getNextId(indexName, key, rms);
-                
-                if(logger.isDebugEnabled())
-                    logger.debug("new document "+docId);
+
+                if (logger.isDebugEnabled())
+                    logger.debug("new document " + docId);
             }
-            
-            int shard     = CassandraIndexManager.getShardFromDocId(docId);
+
+            int shard = CassandraIndexManager.getShardFromDocId(docId);
             int shardedId = CassandraIndexManager.getShardedDocId(docId);
-            indexName = indexName+"~"+shard;
-            
-            //logger.info("adding doc to"+indexName);
-            
-            if(logger.isDebugEnabled())
-                logger.debug("Adding "+shardedId+" to "+indexName);
-            
-                       
+            indexName = indexName + "~" + shard;
+
+            // logger.info("adding doc to"+indexName);
+
+            if (logger.isDebugEnabled())
+                logger.debug("Adding " + shardedId + " to " + indexName);
+
             Term idTerm = this.idTerm.createTerm(cmd.indexedId);
-                       
-            if(isUpdate)
-                writer.updateDocument(indexName, idTerm, cmd.getLuceneDocument(schema), schema.getAnalyzer(), shardedId, false);                
+
+            if (isUpdate)
+                writer.updateDocument(indexName, idTerm, cmd.getLuceneDocument(schema), schema.getAnalyzer(),
+                        shardedId, false);
             else
-                writer.addDocument(indexName, cmd.getLuceneDocument(schema), schema.getAnalyzer(), shardedId, false, rms);
+                writer.addDocument(indexName, cmd.getLuceneDocument(schema), schema.getAnalyzer(), shardedId, false,
+                        rms);
 
             rc = 1;
-            
-            //Notify readers
+
+            // Notify readers
             tryCommit(indexName);
-            
-       }finally {
-            if (rc != 1) {
+
+        }
+        finally
+        {
+            if (rc != 1)
+            {
                 numErrors.incrementAndGet();
                 numErrorsCumulative.incrementAndGet();
             }
@@ -235,35 +253,35 @@ public class SolandraIndexWriter extends UpdateHandler
         // hehe
     }
 
-    //TODO: flush all sub-index caches?
+    // TODO: flush all sub-index caches?
     public void commit(CommitUpdateCommand cmd) throws IOException
     {
-      
+
         commitCommands.incrementAndGet();
-        
+
         String indexName = SolandraCoreContainer.coreInfo.get().indexName;
         long maxId = IndexManagerService.instance.getMaxId(indexName);
         int maxShard = CassandraIndexManager.getShardFromDocId(maxId);
-        
-        for(int i=0; i<=maxShard; i++)
+
+        for (int i = 0; i <= maxShard; i++)
         {
-            if(logger.isDebugEnabled())
-                logger.debug("committing "+indexName+"~"+i);
-            commit(indexName+"~"+i, true);
+            if (logger.isDebugEnabled())
+                logger.debug("committing " + indexName + "~" + i);
+            commit(indexName + "~" + i, true);
         }
     }
-    
+
     public void commit(String indexName, boolean blocked)
-    {      
+    {
         writer.commit(indexName, blocked);
-        
+
         SolandraIndexWriter.flushQueue.add(indexName);
     }
 
     public void delete(DeleteUpdateCommand cmd) throws IOException
     {
         String indexName = SolandraCoreContainer.coreInfo.get().indexName;
-        
+
         deleteByIdCommands.incrementAndGet();
         deleteByIdCommandsCumulative.incrementAndGet();
 
@@ -280,56 +298,57 @@ public class SolandraIndexWriter extends UpdateHandler
             throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, "operation not supported" + cmd);
         }
 
-  
         Term term = idTerm.createTerm(idFieldType.toInternal(cmd.id));
 
-        if(logger.isDebugEnabled())
-            logger.debug("Deleting term: "+term);
-        
-        ByteBuffer keyKey = CassandraUtils.hashKeyBytes((indexName+"~"+term.text()).getBytes(), CassandraUtils.delimeterBytes, "keys".getBytes());
-        ByteBuffer keyCol= ByteBuffer.wrap(term.text().getBytes());
-    
-        List<Row> rows = CassandraUtils.robustRead(keyKey, new QueryPath(CassandraUtils.schemaInfoColumnFamily), Arrays.asList(keyCol), ConsistencyLevel.QUORUM);
+        if (logger.isDebugEnabled())
+            logger.debug("Deleting term: " + term);
 
-        if(rows.size() == 1)
+        ByteBuffer keyKey = CassandraUtils.hashKeyBytes((indexName + "~" + term.text()).getBytes(),
+                CassandraUtils.delimeterBytes, "keys".getBytes());
+        ByteBuffer keyCol = ByteBuffer.wrap(term.text().getBytes());
+
+        List<Row> rows = CassandraUtils.robustRead(keyKey, new QueryPath(CassandraUtils.schemaInfoColumnFamily), Arrays
+                .asList(keyCol), ConsistencyLevel.QUORUM);
+
+        if (rows.size() == 1)
         {
             Row row = rows.get(0);
-            
-            if(row.cf != null)
+
+            if (row.cf != null)
             {
-               IColumn col = row.cf.getColumn(keyCol);
-               
-               if(col != null){
-                   ByteBuffer idCol = col.getSubColumns().iterator().next().name();
-                   Long  id  = Long.valueOf(ByteBufferUtil.string(idCol));                   
-                   int shard = CassandraIndexManager.getShardFromDocId(id);
-                   int sid   = CassandraIndexManager.getShardedDocId(id);
-                   
-                   ByteBuffer sidName = ByteBuffer.wrap(String.valueOf(sid).getBytes());
-                   
-                   String subIndex = indexName + "~" + shard;
-                  
-                   //Delete all terms/fields/etc
-                   writer.deleteDocuments(subIndex,term,false);
-                   
-                   //Delete key -> docId lookup
-                   RowMutation rm = new RowMutation(CassandraUtils.keySpace, keyKey);
-                   rm.delete(new QueryPath(CassandraUtils.schemaInfoColumnFamily, keyCol), System.nanoTime());
-                   
-                   //Delete docId so it can be reused
-                   //TODO: update shard info with this docid
-                   ByteBuffer idKey = CassandraUtils.hashKeyBytes(subIndex.getBytes(), CassandraUtils.delimeterBytes, "ids".getBytes());
-                   RowMutation rm2 = new RowMutation(CassandraUtils.keySpace, idKey);
-                   rm2.delete(new QueryPath(CassandraUtils.schemaInfoColumnFamily, sidName), System.nanoTime());
-                   
-                   CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm, rm2);
-                   
-                   
-                   
-                   //Notify readers
-                   tryCommit(subIndex);
-               }
-            }        
+                IColumn col = row.cf.getColumn(keyCol);
+
+                if (col != null)
+                {
+                    ByteBuffer idCol = col.getSubColumns().iterator().next().name();
+                    Long id = Long.valueOf(ByteBufferUtil.string(idCol));
+                    int shard = CassandraIndexManager.getShardFromDocId(id);
+                    int sid = CassandraIndexManager.getShardedDocId(id);
+
+                    ByteBuffer sidName = ByteBuffer.wrap(String.valueOf(sid).getBytes());
+
+                    String subIndex = indexName + "~" + shard;
+
+                    // Delete all terms/fields/etc
+                    writer.deleteDocuments(subIndex, term, false);
+
+                    // Delete key -> docId lookup
+                    RowMutation rm = new RowMutation(CassandraUtils.keySpace, keyKey);
+                    rm.delete(new QueryPath(CassandraUtils.schemaInfoColumnFamily, keyCol), System.nanoTime());
+
+                    // Delete docId so it can be reused
+                    // TODO: update shard info with this docid
+                    ByteBuffer idKey = CassandraUtils.hashKeyBytes(subIndex.getBytes(), CassandraUtils.delimeterBytes,
+                            "ids".getBytes());
+                    RowMutation rm2 = new RowMutation(CassandraUtils.keySpace, idKey);
+                    rm2.delete(new QueryPath(CassandraUtils.schemaInfoColumnFamily, sidName), System.nanoTime());
+
+                    CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm, rm2);
+
+                    // Notify readers
+                    tryCommit(subIndex);
+                }
+            }
         }
     }
 
@@ -351,7 +370,6 @@ public class SolandraIndexWriter extends UpdateHandler
             throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, "operation not supported" + cmd);
         }
 
-        
         boolean madeIt = false;
         boolean delAll = false;
         try
@@ -366,8 +384,8 @@ public class SolandraIndexWriter extends UpdateHandler
             }
             else
             {
-                //FIXME
-                writer.deleteDocuments("",q,false);
+                // FIXME
+                writer.deleteDocuments("", q, false);
             }
 
             madeIt = true;
@@ -449,27 +467,27 @@ public class SolandraIndexWriter extends UpdateHandler
     {
         return core.getVersion();
     }
-    
+
     private void tryCommit(String indexName)
     {
         AtomicInteger times = bufferedWrites.get(indexName);
-        
-        if(times == null)
+
+        if (times == null)
         {
             synchronized (indexName.intern())
             {
-                 times = bufferedWrites.get(indexName);
-                 if(times == null)
-                 {
-                     times = new AtomicInteger(0);
-                     bufferedWrites.putIfAbsent(indexName, times);
-                 }           
+                times = bufferedWrites.get(indexName);
+                if (times == null)
+                {
+                    times = new AtomicInteger(0);
+                    bufferedWrites.putIfAbsent(indexName, times);
+                }
             }
         }
-        
+
         int t = times.incrementAndGet();
-        
-        if(t > writeTreshold)
+
+        if (t > writeTreshold)
         {
             commit(indexName, false);
             times.set(0);
