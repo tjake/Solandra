@@ -1,3 +1,8 @@
 .project
 .classpath
-*~
+lib/
+bin/
+build/
+solandra-app/
+*.jar
+*.war

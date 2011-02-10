@@ -53,7 +53,7 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
         ReadCommand rc = new SliceByNamesReadCommand(CassandraUtils.keySpace, key, CassandraUtils.metaColumnPath, Arrays
                 .asList(CassandraUtils.documentMetaFieldBytes));
 
-        List<Row> rows = CassandraUtils.robustRead(ConsistencyLevel.ONE, rc);
+        List<Row> rows = CassandraUtils.robustRead(CassandraUtils.consistency, rc);
        
         if (rows.isEmpty()){
             
@@ -87,7 +87,7 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector, o
             readCommands.add(new SliceByNamesReadCommand(CassandraUtils.keySpace, key, new ColumnParent().setColumn_family(CassandraUtils.termVecColumnFamily), Arrays.asList(ByteBuffer.wrap(CassandraUtils.writeVInt(docI)))));
         }
 
-        rows = CassandraUtils.robustRead(ConsistencyLevel.ONE, readCommands.toArray(new ReadCommand[]{}));
+        rows = CassandraUtils.robustRead(CassandraUtils.consistency, readCommands.toArray(new ReadCommand[]{}));
 
         terms = new String[rows.size()];
         freqVec = new int[rows.size()];

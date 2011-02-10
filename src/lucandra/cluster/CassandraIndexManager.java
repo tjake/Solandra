@@ -378,7 +378,7 @@ public class CassandraIndexManager
         
         //TODO: Delayed Insert!
         //Checks for more recent updates and disregards the older ones
-        CassandraUtils.robustInsert(ConsistencyLevel.ONE, rms);
+        CassandraUtils.robustInsert(CassandraUtils.consistency, rms);
         
         return val;
     }

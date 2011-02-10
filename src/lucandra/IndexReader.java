@@ -275,7 +275,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader
                 }
             }
 
-            rows = StorageProxy.readProtocol(readCommands, ConsistencyLevel.ONE);
+            rows = StorageProxy.readProtocol(readCommands, CassandraUtils.consistency);
 
             // allow lookup by row
             Map<ByteBuffer, Row> rowMap = new HashMap<ByteBuffer, Row>(keyMap.size());

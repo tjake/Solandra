@@ -56,6 +56,7 @@ public class CassandraUtils
 {
 
     public static final String               keySpace               = System.getProperty("lucandra.keyspace", "L");
+    public static final ConsistencyLevel	 consistency			= ConsistencyLevel.valueOf(System.getProperty("lucandra.consistency", ConsistencyLevel.QUORUM.name()));
     public static final String               termVecColumnFamily    = "TI";
     public static final String               docColumnFamily        = "Docs";
     public static final String               metaInfoColumnFamily   = "TL";
