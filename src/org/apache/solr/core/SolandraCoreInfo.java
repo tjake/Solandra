@@ -28,8 +28,9 @@ public class SolandraCoreInfo
     public final String  coreName;
     public final String  indexName;
     public final Integer shard;
+    public final boolean bulk;
     
-    public  final static Pattern shardPattern = Pattern.compile("^([^\\.~]+)(\\.?[^~]*)~?(\\d*)$");
+    public  final static Pattern shardPattern = Pattern.compile("^(~?)([^\\.~]+)(\\.?[^~]*)~?(\\d*)$");
 
     
     public SolandraCoreInfo(String indexString)
@@ -39,9 +40,10 @@ public class SolandraCoreInfo
         if(!m.find())
             throw new RuntimeException("Invalid indexname: "+indexString);
         
-        coreName  = m.group(1);
-        indexName = m.group(2).isEmpty() ? coreName : coreName+m.group(2);
-        shard     = m.group(3).isEmpty() ? 0 : Integer.valueOf(m.group(3));
+        bulk      = m.group(1).isEmpty() ? false : true;
+        coreName  = m.group(2);
+        indexName = m.group(3).isEmpty() ? coreName : coreName+m.group(3);
+        shard     = m.group(4).isEmpty() ? 0 : Integer.valueOf(m.group(4));
     }
     
 

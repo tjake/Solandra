@@ -84,7 +84,7 @@ public class WikipediaIndexWorker implements Callable<Integer> {
             if(hosts.size() == 0)
                 throw new RuntimeException("no hosts defined");   
             
-            indexWriter = new StreamingUpdateSolrServer("http://"+hosts.get(r.nextInt(hosts.size()))+":" + port + "/solandra/wikassandra?batch=true", 512, 64/hosts.size());
+            indexWriter = new StreamingUpdateSolrServer("http://"+hosts.get(r.nextInt(hosts.size()))+":" + port + "/solandra/~wikassandra", 512, 64/hosts.size());
 
             clientPool.set(indexWriter);
         }

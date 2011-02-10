@@ -48,6 +48,7 @@ import org.apache.solr.common.SolrException;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.core.SolandraCoreContainer;
+import org.apache.solr.core.SolandraCoreInfo;
 import org.apache.solr.core.SolrCore;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.QueryParsing;
@@ -180,7 +181,7 @@ public class SolandraIndexWriter extends UpdateHandler
         try
         {
 
-            String indexName = SolandraCoreContainer.coreInfo.get().indexName;
+            SolandraCoreInfo coreInfo = SolandraCoreContainer.coreInfo.get();
             String key = cmd.getIndexedId(schema);
 
             Long docId = null;
@@ -189,8 +190,8 @@ public class SolandraIndexWriter extends UpdateHandler
             //Allow this to be bypassed
             String batchMode = SolandraCoreContainer.activeRequest.get().getParameter("batch");
             
-            if(!cmd.allowDups && (batchMode == null || !batchMode.equals("true")))
-                docId = IndexManagerService.instance.getId(indexName, key);
+            if( !coreInfo.bulk && !cmd.allowDups && (batchMode == null || !batchMode.equals("true")))
+                docId = IndexManagerService.instance.getId(coreInfo.indexName, key);
            
             
             boolean isUpdate = false;
@@ -205,7 +206,7 @@ public class SolandraIndexWriter extends UpdateHandler
 
                 rms = new RowMutation[3];
 
-                docId = IndexManagerService.instance.getNextId(indexName, key, rms);
+                docId = IndexManagerService.instance.getNextId(coreInfo.indexName, key, rms);
 
                 if (logger.isDebugEnabled())
                     logger.debug("new document " + docId);
@@ -213,7 +214,7 @@ public class SolandraIndexWriter extends UpdateHandler
 
             int shard = CassandraIndexManager.getShardFromDocId(docId);
             int shardedId = CassandraIndexManager.getShardedDocId(docId);
-            indexName = indexName + "~" + shard;
+            String indexName = coreInfo.indexName + "~" + shard;
 
             // logger.info("adding doc to"+indexName);
 
