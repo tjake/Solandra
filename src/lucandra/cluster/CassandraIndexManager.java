@@ -101,6 +101,7 @@ public class CassandraIndexManager
             this.node = node;
             this.id = id;
             this.offset = offset;
+           
         }
     }
 
@@ -450,21 +451,7 @@ public class CassandraIndexManager
         // Pick a new shard
         Map<NodeInfo, TreeSet<IdInfo>> rsvpdByNode = new LinkedHashMap<NodeInfo, TreeSet<IdInfo>>();
 
-        // Used to order reserves by offset
-        TreeSet<IdInfo> rsvpd = new TreeSet<IdInfo>(new Comparator<IdInfo>() {
-
-            public int compare(IdInfo o1, IdInfo o2)
-            {
-                if (o1.offset == o2.offset)
-                    return 0;
-
-                if (o1.offset < o2.offset)
-                    return -1;
-
-                return 1;
-            }
-
-        });
+        
 
         for (NodeInfo node : shards)
         {
@@ -505,8 +492,21 @@ public class CassandraIndexManager
                     return possiblyNewRsvpd == null ? null : possiblyNewRsvpd.poll();
                 }
                 
-                rsvpd.clear();
-                
+                // Used to order reserves by offset
+                TreeSet<IdInfo> rsvpd = new TreeSet<IdInfo>(new Comparator<IdInfo>() {
+
+                    public int compare(IdInfo o1, IdInfo o2)
+                    {
+                        if (o1.offset == o2.offset)
+                            return 0;
+
+                        if (o1.offset < o2.offset)
+                            return -1;
+
+                        return 1;
+                    }
+
+                });                
                 ByteBuffer key = CassandraUtils.hashKeyBytes((indexName + "~" + node.shard).getBytes(),
                         CassandraUtils.delimeterBytes, "ids".getBytes());
 
@@ -624,14 +624,7 @@ public class CassandraIndexManager
                 if (logger.isDebugEnabled())
                     logger.debug("offset for shard " + node.shard + " " + nextOffset);
 
-                // Someone else changed this as we were working us
-                if (!offset.compareAndSet(startingOffset, nextOffset))
-                {                                    
-                    LinkedBlockingQueue<IdInfo> newRsvpd = indexReserves.get(indexName);
-
-                    logger.info("someone changed from under us, using new reserved "+startingOffset+" to "+offset.get());
-                    return newRsvpd == null ? null : newRsvpd.poll();
-                }
+                
             }
         }
 
@@ -677,7 +670,7 @@ public class CassandraIndexManager
 
                 if (ids.isEmpty())
                     continue;
-
+                
                 rsvpd.add(ids.first());
                 ids.remove(ids.first());
                 allEmpty = false;

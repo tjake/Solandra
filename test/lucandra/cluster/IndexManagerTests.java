@@ -27,14 +27,13 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import lucandra.CassandraUtils;
 import lucandra.dht.RandomPartitioner;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import org.apache.cassandra.db.RowMutation;
 
 public class IndexManagerTests
 {
@@ -89,28 +88,39 @@ public class IndexManagerTests
     public void testCassandraIncrement() throws IOException
     {
 
-        CassandraIndexManager idx = new CassandraIndexManager(1);
+        CassandraIndexManager idx = new CassandraIndexManager(4);
 
         Set<Long> all = new HashSet<Long>(CassandraUtils.maxDocsPerShard);
 
         long startTime = System.currentTimeMillis();
 
+        Map<Integer, AtomicInteger> shardStats = new HashMap<Integer, AtomicInteger>();
+        
         // Add
         for (int i = 0; i < CassandraUtils.maxDocsPerShard - CassandraIndexManager.reserveSlabSize; i++)
         {
             long id = idx.getNextId(indexName, "i" + i);
-
+            
+            //System.err.println(CassandraIndexManager.getShardFromDocId(id));
+            AtomicInteger counter = shardStats.get(CassandraIndexManager.getShardFromDocId(id));
+            if(counter == null)
+            {
+                counter = new AtomicInteger(0);
+                shardStats.put(CassandraIndexManager.getShardFromDocId(id), counter);
+            }
+            counter.incrementAndGet();
+            
             assertTrue(id + " already exists " + all.size(), all.add(id));
 
             if (i % 10000 == 0)
             {
                 long endTime = System.currentTimeMillis();
-                System.err.println("added:" + id + ", 10k iterations in " + (endTime - startTime) / 1000 + " sec");
+                System.err.println("added:" + id + ", 10k iterations in " + (endTime - startTime) / 1000 + " sec "+shardStats);
                 startTime = endTime;
             }
         }
 
-        assertEquals(0, CassandraIndexManager.getShardFromDocId(idx.getMaxId(indexName)));
+        assertEquals(3, CassandraIndexManager.getShardFromDocId(idx.getMaxId(indexName)));
 
         // Update
         for (int i = 0; i < CassandraUtils.maxDocsPerShard - CassandraIndexManager.reserveSlabSize; i++)
