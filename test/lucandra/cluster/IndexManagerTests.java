@@ -34,6 +34,8 @@ import lucandra.dht.RandomPartitioner;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import org.apache.cassandra.db.RowMutation;
+
 public class IndexManagerTests
 {
     static String indexName = String.valueOf(System.nanoTime());
@@ -135,8 +137,8 @@ public class IndexManagerTests
 
         ExecutorService svc = Executors.newFixedThreadPool(16);
 
-        final TestCassandraIndexManager idx = new TestCassandraIndexManager(1);
-
+        final TestCassandraIndexManager idx = new TestCassandraIndexManager(4);
+        
         List<Callable<Set<Long>>> callables = new ArrayList<Callable<Set<Long>>>();
         for (int i = 0; i < 16; i++)
         {
@@ -158,9 +160,9 @@ public class IndexManagerTests
                         }
                         catch (IOException e)
                         {
-                            // TODO Auto-generated catch block
-                            e.printStackTrace();
+                            throw new RuntimeException(e);
                         }
+                        
                         assertTrue(id + " already exists " + all.size(), all.add(id));
 
                         if (i % 10000 == 0)
