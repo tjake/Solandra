@@ -124,9 +124,9 @@
 
         <target name="compile" depends="init,resolve">
 
-	  <!--<exec executable="/bin/sh" failonerror="true">
-	    <arg line="-c &quot;ant -f ${cassandra.base}/build.xml jar&quot;"/> 
-	  </exec>-->
+      <!--<exec executable="/bin/sh" failonerror="true">
+        <arg line="-c &quot;ant -f ${cassandra.base}/build.xml jar&quot;"/>
+      </exec>-->
 
           <javac debug="true" destdir="${build.classes}">
             <src path="${src}"/>
@@ -188,9 +188,9 @@
             <lib dir="${cassandra.base}/build">
               <include name="**/*.jar" />
             </lib>
-	    <classes dir="${resources}">
-	      <include name="*.properties"/>
-	    </classes>
+        <classes dir="${resources}">
+          <include name="*.properties"/>
+        </classes>
             <lib file="solandra.jar"/>
           </war>
         </target>
@@ -215,14 +215,14 @@
           </copy>
           <chmod dir="${app}/solr/conf" perm="644" includes="**,*"/>
           <copy todir="${app}">
-	    <fileset dir="${resources}" includes="cassandra.yaml,solandra.in.sh,start.jar,start-solandra.sh"/>
-	  </copy>
-	  <copy todir="${app}/cassandra-tools">
-	    <fileset dir="${resources}/cassandra" includes="solandra.cml,cassandra-cli,nodetool,cassandra.in.sh,log4j-tools.properties"/>
-	  </copy>
-	  <copy todir="${app}/cassandra-tools/lib">
-	    <fileset dir="${lib}" includes="*.jar"/>
-	  </copy>
+        <fileset dir="${resources}" includes="cassandra.yaml,solandra.in.sh,start.jar,start-solandra.sh,log4j.properties"/>
+      </copy>
+      <copy todir="${app}/cassandra-tools">
+        <fileset dir="${resources}/cassandra" includes="solandra.cml,cassandra-cli,nodetool,cassandra.in.sh,log4j-tools.properties"/>
+      </copy>
+      <copy todir="${app}/cassandra-tools/lib">
+        <fileset dir="${lib}" includes="*.jar"/>
+      </copy>
           <chmod dir="${app}" perm="755" includes="start-solandra.sh"/>
           <chmod dir="${app}/cassandra-tools" perm="755" includes="cassandra-cli,nodetool"/>
 
