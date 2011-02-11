@@ -110,7 +110,7 @@ if [ "x$pidpath" != "x" ]; then
     solandra_parms="$solandra_parms -Dcassandra-pidfile=$pidpath"
 fi
 
-solandra_parms="$solandra_parms -Dlog4j.configuration=log4j-solandra.properties -Dlog4j.defaultInitOverride=true"
+solandra_parms="$solandra_parms -Dlog4j.configuration=log4j.properties -Dlog4j.defaultInitOverride=true"
     
 # The solandra-foreground option will tell Cassandra not
 # to close stdout/stderr, but it's up to us not to background.
