@@ -605,7 +605,7 @@ public class CassandraIndexManager
                 String winningTokenStr;
                 try
                 {
-                    winningTokenStr = ByteBufferUtil.string(winningToken);
+                    winningTokenStr = winningToken == null ? "" : ByteBufferUtil.string(winningToken);
                 }
                 catch (CharacterCodingException e)
                 {
