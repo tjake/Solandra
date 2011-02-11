@@ -96,7 +96,13 @@ public class CassandraUtils
             "index.hashing", "true"));
     
     //how often to check for cache invalidation
-    public static int   cacheInvalidationInterval = 1000;//ms
+    /**
+     * TODO TN make this configurable removed until issues are fixes
+     * https://github.com/tjake/Lucandra/issues/issue/61
+     * https://github.com/tjake/Lucandra/issues/issue/59
+     * 
+     */
+    public static int   cacheInvalidationInterval = 0;//ms
   
     public static final QueryPath            metaColumnPath;
 
