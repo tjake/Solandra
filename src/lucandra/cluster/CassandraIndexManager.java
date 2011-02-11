@@ -22,6 +22,7 @@ package lucandra.cluster;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
@@ -150,7 +151,7 @@ public class CassandraIndexManager
                 .getBytes());
 
         ReadCommand cmd = new SliceFromReadCommand(CassandraUtils.keySpace, key, new ColumnParent(
-                CassandraUtils.schemaInfoColumnFamily), FBUtilities.EMPTY_BYTE_BUFFER, FBUtilities.EMPTY_BYTE_BUFFER,
+                CassandraUtils.schemaInfoColumnFamily), ByteBufferUtil.EMPTY_BYTE_BUFFER, ByteBufferUtil.EMPTY_BYTE_BUFFER,
                 false, 100);
 
         List<Row> rows = CassandraUtils.robustRead(ConsistencyLevel.QUORUM, cmd);
@@ -178,8 +179,8 @@ public class CassandraIndexManager
                     // goto each shard and get local offset
                     cmd = new SliceFromReadCommand(CassandraUtils.keySpace, CassandraUtils.hashKeyBytes((indexName
                             + "~" + shardStr).getBytes(), CassandraUtils.delimeterBytes, "shards".getBytes()),
-                            new ColumnParent(CassandraUtils.schemaInfoColumnFamily), FBUtilities.EMPTY_BYTE_BUFFER,
-                            FBUtilities.EMPTY_BYTE_BUFFER, false, 100);
+                            new ColumnParent(CassandraUtils.schemaInfoColumnFamily), ByteBufferUtil.EMPTY_BYTE_BUFFER,
+                            ByteBufferUtil.EMPTY_BYTE_BUFFER, false, 100);
 
                     List<Row> lrows = CassandraUtils.robustRead(ConsistencyLevel.QUORUM, cmd);
 
@@ -358,7 +359,7 @@ public class CassandraIndexManager
         ByteBuffer idVal = ByteBuffer.wrap(val.toString().getBytes());
 
         RowMutation rm2 = new RowMutation(CassandraUtils.keySpace, keyKey);
-        rm2.add(new QueryPath(CassandraUtils.schemaInfoColumnFamily, keyCol, idVal), FBUtilities.EMPTY_BYTE_BUFFER,
+        rm2.add(new QueryPath(CassandraUtils.schemaInfoColumnFamily, keyCol, idVal), ByteBufferUtil.EMPTY_BYTE_BUFFER,
                 System.nanoTime());
 
         // Update last offset info for this shard
@@ -571,7 +572,14 @@ public class CassandraIndexManager
                     if (!(c instanceof ExpiringColumn) && !(c instanceof DeletedColumn))
                     {
                         if (logger.isDebugEnabled())
-                            logger.debug(offset + " was taken by " + ByteBufferUtil.string(c.name()));
+                            try
+                            {
+                                logger.debug(offset + " was taken by " + ByteBufferUtil.string(c.name()));
+                            }
+                            catch (CharacterCodingException e)
+                            {
+                                
+                            }
 
                         winningToken = null;
                         break;
@@ -593,8 +601,19 @@ public class CassandraIndexManager
                     }
                 }
 
+                
+                String winningTokenStr;
+                try
+                {
+                    winningTokenStr = ByteBufferUtil.string(winningToken);
+                }
+                catch (CharacterCodingException e)
+                {
+                   throw new RuntimeException(e);
+                }
+                
                 // we won!
-                if (winningToken != null && ByteBufferUtil.string(winningToken).equals(myToken))
+                if (winningToken != null && winningTokenStr.equals(myToken))
                 {
                     int numReserved = 0;
                     for (int i = nextOffset; i == nextOffset || i % reserveSlabSize != 0; i++)

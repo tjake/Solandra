@@ -17,7 +17,7 @@
  ~ under the License.
  -->
 <ivy-module version="2.0">
-  <info organisation="lucandra" module="lucandra"/>
+  <info organisation="solandra" module="solandra"/>
 
   <dependencies>
     <dependency org="junit" name="junit" rev="4.6" conf="* -> *,!sources,!javadoc" />
@@ -33,7 +33,7 @@
     <dependency org="org.mortbay.jetty" name="jetty-util" rev="6.1.6" conf="* -> *,!sources,!javadoc" />
     <dependency org="org.mortbay.jetty" name="jsp-2.1" rev="6.1.6" conf="* -> *,!sources,!javadoc" />
 
-    <dependency org="org.apache.cassandra" name="cassandra-all" rev="0.7.0" conf="* -> *,!sources,!javadoc" />
+    <dependency org="org.apache.cassandra" name="cassandra-all" rev="0.7.1" conf="* -> *,!sources,!javadoc" />
     <dependency org="net.java.dev.jna" name="jna" rev="3.2.7" conf="* -> *,!sources,!javadoc" />
   </dependencies>
 </ivy-module>

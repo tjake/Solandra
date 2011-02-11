@@ -145,8 +145,8 @@ public class LucandraAllTermDocs implements TermDocs
         ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, "ids".getBytes());
 
         ReadCommand cmd = new SliceFromReadCommand(CassandraUtils.keySpace, key,
-                new ColumnParent(CassandraUtils.schemaInfoColumnFamily), FBUtilities.EMPTY_BYTE_BUFFER,
-                FBUtilities.EMPTY_BYTE_BUFFER, false, Integer.MAX_VALUE);
+                new ColumnParent(CassandraUtils.schemaInfoColumnFamily), ByteBufferUtil.EMPTY_BYTE_BUFFER,
+                ByteBufferUtil.EMPTY_BYTE_BUFFER, false, Integer.MAX_VALUE);
 
         
         List<Row> rows = CassandraUtils.robustRead(ConsistencyLevel.ONE, cmd);

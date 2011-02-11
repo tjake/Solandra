@@ -225,7 +225,7 @@ public class CassandraUtils
     {
 
         if (intVector.size() == 0)
-            return FBUtilities.EMPTY_BYTE_BUFFER;
+            return ByteBufferUtil.EMPTY_BYTE_BUFFER;
 
         if (intVector.get(0) instanceof Byte)
             return ByteBuffer.wrap(new byte[] { intVector.get(0).byteValue() });
@@ -357,7 +357,7 @@ public class CassandraUtils
         {
             try
             {
-                rows = StorageProxy.readProtocol(Arrays.asList(rc), cl);
+                rows = StorageProxy.read(Arrays.asList(rc), cl);
                 break;
             }
             catch (UnavailableException e1)

@@ -22,6 +22,7 @@ package lucandra;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -117,46 +118,54 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector,
 
         int i = 0;
 
-        for (Row row : rows)
+        try
         {
-            String rowKey = ByteBufferUtil.string(row.key.key, CassandraUtils.UTF_8);
-
-            String termStr = rowKey.substring(rowKey.indexOf(CassandraUtils.delimeter)
-                    + CassandraUtils.delimeter.length());
-
-            Term t = CassandraUtils.parseTerm(termStr);
-
-            terms[i] = t.text();
-
-            // Find the offsets and positions
-            LucandraTermInfo termInfo = null;
-
-            if (row.cf != null)
+            for (Row row : rows)
             {
-                termInfo = new LucandraTermInfo(0, row.cf.getSortedColumns().iterator().next().value());
+                String rowKey = ByteBufferUtil.string(row.key.key, CassandraUtils.UTF_8);
 
-                termPositions[i] = termInfo.positions;
-            }
+                String termStr = rowKey.substring(rowKey.indexOf(CassandraUtils.delimeter)
+                        + CassandraUtils.delimeter.length());
 
-            freqVec[i] = termPositions[i].length;
+                Term t = CassandraUtils.parseTerm(termStr);
 
-            if (termInfo == null || !termInfo.hasOffsets)
-            {
-                termOffsets[i] = TermVectorOffsetInfo.EMPTY_OFFSET_INFO;
-            }
-            else
-            {
+                terms[i] = t.text();
 
-                int[] offsets = termInfo.offsets;
+                // Find the offsets and positions
+                LucandraTermInfo termInfo = null;
 
-                termOffsets[i] = new TermVectorOffsetInfo[freqVec[i]];
-                for (int j = 0, k = 0; j < offsets.length; j += 2, k++)
+                if (row.cf != null)
                 {
-                    termOffsets[i][k] = new TermVectorOffsetInfo(offsets[j], offsets[j + 1]);
-                }
-            }
+                    termInfo = new LucandraTermInfo(0, row.cf.getSortedColumns().iterator().next().value());
 
-            i++;
+                    termPositions[i] = termInfo.positions;
+                }
+
+                freqVec[i] = termPositions[i].length;
+
+                if (termInfo == null || !termInfo.hasOffsets)
+                {
+                    termOffsets[i] = TermVectorOffsetInfo.EMPTY_OFFSET_INFO;
+                }
+                else
+                {
+
+                    int[] offsets = termInfo.offsets;
+
+                    termOffsets[i] = new TermVectorOffsetInfo[freqVec[i]];
+                    for (int j = 0, k = 0; j < offsets.length; j += 2, k++)
+                    {
+                        termOffsets[i][k] = new TermVectorOffsetInfo(offsets[j], offsets[j + 1]);
+                    }
+                }
+
+                i++;
+            }
+        }
+        catch (CharacterCodingException e)
+        {
+            throw new RuntimeException(e);
+
         }
 
     }

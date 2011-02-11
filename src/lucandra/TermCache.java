@@ -115,7 +115,7 @@ public class TermCache
         // Scan range of terms in this field (reversed, so we have a exit point)
         List<Row> rows = CassandraUtils.robustRead(ConsistencyLevel.ONE,
                 new SliceFromReadCommand(CassandraUtils.keySpace, termsListKey, fieldColumnFamily, CassandraUtils.createColumnName(startTerm),
-                        FBUtilities.EMPTY_BYTE_BUFFER, false, bufferSize));
+                        ByteBufferUtil.EMPTY_BYTE_BUFFER, false, bufferSize));
 
         ColumnParent columnParent = new ColumnParent(CassandraUtils.termVecColumnFamily);
 
@@ -189,7 +189,7 @@ public class TermCache
             
             
             reads.add((ReadCommand) new SliceFromReadCommand(CassandraUtils.keySpace, rowKey, columnParent,
-                    FBUtilities.EMPTY_BYTE_BUFFER, FBUtilities.EMPTY_BYTE_BUFFER, false, Integer.MAX_VALUE));
+                    ByteBufferUtil.EMPTY_BYTE_BUFFER, ByteBufferUtil.EMPTY_BYTE_BUFFER, false, Integer.MAX_VALUE));
         }
 
         rows = CassandraUtils.robustRead(ConsistencyLevel.ONE, reads.toArray(new ReadCommand[] {}));
@@ -200,7 +200,7 @@ public class TermCache
         if (logger.isDebugEnabled())
         {
             logger.debug("Found " + rows.size() + " rows in range:" + startTerm + " to "
-                    + ByteBufferUtil.string(FBUtilities.EMPTY_BYTE_BUFFER) + " in "
+                    + "" + " in "
                     + (System.currentTimeMillis() - start) + "ms");
 
         }

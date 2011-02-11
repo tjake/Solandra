@@ -266,7 +266,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader
                 {
                     // get all columns ( except this skips meta info )
                     readCommands.add(new SliceFromReadCommand(CassandraUtils.keySpace, key, columnParent,
-                            FBUtilities.EMPTY_BYTE_BUFFER, CassandraUtils.finalTokenBytes, false, Integer.MAX_VALUE));
+                            ByteBufferUtil.EMPTY_BYTE_BUFFER, CassandraUtils.finalTokenBytes, false, Integer.MAX_VALUE));
                 }
                 else
                 {
@@ -275,7 +275,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader
                 }
             }
 
-            rows = StorageProxy.readProtocol(readCommands, ConsistencyLevel.ONE);
+            rows = CassandraUtils.robustRead(ConsistencyLevel.ONE, readCommands.toArray(new ReadCommand[]{}));
 
             // allow lookup by row
             Map<ByteBuffer, Row> rowMap = new HashMap<ByteBuffer, Row>(keyMap.size());

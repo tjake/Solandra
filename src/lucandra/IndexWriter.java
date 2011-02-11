@@ -32,6 +32,7 @@ import com.google.common.collect.MapMaker;
 import org.apache.cassandra.db.*;
 import org.apache.cassandra.service.StorageProxy;
 import org.apache.cassandra.thrift.*;
+import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.cassandra.utils.FBUtilities;
 import org.apache.cassandra.utils.Pair;
 import org.apache.log4j.Logger;
@@ -227,7 +228,7 @@ public class IndexWriter
 
                     // Store all terms under a row
                     CassandraUtils.addMutations(workingMutations, CassandraUtils.metaInfoColumnFamily, CassandraUtils
-                            .createColumnName(term.getKey()), indexTermsKey, FBUtilities.EMPTY_BYTE_BUFFER);
+                            .createColumnName(term.getKey()), indexTermsKey, ByteBufferUtil.EMPTY_BYTE_BUFFER);
                 }
             }
 
@@ -249,7 +250,7 @@ public class IndexWriter
 
                 // Store all terms under a row
                 CassandraUtils.addMutations(workingMutations, CassandraUtils.metaInfoColumnFamily, CassandraUtils
-                        .createColumnName(field), indexTermsKey, FBUtilities.EMPTY_BYTE_BUFFER);
+                        .createColumnName(field), indexTermsKey, ByteBufferUtil.EMPTY_BYTE_BUFFER);
             }
 
             // Stores each field as a column under this doc key
@@ -340,46 +341,30 @@ public class IndexWriter
     public void deleteDocuments(String indexName, Term term, boolean autoCommit) throws CorruptIndexException,
             IOException
     {
-        try
+        ColumnParent cp = new ColumnParent(CassandraUtils.termVecColumnFamily);
+
+        ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, term
+                .field().getBytes(), CassandraUtils.delimeterBytes, term.text().getBytes("UTF-8"));
+
+        ReadCommand rc = new SliceFromReadCommand(CassandraUtils.keySpace, key, cp, ByteBufferUtil.EMPTY_BYTE_BUFFER,
+                ByteBufferUtil.EMPTY_BYTE_BUFFER, false, Integer.MAX_VALUE);
+
+        List<Row> rows = CassandraUtils.robustRead(ConsistencyLevel.ONE, rc);
+
+        // delete by documentId
+        for (Row row : rows)
         {
-
-            ColumnParent cp = new ColumnParent(CassandraUtils.termVecColumnFamily);
-
-            ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, term
-                    .field().getBytes(), CassandraUtils.delimeterBytes, term.text().getBytes("UTF-8"));
-
-            ReadCommand rc = new SliceFromReadCommand(CassandraUtils.keySpace, key, cp, FBUtilities.EMPTY_BYTE_BUFFER,
-                    FBUtilities.EMPTY_BYTE_BUFFER, false, Integer.MAX_VALUE);
-
-            List<Row> rows = StorageProxy.readProtocol(Arrays.asList(rc), ConsistencyLevel.ONE);
-
-            // delete by documentId
-            for (Row row : rows)
+            if (row.cf != null)
             {
-                if (row.cf != null)
+                Collection<IColumn> columns = row.cf.getSortedColumns();
+                
+                for (IColumn col : columns)
                 {
-                    Collection<IColumn> columns = row.cf.getSortedColumns();
-
-                    for (IColumn col : columns)
-                    {
-                        deleteLucandraDocument(indexName, CassandraUtils.readVInt(col.name()), autoCommit);
-                    }
-                }
+                    deleteLucandraDocument(indexName, CassandraUtils.readVInt(col.name()), autoCommit);
+                }                 
             }
-
         }
-        catch (TimeoutException e)
-        {
-            throw new RuntimeException(e);
-        }
-        catch (UnavailableException e)
-        {
-            throw new RuntimeException(e);
-        }
-        catch (InvalidRequestException e)
-        {
-            throw new RuntimeException(e);
-        }
+    
     }
 
     private void deleteLucandraDocument(String indexName, int docNumber, boolean autoCommit) throws IOException
