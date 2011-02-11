@@ -20,18 +20,26 @@
 package org.apache.solr.core;
 
 import java.io.*;
+import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+
+import javax.servlet.http.HttpServletRequest;
 import javax.xml.parsers.ParserConfigurationException;
 
 import lucandra.CassandraUtils;
+import lucandra.cluster.CassandraIndexManager;
+import lucandra.cluster.IndexManagerService;
 
 import org.apache.cassandra.cache.InstrumentedCache;
 import org.apache.cassandra.db.Row;
 import org.apache.cassandra.db.RowMutation;
+import org.apache.cassandra.db.Table;
 import org.apache.cassandra.db.filter.QueryPath;
+import org.apache.cassandra.dht.Token;
+import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.log4j.Logger;
@@ -41,7 +49,9 @@ import org.xml.sax.SAXException;
 
 public class SolandraCoreContainer extends CoreContainer
 {
-    public  final static ThreadLocal<SolandraCoreInfo>        coreInfo = new ThreadLocal<SolandraCoreInfo>();
+    public  final static ThreadLocal<SolandraCoreInfo>        coreInfo      = new ThreadLocal<SolandraCoreInfo>();
+    public  final static ThreadLocal<HttpServletRequest>      activeRequest = new ThreadLocal<HttpServletRequest>();
+
     
     private static final Logger                              logger    = Logger.getLogger(SolandraCoreContainer.class);
     private final static InstrumentedCache<String, SolrCore> cache     = new InstrumentedCache<String, SolrCore>(1024);
@@ -110,7 +120,7 @@ public class SolandraCoreContainer extends CoreContainer
 
         return core;
     }
-
+    
     public static String readSchemaXML(String indexName) throws IOException
     {        
         
@@ -195,6 +205,44 @@ public class SolandraCoreContainer extends CoreContainer
         logger.debug("Wrote Schema for " + indexName);
     }
 
+    public static String getCoreMetaInfo(String indexName) throws IOException
+    {
+        String schemaXML = readSchemaXML(indexName);
+        long   maxId     = IndexManagerService.instance.getMaxId(indexName);
+        int    numShards = CassandraIndexManager.getShardFromDocId(maxId);        
+        
+        SolandraCoreInfo info = new SolandraCoreInfo(indexName);
+        
+        StringBuilder sb = new StringBuilder();
+        
+        sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n");
+        sb.append("<solandraCore name=\""+indexName+"\" numSubIndexes=\""+(numShards+1)+"\" documentsPerSubIndex=\""+CassandraUtils.maxDocsPerShard+"\">\n");
+        for(int i=0; i<=numShards; i++)
+        {
+            ByteBuffer subIndex = CassandraUtils.hashBytes((info.indexName + "~" + i).getBytes());
+    
+            sb.append("  <subIndex name=\""+i+"\" token=\""+CassandraUtils.md5hash(subIndex)+"\">\n");
+            
+            Token<?> t = StorageService.getPartitioner().getToken(subIndex);
+            List<InetAddress> addrs = Table.open(CassandraUtils.keySpace).getReplicationStrategy().getNaturalEndpoints(t);
+
+            for(InetAddress addr : addrs)
+            {
+                sb.append("    <endpoint id=\""+addr+"\"/>\n");
+            }
+            sb.append("  </subIndex>\n");
+        }
+        
+        sb.append("  <schema><![CDATA[\n");
+        sb.append(schemaXML);
+        sb.append("]]>\n  </schema>\n");
+        
+        sb.append("</solandraCore>\n");
+        
+        return sb.toString();
+    }
+    
+    
     @Override
     public Collection<String> getCoreNames(SolrCore core)
     {

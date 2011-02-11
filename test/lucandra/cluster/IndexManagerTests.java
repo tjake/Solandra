@@ -19,149 +19,197 @@
  */
 package lucandra.cluster;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import lucandra.CassandraUtils;
+import lucandra.dht.RandomPartitioner;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-
 public class IndexManagerTests
 {
     static String indexName = String.valueOf(System.nanoTime());
-    
+
+    @Test
+    public void testCustomRandomPartitioner()
+    {
+        String[] keys = new String[] { "0", "83316744970572273156255124564039073023",
+                "22040284005381836676397683785200205813", "43045609512509978730039130609641356928",
+                "35329030817634227734261170198958572329", "127605887595351923798765477786913079295" };
+
+        RandomPartitioner rp = new RandomPartitioner();
+
+        for (String key : keys)
+        {
+            byte[] keyBytes = key.getBytes();
+
+            ByteBuffer hashBuf = ByteBuffer.allocate(keyBytes.length + CassandraUtils.delimeterBytes.length);
+            hashBuf.put(keyBytes);
+            hashBuf.put(CassandraUtils.delimeterBytes);
+            hashBuf.flip();
+
+            assertEquals(rp.getToken(hashBuf).token.abs().toString(), key);
+        }
+    }
+
     private class TestCassandraIndexManager extends CassandraIndexManager
     {
 
-        
-        
         public TestCassandraIndexManager(int shardsAtOnce)
         {
             super(shardsAtOnce);
             // TODO Auto-generated constructor stub
         }
-        
+
         public String getToken()
         {
             return Thread.currentThread().getName();
         }
-        
+
     }
-    
+
     @BeforeClass
-    public static void setUpBeforeClass() {       
-            // start cassandra
-            CassandraUtils.startup();
-    }
-    
-    @Test
-    public void testCassandraIncrement()
+    public static void setUpBeforeClass()
     {
-        
-        CassandraIndexManager idx = new CassandraIndexManager(1);
-        
+        // start cassandra
+        CassandraUtils.startup();
+    }
+
+    @Test
+    public void testCassandraIncrement() throws IOException
+    {
+
+        CassandraIndexManager idx = new CassandraIndexManager(4);
+
         Set<Long> all = new HashSet<Long>(CassandraUtils.maxDocsPerShard);
-        
+
         long startTime = System.currentTimeMillis();
+
+        Map<Integer, AtomicInteger> shardStats = new HashMap<Integer, AtomicInteger>();
         
-        //Add
-        for(int i=0; i<CassandraUtils.maxDocsPerShard; i++)
+        // Add
+        for (int i = 0; i < CassandraUtils.maxDocsPerShard - CassandraIndexManager.reserveSlabSize; i++)
         {
-            long id = idx.getNextId(indexName, "i"+i);
-              
-            assertTrue(id+" already exists "+all.size(),all.add(id));
+            long id = idx.getNextId(indexName, "i" + i);
             
-            if(i % 10000 == 0){
+            //System.err.println(CassandraIndexManager.getShardFromDocId(id));
+            AtomicInteger counter = shardStats.get(CassandraIndexManager.getShardFromDocId(id));
+            if(counter == null)
+            {
+                counter = new AtomicInteger(0);
+                shardStats.put(CassandraIndexManager.getShardFromDocId(id), counter);
+            }
+            counter.incrementAndGet();
+            
+            assertTrue(id + " already exists " + all.size(), all.add(id));
+
+            if (i % 10000 == 0)
+            {
                 long endTime = System.currentTimeMillis();
-                System.err.println("added:"+id+", 10k iterations in "+(endTime - startTime)/1000+" sec");
-                startTime = endTime;         
+                System.err.println("added:" + id + ", 10k iterations in " + (endTime - startTime) / 1000 + " sec "+shardStats);
+                startTime = endTime;
             }
         }
-        
-        
-        assertEquals(0, CassandraIndexManager.getShardFromDocId(idx.getMaxId(indexName)));
-        
-        //Update
-        for(int i=0; i<CassandraUtils.maxDocsPerShard; i++)
+
+        assertEquals(3, CassandraIndexManager.getShardFromDocId(idx.getMaxId(indexName)));
+
+        // Update
+        for (int i = 0; i < CassandraUtils.maxDocsPerShard - CassandraIndexManager.reserveSlabSize; i++)
         {
-            Long id = idx.getId(indexName, "i"+i);
-            
-            
+            Long id = idx.getId(indexName, "i" + i);
+
             assertNotNull(id);
-            
-            if(i % 10000 == 0){
+
+            if (i % 10000 == 0)
+            {
                 long endTime = System.currentTimeMillis();
-                System.err.println("updated:"+id+", 10k iterations in "+(endTime - startTime)/1000+" sec");
-                startTime = endTime;      
+                System.err.println("updated:" + id + ", 10k iterations in " + (endTime - startTime) / 1000 + " sec");
+                startTime = endTime;
             }
 
         }
     }
-    
-    
+
     @Test
     public void testCassandraIncrement2()
     {
-        
+
         indexName = String.valueOf(System.nanoTime());
 
         ExecutorService svc = Executors.newFixedThreadPool(16);
-        
-        final TestCassandraIndexManager idx = new TestCassandraIndexManager(1);
 
+        final TestCassandraIndexManager idx = new TestCassandraIndexManager(4);
         
         List<Callable<Set<Long>>> callables = new ArrayList<Callable<Set<Long>>>();
-        for(int i=0; i<16; i++){
+        for (int i = 0; i < 16; i++)
+        {
             Callable<Set<Long>> r = new Callable<Set<Long>>() {
-                
+
                 public Set<Long> call()
                 {
 
-                   long startTime = System.currentTimeMillis();
-                    
+                    long startTime = System.currentTimeMillis();
+
                     Set<Long> all = new HashSet<Long>(CassandraUtils.maxDocsPerShard);
 
-                    for(int i=0; i<CassandraUtils.maxDocsPerShard/10; i++)
+                    for (int i = 0; i < CassandraUtils.maxDocsPerShard / 10; i++)
                     {
-                        Long id = idx.getNextId(indexName, "i"+i);
-                        assertTrue(id+" already exists "+all.size(),all.add(id));
+                        Long id = null;
+                        try
+                        {
+                            id = idx.getNextId(indexName, "i" + i);
+                        }
+                        catch (IOException e)
+                        {
+                            throw new RuntimeException(e);
+                        }
                         
-                        if(i % 10000 == 0){
+                        assertTrue(id + " already exists " + all.size(), all.add(id));
+
+                        if (i % 10000 == 0)
+                        {
                             long endTime = System.currentTimeMillis();
-                            System.err.println(Thread.currentThread().getName()+" id:"+id+", 10k iterations in "+(endTime - startTime)/1000+" sec");
-                            startTime = endTime;      
+                            System.err.println(Thread.currentThread().getName() + " id:" + id + ", 10k iterations in "
+                                    + (endTime - startTime) / 1000 + " sec");
+                            startTime = endTime;
                         }
                     }
-                    
+
                     return all;
                 }
 
-             
             };
-            
+
             callables.add(r);
         }
-        
+
         try
         {
             List<Future<Set<Long>>> results = svc.invokeAll(callables);
-            
+
             Set<Long> all = new HashSet<Long>(CassandraUtils.maxDocsPerShard);
-            
-            for(Future<Set<Long>> result : results)
+
+            for (Future<Set<Long>> result : results)
             {
                 Set<Long> thread = result.get();
-                
-                for(Long id : thread) {
-                    if(!all.add(id)){
-                        System.err.println(id+" already exists "+all.size());
+
+                for (Long id : thread)
+                {
+                    if (!all.add(id))
+                    {
+                        System.err.println(id + " already exists " + all.size());
                     }
                 }
-            }            
+            }
         }
         catch (InterruptedException e1)
         {
@@ -173,9 +221,9 @@ public class IndexManagerTests
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
-        
+
         svc.shutdown();
-        
+
         try
         {
             svc.awaitTermination(10, TimeUnit.MINUTES);
@@ -185,9 +233,7 @@ public class IndexManagerTests
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
-        
-        
+
     }
-    
- 
+
 }

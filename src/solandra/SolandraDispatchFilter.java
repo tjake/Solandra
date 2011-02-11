@@ -92,7 +92,7 @@ public class SolandraDispatchFilter extends SolrDispatchFilter
             {
                 try
                 {
-                    String schema = SolandraCoreContainer.readSchemaXML(indexName);
+                    String schema = SolandraCoreContainer.getCoreMetaInfo(indexName);
                     response.setContentType("text/xml");
                     PrintWriter out = resp.getWriter();
 
@@ -131,6 +131,8 @@ public class SolandraDispatchFilter extends SolrDispatchFilter
             }
         }
 
+        SolandraCoreContainer.activeRequest.set(req);
+        
         super.doFilter(request, response, chain);
     }
 

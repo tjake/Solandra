@@ -162,7 +162,7 @@ public class JettySolandraRunner
     try {
       CassandraUtils.startup();
         
-      JettySolandraRunner jetty = new JettySolandraRunner( "/solr", 8983 );
+      JettySolandraRunner jetty = new JettySolandraRunner( "/solandra", 8983 );
       jetty.start();
     }
     catch( Exception ex ) {

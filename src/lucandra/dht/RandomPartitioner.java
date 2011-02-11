@@ -38,20 +38,19 @@ import org.apache.log4j.Logger;
 public class RandomPartitioner extends org.apache.cassandra.dht.RandomPartitioner
 {
 
-    public static Logger logger = Logger.getLogger(RandomPartitioner.class);
-
+    public static Logger      logger         = Logger.getLogger(RandomPartitioner.class);
     private static final byte DELIMITER_BYTE = ":".getBytes()[0];
 
     public DecoratedKey<BigIntegerToken> decorateKey(ByteBuffer key)
     {
         return new DecoratedKey<BigIntegerToken>(getToken(key), key);
     }
-    
+
     public DecoratedKey<BigIntegerToken> convertFromDiskFormat(ByteBuffer fromdisk)
     {
         // find the delimiter position
         int splitPoint = -1;
-        for (int i = fromdisk.position()+fromdisk.arrayOffset(); i < fromdisk.limit()+fromdisk.arrayOffset(); i++)
+        for (int i = fromdisk.position() + fromdisk.arrayOffset(); i < fromdisk.limit() + fromdisk.arrayOffset(); i++)
         {
             if (fromdisk.array()[i] == DELIMITER_BYTE)
             {
@@ -62,48 +61,62 @@ public class RandomPartitioner extends org.apache.cassandra.dht.RandomPartitione
         assert splitPoint != -1;
 
         // and decode the token and key
-        String token = new String(fromdisk.array(), fromdisk.position()+fromdisk.arrayOffset(), splitPoint, UTF_8);
-        byte[] key = Arrays.copyOfRange(fromdisk.array(), splitPoint + 1, fromdisk.limit()+fromdisk.arrayOffset());
+        String token = new String(fromdisk.array(), fromdisk.position() + fromdisk.arrayOffset(), splitPoint, UTF_8);
+        byte[] key = Arrays.copyOfRange(fromdisk.array(), splitPoint + 1, fromdisk.limit() + fromdisk.arrayOffset());
         return new DecoratedKey<BigIntegerToken>(new BigIntegerToken(token), ByteBuffer.wrap(key));
     }
-   
+
     public BigIntegerToken getToken(ByteBuffer key)
     {
-        int minLength = CassandraUtils.keySigBytes + CassandraUtils.delimeterBytes.length;
-        
-        if (key.remaining() >= minLength)
+        int length = key.remaining();
+
+        if (length > 0)
         {
-            // check for our delimiter
             boolean found = true;
-            for (int i = 0; i < minLength; i++)
+            int firstNonChar = -1;
+
+            //find our delimiter
+            for (int i = 0; i < length; i++)
             {
-                // first n chars are digits
-                if (i < CassandraUtils.keySigBytes)
+
+                if (!Character.isDigit(key.get(i)))
                 {
-                    if (!Character.isDigit(key.get(i)))
+                    if (firstNonChar < 0)
+                        firstNonChar = i;
+                }
+                else
+                {
+                    if (firstNonChar >= 0)
                     {
                         found = false;
                         break;
                     }
-                    else
-                    {
-                        continue;
-                    }
+
+                    continue;
                 }
 
                 // the rest is delimiter
-                if (key.get(i) != CassandraUtils.delimeterBytes[i - CassandraUtils.keySigBytes])
+                if ((i - firstNonChar) >= CassandraUtils.delimeterBytes.length
+                        || key.get(i) != CassandraUtils.delimeterBytes[i - firstNonChar])
                 {
                     found = false;
                     break;
+                }
+                else
+                {
+
+                    // Success
+                    if ((i - firstNonChar) == (CassandraUtils.delimeterBytes.length - 1))
+                        break;
                 }
             }
 
             if (found)
             {
-                String tokStr = new String(key.array(), key.position() + key.arrayOffset(),CassandraUtils.keySigBytes, CassandraUtils.UTF_8);
-               // logger.debug("Token hijacked:"+tokStr);
-                               
+                String tokStr = new String(key.array(), key.position() + key.arrayOffset(), firstNonChar,
+                        CassandraUtils.UTF_8);
+                //logger.info("Token hijacked:" + tokStr);
+
                 return new BigIntegerToken(tokStr);
             }
         }
