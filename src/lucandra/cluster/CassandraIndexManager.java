@@ -183,7 +183,7 @@ public class CassandraIndexManager
 
                     List<Row> lrows = CassandraUtils.robustRead(ConsistencyLevel.QUORUM, cmd);
 
-                    if (lrows != null || !lrows.isEmpty())
+                    if (lrows != null && !lrows.isEmpty())
                     {
                         assert rows.size() == 1;
 
