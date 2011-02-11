@@ -357,20 +357,17 @@ public class CassandraUtils
         throw new RuntimeException("insert failed after 10 attempts");
     }
 
-    public static List<Row> robustRead(ConsistencyLevel cl, ReadCommand... rc)
+    public static List<Row> robustRead(ConsistencyLevel cl, ReadCommand... rc) throws IOException
     {      
+        final int maxTries = 1024;
         List<Row> rows = null;
         int attempts = 0;
-        while (attempts++ < 100)
+        while (attempts++ < maxTries)
         {
             try
             {
                 rows = StorageProxy.readProtocol(Arrays.asList(rc), cl);
                 break;
-            }
-            catch (IOException e1)
-            {
-                throw new RuntimeException(e1);
             }
             catch (UnavailableException e1)
             {
@@ -382,7 +379,7 @@ public class CassandraUtils
             }
             catch (InvalidRequestException e)
             {
-                throw new RuntimeException(e);
+                throw new IOException(e);
             }
 
             try
@@ -395,13 +392,13 @@ public class CassandraUtils
             }
         }
 
-        if (attempts >= 100)
-            throw new RuntimeException("Read command failed after 100 attempts");
+        if (attempts >= maxTries)
+            throw new IOException("Read command failed after 100 attempts");
 
         return rows;
     }
 
-    public static List<Row> robustRead(ByteBuffer key, QueryPath qp, List<ByteBuffer> columns, ConsistencyLevel cl)
+    public static List<Row> robustRead(ByteBuffer key, QueryPath qp, List<ByteBuffer> columns, ConsistencyLevel cl) throws IOException
     {
 
         ReadCommand rc = new SliceByNamesReadCommand(CassandraUtils.keySpace, key, qp, columns);
@@ -440,7 +437,15 @@ public class CassandraUtils
     
     public static ByteBuffer hashBytes(byte[] key)
     {      
-        return ByteBufferUtil.bytes(md5hash(ByteBuffer.wrap(key)).toString()+delimeter);
+       
+            byte[] hashBytes = md5hash(ByteBuffer.wrap(key)).toString().getBytes();
+            
+            ByteBuffer hashBuf = ByteBuffer.allocate(hashBytes.length+delimeterBytes.length);
+            hashBuf.put(hashBytes);
+            hashBuf.put(delimeterBytes);
+            hashBuf.flip();
+            
+            return hashBuf;
     }
 
     public static ByteBuffer hashKeyBytes(byte[]... keys)

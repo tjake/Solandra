@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.CommonsHttpSolrServer;
@@ -37,7 +38,7 @@ public class WikipediaIndexWorker implements Callable<Integer> {
     // each worker thread has a connection to cassandra
     private static ConcurrentLinkedQueue<List<SolrInputDocument>> allDocBuffers = new ConcurrentLinkedQueue<List<SolrInputDocument>>();
     private static ThreadLocal<CommonsHttpSolrServer> clientPool = new ThreadLocal<CommonsHttpSolrServer>();
-    private static ThreadLocal<List<SolrInputDocument>> docBuffer = new ThreadLocal<List<SolrInputDocument>>();
+    private static AtomicInteger connectionCounter = new AtomicInteger(0);
     private static CommonsHttpSolrServer oneClient;
     public  static final ArrayList<String> hosts = new ArrayList<String>();
     private static final Random r = new Random();
@@ -84,8 +85,11 @@ public class WikipediaIndexWorker implements Callable<Integer> {
             if(hosts.size() == 0)
                 throw new RuntimeException("no hosts defined");   
             
-            indexWriter = new StreamingUpdateSolrServer("http://"+hosts.get(r.nextInt(hosts.size()))+":" + port + "/solandra/wikassandra", 512, 64/hosts.size());
-
+            int id = connectionCounter.incrementAndGet();
+            
+            indexWriter = new StreamingUpdateSolrServer("http://"+hosts.get(id % hosts.size())+":" + port + "/solandra/~wikassandra", 512, 8);
+            indexWriter.setAllowCompression(true);
+            
             clientPool.set(indexWriter);
         }
 

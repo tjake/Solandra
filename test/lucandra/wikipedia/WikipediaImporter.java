@@ -39,7 +39,7 @@ public class WikipediaImporter {
     private long lastTime;
 
     public WikipediaImporter(String hosts) {
-        threadPool = Executors.newFixedThreadPool(64);
+        threadPool = Executors.newFixedThreadPool(8);
         resultSet = new LinkedBlockingQueue<Future<Integer>>();
         pageCount = 0;
         loadCount = 0;
