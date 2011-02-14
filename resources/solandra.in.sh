@@ -20,13 +20,11 @@ calculate_heap_sizes()
         Linux)
             system_memory_in_mb=`free -m | awk '/Mem:/ {print $2}'`
             system_cpu_cores=`egrep -c 'processor([[:space:]]+):.*' /proc/cpuinfo`
-            break
         ;;
         FreeBSD)
             system_memory_in_bytes=`sysctl hw.physmem | awk '{print $2}'`
             system_memory_in_mb=$((system_memory_in_bytes / 1024 / 1024))
             system_cpu_cores=`sysctl hw.ncpu | awk '{print $2}'`
-            break
         ;;
         *)
             # assume reasonable defaults for e.g. a modern desktop or
