@@ -153,7 +153,7 @@ public class SolandraIndexWriter extends UpdateHandler
 
                     RowMutation rm = new RowMutation(CassandraUtils.keySpace, cacheKey);
                     rm.add(new QueryPath(CassandraUtils.schemaInfoColumnFamily, CassandraUtils.cachedColBytes,
-                            CassandraUtils.cachedColBytes), ByteBufferUtil.EMPTY_BYTE_BUFFER, System.nanoTime());
+                            CassandraUtils.cachedColBytes), ByteBufferUtil.EMPTY_BYTE_BUFFER, System.currentTimeMillis());
                     CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm);
                 }
 
