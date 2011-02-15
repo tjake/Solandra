@@ -50,9 +50,19 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector,
     public TermFreqVector(String indexName, String field, int docI)
     {
         this.field = field;
-        this.docId = Integer.toHexString(docI).getBytes();
+        
+        byte[] indexNameBytes = null;
+        try
+        {
+            this.docId = Integer.toHexString(docI).getBytes("UTF-8");
+            indexNameBytes = indexName.getBytes("UTF-8");
+        }
+        catch (UnsupportedEncodingException e1)
+        {
+           throw new RuntimeException(e1);
+        }
 
-        ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, docId);
+        ByteBuffer key = CassandraUtils.hashKeyBytes(indexNameBytes, CassandraUtils.delimeterBytes, docId);
 
         ReadCommand rc = new SliceByNamesReadCommand(CassandraUtils.keySpace, key, CassandraUtils.metaColumnPath,
                 Arrays.asList(CassandraUtils.documentMetaFieldBytes));
@@ -86,7 +96,7 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector,
                 // add to multiget params
                 try
                 {
-                    key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, t.field()
+                    key = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"), CassandraUtils.delimeterBytes, t.field()
                             .getBytes("UTF-8"), CassandraUtils.delimeterBytes, t.text().getBytes("UTF-8"));
                 }
                 catch (UnsupportedEncodingException e)
@@ -136,12 +146,16 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector,
 
                 if (row.cf != null)
                 {
-                    termInfo = new LucandraTermInfo(0, row.cf.getSortedColumns().iterator().next().value());
+                    ByteBuffer val = row.cf.getSortedColumns().iterator().next().value();
+                    
+                    termInfo = new LucandraTermInfo(0, val);
 
                     termPositions[i] = termInfo.positions;
                 }
-
-                freqVec[i] = termPositions[i].length;
+                
+                
+                if(termInfo.hasPositions)
+                    freqVec[i] = termPositions[i].length;
 
                 if (termInfo == null || !termInfo.hasOffsets)
                 {

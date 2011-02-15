@@ -142,7 +142,7 @@ public class LucandraAllTermDocs implements TermDocs
     private void fillDocBuffer() throws IOException
     {
         
-        ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, "ids".getBytes());
+        ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"), CassandraUtils.delimeterBytes, "ids".getBytes("UTF-8"));
 
         ReadCommand cmd = new SliceFromReadCommand(CassandraUtils.keySpace, key,
                 new ColumnParent(CassandraUtils.schemaInfoColumnFamily), ByteBufferUtil.EMPTY_BYTE_BUFFER,
@@ -160,8 +160,9 @@ public class LucandraAllTermDocs implements TermDocs
             return;
         
         for(IColumn sc : row.cf.getSortedColumns()){
-            Integer id   = Integer.valueOf(ByteBufferUtil.string(sc.name()));
-            
+                        
+            Integer id  = Integer.valueOf(ByteBufferUtil.string(sc.name()));
+                       
             for(IColumn c : sc.getSubColumns())
             {
                 //valid id

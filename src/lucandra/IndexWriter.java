@@ -68,9 +68,9 @@ public class IndexWriter
 
         Map<ByteBuffer, RowMutation> workingMutations = new HashMap<ByteBuffer, RowMutation>();
 
-        byte[] indexNameBytes = indexName.getBytes();
+        byte[] indexNameBytes = indexName.getBytes("UTF-8");
         ByteBuffer indexTermsKey = CassandraUtils.hashKeyBytes(indexNameBytes, CassandraUtils.delimeterBytes, "terms"
-                .getBytes());
+                .getBytes("UTF-8"));
 
         List<Term> allIndexedTerms = new ArrayList<Term>();
         Map<String, byte[]> fieldCache = new HashMap<String, byte[]>(1024);
@@ -210,11 +210,11 @@ public class IndexWriter
                     // This is required since cassandra loads all columns
                     // in a key/column family into memory
                     ByteBuffer key = CassandraUtils.hashKeyBytes(indexNameBytes, CassandraUtils.delimeterBytes, term
-                            .getKey().field().getBytes(), CassandraUtils.delimeterBytes, term.getKey().text().getBytes(
+                            .getKey().field().getBytes("UTF-8"), CassandraUtils.delimeterBytes, term.getKey().text().getBytes(
                             "UTF-8"));
 
-                    ByteBuffer termkey = CassandraUtils.hashKeyBytes(indexName.getBytes(),
-                            CassandraUtils.delimeterBytes, term.getKey().field().getBytes());
+                    ByteBuffer termkey = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"),
+                            CassandraUtils.delimeterBytes, term.getKey().field().getBytes("UTF-8"));
 
                     // Mix in the norm for this field alongside each term
                     // more writes but faster on read side.
@@ -238,8 +238,8 @@ public class IndexWriter
                 Term term = new Term(field.name(), field.stringValue());
                 allIndexedTerms.add(term);
 
-                ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, field
-                        .name().getBytes(), CassandraUtils.delimeterBytes, field.stringValue().getBytes("UTF-8"));
+                ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"), CassandraUtils.delimeterBytes, field
+                        .name().getBytes("UTF-8"), CassandraUtils.delimeterBytes, field.stringValue().getBytes("UTF-8"));
 
                 Map<ByteBuffer, List<Number>> termMap = new ConcurrentSkipListMap<ByteBuffer, List<Number>>();
                 termMap.put(CassandraUtils.termFrequencyKeyBytes, CassandraUtils.emptyArray);
@@ -288,7 +288,7 @@ public class IndexWriter
             }
         }
 
-        ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, Integer
+        ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"), CassandraUtils.delimeterBytes, Integer
                 .toHexString(docNumber).getBytes("UTF-8"));
 
         // Store each field as a column under this docId
@@ -343,8 +343,8 @@ public class IndexWriter
     {
         ColumnParent cp = new ColumnParent(CassandraUtils.termVecColumnFamily);
 
-        ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, term
-                .field().getBytes(), CassandraUtils.delimeterBytes, term.text().getBytes("UTF-8"));
+        ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"), CassandraUtils.delimeterBytes, term
+                .field().getBytes("UTF-8"), CassandraUtils.delimeterBytes, term.text().getBytes("UTF-8"));
 
         ReadCommand rc = new SliceFromReadCommand(CassandraUtils.keySpace, key, cp, ByteBufferUtil.EMPTY_BYTE_BUFFER,
                 ByteBufferUtil.EMPTY_BYTE_BUFFER, false, Integer.MAX_VALUE);
@@ -372,8 +372,8 @@ public class IndexWriter
 
         Map<ByteBuffer, RowMutation> workingMutations = new HashMap<ByteBuffer, RowMutation>();
 
-        byte[] docId = Integer.toHexString(docNumber).getBytes();
-        byte[] indexNameBytes = indexName.getBytes();
+        byte[] docId = Integer.toHexString(docNumber).getBytes("UTF-8");
+        byte[] indexNameBytes = indexName.getBytes("UTF-8");
 
         ByteBuffer key = CassandraUtils.hashKeyBytes(indexNameBytes, CassandraUtils.delimeterBytes, docId);
 
@@ -407,7 +407,7 @@ public class IndexWriter
             try
             {
                 key = CassandraUtils.hashKeyBytes(indexNameBytes, CassandraUtils.delimeterBytes, term.field()
-                        .getBytes(), CassandraUtils.delimeterBytes, term.text().getBytes("UTF-8"));
+                        .getBytes("UTF-8"), CassandraUtils.delimeterBytes, term.text().getBytes("UTF-8"));
             }
             catch (UnsupportedEncodingException e)
             {

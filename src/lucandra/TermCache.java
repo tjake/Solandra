@@ -30,10 +30,10 @@ public class TermCache
     public final ConcurrentSkipListMap<Term, Pair<Term,Term>>         termQueryBoundries;
   
 
-    public TermCache(String indexName)
+    public TermCache(String indexName) throws IOException
     {
         this.indexName = indexName;
-        termsListKey   = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, "terms".getBytes());        
+        termsListKey   = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"), CassandraUtils.delimeterBytes, "terms".getBytes("UTF-8"));        
         termList       = new ConcurrentSkipListMap<Term, LucandraTermInfo[]>();
 
         //Get the boundries of terms each term
@@ -175,8 +175,8 @@ public class TermCache
             ByteBuffer rowKey;
             try
             {
-                rowKey = CassandraUtils.hashKeyBytes(indexName.getBytes(),    CassandraUtils.delimeterBytes, 
-                                                                term.field().getBytes(), CassandraUtils.delimeterBytes, 
+                rowKey = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"),    CassandraUtils.delimeterBytes, 
+                                                                term.field().getBytes("UTF-8"), CassandraUtils.delimeterBytes, 
                                                                 term.text().getBytes("UTF-8"));
             }
             catch (UnsupportedEncodingException e)
