@@ -277,7 +277,8 @@ public class IndexReader extends org.apache.lucene.index.IndexReader
                 }
             }
 
-            rows = CassandraUtils.robustRead(ConsistencyLevel.ONE, readCommands.toArray(new ReadCommand[]{}));
+            rows = CassandraUtils.robustRead(CassandraUtils.consistency, readCommands.toArray(new ReadCommand[]{}));
+
 
             // allow lookup by row
             Map<ByteBuffer, Row> rowMap = new HashMap<ByteBuffer, Row>(keyMap.size());

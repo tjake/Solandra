@@ -105,6 +105,9 @@ public class CassandraUtils
     
     //how often to check for cache invalidation
     public static int                        cacheInvalidationInterval = Integer.valueOf(properties.getProperty("solandra.cache.invalidation.check.interval", "1000"));
+  
+    public static final ConsistencyLevel     consistency               = ConsistencyLevel.valueOf(properties.getProperty("solandra.consistency", ConsistencyLevel.ONE.name()));
+    
     
     public static final QueryPath            metaColumnPath            = new QueryPath(CassandraUtils.docColumnFamily);
 
@@ -114,6 +117,15 @@ public class CassandraUtils
 
     private static boolean                   cassandraStarted       = false;
 
+    
+    public static synchronized void setStartup(){
+    	if(cassandraStarted){
+    		throw new RuntimeException("You attempted to set the casandra started flag after it has started");
+    	}
+    	
+    	cassandraStarted = true;
+    }
+    
     // Start Cassandra up!!!
     public static synchronized void startup()
     {

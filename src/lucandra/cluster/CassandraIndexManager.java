@@ -391,10 +391,11 @@ public class CassandraIndexManager
 
         Long val = getNextId(indexName, key, rms);
 
+
         // TODO: Delayed Insert!
         // Checks for more recent updates and disregards the older ones
-        CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rms);
 
+        CassandraUtils.robustInsert(CassandraUtils.consistency, rms);
         return val;
     }
 

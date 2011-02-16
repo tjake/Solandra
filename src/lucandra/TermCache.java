@@ -113,7 +113,7 @@ public class TermCache
         long start = System.currentTimeMillis();
               
         // Scan range of terms in this field (reversed, so we have a exit point)
-        List<Row> rows = CassandraUtils.robustRead(ConsistencyLevel.ONE,
+        List<Row> rows = CassandraUtils.robustRead(CassandraUtils.consistency,
                 new SliceFromReadCommand(CassandraUtils.keySpace, termsListKey, fieldColumnFamily, CassandraUtils.createColumnName(startTerm),
                         ByteBufferUtil.EMPTY_BYTE_BUFFER, false, bufferSize));
 
@@ -192,7 +192,7 @@ public class TermCache
                     ByteBufferUtil.EMPTY_BYTE_BUFFER, ByteBufferUtil.EMPTY_BYTE_BUFFER, false, Integer.MAX_VALUE));
         }
 
-        rows = CassandraUtils.robustRead(ConsistencyLevel.ONE, reads.toArray(new ReadCommand[] {}));
+        rows = CassandraUtils.robustRead(CassandraUtils.consistency, reads.toArray(new ReadCommand[] {}));
 
         // term to start with next time
         int actualReadSize = rows.size();

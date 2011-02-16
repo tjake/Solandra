@@ -153,7 +153,7 @@ public class LucandraTermEnum extends TermEnum
  
         ReadCommand rc = new SliceByNamesReadCommand(CassandraUtils.keySpace, key, parent, docNums);
  
-        List<Row> rows = CassandraUtils.robustRead(ConsistencyLevel.ONE, rc);
+        List<Row> rows = CassandraUtils.robustRead(CassandraUtils.consistency, rc);
  
         LucandraTermInfo[] termInfo = null;
  

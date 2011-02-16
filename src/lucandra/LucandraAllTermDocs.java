@@ -151,7 +151,7 @@ public class LucandraAllTermDocs implements TermDocs
                 ByteBufferUtil.EMPTY_BYTE_BUFFER, false, Integer.MAX_VALUE);
 
         
-        List<Row> rows = CassandraUtils.robustRead(ConsistencyLevel.ONE, cmd);
+        List<Row> rows = CassandraUtils.robustRead(CassandraUtils.consistency, cmd);
 
         if(rows.isEmpty())
             return;

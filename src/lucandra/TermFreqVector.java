@@ -67,11 +67,13 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector,
         ReadCommand rc = new SliceByNamesReadCommand(CassandraUtils.keySpace, key, CassandraUtils.metaColumnPath,
                 Arrays.asList(CassandraUtils.documentMetaFieldBytes));
 
+
         List<Row> rows = null;
         try
         {
 
             rows = CassandraUtils.robustRead(ConsistencyLevel.ONE, rc);
+
 
             if (rows.isEmpty())
             {
@@ -109,7 +111,8 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector,
                         .wrap(CassandraUtils.writeVInt(docI)))));
             }
 
-            rows = CassandraUtils.robustRead(ConsistencyLevel.ONE, readCommands.toArray(new ReadCommand[] {}));
+            rows = CassandraUtils.robustRead(CassandraUtils.consistency, readCommands.toArray(new ReadCommand[] {}));
+
 
         }
         catch (IOException e)
