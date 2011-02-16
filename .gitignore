@@ -8,3 +8,4 @@ solandra-app/
 *.war
 /target
 /solandra
+cassandra/

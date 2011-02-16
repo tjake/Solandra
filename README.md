@@ -39,6 +39,18 @@ Now that Solandra is running you can run the demo:
   - While data is loading open the file ./website/index.html in your favorite browser 
 
 
+####Embedding in cassandra distribution####
+
+To use an existing cassandra distribution perform the following steps.
+
+1. Download the cassandra distribution
+2. Unzip it the directory of your choice
+3. Run the ant task to deploy the neccessary files
+   
+   ant -Dcassandra=<unzipped dir> cassandra-dist 
+
+4. You can now start solr within cassandra by using the standard bin/cassandra command.  Cassandra now takes 2 optional properties -Dsolandra.context and -Dsolandra.port for the context path and the jetty port. 
+
 ####Limitations####
 
 Solandra uses Solr's built in distributed searching meachanism, 
