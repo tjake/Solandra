@@ -254,6 +254,12 @@
 			<fileset dir="${resources}/solr" includes="solrconfig.xml,schema.xml" />
 		</copy>
 
+		<copy todir="${cassandra}/bin" overwrite="false">
+			<fileset dir="${resources}/cassandra" includes="*.cml" />
+		</copy>
+
+
+
 		<replace file="${cassandra}/bin/cassandra">
 			<replacetoken>
 				<![CDATA[classname="org.apache.cassandra.thrift.CassandraDaemon"]]>
