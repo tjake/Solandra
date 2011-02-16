@@ -215,7 +215,7 @@
           </copy>
           <chmod dir="${app}/solr/conf" perm="644" includes="**,*"/>
           <copy todir="${app}">
-        <fileset dir="${resources}" includes="cassandra.yaml,solandra.in.sh,start.jar,start-solandra.sh,log4j.properties"/>
+        <fileset dir="${resources}" includes="cassandra.yaml,solandra.in.sh,start.jar,start-solandra.sh,log4j.properties,solandra.properties"/>
       </copy>
       <copy todir="${app}/cassandra-tools">
         <fileset dir="${resources}/cassandra" includes="solandra.cml,cassandra-cli,nodetool,cassandra.in.sh,log4j-tools.properties"/>

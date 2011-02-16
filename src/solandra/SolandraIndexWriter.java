@@ -81,7 +81,7 @@ public class SolandraIndexWriter extends UpdateHandler
 
     private static final ConcurrentMap<String, AtomicInteger> bufferedWrites                  = new MapMaker()
                                                                                                       .makeMap();
-    private static final int                                  writeTreshold                   = 16;
+    private static final int                                  writeTreshold                   = Integer.valueOf(CassandraUtils.properties.getProperty("solandra.write.buffer.queue.size", "16"));
 
     public SolandraIndexWriter(SolrCore core)
     {

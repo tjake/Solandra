@@ -24,6 +24,8 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.ConcurrentMap;
 
+import lucandra.cluster.CassandraIndexManager;
+
 import com.google.common.collect.MapMaker;
 
 import org.apache.cassandra.db.*;
@@ -54,7 +56,7 @@ import solandra.SolandraFieldSelector;
 public class IndexReader extends org.apache.lucene.index.IndexReader
 {
 
-    private final static int                                numDocs       = CassandraUtils.maxDocsPerShard;
+    private final static int                                numDocs       = CassandraIndexManager.maxDocsPerShard;
     private final static byte                               defaultNorm   = Similarity.encodeNorm(1.0f);
 
     private final static Directory                          mockDirectory = new RAMDirectory();

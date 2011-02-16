@@ -27,6 +27,8 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import lucandra.cluster.CassandraIndexManager;
+
 import com.google.common.collect.MapMaker;
 
 import org.apache.cassandra.db.*;
@@ -77,7 +79,7 @@ public class IndexWriter
 
         // By default we don't handle indexSharding
         // We round robin replace the index
-        docNumber = docNumber % CassandraUtils.maxDocsPerShard;
+        docNumber = docNumber % CassandraIndexManager.maxDocsPerShard;
 
         ByteBuffer docId = ByteBuffer.wrap(CassandraUtils.writeVInt(docNumber));
         int position = 0;

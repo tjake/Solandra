@@ -47,6 +47,14 @@ public class VIntType extends AbstractType {
         }
         if(0 == o2.remaining()) return 1;
         
+        //in vints, length equates to value size
+        if(o1.remaining() < o2.remaining())
+            return -1;
+        
+        if(o2.remaining() < o1.remaining())
+            return 1;
+        
+        
         
         int i1 = CassandraUtils.readVInt(o1);
         int i2 = CassandraUtils.readVInt(o2);
