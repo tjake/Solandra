@@ -94,5 +94,4 @@ public class DecoratedKey<T extends Token> extends org.apache.cassandra.db.Decor
     {    
          return token.hashCode() + (key == null ? 0 : key.hashCode());
     }
-
 }

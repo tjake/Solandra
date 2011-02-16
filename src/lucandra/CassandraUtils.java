@@ -27,6 +27,7 @@ import java.io.ObjectOutputStream;
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.List;
@@ -70,13 +71,13 @@ public class CassandraUtils
     public static final String               schemaKey              = "S";
     public static final String               cachedCol              = "CC";
     
-    public static final ByteBuffer           cachedColBytes         = ByteBuffer.wrap(cachedCol.getBytes());
-    public static final ByteBuffer           positionVectorKeyBytes = ByteBuffer.wrap(positionVectorKey.getBytes());
-    public static final ByteBuffer           offsetVectorKeyBytes   = ByteBuffer.wrap(offsetVectorKey.getBytes());
-    public static final ByteBuffer           termFrequencyKeyBytes  = ByteBuffer.wrap(termFrequencyKey.getBytes());
-    public static final ByteBuffer           normsKeyBytes          = ByteBuffer.wrap(normsKey.getBytes());
+    public static final ByteBuffer           cachedColBytes         = ByteBufferUtil.bytes(cachedCol);
+    public static final ByteBuffer           positionVectorKeyBytes = ByteBufferUtil.bytes(positionVectorKey);
+    public static final ByteBuffer           offsetVectorKeyBytes   = ByteBufferUtil.bytes(offsetVectorKey);
+    public static final ByteBuffer           termFrequencyKeyBytes  = ByteBufferUtil.bytes(termFrequencyKey);
+    public static final ByteBuffer           normsKeyBytes          = ByteBufferUtil.bytes(normsKey);
 
-    public static final ByteBuffer           schemaKeyBytes         = ByteBuffer.wrap(schemaKey.getBytes());
+    public static final ByteBuffer           schemaKeyBytes         = ByteBufferUtil.bytes(schemaKey);
     
     public static final int                  maxDocsPerShard        = (int) Math.pow(2, 17);
 
@@ -231,17 +232,17 @@ public class CassandraUtils
 
     public static final int byteArrayToInt(ByteBuffer b)
     {
-        return (b.array()[b.position() + b.arrayOffset() + 0] << 24)
-                + ((b.array()[b.position() + b.arrayOffset() + 1] & 0xFF) << 16)
-                + ((b.array()[b.position() + b.arrayOffset() + 2] & 0xFF) << 8)
-                + (b.array()[b.position() + b.arrayOffset() + 3] & 0xFF);
+        return (b.get(b.position() + 0) << 24)
+                + ((b.get(b.position() + 1) & 0xFF) << 16)
+                + ((b.get(b.position() + 2) & 0xFF) << 8)
+                + (b.get(b.position() + 3) & 0xFF);
     }
 
     public static final ByteBuffer intVectorToByteArray(List<Number> intVector)
     {
 
         if (intVector.size() == 0)
-            return FBUtilities.EMPTY_BYTE_BUFFER;
+            return ByteBufferUtil.EMPTY_BYTE_BUFFER;
 
         if (intVector.get(0) instanceof Byte)
             return ByteBuffer.wrap(new byte[] { intVector.get(0).byteValue() });
@@ -271,10 +272,10 @@ public class CassandraUtils
         int[] intArray = new int[b.remaining() / 4];
         int idx = 0;
 
-        for (int i = b.position() + b.arrayOffset(); i < b.limit() + b.arrayOffset(); i += 4)
+        for (int i = b.position(); i < b.limit(); i += 4)
         {
-            intArray[idx++] = (b.array()[i] << 24) + ((b.array()[i + 1] & 0xFF) << 16)
-                    + ((b.array()[i + 2] & 0xFF) << 8) + (b.array()[i + 3] & 0xFF);
+            intArray[idx++] = (b.get(i) << 24) + ((b.get(i + 1) & 0xFF) << 16)
+                    + ((b.get(i + 2) & 0xFF) << 8) + (b.get(i + 3) & 0xFF);
         }
 
         return intArray;
@@ -373,7 +374,7 @@ public class CassandraUtils
         {
             try
             {
-                rows = StorageProxy.readProtocol(Arrays.asList(rc), cl);
+                rows = StorageProxy.read(Arrays.asList(rc), cl);
                 break;
             }
             catch (UnavailableException e1)
@@ -418,8 +419,7 @@ public class CassandraUtils
     public static Object fromBytes(ByteBuffer data) throws IOException, ClassNotFoundException
     {
 
-        ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(data.array(), data.position()+data.arrayOffset(), data
-                .remaining()));
+        ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(ByteBufferUtil.getArray(data)));
         Object o = ois.readObject();
         ois.close();
         return o;
@@ -445,7 +445,15 @@ public class CassandraUtils
     public static ByteBuffer hashBytes(byte[] key)
     {      
        
-            byte[] hashBytes = md5hash(ByteBuffer.wrap(key)).toString().getBytes();
+            byte[] hashBytes = null;
+            try
+            {
+                hashBytes = md5hash(ByteBuffer.wrap(key)).toString().getBytes("UTF-8");
+            }
+            catch (UnsupportedEncodingException e)
+            {
+                throw new RuntimeException(e);
+            }
             
             ByteBuffer hashBuf = ByteBuffer.allocate(hashBytes.length+delimeterBytes.length);
             hashBuf.put(hashBytes);
@@ -508,6 +516,7 @@ public class CassandraUtils
             currentLen += keys[i].length;
         }
 
+       
         return ByteBuffer.wrap(hashedKey);
     }
 
@@ -536,11 +545,11 @@ public class CassandraUtils
         if(length == 0)
             return 0;
         
-        byte b = buf.array()[buf.position()+buf.arrayOffset()];
+        byte b = buf.get(buf.position());
         int i = b & 0x7F;
         for (int pos = 1, shift = 7; (b & 0x80) != 0 && pos < length; shift += 7, pos++)
         {
-            b = buf.array()[buf.position() + buf.arrayOffset() + pos];
+            b = buf.get(buf.position() + pos);
             i |= (b & 0x7F) << shift;
         }
 

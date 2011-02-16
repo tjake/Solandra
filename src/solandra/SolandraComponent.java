@@ -93,7 +93,7 @@ public class SolandraComponent extends SearchComponent
         if(lastCheck == null || lastCheck <= (System.currentTimeMillis() - CassandraUtils.cacheInvalidationInterval))
         {
         
-            ByteBuffer keyKey = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, "cache".getBytes());
+            ByteBuffer keyKey = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"), CassandraUtils.delimeterBytes, "cache".getBytes("UTF-8"));
 
             List<Row> rows = CassandraUtils.robustRead(keyKey, new QueryPath(CassandraUtils.schemaInfoColumnFamily), Arrays
                     .asList(CassandraUtils.cachedColBytes), ConsistencyLevel.QUORUM);
@@ -189,7 +189,7 @@ public class SolandraComponent extends SearchComponent
 
             for (int i = 0; i <= numShards; i++)
             {
-                ByteBuffer subIndex = CassandraUtils.hashBytes((indexName + "~" + i).getBytes());
+                ByteBuffer subIndex = CassandraUtils.hashBytes((indexName + "~" + i).getBytes("UTF-8"));
                 Token<?> t = StorageService.getPartitioner().getToken(subIndex);
                 List<InetAddress> addrs = Table.open(CassandraUtils.keySpace).getReplicationStrategy().getNaturalEndpoints(t);
 

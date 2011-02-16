@@ -37,7 +37,7 @@ public class LucandraTermDocs implements TermDocs, TermPositions
     private int                 termPosition;
     private static final Logger logger = Logger.getLogger(LucandraTermDocs.class);
 
-    public LucandraTermDocs(IndexReader indexReader)
+    public LucandraTermDocs(IndexReader indexReader) throws IOException
     {
         this.indexReader = indexReader;
         termEnum = new LucandraTermEnum(indexReader);

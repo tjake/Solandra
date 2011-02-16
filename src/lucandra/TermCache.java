@@ -30,10 +30,10 @@ public class TermCache
     public final ConcurrentSkipListMap<Term, Pair<Term,Term>>         termQueryBoundries;
   
 
-    public TermCache(String indexName)
+    public TermCache(String indexName) throws IOException
     {
         this.indexName = indexName;
-        termsListKey   = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, "terms".getBytes());        
+        termsListKey   = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"), CassandraUtils.delimeterBytes, "terms".getBytes("UTF-8"));        
         termList       = new ConcurrentSkipListMap<Term, LucandraTermInfo[]>();
 
         //Get the boundries of terms each term
@@ -115,7 +115,7 @@ public class TermCache
         // Scan range of terms in this field (reversed, so we have a exit point)
         List<Row> rows = CassandraUtils.robustRead(CassandraUtils.consistency,
                 new SliceFromReadCommand(CassandraUtils.keySpace, termsListKey, fieldColumnFamily, CassandraUtils.createColumnName(startTerm),
-                        FBUtilities.EMPTY_BYTE_BUFFER, false, bufferSize));
+                        ByteBufferUtil.EMPTY_BYTE_BUFFER, false, bufferSize));
 
         ColumnParent columnParent = new ColumnParent(CassandraUtils.termVecColumnFamily);
 
@@ -175,8 +175,8 @@ public class TermCache
             ByteBuffer rowKey;
             try
             {
-                rowKey = CassandraUtils.hashKeyBytes(indexName.getBytes(),    CassandraUtils.delimeterBytes, 
-                                                                term.field().getBytes(), CassandraUtils.delimeterBytes, 
+                rowKey = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"),    CassandraUtils.delimeterBytes, 
+                                                                term.field().getBytes("UTF-8"), CassandraUtils.delimeterBytes, 
                                                                 term.text().getBytes("UTF-8"));
             }
             catch (UnsupportedEncodingException e)
@@ -189,7 +189,7 @@ public class TermCache
             
             
             reads.add((ReadCommand) new SliceFromReadCommand(CassandraUtils.keySpace, rowKey, columnParent,
-                    FBUtilities.EMPTY_BYTE_BUFFER, FBUtilities.EMPTY_BYTE_BUFFER, false, Integer.MAX_VALUE));
+                    ByteBufferUtil.EMPTY_BYTE_BUFFER, ByteBufferUtil.EMPTY_BYTE_BUFFER, false, Integer.MAX_VALUE));
         }
 
         rows = CassandraUtils.robustRead(CassandraUtils.consistency, reads.toArray(new ReadCommand[] {}));
@@ -200,7 +200,7 @@ public class TermCache
         if (logger.isDebugEnabled())
         {
             logger.debug("Found " + rows.size() + " rows in range:" + startTerm + " to "
-                    + ByteBufferUtil.string(FBUtilities.EMPTY_BYTE_BUFFER) + " in "
+                    + "" + " in "
                     + (System.currentTimeMillis() - start) + "ms");
 
         }

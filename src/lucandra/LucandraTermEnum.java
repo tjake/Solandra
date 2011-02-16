@@ -49,7 +49,7 @@ public class LucandraTermEnum extends TermEnum
  
     private static final Logger                  logger         = Logger.getLogger(LucandraTermEnum.class);
 
-    public LucandraTermEnum(IndexReader indexReader)
+    public LucandraTermEnum(IndexReader indexReader) throws IOException
     {
         this.indexReader = indexReader;
         indexName        = indexReader.getIndexName();
@@ -143,8 +143,8 @@ public class LucandraTermEnum extends TermEnum
         ByteBuffer key;
         try
         {
-            key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, term.field()
-                    .getBytes(), CassandraUtils.delimeterBytes, term.text().getBytes("UTF-8"));
+            key = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"), CassandraUtils.delimeterBytes, term.field()
+                    .getBytes("UTF-8"), CassandraUtils.delimeterBytes, term.text().getBytes("UTF-8"));
         }
         catch (UnsupportedEncodingException e2)
         {

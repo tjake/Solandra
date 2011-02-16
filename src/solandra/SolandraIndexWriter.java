@@ -110,7 +110,14 @@ public class SolandraIndexWriter extends UpdateHandler
                                 if (lastFlush == null
                                         || lastFlush <= (System.currentTimeMillis() - CassandraUtils.cacheInvalidationInterval))
                                 {
-                                    flush(core);
+                                    try
+                                    {
+                                        flush(core);
+                                    }
+                                    catch (IOException e)
+                                    {
+                                        throw new RuntimeException(e);
+                                    }
                                     lastCoreFlush.put(core, System.currentTimeMillis());
                                     if (logger.isDebugEnabled())
                                         logger.debug("Flushed cache: " + core);
@@ -136,17 +143,17 @@ public class SolandraIndexWriter extends UpdateHandler
                     }
                 }
 
-                private void flush(String core)
+                private void flush(String core) throws IOException
                 {
                     // Make sure all writes are in for this core
                     writer.commit(core, false);
 
-                    ByteBuffer cacheKey = CassandraUtils.hashKeyBytes((core).getBytes(), CassandraUtils.delimeterBytes,
-                            "cache".getBytes());
+                    ByteBuffer cacheKey = CassandraUtils.hashKeyBytes((core).getBytes("UTF-8"), CassandraUtils.delimeterBytes,
+                            "cache".getBytes("UTF-8"));
 
                     RowMutation rm = new RowMutation(CassandraUtils.keySpace, cacheKey);
                     rm.add(new QueryPath(CassandraUtils.schemaInfoColumnFamily, CassandraUtils.cachedColBytes,
-                            CassandraUtils.cachedColBytes), FBUtilities.EMPTY_BYTE_BUFFER, System.nanoTime());
+                            CassandraUtils.cachedColBytes), ByteBufferUtil.EMPTY_BYTE_BUFFER, System.currentTimeMillis());
                     CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm);
                 }
 
@@ -192,7 +199,7 @@ public class SolandraIndexWriter extends UpdateHandler
             
             if( !coreInfo.bulk && !cmd.allowDups && (batchMode == null || !batchMode.equals("true")))
                 docId = IndexManagerService.instance.getId(coreInfo.indexName, key);
-           
+            
             
             boolean isUpdate = false;
             if (docId != null)
@@ -304,9 +311,9 @@ public class SolandraIndexWriter extends UpdateHandler
         if (logger.isDebugEnabled())
             logger.debug("Deleting term: " + term);
 
-        ByteBuffer keyKey = CassandraUtils.hashKeyBytes((indexName + "~" + term.text()).getBytes(),
-                CassandraUtils.delimeterBytes, "keys".getBytes());
-        ByteBuffer keyCol = ByteBuffer.wrap(term.text().getBytes());
+        ByteBuffer keyKey = CassandraUtils.hashKeyBytes((indexName + "~" + term.text()).getBytes("UTF-8"),
+                CassandraUtils.delimeterBytes, "keys".getBytes("UTF-8"));
+        ByteBuffer keyCol = ByteBuffer.wrap(term.text().getBytes("UTF-8"));
 
         List<Row> rows = CassandraUtils.robustRead(keyKey, new QueryPath(CassandraUtils.schemaInfoColumnFamily), Arrays
                 .asList(keyCol), ConsistencyLevel.QUORUM);
@@ -326,7 +333,7 @@ public class SolandraIndexWriter extends UpdateHandler
                     int shard = CassandraIndexManager.getShardFromDocId(id);
                     int sid = CassandraIndexManager.getShardedDocId(id);
 
-                    ByteBuffer sidName = ByteBuffer.wrap(String.valueOf(sid).getBytes());
+                    ByteBuffer sidName = ByteBuffer.wrap(String.valueOf(sid).getBytes("UTF-8"));
 
                     String subIndex = indexName + "~" + shard;
 
@@ -339,8 +346,8 @@ public class SolandraIndexWriter extends UpdateHandler
 
                     // Delete docId so it can be reused
                     // TODO: update shard info with this docid
-                    ByteBuffer idKey = CassandraUtils.hashKeyBytes(subIndex.getBytes(), CassandraUtils.delimeterBytes,
-                            "ids".getBytes());
+                    ByteBuffer idKey = CassandraUtils.hashKeyBytes(subIndex.getBytes("UTF-8"), CassandraUtils.delimeterBytes,
+                            "ids".getBytes("UTF-8"));
                     RowMutation rm2 = new RowMutation(CassandraUtils.keySpace, idKey);
                     rm2.delete(new QueryPath(CassandraUtils.schemaInfoColumnFamily, sidName), System.nanoTime());
 
