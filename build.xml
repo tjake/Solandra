@@ -18,216 +18,253 @@
  ~ specific language governing permissions and limitations
  ~ under the License.
  -->
-<project name="solandra" default="dist" basedir="."
-         xmlns:ivy="antlib:org.apache.ivy.ant">
+<project name="solandra" default="dist" basedir="." xmlns:ivy="antlib:org.apache.ivy.ant">
 
-        <description>Solandra</description>
+	<description>Solandra</description>
 
-        <property name="src"           location="src" />
-        <property name="test"          location="test" />
-        <property name="config"        location="config" />
-        <property name="build"         location="build" />
-        <property name="build.classes" location="${build}/classes"/>
-        <property name="build.test.classes" location="${build}/test-classes"/>
-        <property name="lib"           location="lib" />
-        <property name="cassandra.base" location="${basedir}"/>
+	<property name="src" location="src" />
+	<property name="test" location="test" />
+	<property name="config" location="config" />
+	<property name="build" location="build" />
+	<property name="build.classes" location="${build}/classes" />
+	<property name="build.test.classes" location="${build}/test-classes" />
+	<property name="lib" location="lib" />
+	<property name="cassandra.base" location="${basedir}" />
 
-        <property name="app"       location="solandra-app"/>
-        <property name="resources" location="resources"/>
+	<property name="app" location="solandra-app" />
+	<property name="resources" location="resources" />
 
-        <!-- ivy properties -->
-        <property name="ivy.version" value="2.1.0" />
-        <property name="ivy.dir" location="${build}/ivy" />
-        <property name="ivy.jar" location="${ivy.dir}/ivy-${ivy.version}.jar"/>
-        <property name="ivy.lib.dir" location="${lib}" />
-        <property name="ivy_repo_url" value="http://repo2.maven.org/maven2/org/apache/ivy/ivy/${ivy.version}/ivy-${ivy.version}.jar"/>
-        <property name="ivysettings.xml" location="${ivy.dir}/ivysettings.xml" />
+	<!-- ivy properties -->
+	<property name="ivy.version" value="2.1.0" />
+	<property name="ivy.dir" location="${build}/ivy" />
+	<property name="ivy.jar" location="${ivy.dir}/ivy-${ivy.version}.jar" />
+	<property name="ivy.lib.dir" location="${lib}" />
+	<property name="ivy_repo_url" value="http://repo2.maven.org/maven2/org/apache/ivy/ivy/${ivy.version}/ivy-${ivy.version}.jar" />
+	<property name="ivysettings.xml" location="${ivy.dir}/ivysettings.xml" />
 
-        <target name="init">
-          <tstamp />
-          <mkdir dir="${build}" />
-          <mkdir dir="${build}/output" />
-          <mkdir dir="${build.classes}" />
-          <mkdir dir="${build.test.classes}"/>
-          <mkdir dir="${ivy.dir}" />
-          <mkdir dir="${ivy.lib.dir}" />
-          <mkdir dir="${app}" />
-          <!--
+	<target name="init">
+		<tstamp />
+		<mkdir dir="${build}" />
+		<mkdir dir="${build}/output" />
+		<mkdir dir="${build.classes}" />
+		<mkdir dir="${build.test.classes}" />
+		<mkdir dir="${ivy.dir}" />
+		<mkdir dir="${ivy.lib.dir}" />
+		<mkdir dir="${app}" />
+		<!--
               Allow Ivy to be disabled with "-Dnoivy=".
               It is kind of a hack to pretend that we already found it,
               but Ant doesn't provide an easy way of blocking dependencies
               from executing or checking multiple conditions.
             -->
-          <condition property="ivy.found"><isset property="noivy" /></condition>
-          <condition property="offline"><isset property="noivy" /></condition>
-        </target>
+		<condition property="ivy.found">
+			<isset property="noivy" />
+		</condition>
+		<condition property="offline">
+			<isset property="noivy" />
+		</condition>
+	</target>
 
 
-        <target name="ivy-download"  description="To download ivy" unless="offline">
-          <get src="${ivy_repo_url}" dest="${ivy.jar}" usetimestamp="true"/>
-        </target>
+	<target name="ivy-download" description="To download ivy" unless="offline">
+		<get src="${ivy_repo_url}" dest="${ivy.jar}" usetimestamp="true" />
+	</target>
 
-        <target name="ivy-probe-antlib">
-          <condition property="ivy.found">
-            <typefound uri="antlib:org.apache.ivy.ant" name="cleancache"/>
-          </condition>
-        </target>
+	<target name="ivy-probe-antlib">
+		<condition property="ivy.found">
+			<typefound uri="antlib:org.apache.ivy.ant" name="cleancache" />
+		</condition>
+	</target>
 
-        <target name="ivy-init-antlib" depends="ivy-download,ivy-probe-antlib" unless="ivy.found">
-          <typedef uri="antlib:org.apache.ivy.ant" onerror="fail"
-                   loaderRef="ivyLoader">
-            <classpath>
-              <pathelement location="${ivy.jar}"/>
-            </classpath>
-          </typedef>
-          <fail>
-            <condition >
-              <not>
-                <typefound uri="antlib:org.apache.ivy.ant" name="cleancache"/>
-              </not>
-            </condition>
+	<target name="ivy-init-antlib" depends="ivy-download,ivy-probe-antlib" unless="ivy.found">
+		<typedef uri="antlib:org.apache.ivy.ant" onerror="fail" loaderRef="ivyLoader">
+			<classpath>
+				<pathelement location="${ivy.jar}" />
+			</classpath>
+		</typedef>
+		<fail>
+			<condition>
+				<not>
+					<typefound uri="antlib:org.apache.ivy.ant" name="cleancache" />
+				</not>
+			</condition>
             You need Apache Ivy 2.0 or later from http://ant.apache.org/
             It could not be loaded from ${ivy_repo_url}
           </fail>
-        </target>
+	</target>
 
-        <target name="resolve" depends="ivy-init-antlib" description="retrieve dependencies with ivy" unless="noivy">
-          <ivy:retrieve />
-        </target>
-
-
-        <path id="autoivy.classpath">
-          <fileset dir="${ivy.lib.dir}">
-            <include name="**/*.jar" />
-          </fileset>
-        </path>
-
-        <!-- ===========================  -->
-
-        <path id="solandra.classpath">
-          <pathelement location="${build.classes}"/>
-          <pathelement location="${build.test.classes}"/>
-          <pathelement location="${resources}"/>
-          <pathelement location="${resources}/solr"/>
-          <fileset dir="${lib}">
-            <include name="**/*.jar" />
-          </fileset>
-          <fileset dir="${cassandra.base}/lib">
-            <include name="**/*.jar" />
-          </fileset>
-          <fileset dir="${cassandra.base}/build">
-            <include name="**/*.jar" />
-          </fileset>
-          <path refid="autoivy.classpath" />
-        </path>
+	<target name="resolve" depends="ivy-init-antlib" description="retrieve dependencies with ivy" unless="noivy">
+		<ivy:retrieve />
+	</target>
 
 
-        <target name="compile" depends="init,resolve">
+	<path id="autoivy.classpath">
+		<fileset dir="${ivy.lib.dir}">
+			<include name="**/*.jar" />
+		</fileset>
+	</path>
 
-	  <!--<exec executable="/bin/sh" failonerror="true">
-	    <arg line="-c &quot;ant -f ${cassandra.base}/build.xml jar&quot;"/> 
-	  </exec>-->
+	<!-- ===========================  -->
 
-          <javac debug="true" destdir="${build.classes}">
-            <src path="${src}"/>
-            <classpath refid="solandra.classpath"/>
-          </javac>
-        </target>
+	<path id="solandra.classpath">
+		<pathelement location="${build.classes}" />
+		<pathelement location="${build.test.classes}" />
+		<pathelement location="${resources}" />
+		<pathelement location="${resources}/solr" />
+		<fileset dir="${lib}">
+			<include name="**/*.jar" />
+		</fileset>
+		<fileset dir="${cassandra.base}/lib">
+			<include name="**/*.jar" />
+		</fileset>
+		<fileset dir="${cassandra.base}/build">
+			<include name="**/*.jar" />
+		</fileset>
+		<path refid="autoivy.classpath" />
+	</path>
 
-        <target name="compile.tests" depends="compile">
-          <javac debug="true" destdir="${build.test.classes}">
-            <src path="${test}"/>
-            <classpath refid="solandra.classpath"/>
-          </javac>
-        </target>
+
+	<target name="compile" depends="init,resolve">
+
+		<!--<exec executable="/bin/sh" failonerror="true">
+        <arg line="-c &quot;ant -f ${cassandra.base}/build.xml jar&quot;"/>
+      </exec>-->
+
+		<javac debug="true" destdir="${build.classes}">
+			<src path="${src}" />
+			<classpath refid="solandra.classpath" />
+		</javac>
+	</target>
+
+	<target name="compile.tests" depends="compile">
+		<javac debug="true" destdir="${build.test.classes}">
+			<src path="${test}" />
+			<classpath refid="solandra.classpath" />
+		</javac>
+	</target>
 
 
-        <target name="test" depends="compile.tests">
-          <echo message="running tests"/>
-          <mkdir dir="${build}/output"/>
-          <junit fork="on" failureproperty="testfailed">
-            <classpath refid="solandra.classpath"/>
-            <formatter type="xml" usefile="true"/>
-            <formatter type="brief" usefile="false"/>
+	<target name="test" depends="compile.tests">
+		<echo message="running tests" />
+		<mkdir dir="${build}/output" />
+		<junit fork="on" failureproperty="testfailed">
+			<classpath refid="solandra.classpath" />
+			<formatter type="xml" usefile="true" />
+			<formatter type="brief" usefile="false" />
 
-            <batchtest todir="${build}/output">
-              <fileset dir="${build.test.classes}" includes="**/SolandraTests.class" />
-            </batchtest>
+			<batchtest todir="${build}/output">
+				<fileset dir="${build.test.classes}" includes="**/SolandraTests.class" />
+			</batchtest>
 
-            <jvmarg value="-Xmx1G"/>
-          </junit>
-          <fail if="testfailed" message="Some test(s) failed."/>
-        </target>
+			<jvmarg value="-Xmx1G" />
+		</junit>
+		<fail if="testfailed" message="Some test(s) failed." />
+	</target>
 
-        <target name="solandra.jar" depends="compile,compile.tests">
-          <jar jarfile="solandra.jar" basedir="${build.classes}" />
-          <jar jarfile="solandra-tests.jar" basedir="${build.test.classes}" />
-        </target>
+	<target name="solandra.jar" depends="compile,compile.tests">
+		<jar jarfile="solandra.jar" basedir="${build.classes}" />
+		<jar jarfile="solandra-tests.jar" basedir="${build.test.classes}" />
+	</target>
 
-        <target name="clean">
-          <delete dir="${build}" />
-          <delete dir="${lib}" />
-          <delete dir="${app}" />
-          <delete file="solandra.jar" />
-          <delete file="solandra-tests.jar" />
-          <delete file="solandra.war" />
-        </target>
+	<target name="clean">
+		<delete dir="${build}" />
+		<delete dir="${lib}" />
+		<delete dir="${app}" />
+		<delete file="solandra.jar" />
+		<delete file="solandra-tests.jar" />
+		<delete file="solandra.war" />
+	</target>
 
-        <!-- ============================= -->
-        <target name="war" depends="solandra.jar">
-          <war destfile="solandra.war"
-               webxml="${resources}/solr/web.xml">
-            <lib dir="${lib}">
-              <exclude name="jetty*.jar" />
-              <exclude name="servlet-api*.jar" />
-              <exclude name="easymock.jar" />
-            </lib>
-            <lib dir="${cassandra.base}/lib">
-              <include name="**/*.jar" />
-            </lib>
-            <lib dir="${cassandra.base}/build">
-              <include name="**/*.jar" />
-            </lib>
-	    <classes dir="${resources}">
-	      <include name="*.properties"/>
-	    </classes>
-            <lib file="solandra.jar"/>
-          </war>
-        </target>
-        <target name="dist" depends="war">
-          <delete dir="${app}" />
-          <mkdir dir="${app}"/>
-          <mkdir dir="${app}/cassandra-tools"/>
-          <mkdir dir="${app}/cassandra-tools/lib"/>
-          <mkdir dir="${app}/logs" />
-          <mkdir dir="${app}/etc" />
-          <mkdir dir="${app}/lib" />
-          <mkdir dir="${app}/work" />
-          <copy todir="${app}/lib">
-            <fileset dir="${lib}" includes="jetty*.jar,servlet*.jar,jsp*.jar"/>
-          </copy>
-          <copy todir="${app}/etc">
-            <fileset dir="${resources}/solr" includes="jetty.xml,jetty-logging.xml,webdefault.xml"/>
-          </copy>
-          <copy file="solandra.war" tofile="${app}/webapps/solandra.war"/>
-          <copy todir="${app}/solr/conf" overwrite="false">
-            <fileset dir="${resources}/solr" includes="solrconfig.xml,schema.xml,*.txt"/>
-          </copy>
-          <chmod dir="${app}/solr/conf" perm="644" includes="**,*"/>
-          <copy todir="${app}">
-	    <fileset dir="${resources}" includes="cassandra.yaml,solandra.in.sh,start.jar,start-solandra.sh"/>
-	  </copy>
-	  <copy todir="${app}/cassandra-tools">
-	    <fileset dir="${resources}/cassandra" includes="solandra.cml,cassandra-cli,nodetool,cassandra.in.sh,log4j-tools.properties"/>
-	  </copy>
-	  <copy todir="${app}/cassandra-tools/lib">
-	    <fileset dir="${lib}" includes="*.jar"/>
-	  </copy>
-          <chmod dir="${app}" perm="755" includes="start-solandra.sh"/>
-          <chmod dir="${app}/cassandra-tools" perm="755" includes="cassandra-cli,nodetool"/>
+	<!-- ============================= -->
+	<target name="war" depends="solandra.jar">
+		<war destfile="solandra.war" webxml="${resources}/solr/web.xml">
+			<lib dir="${lib}">
+				<exclude name="jetty*.jar" />
+				<exclude name="servlet-api*.jar" />
+				<exclude name="easymock.jar" />
+			</lib>
+			<lib dir="${cassandra.base}/lib">
+				<include name="**/*.jar" />
+			</lib>
+			<lib dir="${cassandra.base}/build">
+				<include name="**/*.jar" />
+			</lib>
+			<classes dir="${resources}">
+				<include name="*.properties" />
+			</classes>
+			<lib file="solandra.jar" />
+		</war>
+	</target>
+	<target name="dist" depends="war">
+		<delete dir="${app}" />
+		<mkdir dir="${app}" />
+		<mkdir dir="${app}/cassandra-tools" />
+		<mkdir dir="${app}/cassandra-tools/lib" />
+		<mkdir dir="${app}/logs" />
+		<mkdir dir="${app}/etc" />
+		<mkdir dir="${app}/lib" />
+		<mkdir dir="${app}/work" />
+		<copy todir="${app}/lib">
+			<fileset dir="${lib}" includes="jetty*.jar,servlet*.jar,jsp*.jar" />
+		</copy>
+		<copy todir="${app}/etc">
+			<fileset dir="${resources}/solr" includes="jetty.xml,jetty-logging.xml,webdefault.xml" />
+		</copy>
+		<copy file="solandra.war" tofile="${app}/webapps/solandra.war" />
+		<copy todir="${app}/solr/conf" overwrite="false">
+			<fileset dir="${resources}/solr" includes="solrconfig.xml,schema.xml,*.txt" />
+		</copy>
+		<chmod dir="${app}/solr/conf" perm="644" includes="**,*" />
+		<copy todir="${app}">
+			<fileset dir="${resources}" includes="cassandra.yaml,solandra.in.sh,start.jar,start-solandra.sh,log4j.properties" />
+		</copy>
+		<copy todir="${app}/cassandra-tools">
+			<fileset dir="${resources}/cassandra" includes="solandra.cml,cassandra-cli,nodetool,cassandra.in.sh,log4j-tools.properties" />
+		</copy>
+		<copy todir="${app}/cassandra-tools/lib">
+			<fileset dir="${lib}" includes="*.jar" />
+		</copy>
+		<chmod dir="${app}" perm="755" includes="start-solandra.sh" />
+		<chmod dir="${app}/cassandra-tools" perm="755" includes="cassandra-cli,nodetool" />
 
-          <echo>Solandra successfully built</echo>
-          <echo>You can excute the following command to start the server.</echo>
-          <echo>cd ${app}; start-solandra.sh -b</echo>
-        </target>
+		<echo>Solandra successfully built</echo>
+		<echo>You can excute the following command to start the server.</echo>
+		<echo>cd ${app}; start-solandra.sh -b</echo>
+	</target>
+
+	<!-- Construct the path to the cassandra distribution.  Taken from the command
+		line if set like this
+		
+		ant cassandra-dist -Dcassandra=apache-cassandra-0.7.1
+		
+		-->
+
+	<!-- Copy our required runtime file the cassandra extracted directory -->
+	<target name="cassandra-dist" depends="solandra.jar">
+		<!-- copy over all the new jar files -->
+
+		<copy todir="${cassandra}/lib">
+			<fileset dir="${lib}" includes="jetty*.jar,servlet*.jar,jsp*.jar, solr*.jar, lucene*.jar, commons*.jar" />
+			<fileset dir="${basedir}" includes="solandra.jar" />
+		</copy>
+
+		<!-- copy the solr data -->
+
+		<copy todir="${cassandra}/conf" overwrite="false">
+			<fileset dir="${resources}/solr" includes="solrconfig.xml,schema.xml" />
+		</copy>
+
+		<replace file="${cassandra}/bin/cassandra">
+			<replacetoken>
+				<![CDATA[classname="org.apache.cassandra.thrift.CassandraDaemon"]]>
+			</replacetoken>
+			<replacevalue>
+				<![CDATA[classname="solandra.CassandraStarter"]]>
+			</replacevalue>
+		</replace>
+
+		<echo>Libraries successfully copied into cassandra distribution</echo>
+		<echo>Start the cassandra server with the standard bin/cassandra command</echo>
+
+	</target>
 </project>
