@@ -6,3 +6,5 @@ build/
 solandra-app/
 *.jar
 *.war
+/target
+/solandra
