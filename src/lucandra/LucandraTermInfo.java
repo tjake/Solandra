@@ -20,6 +20,7 @@
 package lucandra;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
 import java.util.List;
 import java.util.Map;
 
@@ -97,7 +98,14 @@ public class LucandraTermInfo implements Comparable<LucandraTermInfo>
             
             else
             {
-                throw new IllegalArgumentException(ByteBufferUtil.string(e.getKey()));
+                try
+                {
+                    throw new IllegalArgumentException(ByteBufferUtil.string(e.getKey()));
+                }
+                catch (CharacterCodingException e1)
+                {
+                    throw new IllegalArgumentException(e.getKey().toString());
+                }
             }
         }
         

@@ -35,10 +35,16 @@ import lucandra.dht.RandomPartitioner;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import org.apache.cassandra.db.*;
+import org.apache.cassandra.db.filter.QueryPath;
+import org.apache.cassandra.thrift.ConsistencyLevel;
+import org.apache.cassandra.utils.ByteBufferUtil;
+
 public class IndexManagerTests
 {
-    static String indexName = String.valueOf(System.nanoTime());
-
+    static String indexName = String.valueOf(System.nanoTime()); 
+    
+   
     @Test
     public void testCustomRandomPartitioner()
     {
@@ -97,10 +103,12 @@ public class IndexManagerTests
         Map<Integer, AtomicInteger> shardStats = new HashMap<Integer, AtomicInteger>();
         
         // Add
-        for (int i = 0; i < CassandraUtils.maxDocsPerShard - CassandraIndexManager.reserveSlabSize; i++)
+        for (int i = 0; i < CassandraUtils.maxDocsPerShard; i++)
         {
-            long id = idx.getNextId(indexName, "i" + i);
+            Long id = idx.getNextId(indexName, "i" + i);
             
+            assertNotNull(id);
+                        
             //System.err.println(CassandraIndexManager.getShardFromDocId(id));
             AtomicInteger counter = shardStats.get(CassandraIndexManager.getShardFromDocId(id));
             if(counter == null)
@@ -123,12 +131,12 @@ public class IndexManagerTests
         assertEquals(3, CassandraIndexManager.getShardFromDocId(idx.getMaxId(indexName)));
 
         // Update
-        for (int i = 0; i < CassandraUtils.maxDocsPerShard - CassandraIndexManager.reserveSlabSize; i++)
+        for (int i = 0; i < CassandraUtils.maxDocsPerShard; i++)
         {
             Long id = idx.getId(indexName, "i" + i);
 
-            assertNotNull(id);
-
+            assertNotNull("i"+i, id);     
+            
             if (i % 10000 == 0)
             {
                 long endTime = System.currentTimeMillis();

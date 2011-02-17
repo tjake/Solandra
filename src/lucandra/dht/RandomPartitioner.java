@@ -21,14 +21,13 @@ package lucandra.dht;
 
 import static com.google.common.base.Charsets.UTF_8;
 
-import java.math.BigInteger;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
+import java.nio.charset.CharacterCodingException;
 
 import lucandra.CassandraUtils;
 
 import org.apache.cassandra.dht.BigIntegerToken;
-
+import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.log4j.Logger;
 
 /**
@@ -50,9 +49,9 @@ public class RandomPartitioner extends org.apache.cassandra.dht.RandomPartitione
     {
         // find the delimiter position
         int splitPoint = -1;
-        for (int i = fromdisk.position() + fromdisk.arrayOffset(); i < fromdisk.limit() + fromdisk.arrayOffset(); i++)
+        for (int i = fromdisk.position(); i < fromdisk.limit(); i++)
         {
-            if (fromdisk.array()[i] == DELIMITER_BYTE)
+            if (fromdisk.get(i) == DELIMITER_BYTE)
             {
                 splitPoint = i;
                 break;
@@ -60,10 +59,19 @@ public class RandomPartitioner extends org.apache.cassandra.dht.RandomPartitione
         }
         assert splitPoint != -1;
 
-        // and decode the token and key
-        String token = new String(fromdisk.array(), fromdisk.position() + fromdisk.arrayOffset(), splitPoint, UTF_8);
-        byte[] key = Arrays.copyOfRange(fromdisk.array(), splitPoint + 1, fromdisk.limit() + fromdisk.arrayOffset());
-        return new DecoratedKey<BigIntegerToken>(new BigIntegerToken(token), ByteBuffer.wrap(key));
+        
+        String token = null;
+        try
+        {
+            token = ByteBufferUtil.string(fromdisk, fromdisk.position(), splitPoint - fromdisk.position(), UTF_8);
+        }
+        catch (CharacterCodingException e)
+        {
+            throw new RuntimeException(e);
+        }
+        ByteBuffer key = fromdisk.duplicate();
+        key.position(splitPoint + 1);
+        return new DecoratedKey<BigIntegerToken>(new BigIntegerToken(token), key);
     }
 
     public BigIntegerToken getToken(ByteBuffer key)
@@ -74,15 +82,15 @@ public class RandomPartitioner extends org.apache.cassandra.dht.RandomPartitione
         {
             boolean found = true;
             int firstNonChar = -1;
-
+            
             //find our delimiter
-            for (int i = 0; i < length; i++)
+            for (int i = key.position(); i < key.limit(); i++)
             {
 
                 if (!Character.isDigit(key.get(i)))
                 {
                     if (firstNonChar < 0)
-                        firstNonChar = i;
+                        firstNonChar = i;                
                 }
                 else
                 {
@@ -98,7 +106,7 @@ public class RandomPartitioner extends org.apache.cassandra.dht.RandomPartitione
                 // the rest is delimiter
                 if ((i - firstNonChar) >= CassandraUtils.delimeterBytes.length
                         || key.get(i) != CassandraUtils.delimeterBytes[i - firstNonChar])
-                {
+                {                    
                     found = false;
                     break;
                 }
@@ -110,15 +118,26 @@ public class RandomPartitioner extends org.apache.cassandra.dht.RandomPartitione
                         break;
                 }
             }
+            
+            if(firstNonChar < 0)
+                found = false;
 
             if (found)
             {
-                String tokStr = new String(key.array(), key.position() + key.arrayOffset(), firstNonChar,
-                        CassandraUtils.UTF_8);
+                String tokStr = null;
+                try
+                {
+                    tokStr = ByteBufferUtil.string(key, key.position(), firstNonChar - key.position(), UTF_8);
+                }
+                catch (CharacterCodingException e)
+                {
+                    throw new RuntimeException(e);
+                }
                 //logger.info("Token hijacked:" + tokStr);
 
                 return new BigIntegerToken(tokStr);
             }
+            
         }
 
         return super.getToken(key);

@@ -19,6 +19,7 @@
  */
 package lucandra;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.UUID;
 
@@ -36,7 +37,7 @@ public class ReaderCache
     public final OpenBitSet docHits;
     public final Object fieldCacheKey;
     
-    public ReaderCache(String indexName)
+    public ReaderCache(String indexName) throws IOException
     {
         this.indexName = indexName;
         

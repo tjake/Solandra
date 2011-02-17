@@ -124,7 +124,7 @@ public class SolandraCoreContainer extends CoreContainer
     public static String readSchemaXML(String indexName) throws IOException
     {        
         
-        List<Row> rows = CassandraUtils.robustRead(ByteBuffer.wrap((indexName + "/schema").getBytes()), queryPath,
+        List<Row> rows = CassandraUtils.robustRead(ByteBuffer.wrap((indexName + "/schema").getBytes("UTF-8")), queryPath,
                 Arrays.asList(CassandraUtils.schemaKeyBytes), ConsistencyLevel.QUORUM);
 
         if (rows.isEmpty())
@@ -153,7 +153,7 @@ public class SolandraCoreContainer extends CoreContainer
             if (logger.isDebugEnabled())
                 logger.debug("loading indexInfo for: " + indexName);
 
-            List<Row> rows = CassandraUtils.robustRead(ByteBuffer.wrap((indexName + "/schema").getBytes()), queryPath,
+            List<Row> rows = CassandraUtils.robustRead(ByteBuffer.wrap((indexName + "/schema").getBytes("UTF-8")), queryPath,
                     Arrays.asList(CassandraUtils.schemaKeyBytes), ConsistencyLevel.QUORUM);
 
             if (rows.isEmpty())
@@ -167,7 +167,7 @@ public class SolandraCoreContainer extends CoreContainer
 
             ByteBuffer buf = rows.get(0).cf.getColumn(CassandraUtils.schemaKeyBytes).getSubColumn(
                     CassandraUtils.schemaKeyBytes).value();
-            InputStream stream = new ByteArrayInputStream(buf.array(), buf.position(), buf.remaining());
+            InputStream stream = new ByteArrayInputStream(ByteBufferUtil.getArray(buf));
 
             SolrConfig solrConfig = new SolrConfig(solrConfigFile);
 
@@ -183,9 +183,9 @@ public class SolandraCoreContainer extends CoreContainer
         return core;
     }
 
-    public static void writeSchema(String indexName, String schemaXml)
+    public static void writeSchema(String indexName, String schemaXml) throws IOException
     {
-        RowMutation rm = new RowMutation(CassandraUtils.keySpace, ByteBuffer.wrap((indexName + "/schema").getBytes()));
+        RowMutation rm = new RowMutation(CassandraUtils.keySpace, ByteBuffer.wrap((indexName + "/schema").getBytes("UTF-8")));
 
         try
         {
@@ -219,7 +219,7 @@ public class SolandraCoreContainer extends CoreContainer
         sb.append("<solandraCore name=\""+indexName+"\" numSubIndexes=\""+(numShards+1)+"\" documentsPerSubIndex=\""+CassandraUtils.maxDocsPerShard+"\">\n");
         for(int i=0; i<=numShards; i++)
         {
-            ByteBuffer subIndex = CassandraUtils.hashBytes((info.indexName + "~" + i).getBytes());
+            ByteBuffer subIndex = CassandraUtils.hashBytes((info.indexName + "~" + i).getBytes("UTF-8"));
     
             sb.append("  <subIndex name=\""+i+"\" token=\""+CassandraUtils.md5hash(subIndex)+"\">\n");
             

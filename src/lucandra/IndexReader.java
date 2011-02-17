@@ -123,7 +123,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader
         activeCache.remove();
     }
 
-    public ReaderCache getCache()
+    public ReaderCache getCache() throws IOException
     {
         String activeIndex = getIndexName();
 
@@ -217,8 +217,8 @@ public class IndexReader extends org.apache.lucene.index.IndexReader
         List<ByteBuffer> fieldNames = null;
 
         Map<Integer, ByteBuffer> keyMap = new HashMap<Integer, ByteBuffer>();
-        keyMap.put(docNum, CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, Integer
-                .toHexString(docNum).getBytes()));
+        keyMap.put(docNum, CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"), CassandraUtils.delimeterBytes, Integer
+                .toHexString(docNum).getBytes("UTF-8")));
 
         // Special field selector used to carry list of other docIds to cache in
         // Parallel for Solr Performance
@@ -239,12 +239,12 @@ public class IndexReader extends org.apache.lucene.index.IndexReader
                 if (documentCache.containsKey(otherDocNum))
                     continue;
 
-                byte[] docKey = Integer.toHexString(otherDocNum).getBytes();
+                byte[] docKey = Integer.toHexString(otherDocNum).getBytes("UTF-8");
 
                 if (docKey == null)
                     continue;
 
-                keyMap.put(otherDocNum, CassandraUtils.hashKeyBytes(indexName.getBytes(),
+                keyMap.put(otherDocNum, CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"),
                         CassandraUtils.delimeterBytes, docKey));
             }
         }
@@ -266,7 +266,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader
                 {
                     // get all columns ( except this skips meta info )
                     readCommands.add(new SliceFromReadCommand(CassandraUtils.keySpace, key, columnParent,
-                            FBUtilities.EMPTY_BYTE_BUFFER, CassandraUtils.finalTokenBytes, false, Integer.MAX_VALUE));
+                            ByteBufferUtil.EMPTY_BYTE_BUFFER, CassandraUtils.finalTokenBytes, false, Integer.MAX_VALUE));
                 }
                 else
                 {
@@ -275,7 +275,8 @@ public class IndexReader extends org.apache.lucene.index.IndexReader
                 }
             }
 
-            rows = StorageProxy.readProtocol(readCommands, CassandraUtils.consistency);
+            rows = CassandraUtils.robustRead(CassandraUtils.consistency, readCommands.toArray(new ReadCommand[]{}));
+
 
             // allow lookup by row
             Map<ByteBuffer, Row> rowMap = new HashMap<ByteBuffer, Row>(keyMap.size());
@@ -305,7 +306,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader
                         String fieldName = ByteBufferUtil.string(col.name());
 
                         // Incase __META__ slips through
-                        if (ByteBufferUtil.compare(col.name(), CassandraUtils.documentMetaField.getBytes()) == 0)
+                        if (ByteBufferUtil.compare(col.name(), CassandraUtils.documentMetaFieldBytes.array()) == 0)
                         {
                             logger.warn("Filtering out __META__ key");
                             continue;
@@ -313,26 +314,26 @@ public class IndexReader extends org.apache.lucene.index.IndexReader
 
                         byte[] value;
                         ByteBuffer v = col.value();
-                        int vlimit = v.limit() + v.arrayOffset();
+                        int vlimit = v.limit();
 
-                        if (v.array()[vlimit - 1] != Byte.MAX_VALUE && v.array()[vlimit - 1] != Byte.MIN_VALUE)
+                        if (v.get(vlimit - 1) != Byte.MAX_VALUE && v.get(vlimit - 1) != Byte.MIN_VALUE)
                         {
                             throw new CorruptIndexException("Lucandra field is not properly encoded: " + docNum + "("
                                     + fieldName + ")");
 
                         }
-                        else if (v.array()[vlimit - 1] == Byte.MAX_VALUE)
+                        else if (v.get(vlimit - 1) == Byte.MAX_VALUE)
                         { // Binary
                             value = new byte[vlimit - 1];
-                            System.arraycopy(v.array(), v.position() + v.arrayOffset(), value, 0, vlimit - 1);
+                            ByteBufferUtil.arrayCopy(v, v.position(), value, 0, vlimit - 1);
 
                             field = new Field(fieldName, value, Store.YES);
                             cacheDoc.add(field);
                         }
-                        else if (v.array()[vlimit - 1] == Byte.MIN_VALUE)
+                        else if (v.get(vlimit - 1) == Byte.MIN_VALUE)
                         { // String
                             value = new byte[vlimit - 1];
-                            System.arraycopy(v.array(), v.position() + v.arrayOffset(), value, 0, vlimit - 1);
+                            ByteBufferUtil.arrayCopy(v, v.position(), value, 0, vlimit - 1);
 
                             // Check for multi-fields
                             String fieldString = new String(value, "UTF-8");
@@ -385,7 +386,14 @@ public class IndexReader extends org.apache.lucene.index.IndexReader
     public Object getFieldCacheKey()
     {
 
-        return getCache().fieldCacheKey;
+        try
+        {
+            return getCache().fieldCacheKey;
+        }
+        catch (IOException e)
+        {
+           throw new RuntimeException(e);
+        }
 
     }
 
@@ -578,7 +586,14 @@ public class IndexReader extends org.apache.lucene.index.IndexReader
 
     public OpenBitSet getDocsHit()
     {
-        return getCache().docHits;
+        try
+        {
+            return getCache().docHits;
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException(e);
+        }
     }
 
 }

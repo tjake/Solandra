@@ -109,6 +109,8 @@ fi
 if [ "x$pidpath" != "x" ]; then
     solandra_parms="$solandra_parms -Dcassandra-pidfile=$pidpath"
 fi
+
+solandra_parms="$solandra_parms -Dlog4j.configuration=log4j.properties -Dlog4j.defaultInitOverride=true"
     
 # The solandra-foreground option will tell Cassandra not
 # to close stdout/stderr, but it's up to us not to background.
@@ -126,6 +128,6 @@ then
     sleep 1
     echo "Waiting 10 seconds for solandra to start before bootstrapping schema..."
     sleep 10
-    cd cassandra-tools && ./cassandra-cli --host=localhost < solandra.cml
+    cd cassandra-tools && ./cassandra-cli --host localhost < solandra.cml
     echo "Solandra ready"
 fi

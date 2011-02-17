@@ -32,6 +32,7 @@ import com.google.common.collect.MapMaker;
 import org.apache.cassandra.db.*;
 import org.apache.cassandra.service.StorageProxy;
 import org.apache.cassandra.thrift.*;
+import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.cassandra.utils.FBUtilities;
 import org.apache.cassandra.utils.Pair;
 import org.apache.log4j.Logger;
@@ -67,9 +68,9 @@ public class IndexWriter
 
         Map<ByteBuffer, RowMutation> workingMutations = new HashMap<ByteBuffer, RowMutation>();
 
-        byte[] indexNameBytes = indexName.getBytes();
+        byte[] indexNameBytes = indexName.getBytes("UTF-8");
         ByteBuffer indexTermsKey = CassandraUtils.hashKeyBytes(indexNameBytes, CassandraUtils.delimeterBytes, "terms"
-                .getBytes());
+                .getBytes("UTF-8"));
 
         List<Term> allIndexedTerms = new ArrayList<Term>();
         Map<String, byte[]> fieldCache = new HashMap<String, byte[]>(1024);
@@ -209,11 +210,11 @@ public class IndexWriter
                     // This is required since cassandra loads all columns
                     // in a key/column family into memory
                     ByteBuffer key = CassandraUtils.hashKeyBytes(indexNameBytes, CassandraUtils.delimeterBytes, term
-                            .getKey().field().getBytes(), CassandraUtils.delimeterBytes, term.getKey().text().getBytes(
+                            .getKey().field().getBytes("UTF-8"), CassandraUtils.delimeterBytes, term.getKey().text().getBytes(
                             "UTF-8"));
 
-                    ByteBuffer termkey = CassandraUtils.hashKeyBytes(indexName.getBytes(),
-                            CassandraUtils.delimeterBytes, term.getKey().field().getBytes());
+                    ByteBuffer termkey = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"),
+                            CassandraUtils.delimeterBytes, term.getKey().field().getBytes("UTF-8"));
 
                     // Mix in the norm for this field alongside each term
                     // more writes but faster on read side.
@@ -227,7 +228,7 @@ public class IndexWriter
 
                     // Store all terms under a row
                     CassandraUtils.addMutations(workingMutations, CassandraUtils.metaInfoColumnFamily, CassandraUtils
-                            .createColumnName(term.getKey()), indexTermsKey, FBUtilities.EMPTY_BYTE_BUFFER);
+                            .createColumnName(term.getKey()), indexTermsKey, ByteBufferUtil.EMPTY_BYTE_BUFFER);
                 }
             }
 
@@ -237,8 +238,8 @@ public class IndexWriter
                 Term term = new Term(field.name(), field.stringValue());
                 allIndexedTerms.add(term);
 
-                ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, field
-                        .name().getBytes(), CassandraUtils.delimeterBytes, field.stringValue().getBytes("UTF-8"));
+                ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"), CassandraUtils.delimeterBytes, field
+                        .name().getBytes("UTF-8"), CassandraUtils.delimeterBytes, field.stringValue().getBytes("UTF-8"));
 
                 Map<ByteBuffer, List<Number>> termMap = new ConcurrentSkipListMap<ByteBuffer, List<Number>>();
                 termMap.put(CassandraUtils.termFrequencyKeyBytes, CassandraUtils.emptyArray);
@@ -249,7 +250,7 @@ public class IndexWriter
 
                 // Store all terms under a row
                 CassandraUtils.addMutations(workingMutations, CassandraUtils.metaInfoColumnFamily, CassandraUtils
-                        .createColumnName(field), indexTermsKey, FBUtilities.EMPTY_BYTE_BUFFER);
+                        .createColumnName(field), indexTermsKey, ByteBufferUtil.EMPTY_BYTE_BUFFER);
             }
 
             // Stores each field as a column under this doc key
@@ -287,7 +288,7 @@ public class IndexWriter
             }
         }
 
-        ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, Integer
+        ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"), CassandraUtils.delimeterBytes, Integer
                 .toHexString(docNumber).getBytes("UTF-8"));
 
         // Store each field as a column under this docId
@@ -340,46 +341,30 @@ public class IndexWriter
     public void deleteDocuments(String indexName, Term term, boolean autoCommit) throws CorruptIndexException,
             IOException
     {
-        try
+        ColumnParent cp = new ColumnParent(CassandraUtils.termVecColumnFamily);
+
+        ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"), CassandraUtils.delimeterBytes, term
+                .field().getBytes("UTF-8"), CassandraUtils.delimeterBytes, term.text().getBytes("UTF-8"));
+
+        ReadCommand rc = new SliceFromReadCommand(CassandraUtils.keySpace, key, cp, ByteBufferUtil.EMPTY_BYTE_BUFFER,
+                ByteBufferUtil.EMPTY_BYTE_BUFFER, false, Integer.MAX_VALUE);
+
+        List<Row> rows = CassandraUtils.robustRead(CassandraUtils.consistency, rc);
+
+        // delete by documentId
+        for (Row row : rows)
         {
-
-            ColumnParent cp = new ColumnParent(CassandraUtils.termVecColumnFamily);
-
-            ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes(), CassandraUtils.delimeterBytes, term
-                    .field().getBytes(), CassandraUtils.delimeterBytes, term.text().getBytes("UTF-8"));
-
-            ReadCommand rc = new SliceFromReadCommand(CassandraUtils.keySpace, key, cp, FBUtilities.EMPTY_BYTE_BUFFER,
-                    FBUtilities.EMPTY_BYTE_BUFFER, false, Integer.MAX_VALUE);
-
-            List<Row> rows = StorageProxy.readProtocol(Arrays.asList(rc), CassandraUtils.consistency);
-
-            // delete by documentId
-            for (Row row : rows)
+            if (row.cf != null)
             {
-                if (row.cf != null)
+                Collection<IColumn> columns = row.cf.getSortedColumns();
+                
+                for (IColumn col : columns)
                 {
-                    Collection<IColumn> columns = row.cf.getSortedColumns();
-
-                    for (IColumn col : columns)
-                    {
-                        deleteLucandraDocument(indexName, CassandraUtils.readVInt(col.name()), autoCommit);
-                    }
-                }
+                    deleteLucandraDocument(indexName, CassandraUtils.readVInt(col.name()), autoCommit);
+                }                 
             }
-
         }
-        catch (TimeoutException e)
-        {
-            throw new RuntimeException(e);
-        }
-        catch (UnavailableException e)
-        {
-            throw new RuntimeException(e);
-        }
-        catch (InvalidRequestException e)
-        {
-            throw new RuntimeException(e);
-        }
+    
     }
 
     private void deleteLucandraDocument(String indexName, int docNumber, boolean autoCommit) throws IOException
@@ -387,8 +372,8 @@ public class IndexWriter
 
         Map<ByteBuffer, RowMutation> workingMutations = new HashMap<ByteBuffer, RowMutation>();
 
-        byte[] docId = Integer.toHexString(docNumber).getBytes();
-        byte[] indexNameBytes = indexName.getBytes();
+        byte[] docId = Integer.toHexString(docNumber).getBytes("UTF-8");
+        byte[] indexNameBytes = indexName.getBytes("UTF-8");
 
         ByteBuffer key = CassandraUtils.hashKeyBytes(indexNameBytes, CassandraUtils.delimeterBytes, docId);
 
@@ -422,7 +407,7 @@ public class IndexWriter
             try
             {
                 key = CassandraUtils.hashKeyBytes(indexNameBytes, CassandraUtils.delimeterBytes, term.field()
-                        .getBytes(), CassandraUtils.delimeterBytes, term.text().getBytes("UTF-8"));
+                        .getBytes("UTF-8"), CassandraUtils.delimeterBytes, term.text().getBytes("UTF-8"));
             }
             catch (UnsupportedEncodingException e)
             {
