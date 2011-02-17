@@ -26,6 +26,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import lucandra.cluster.CassandraIndexManager;
+
 import org.apache.cassandra.db.ExpiringColumn;
 import org.apache.cassandra.db.IColumn;
 import org.apache.cassandra.db.ReadCommand;
@@ -47,7 +49,7 @@ public class LucandraAllTermDocs implements TermDocs
     private String        indexName;
     private int           idx;      // tracks where we are in the doc buffer
     private int           fillSize; // tracks how much the buffer was filled with docs from cassandra
-    private int[]         docBuffer = new int[CassandraUtils.maxDocsPerShard+1]; // max number of docs we pull
+    private int[]         docBuffer = new int[CassandraIndexManager.maxDocsPerShard+1]; // max number of docs we pull
     private int           doc       = -1;
     private int           maxDoc;
 

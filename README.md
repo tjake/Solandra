@@ -27,29 +27,32 @@ The following will guide you through setting up a single node instance of Soland
 
 From the Solandra base directory:
   
-  - mkdir /tmp/cassandra-data
-  - ant
-  - cd solandra-app; ./start-solandra.sh -b #(-b adds the solandra specific cassandra schema)
+    mkdir /tmp/cassandra-data
+    ant
+    cd solandra-app; ./start-solandra.sh -b #(-b adds the solandra specific cassandra schema)
   
 Now that Solandra is running you can run the demo:
   
-  - cd ../../reuters-demo
-  - ./1-download_data.sh
-  - ./2-import_data.sh  
-  - While data is loading open the file ./website/index.html in your favorite browser 
+    cd ../../reuters-demo
+    ./1-download_data.sh
+    ./2-import_data.sh  
+    While data is loading open the file ./website/index.html in your favorite browser 
 
 
-####Embedding in cassandra distribution####
+####Embedding in an existing cassandra distribution####
 
 To use an existing cassandra distribution perform the following steps.
 
-1. Download the cassandra distribution
+1. Download your cassandra distribution
 2. Unzip it the directory of your choice
-3. Run the ant task to deploy the neccessary files
+3. Run the following solandra ant task to deploy the necessary files into the unzipped dir
    
-   ant -Dcassandra=[unzipped dir] cassandra-dist 
+    ant -Dcassandra=<unzipped dir> cassandra-dist 
 
 4. You can now start solr within cassandra by using the standard bin/cassandra command.  Cassandra now takes 2 optional properties -Dsolandra.context and -Dsolandra.port for the context path and the jetty port. 
+
+5. You will need to add the solandra specific schema
+   $CASSANDRA_HOME/bin/cassandra-cli --host localhost < resources/cassandra/solandra.cml
 
 ####Limitations####
 

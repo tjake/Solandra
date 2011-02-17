@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.UUID;
 
+import lucandra.cluster.CassandraIndexManager;
+
 import com.google.common.collect.MapMaker;
 
 import org.apache.lucene.document.Document;
@@ -44,7 +46,7 @@ public class ReaderCache
         documents           = new MapMaker().makeMap();
         termCache           = new TermCache(indexName);
         fieldNorms          = new MapMaker().makeMap();
-        docHits             = new OpenBitSet(CassandraUtils.maxDocsPerShard);
+        docHits             = new OpenBitSet(CassandraIndexManager.maxDocsPerShard);
         
         fieldCacheKey = UUID.randomUUID();
     }

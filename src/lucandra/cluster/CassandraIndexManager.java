@@ -55,13 +55,15 @@ public class CassandraIndexManager
 
     private int[]                                                    randomSeq;
 
-    public static final int                                          reserveSlabSize = (int) Math.pow(2, 10);
-    private final int                                                offsetSlots     = CassandraUtils.maxDocsPerShard
-                                                                                             / reserveSlabSize;
+    public static final int                                          maxDocsPerShard = Integer.valueOf(CassandraUtils.properties.getProperty("solandra.maximum.docs.per.shard","131072"));
+    public static final int                                          reserveSlabSize = Integer.valueOf(CassandraUtils.properties.getProperty("solandra.index.id.reserve.size", "16384"));
+    
+    private final int                                                offsetSlots     = maxDocsPerShard / reserveSlabSize;
     private final int                                                expirationTime  = 120;                                          // seconds
 
     private final ConcurrentMap<String, LinkedBlockingQueue<IdInfo>> indexReserves   = new MapMaker().makeMap();
     private final ConcurrentMap<String, ShardInfo>                   indexShards     = new MapMaker().makeMap();
+
 
     private static final Logger                                      logger          = Logger
                                                                                              .getLogger(CassandraIndexManager.class);
@@ -125,7 +127,7 @@ public class CassandraIndexManager
 
         randomSeq = new int[offsetSlots];
 
-        for (int i = 0, offset = 0; i < CassandraUtils.maxDocsPerShard; i++)
+        for (int i = 0, offset = 0; i < CassandraIndexManager.maxDocsPerShard; i++)
         {
             if (i % reserveSlabSize == 0)
             {
@@ -271,7 +273,7 @@ public class CassandraIndexManager
                 highest = e.getKey();
         }
 
-        return (CassandraUtils.maxDocsPerShard * highest);
+        return (CassandraIndexManager.maxDocsPerShard * highest);
     }
 
     public Long getId(String indexName, String key) throws IOException
@@ -330,7 +332,7 @@ public class CassandraIndexManager
         IdInfo idInfo = null;
 
         int attempts = 0;
-        while (attempts < reserveSlabSize)
+        while (attempts < CassandraUtils.retryAttempts)
         {
             shards = getShardInfo(indexName, false);
             nodes = pickAShard(shards);
@@ -364,7 +366,7 @@ public class CassandraIndexManager
         ByteBuffer keyKey = CassandraUtils.hashKeyBytes((indexName + "~" + key).getBytes("UTF-8"),
                 CassandraUtils.delimeterBytes, "keys".getBytes("UTF-8"));
         
-        Long val = new Long(idInfo.id + (idInfo.node.shard * CassandraUtils.maxDocsPerShard));
+        Long val = new Long(idInfo.id + (idInfo.node.shard * CassandraIndexManager.maxDocsPerShard));
         
         ByteBuffer idVal = ByteBuffer.wrap(val.toString().getBytes("UTF-8"));
 
@@ -536,7 +538,7 @@ public class CassandraIndexManager
                 // Read the columns back
                 IColumn supercol = null;
                 int attempts = 0;
-                while (supercol == null && attempts < 10)
+                while (supercol == null && attempts < CassandraUtils.retryAttempts)
                 {
                     try
                     {
@@ -713,8 +715,8 @@ public class CassandraIndexManager
 
     private int getRandomSequenceOffset(int offset)
     {
-        if (offset >= CassandraUtils.maxDocsPerShard)
-            throw new IllegalArgumentException("offset can not be > " + CassandraUtils.maxDocsPerShard);
+        if (offset >= CassandraIndexManager.maxDocsPerShard)
+            throw new IllegalArgumentException("offset can not be > " + CassandraIndexManager.maxDocsPerShard);
 
         for (int randomSeqOffset = 0; randomSeqOffset < randomSeq.length; randomSeqOffset++)
         {
@@ -922,11 +924,11 @@ public class CassandraIndexManager
 
     public static int getShardFromDocId(long docId)
     {
-        return (int) Math.floor(docId / CassandraUtils.maxDocsPerShard);
+        return (int) Math.floor(docId / CassandraIndexManager.maxDocsPerShard);
     }
 
     public static int getShardedDocId(long docId)
     {
-        return (int) docId % CassandraUtils.maxDocsPerShard;
+        return (int) docId % CassandraIndexManager.maxDocsPerShard;
     }
 }

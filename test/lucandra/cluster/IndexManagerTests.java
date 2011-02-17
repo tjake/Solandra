@@ -96,14 +96,14 @@ public class IndexManagerTests
 
         CassandraIndexManager idx = new CassandraIndexManager(4);
 
-        Set<Long> all = new HashSet<Long>(CassandraUtils.maxDocsPerShard);
+        Set<Long> all = new HashSet<Long>(CassandraIndexManager.maxDocsPerShard);
 
         long startTime = System.currentTimeMillis();
 
         Map<Integer, AtomicInteger> shardStats = new HashMap<Integer, AtomicInteger>();
         
         // Add
-        for (int i = 0; i < CassandraUtils.maxDocsPerShard; i++)
+        for (int i = 0; i < CassandraIndexManager.maxDocsPerShard; i++)
         {
             Long id = idx.getNextId(indexName, "i" + i);
             
@@ -131,7 +131,7 @@ public class IndexManagerTests
         assertEquals(3, CassandraIndexManager.getShardFromDocId(idx.getMaxId(indexName)));
 
         // Update
-        for (int i = 0; i < CassandraUtils.maxDocsPerShard; i++)
+        for (int i = 0; i < CassandraIndexManager.maxDocsPerShard; i++)
         {
             Long id = idx.getId(indexName, "i" + i);
 
@@ -167,9 +167,9 @@ public class IndexManagerTests
 
                     long startTime = System.currentTimeMillis();
 
-                    Set<Long> all = new HashSet<Long>(CassandraUtils.maxDocsPerShard);
+                    Set<Long> all = new HashSet<Long>(CassandraIndexManager.maxDocsPerShard);
 
-                    for (int i = 0; i < CassandraUtils.maxDocsPerShard / 10; i++)
+                    for (int i = 0; i < CassandraIndexManager.maxDocsPerShard / 10; i++)
                     {
                         Long id = null;
                         try
@@ -204,7 +204,7 @@ public class IndexManagerTests
         {
             List<Future<Set<Long>>> results = svc.invokeAll(callables);
 
-            Set<Long> all = new HashSet<Long>(CassandraUtils.maxDocsPerShard);
+            Set<Long> all = new HashSet<Long>(CassandraIndexManager.maxDocsPerShard);
 
             for (Future<Set<Long>> result : results)
             {

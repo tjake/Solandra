@@ -216,7 +216,7 @@ public class SolandraCoreContainer extends CoreContainer
         StringBuilder sb = new StringBuilder();
         
         sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n");
-        sb.append("<solandraCore name=\""+indexName+"\" numSubIndexes=\""+(numShards+1)+"\" documentsPerSubIndex=\""+CassandraUtils.maxDocsPerShard+"\">\n");
+        sb.append("<solandraCore name=\""+indexName+"\" numSubIndexes=\""+(numShards+1)+"\" documentsPerSubIndex=\""+CassandraIndexManager.maxDocsPerShard+"\">\n");
         for(int i=0; i<=numShards; i++)
         {
             ByteBuffer subIndex = CassandraUtils.hashBytes((info.indexName + "~" + i).getBytes("UTF-8"));
