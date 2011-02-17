@@ -58,10 +58,13 @@
               from executing or checking multiple conditions.
             -->
 		<condition property="ivy.found">
-			<isset property="noivy" />
+		  <isset property="noivy" />
 		</condition>
 		<condition property="offline">
-			<isset property="noivy" />
+		  <isset property="noivy" />
+		</condition>
+		<condition property="cassandra.found">
+		  <isset property="cassandra" />
 		</condition>
 	</target>
 
@@ -78,16 +81,16 @@
 
 	<target name="ivy-init-antlib" depends="ivy-download,ivy-probe-antlib" unless="ivy.found">
 		<typedef uri="antlib:org.apache.ivy.ant" onerror="fail" loaderRef="ivyLoader">
-			<classpath>
-				<pathelement location="${ivy.jar}" />
-			</classpath>
+		  <classpath>
+		    <pathelement location="${ivy.jar}" />
+		  </classpath>
 		</typedef>
 		<fail>
-			<condition>
-				<not>
-					<typefound uri="antlib:org.apache.ivy.ant" name="cleancache" />
-				</not>
-			</condition>
+		  <condition>
+		    <not>
+		      <typefound uri="antlib:org.apache.ivy.ant" name="cleancache" />
+		    </not>
+		  </condition>
             You need Apache Ivy 2.0 or later from http://ant.apache.org/
             It could not be loaded from ${ivy_repo_url}
           </fail>
@@ -97,68 +100,63 @@
 		<ivy:retrieve />
 	</target>
 
-
 	<path id="autoivy.classpath">
-		<fileset dir="${ivy.lib.dir}">
-			<include name="**/*.jar" />
-		</fileset>
+	  <fileset dir="${ivy.lib.dir}">
+	    <include name="**/*.jar" />
+	    <exclude name="**/*cassandra*.jar" if="cassandra.found"/>
+	  </fileset>
 	</path>
 
 	<!-- ===========================  -->
 
 	<path id="solandra.classpath">
-		<pathelement location="${build.classes}" />
-		<pathelement location="${build.test.classes}" />
-		<pathelement location="${resources}" />
-		<pathelement location="${resources}/solr" />
-		<fileset dir="${lib}">
-			<include name="**/*.jar" />
-		</fileset>
-		<fileset dir="${cassandra.base}/lib">
-			<include name="**/*.jar" />
-		</fileset>
-		<fileset dir="${cassandra.base}/build">
-			<include name="**/*.jar" />
-		</fileset>
-		<path refid="autoivy.classpath" />
+	  <pathelement location="${build.classes}" />
+	  <pathelement location="${build.test.classes}" />
+	  <pathelement location="${resources}" />
+	  <pathelement location="${resources}/solr" />
+	  <fileset dir="${lib}">
+	    <include name="**/*.jar" />
+	    <exclude name="**/*cassandra*.jar" if="cassandra.found"/>
+	  </fileset>
+	  <fileset dir="${cassandra}" erroronmissingdir="false">
+	    <include name="lib/*.jar"/>
+	    <include name="build/*.jar"/>
+	  </fileset>
+	  <path refid="autoivy.classpath" />
+	  <pathelement location="${cassandra}/build/classes"/>
 	</path>
 
 
 	<target name="compile" depends="init,resolve">
-
-		<!--<exec executable="/bin/sh" failonerror="true">
-        <arg line="-c &quot;ant -f ${cassandra.base}/build.xml jar&quot;"/>
-      </exec>-->
-
-		<javac debug="true" destdir="${build.classes}">
-			<src path="${src}" />
-			<classpath refid="solandra.classpath" />
-		</javac>
+	  <javac debug="true" destdir="${build.classes}">
+	    <src path="${src}" />
+	    <classpath refid="solandra.classpath" />
+	  </javac>
 	</target>
 
 	<target name="compile.tests" depends="compile">
-		<javac debug="true" destdir="${build.test.classes}">
-			<src path="${test}" />
-			<classpath refid="solandra.classpath" />
-		</javac>
+	  <javac debug="true" destdir="${build.test.classes}">
+	    <src path="${test}" />
+	    <classpath refid="solandra.classpath" />
+	  </javac>
 	</target>
 
 
 	<target name="test" depends="compile.tests">
-		<echo message="running tests" />
-		<mkdir dir="${build}/output" />
-		<junit fork="on" failureproperty="testfailed">
-			<classpath refid="solandra.classpath" />
-			<formatter type="xml" usefile="true" />
-			<formatter type="brief" usefile="false" />
-
-			<batchtest todir="${build}/output">
-				<fileset dir="${build.test.classes}" includes="**/SolandraTests.class" />
-			</batchtest>
-
-			<jvmarg value="-Xmx1G" />
-		</junit>
-		<fail if="testfailed" message="Some test(s) failed." />
+	  <echo message="running tests" />
+	  <mkdir dir="${build}/output" />
+	  <junit fork="on" failureproperty="testfailed">
+	    <classpath refid="solandra.classpath" />
+	    <formatter type="xml" usefile="true" />
+	    <formatter type="brief" usefile="false" />
+	    
+	    <batchtest todir="${build}/output">
+	      <fileset dir="${build.test.classes}" includes="**/SolandraTests.class" />
+	    </batchtest>
+	    
+	    <jvmarg value="-Xmx1G" />
+	  </junit>
+	  <fail if="testfailed" message="Some test(s) failed." />
 	</target>
 
 	<target name="solandra.jar" depends="compile,compile.tests">
@@ -233,6 +231,12 @@
 		<echo>cd ${app}; start-solandra.sh -b</echo>
 	</target>
 
+
+
+	<target name="set.cassandra">
+	  <fail unless="cassandra.found">path to cassandra not found use -Dcassandra=...</fail>
+	</target>
+
 	<!-- Construct the path to the cassandra distribution.  Taken from the command
 		line if set like this
 		
@@ -241,31 +245,33 @@
 		-->
 
 	<!-- Copy our required runtime file the cassandra extracted directory -->
-	<target name="cassandra-dist" depends="solandra.jar">
-		<!-- copy over all the new jar files -->
+	<target name="cassandra-dist" depends="init,set.cassandra,solandra.jar">
+	  
+	  <!-- copy over all the new jar files -->
+	
+	  <copy todir="${cassandra}/lib">
+	    <fileset dir="${lib}" includes="jetty*.jar,servlet*.jar,jsp*.jar, solr*.jar, lucene*.jar, commons*.jar" />
+	    <fileset dir="${basedir}" includes="solandra.jar" />
+	  </copy>
 
-		<copy todir="${cassandra}/lib">
-			<fileset dir="${lib}" includes="jetty*.jar,servlet*.jar,jsp*.jar, solr*.jar, lucene*.jar, commons*.jar" />
-			<fileset dir="${basedir}" includes="solandra.jar" />
-		</copy>
+	  <!-- copy the solr data -->
 
-		<!-- copy the solr data -->
+	  <copy todir="${cassandra}/conf" overwrite="false">
+	    <fileset dir="${resources}/solr" includes="solrconfig.xml,schema.xml" />
+	    <fileset dir="${resources}" includes="solandra.properties" />
+	  </copy>
 
-		<copy todir="${cassandra}/conf" overwrite="false">
-			<fileset dir="${resources}/solr" includes="solrconfig.xml,schema.xml" />
-		</copy>
+	  <replace file="${cassandra}/bin/cassandra">
+	    <replacetoken>
+	      <![CDATA[classname="org.apache.cassandra.thrift.CassandraDaemon"]]>
+	    </replacetoken>
+	    <replacevalue>
+	      <![CDATA[classname="solandra.CassandraStarter"]]>
+	    </replacevalue>
+	  </replace>
 
-		<replace file="${cassandra}/bin/cassandra">
-			<replacetoken>
-				<![CDATA[classname="org.apache.cassandra.thrift.CassandraDaemon"]]>
-			</replacetoken>
-			<replacevalue>
-				<![CDATA[classname="solandra.CassandraStarter"]]>
-			</replacevalue>
-		</replace>
-
-		<echo>Libraries successfully copied into cassandra distribution</echo>
-		<echo>Start the cassandra server with the standard bin/cassandra command</echo>
+	  <echo>Libraries successfully copied into cassandra distribution</echo>
+	  <echo>Start the cassandra server with the standard bin/cassandra command</echo>
 
 	</target>
 </project>
