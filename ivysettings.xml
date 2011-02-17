@@ -17,8 +17,12 @@
  ~ under the License.
  -->
 <ivysettings>
-  <settings defaultResolver="ibiblio"/>
+  <settings defaultResolver="chain"/>
   <resolvers>
+    <filesystem name="local.libraries">
+      <ivy pattern="${ivy.settings.dir}/local.repo/[organisation]/[module]/ivys/ivy-[revision].xml"/>
+      <artifact pattern="${ivy.settings.dir}/local.repo/[organisation]/[module]/[type]s/[artifact]-[revision].[ext]"/>
+    </filesystem>
     <chain name="chain" dual="true">
       <ibiblio name="java.net2" root="http://download.java.net/maven/2/" m2compatible="true"/>
       <ibiblio name="cloudera" root="https://repository.cloudera.com/content/repositories/releases/" m2compatible="true" />
