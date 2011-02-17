@@ -19,15 +19,8 @@
  */
 package solandra;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
+import java.io.*;
+import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -35,14 +28,10 @@ import org.apache.solr.common.params.CommonParams;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.core.SolandraCoreContainer;
+import org.apache.solr.core.SolandraCoreInfo;
 import org.apache.solr.core.SolrCore;
 import org.apache.solr.core.CoreContainer.Initializer;
-import org.apache.solr.handler.RequestHandlerBase;
-import org.apache.solr.request.BinaryQueryResponseWriter;
-import org.apache.solr.request.QueryResponseWriter;
-import org.apache.solr.request.SolrQueryRequest;
-import org.apache.solr.request.SolrQueryResponse;
-import org.apache.solr.request.SolrRequestHandler;
+import org.apache.solr.request.*;
 import org.apache.solr.servlet.SolrDispatchFilter;
 import org.apache.solr.servlet.cache.Method;
 
@@ -92,6 +81,7 @@ public class SolandraDispatchFilter extends SolrDispatchFilter
             {
                 try
                 {
+                    
                     String schema = SolandraCoreContainer.getCoreMetaInfo(indexName);
                     response.setContentType("text/xml");
                     PrintWriter out = resp.getWriter();

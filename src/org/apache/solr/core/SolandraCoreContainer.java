@@ -207,11 +207,14 @@ public class SolandraCoreContainer extends CoreContainer
 
     public static String getCoreMetaInfo(String indexName) throws IOException
     {
-        String schemaXML = readSchemaXML(indexName);
+
+        SolandraCoreInfo info = new SolandraCoreInfo(indexName);
+
+        
+        String schemaXML = readSchemaXML(info.coreName);
         long   maxId     = IndexManagerService.instance.getMaxId(indexName);
         int    numShards = CassandraIndexManager.getShardFromDocId(maxId);        
         
-        SolandraCoreInfo info = new SolandraCoreInfo(indexName);
         
         StringBuilder sb = new StringBuilder();
         
