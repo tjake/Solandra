@@ -223,55 +223,55 @@
       <copy todir="${app}/cassandra-tools/lib">
         <fileset dir="${lib}" includes="*.jar"/>
       </copy>
-          <chmod dir="${app}" perm="755" includes="start-solandra.sh"/>
-          <chmod dir="${app}/cassandra-tools" perm="755" includes="cassandra-cli,nodetool"/>
+      <chmod dir="${app}" perm="755" includes="start-solandra.sh"/>
+      <chmod dir="${app}/cassandra-tools" perm="755" includes="cassandra-cli,nodetool"/>
+      
+      <echo>Solandra successfully built</echo>
+      <echo>You can excute the following command to start the server.</echo>
+      <echo>cd ${app}; start-solandra.sh -b</echo>
+    </target>
+	
 
-		<echo>Solandra successfully built</echo>
-		<echo>You can excute the following command to start the server.</echo>
-		<echo>cd ${app}; start-solandra.sh -b</echo>
-	</target>
 
+    <target name="set.cassandra">
+      <fail unless="cassandra.found">path to cassandra not found use -Dcassandra=...</fail>
+    </target>
 
-
-	<target name="set.cassandra">
-	  <fail unless="cassandra.found">path to cassandra not found use -Dcassandra=...</fail>
-	</target>
-
-	<!-- Construct the path to the cassandra distribution.  Taken from the command
-		line if set like this
+    <!-- Construct the path to the cassandra distribution.  Taken from the command
+	 line if set like this
 		
 		ant cassandra-dist -Dcassandra=apache-cassandra-0.7.1
 		
-		-->
+    -->
 
-	<!-- Copy our required runtime file the cassandra extracted directory -->
-	<target name="cassandra-dist" depends="init,set.cassandra,solandra.jar">
+    <!-- Copy our required runtime file the cassandra extracted directory -->
+    <target name="cassandra-dist" depends="init,set.cassandra,solandra.jar">
 	  
-	  <!-- copy over all the new jar files -->
+      <!-- copy over all the new jar files -->
 	
-	  <copy todir="${cassandra}/lib">
-	    <fileset dir="${lib}" includes="jetty*.jar,servlet*.jar,jsp*.jar, solr*.jar, lucene*.jar, commons*.jar" />
-	    <fileset dir="${basedir}" includes="solandra.jar" />
-	  </copy>
+      <copy todir="${cassandra}/lib">
+	<fileset dir="${lib}" includes="jetty*.jar,servlet*.jar,jsp*.jar, solr*.jar, lucene*.jar, commons*.jar" />
+	<fileset dir="${basedir}" includes="solandra.jar" />
+      </copy>
 
-	  <!-- copy the solr data -->
+      <!-- copy the solr data -->
 
-	  <copy todir="${cassandra}/conf" overwrite="false">
-	    <fileset dir="${resources}/solr" includes="solrconfig.xml,schema.xml" />
-	    <fileset dir="${resources}" includes="solandra.properties" />
-	  </copy>
+      <copy todir="${cassandra}/conf" overwrite="false">
+	<fileset dir="${resources}/solr" includes="solrconfig.xml,schema.xml,*.txt" />
+	<fileset dir="${resources}" includes="solandra.properties" />
+      </copy>
 
-	  <replace file="${cassandra}/bin/cassandra">
-	    <replacetoken>
-	      <![CDATA[classname="org.apache.cassandra.thrift.CassandraDaemon"]]>
-	    </replacetoken>
-	    <replacevalue>
-	      <![CDATA[classname="solandra.CassandraStarter"]]>
-	    </replacevalue>
-	  </replace>
+      <copy overwrite="true" file="${cassandra}/bin/cassandra" tofile="${cassandra}/bin/solandra"/>
+      
+      <replace file="${cassandra}/bin/solandra" failOnNoReplacements="true">
+	<replacetoken>classname="org.apache.cassandra.thrift.CassandraDaemon"</replacetoken>
+	<replacevalue>classname="solandra.CassandraStarter"</replacevalue>
+      </replace>
+      
+      <chmod dir="${cassandra}/bin" perm="755" includes="solandra"/>      
 
-	  <echo>Libraries successfully copied into cassandra distribution</echo>
-	  <echo>Start the cassandra server with the standard bin/cassandra command</echo>
-
-	</target>
+      <echo>Libraries successfully copied into cassandra distribution</echo>
+      <echo>Start the cassandra server with ${cassandra}/bin/solandra command</echo>
+      
+    </target>
 </project>

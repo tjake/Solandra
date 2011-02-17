@@ -47,12 +47,12 @@ To use an existing cassandra distribution perform the following steps.
 2. Unzip it the directory of your choice
 3. Run the following solandra ant task to deploy the necessary files into the unzipped dir
    
-    ant -Dcassandra=<unzipped dir> cassandra-dist 
+    ant -Dcassandra={unzipped dir} cassandra-dist 
 
-4. You can now start solr within cassandra by using the standard bin/cassandra command.  Cassandra now takes 2 optional properties -Dsolandra.context and -Dsolandra.port for the context path and the jetty port. 
+4. You can now start solr within cassandra by using $CASSANDRA_HOME/bin/solandra command.  Cassandra now takes 2 optional properties -Dsolandra.context and -Dsolandra.port for the context path and the jetty port. 
 
 5. You will need to add the solandra specific schema
-   $CASSANDRA_HOME/bin/cassandra-cli --host localhost < resources/cassandra/solandra.cml
+    $CASSANDRA_HOME/bin/cassandra-cli --host localhost < resources/cassandra/solandra.cml
 
 ####Limitations####
 

@@ -35,12 +35,7 @@ import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.FilterHolder;
 
-/**
- * Run solr using jetty
- * 
- * @version $Id: JettySolrRunner.java 820101 2009-09-29 21:53:48Z yonik $
- * @since solr 1.3
- */
+
 public class JettySolandraRunner 
 {
   Server server;
