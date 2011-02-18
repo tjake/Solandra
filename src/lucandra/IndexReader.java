@@ -316,15 +316,15 @@ public class IndexReader extends org.apache.lucene.index.IndexReader
 
                         byte[] value;
                         ByteBuffer v = col.value();
-                        int vlimit = v.limit();
+                        int vlimit = v.limit() - v.position();
 
-                        if (v.get(vlimit - 1) != Byte.MAX_VALUE && v.get(vlimit - 1) != Byte.MIN_VALUE)
+                        if (v.get(v.limit() - 1) != Byte.MAX_VALUE && v.get(v.limit() - 1) != Byte.MIN_VALUE)
                         {
                             throw new CorruptIndexException("Lucandra field is not properly encoded: " + docNum + "("
                                     + fieldName + ")");
 
                         }
-                        else if (v.get(vlimit - 1) == Byte.MAX_VALUE)
+                        else if (v.get(v.limit() - 1) == Byte.MAX_VALUE)
                         { // Binary
                             value = new byte[vlimit - 1];
                             ByteBufferUtil.arrayCopy(v, v.position(), value, 0, vlimit - 1);
@@ -332,7 +332,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader
                             field = new Field(fieldName, value, Store.YES);
                             cacheDoc.add(field);
                         }
-                        else if (v.get(vlimit - 1) == Byte.MIN_VALUE)
+                        else if (v.get(v.limit() - 1) == Byte.MIN_VALUE)
                         { // String
                             value = new byte[vlimit - 1];
                             ByteBufferUtil.arrayCopy(v, v.position(), value, 0, vlimit - 1);
