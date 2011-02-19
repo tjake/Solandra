@@ -63,7 +63,8 @@ public class CassandraUtils
     }
     
     
-    public static final String               keySpace               = properties.getProperty("lucandra.keyspace", "L");
+    public static final String               keySpace               = properties.getProperty("solandra.keyspace", "L");
+
     public static final String               termVecColumnFamily    = "TI";
     public static final String               docColumnFamily        = "Docs";
     public static final String               metaInfoColumnFamily   = "TL";
@@ -92,8 +93,6 @@ public class CassandraUtils
     public static final String               finalToken             = new String("\ufffe\ufffe");
     public static final ByteBuffer           finalTokenBytes        = ByteBufferUtil.bytes(finalToken);
 
-    public static final String               documentIdField        = System.getProperty("lucandra.id.field", delimeter
-                                                                            + "KEY" + delimeter);
     public static final String               documentMetaField      = delimeter + "META" + delimeter;
     public static final ByteBuffer           documentMetaFieldBytes = ByteBufferUtil.bytes(documentMetaField);
 

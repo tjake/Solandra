@@ -40,6 +40,7 @@ import org.apache.cassandra.dht.Token;
 import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.utils.ByteBufferUtil;
+import org.apache.cassandra.utils.FBUtilities;
 import org.apache.log4j.Logger;
 import org.apache.lucene.document.FieldSelector;
 import org.apache.solr.common.params.ShardParams;
@@ -190,14 +191,14 @@ public class SolandraComponent extends SearchComponent
             for (int i = 0; i <= numShards; i++)
             {
                 ByteBuffer subIndex = CassandraUtils.hashBytes((indexName + "~" + i).getBytes("UTF-8"));
-                Token<?> t = StorageService.getPartitioner().getToken(subIndex);
-                List<InetAddress> addrs = Table.open(CassandraUtils.keySpace).getReplicationStrategy().getNaturalEndpoints(t);
+                
+                List<InetAddress> endpoints = StorageService.instance.getLiveNaturalEndpoints(CassandraUtils.keySpace, subIndex);
+                DatabaseDescriptor.getEndpointSnitch().sortByProximity(FBUtilities.getLocalAddress(), endpoints);
 
-                // pick a replica at random
-                if (addrs.isEmpty())
+                if (endpoints.isEmpty())
                     throw new IOException("can't locate index");
 
-                InetAddress addr = addrs.get(random.nextInt(addrs.size()));
+                InetAddress addr = endpoints.get(0);
                 String shard = addr.getHostAddress() + ":8983/solandra/" + indexName + "~" + i;
 
                 if(logger.isDebugEnabled())

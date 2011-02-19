@@ -52,9 +52,7 @@ public class VIntType extends AbstractType {
             return -1;
         
         if(o2.remaining() < o1.remaining())
-            return 1;
-        
-        
+            return 1;       
         
         int i1 = CassandraUtils.readVInt(o1);
         int i2 = CassandraUtils.readVInt(o2);
