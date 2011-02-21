@@ -54,6 +54,7 @@ import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.QueryParsing;
 import org.apache.solr.update.*;
 
+
 public class SolandraIndexWriter extends UpdateHandler
 {
     // To manage cached reads

@@ -45,13 +45,33 @@ public class CassandraUtils
 {
 
     public static final Properties           properties;
+    public static final String               keySpace;
+    public static  int                       retryAttempts;
+    public static  int                       retryAttemptSleep; 
+    
+    //how often to check for cache invalidation
+    public static int                        cacheInvalidationInterval;
+  
+    public static final ConsistencyLevel     consistency;
+    
+    
     static
     {      
         try
         {
             
-            properties = new Properties();
-            properties.load(CassandraUtils.class.getClassLoader().getResourceAsStream("solandra.properties"));
+			properties = new Properties();
+			properties.load(CassandraUtils.class.getClassLoader().getResourceAsStream("solandra.properties"));
+
+			keySpace = properties.getProperty("solandra.keyspace", "L");
+			retryAttempts = Integer.valueOf(properties.getProperty("cassandra.retries", "1024"));
+			retryAttemptSleep = Integer.valueOf(properties.getProperty("cassandra.retries.sleep", "100"));
+
+			// how often to check for cache invalidation
+			cacheInvalidationInterval = Integer.valueOf(properties.getProperty("solandra.cache.invalidation.check.interval", "1000"));
+
+			consistency = ConsistencyLevel.valueOf(properties.getProperty("solandra.consistency", ConsistencyLevel.ONE.name()));
+            
         
         } 
         catch (FileNotFoundException e)
@@ -65,7 +85,8 @@ public class CassandraUtils
     }
     
     
-    public static final String               keySpace               = properties.getProperty("solandra.keyspace", "L");
+     
+
     public static final String               termVecColumnFamily    = "TI";
     public static final String               docColumnFamily        = "Docs";
     public static final String               metaInfoColumnFamily   = "TL";
@@ -100,14 +121,7 @@ public class CassandraUtils
     public static final boolean              indexHashingEnabled    = Boolean.valueOf(System.getProperty(
             "index.hashing", "true"));
     
-    public static  int                       retryAttempts             = Integer.valueOf(properties.getProperty("cassandra.retries", "1024"));
-    public static  int                       retryAttemptSleep         = Integer.valueOf(properties.getProperty("cassandra.retries.sleep", "100")); 
-    
-    //how often to check for cache invalidation
-    public static int                        cacheInvalidationInterval = Integer.valueOf(properties.getProperty("solandra.cache.invalidation.check.interval", "1000"));
-  
-    public static final ConsistencyLevel     consistency               = ConsistencyLevel.valueOf(properties.getProperty("solandra.consistency", ConsistencyLevel.ONE.name()));
-    
+
     
     public static final QueryPath            metaColumnPath            = new QueryPath(CassandraUtils.docColumnFamily);
 
