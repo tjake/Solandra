@@ -40,7 +40,7 @@ fi
 
 
 # Parse any command line options.
-args=`getopt fbhdp: "$@"`
+args=`getopt fbhdp:bD: "$@"`
 eval set -- "$args"
 
 while true; do
@@ -69,6 +69,10 @@ while true; do
         -d)
             debug="yes"
             shift
+        ;;
+	-D)
+            properties="$properties -D$2"
+            shift 2
         ;;
         --)
             shift
@@ -101,7 +105,7 @@ if [ "x$pidpath" != "x" ]; then
     solandra_parms="$solandra_parms -Dcassandra-pidfile=$pidpath"
 fi
 
-solandra_parms="$solandra_parms -Dlog4j.configuration=log4j.properties -Dlog4j.defaultInitOverride=true"
+solandra_parms="$solandra_parms -Dlog4j.configuration=log4j.properties -Dlog4j.defaultInitOverride=true $properties"
     
 # The solandra-foreground option will tell Cassandra not
 # to close stdout/stderr, but it's up to us not to background.

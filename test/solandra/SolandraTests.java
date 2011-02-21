@@ -87,7 +87,7 @@ public class SolandraTests
         try
         {
             // start cassandra
-            CassandraUtils.startup();
+            CassandraUtils.startupServer();
 
             // Start Jetty Solandra Instance
             eservice = Executors.newSingleThreadExecutor();

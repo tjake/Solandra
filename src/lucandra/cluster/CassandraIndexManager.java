@@ -62,11 +62,9 @@ public class CassandraIndexManager
     private final int                                                expirationTime  = 120;                                          // seconds
 
     private final ConcurrentMap<String, LinkedBlockingQueue<IdInfo>> indexReserves   = new MapMaker().makeMap();
-    private final ConcurrentMap<String, ShardInfo>                   indexShards     = new MapMaker().makeMap();
+    private final ConcurrentMap<String, ShardInfo>                   indexShards     = new MapMaker().makeMap();                             
 
-
-    private static final Logger                                      logger          = Logger
-                                                                                             .getLogger(CassandraIndexManager.class);
+    private static final Logger                                      logger          = Logger.getLogger(CassandraIndexManager.class);
 
     private class ShardInfo
     {
@@ -318,6 +316,9 @@ public class CassandraIndexManager
 
     public String getToken()
     {
+        if(StorageService.instance.isClientMode())
+            return CassandraUtils.fakeToken;
+        
         return StorageService.instance.getTokenMetadata().getToken(FBUtilities.getLocalAddress()).toString();
     }
 

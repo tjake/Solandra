@@ -34,7 +34,11 @@ public class CassandraStarter {
 		int port = Integer.parseInt(System.getProperty("solandra.port", "8983"));
 		
 		try {
-			CassandraUtils.startup();
+		    
+		    if(System.getProperty("solandra.clientmode", "false").equalsIgnoreCase("true"))
+		        CassandraUtils.startupClient();
+		    else
+		        CassandraUtils.startupServer();
 
 			JettySolandraRunner jetty = new JettySolandraRunner(context, port);
 			jetty.start(false);

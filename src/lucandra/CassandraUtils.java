@@ -27,9 +27,11 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.cassandra.config.ConfigurationException;
 import org.apache.cassandra.db.*;
 import org.apache.cassandra.db.filter.QueryPath;
 import org.apache.cassandra.service.StorageProxy;
+import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.UnavailableException;
@@ -115,6 +117,8 @@ public class CassandraUtils
 
     private static boolean                   cassandraStarted       = false;
 
+    public  static String                    fakeToken              = String.valueOf(System.nanoTime());
+    
     
     public static synchronized void setStartup(){
     	if(cassandraStarted){
@@ -124,15 +128,40 @@ public class CassandraUtils
     	cassandraStarted = true;
     }
     
-    // Start Cassandra up!!!
-    public static synchronized void startup()
+    
+    public static synchronized void startupClient()
     {
-
         if (cassandraStarted)
             return;
 
         cassandraStarted = true;
 
+       
+        try
+        {
+            StorageService.instance.initClient();
+            logger.info("Started solandra in client mode");
+        }
+        catch (IOException e2)
+        {
+            e2.printStackTrace();
+            System.exit(2);
+        }
+        catch (ConfigurationException e2)
+        {
+            e2.printStackTrace();
+            System.exit(2);
+        }
+        
+        return;
+        
+    }
+    
+    // Start Cassandra up!!!
+    public static synchronized void startupServer()
+    {
+
+       
         
         System.setProperty("cassandra-foreground", "1");
         

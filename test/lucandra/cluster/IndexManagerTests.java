@@ -87,7 +87,7 @@ public class IndexManagerTests
     public static void setUpBeforeClass()
     {
         // start cassandra
-        CassandraUtils.startup();
+        CassandraUtils.startupServer();
     }
 
     @Test

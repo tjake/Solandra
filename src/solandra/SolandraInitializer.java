@@ -41,8 +41,11 @@ public class SolandraInitializer extends Initializer {
         CoreContainer cores = new SolandraCoreContainer(solrConfigFilename == null ? SolrConfig.DEFAULT_CONF_FILE : solrConfigFilename);
              
         //Startup cassandra
-        CassandraUtils.startup();  
-        
+        if(System.getProperty("solandra.clientmode", "false").equalsIgnoreCase("true"))
+            CassandraUtils.startupClient();
+        else
+            CassandraUtils.startupServer();
+
         return cores;
     }
 }

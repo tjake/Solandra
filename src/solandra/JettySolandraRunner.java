@@ -155,7 +155,7 @@ public class JettySolandraRunner
   public static void main( String[] args )
   {
     try {
-      CassandraUtils.startup();
+      CassandraUtils.startupServer();
         
       JettySolandraRunner jetty = new JettySolandraRunner( "/solandra", 8983 );
       jetty.start();

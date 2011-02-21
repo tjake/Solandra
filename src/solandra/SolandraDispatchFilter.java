@@ -45,19 +45,18 @@ public class SolandraDispatchFilter extends SolrDispatchFilter
             ServletException
     {
 
-        
         HttpServletRequest req = (HttpServletRequest) request;
         HttpServletResponse resp = (HttpServletResponse) response;
 
         String indexName = "";
         String path = req.getServletPath();
-        
+
         if (req.getPathInfo() != null)
         {
             // this lets you handle /update/commit when /update is a servlet
             path += req.getPathInfo();
         }
-        
+
         if (path.startsWith(schemaPrefix))
         {
             path = path.substring(schemaPrefix.length());
@@ -81,7 +80,7 @@ public class SolandraDispatchFilter extends SolrDispatchFilter
             {
                 try
                 {
-                    
+
                     String schema = SolandraCoreContainer.getCoreMetaInfo(indexName);
                     response.setContentType("text/xml");
                     PrintWriter out = resp.getWriter();
@@ -122,11 +121,9 @@ public class SolandraDispatchFilter extends SolrDispatchFilter
         }
 
         SolandraCoreContainer.activeRequest.set(req);
-        
+
         super.doFilter(request, response, chain);
     }
-
-   
 
     @Override
     protected Initializer createInitializer()
@@ -154,7 +151,7 @@ public class SolandraDispatchFilter extends SolrDispatchFilter
 
         int idx = path.indexOf("/", 1);
         if (idx > 1)
-        {         
+        {
             // try to get the corename as a request parameter first
             sreq.getContext().put("solandra-index", path.substring(1, idx));
         }
@@ -187,7 +184,7 @@ public class SolandraDispatchFilter extends SolrDispatchFilter
             respWriter = SolrCore.DEFAULT_RESPONSE_WRITERS.get("standard");
         writeResponse(solrResp, response, respWriter, solrReq, Method.getMethod(req.getMethod()));
     }
-    
+
     private void writeResponse(SolrQueryResponse solrRsp, ServletResponse response, QueryResponseWriter responseWriter,
             SolrQueryRequest solrReq, Method reqMethod) throws IOException
     {
