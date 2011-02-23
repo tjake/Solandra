@@ -261,11 +261,31 @@ public class CassandraUtils
             return;
         }
         
+              
         if(DatabaseDescriptor.getNonSystemTables().contains(keySpace))
         {
             logger.info("Found Solandra specific schema");
             return;
         }
+     
+        int sleep = new Random().nextInt(60000);
+        logger.info("Sleeping "+sleep+"ms to stagger solandra schema creation");
+        try
+        {
+            Thread.sleep(sleep);
+        }
+        catch (InterruptedException e1)
+        {
+            e1.printStackTrace();
+            System.exit(2);
+        }
+        
+        if(DatabaseDescriptor.getNonSystemTables().contains(keySpace))
+        {
+            logger.info("Found Solandra specific schema");
+            return;
+        }
+     
         
         List<CfDef> cfs = new ArrayList<CfDef>();
             
@@ -320,7 +340,7 @@ public class CassandraUtils
         CassandraServer cs = new CassandraServer();
             
         try
-        {
+        {           
             cs.system_add_keyspace(solandraKS);
         }
         catch (InvalidRequestException e)
