@@ -19,7 +19,10 @@
  */
 package lucandra;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.Serializable;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
@@ -28,6 +31,8 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import lucandra.cluster.CassandraIndexManager;
+import lucandra.serializers.thrift.DocumentMetadata;
+import lucandra.serializers.thrift.ThriftTerm;
 
 import com.google.common.collect.MapMaker;
 
@@ -48,6 +53,11 @@ import org.apache.lucene.document.Fieldable;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.*;
+import org.apache.thrift.TDeserializer;
+import org.apache.thrift.TException;
+import org.apache.thrift.TSerializer;
+import org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.thrift.protocol.TBinaryProtocol.Factory;
 
 public class IndexWriter
 {
@@ -301,8 +311,18 @@ public class IndexWriter
         }
 
         // Finally, Store meta-data so we can delete this document
-        CassandraUtils.addMutations(workingMutations, CassandraUtils.docColumnFamily,
-                CassandraUtils.documentMetaFieldBytes, key, CassandraUtils.toBytes(allIndexedTerms));
+        //CassandraUtils.addMutations(workingMutations, CassandraUtils.docColumnFamily,
+        //        CassandraUtils.documentMetaFieldBytes, key, CassandraUtils.toBytes(allIndexedTerms));
+        
+        try {
+			CassandraUtils.addMutations(workingMutations, 
+					CassandraUtils.docColumnFamily,
+					CassandraUtils.documentMetaFieldBytes, 
+					key, 
+					toBytesUsingThrift(allIndexedTerms));
+		} catch (TException e) {
+			throw new RuntimeException(e);
+		}
 
         if (rms != null)
         {
@@ -392,16 +412,17 @@ public class IndexWriter
         List<Term> terms;
         try
         {
-            terms = (List<Term>) CassandraUtils.fromBytes(metaCol.value());
+            //terms = (List<Term>) CassandraUtils.fromBytes(metaCol.value());
+        	terms = fromBytesUsingThrift(metaCol.value());
         }
-        catch (IOException e)
+        catch (TException e)
         {
             throw new RuntimeException(e);
         }
-        catch (ClassNotFoundException e)
+        /* catch (ClassNotFoundException e)
         {
             throw new RuntimeException(e);
-        }
+        }*/
 
         for (Term term : terms)
         {
@@ -535,5 +556,45 @@ public class IndexWriter
         }
 
         return mutationQ;
+    }
+    
+    /** Write all terms to bytes using thrift serialization */
+    private ByteBuffer toBytesUsingThrift(List<Term> allTerms) throws TException
+    {
+    	if (allTerms.size() > 0) {
+	    	Factory tproc = new TBinaryProtocol.Factory();
+	    	List<ThriftTerm> terms = new ArrayList<ThriftTerm>(allTerms.size());
+	    	for (Term thisTerm : allTerms) {
+	    		terms.add(new ThriftTerm(thisTerm.field(), thisTerm.text()));
+	    	}
+	    	
+	    	DocumentMetadata data = new DocumentMetadata(terms);
+	
+			return ByteBuffer.wrap(new TSerializer(tproc).serialize(data));
+    	} else {
+    		return null;
+    	}
+    }
+    
+    /** Read the object from bytes string. */
+    private List<Term> fromBytesUsingThrift(ByteBuffer data) throws TException
+    {
+
+    	Factory tproc = new TBinaryProtocol.Factory();
+    	byte[] bytes = data.array();
+    	DocumentMetadata docMeta = new DocumentMetadata();
+    	
+    	new TDeserializer(tproc).deserialize(docMeta, bytes);
+    	
+    	List<ThriftTerm> terms  = docMeta.getTerms();
+    	if (terms.size() > 0) {
+	    	List<Term> result = new ArrayList<Term>(terms.size());
+	    	for (ThriftTerm thisTerm : terms) {
+	    		result.add(new Term(thisTerm.getField(), thisTerm.getText()));
+	    	}
+	    	return result;
+    	} else {
+    		return null;
+    	}
     }
 }
