@@ -24,8 +24,6 @@ import java.io.IOException;
 import lucandra.IndexReader;
 
 import org.apache.lucene.store.Directory;
-import org.apache.solr.common.SolrException;
-import org.apache.solr.common.SolrException.ErrorCode;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.core.IndexReaderFactory;
 

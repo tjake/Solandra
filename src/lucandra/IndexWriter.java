@@ -19,15 +19,14 @@
  */
 package lucandra;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.Serializable;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import lucandra.cluster.CassandraIndexManager;
@@ -37,10 +36,8 @@ import lucandra.serializers.thrift.ThriftTerm;
 import com.google.common.collect.MapMaker;
 
 import org.apache.cassandra.db.*;
-import org.apache.cassandra.service.StorageProxy;
-import org.apache.cassandra.thrift.*;
+import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.utils.ByteBufferUtil;
-import org.apache.cassandra.utils.FBUtilities;
 import org.apache.cassandra.utils.Pair;
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.Analyzer;
@@ -57,16 +54,21 @@ import org.apache.thrift.TDeserializer;
 import org.apache.thrift.TException;
 import org.apache.thrift.TSerializer;
 import org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.thrift.protocol.TProtocol;
+import org.apache.thrift.protocol.TProtocolFactory;
 import org.apache.thrift.protocol.TBinaryProtocol.Factory;
+import org.apache.thrift.transport.TMemoryInputTransport;
+import org.apache.thrift.transport.TTransport;
 
 public class IndexWriter
 {
-    private static final ConcurrentMap<String, Pair<AtomicInteger, LinkedBlockingQueue<RowMutation>>> mutationList = new MapMaker()
-                                                                                                                           .makeMap();
-    private Similarity                                                                                similarity   = Similarity
-                                                                                                                           .getDefault();
-    private static final Logger                                                                       logger       = Logger
-                                                                                                                           .getLogger(IndexWriter.class);
+    private static final ConcurrentMap<String, Pair<AtomicInteger, LinkedBlockingQueue<RowMutation>>> mutationList    = new MapMaker()
+                                                                                                                              .makeMap();
+    private Similarity                                                                                similarity      = Similarity
+                                                                                                                              .getDefault();
+    private static final Logger                                                                       logger          = Logger
+                                                                                                                              .getLogger(IndexWriter.class);
+    private static TProtocolFactory                                                                   protocolFactory = new TBinaryProtocol.Factory();
 
     public IndexWriter()
     {
@@ -84,7 +86,7 @@ public class IndexWriter
         ByteBuffer indexTermsKey = CassandraUtils.hashKeyBytes(indexNameBytes, CassandraUtils.delimeterBytes, "terms"
                 .getBytes("UTF-8"));
 
-        List<Term> allIndexedTerms = new ArrayList<Term>();
+        List<ThriftTerm> allIndexedTerms = new ArrayList<ThriftTerm>();
         Map<String, byte[]> fieldCache = new HashMap<String, byte[]>(1024);
 
         // By default we don't handle indexSharding
@@ -146,7 +148,7 @@ public class IndexWriter
                     tokensInField++;
                     Term term = new Term(field.name(), termAttribute.term());
 
-                    allIndexedTerms.add(term);
+                    allIndexedTerms.add(new ThriftTerm(field.name(), termAttribute.term()));
 
                     // fetch all collected information for this term
                     Map<ByteBuffer, List<Number>> termInfo = allTermInformation.get(term);
@@ -222,11 +224,8 @@ public class IndexWriter
                     // This is required since cassandra loads all columns
                     // in a key/column family into memory
                     ByteBuffer key = CassandraUtils.hashKeyBytes(indexNameBytes, CassandraUtils.delimeterBytes, term
-                            .getKey().field().getBytes("UTF-8"), CassandraUtils.delimeterBytes, term.getKey().text().getBytes(
-                            "UTF-8"));
-
-                    ByteBuffer termkey = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"),
-                            CassandraUtils.delimeterBytes, term.getKey().field().getBytes("UTF-8"));
+                            .getKey().field().getBytes("UTF-8"), CassandraUtils.delimeterBytes, term.getKey().text()
+                            .getBytes("UTF-8"));
 
                     // Mix in the norm for this field alongside each term
                     // more writes but faster on read side.
@@ -247,11 +246,11 @@ public class IndexWriter
             // Untokenized fields go in without a termPosition
             if (field.isIndexed() && !field.isTokenized())
             {
-                Term term = new Term(field.name(), field.stringValue());
-                allIndexedTerms.add(term);
+                allIndexedTerms.add(new ThriftTerm(field.name(), field.stringValue()));
 
-                ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"), CassandraUtils.delimeterBytes, field
-                        .name().getBytes("UTF-8"), CassandraUtils.delimeterBytes, field.stringValue().getBytes("UTF-8"));
+                ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"),
+                        CassandraUtils.delimeterBytes, field.name().getBytes("UTF-8"), CassandraUtils.delimeterBytes,
+                        field.stringValue().getBytes("UTF-8"));
 
                 Map<ByteBuffer, List<Number>> termMap = new ConcurrentSkipListMap<ByteBuffer, List<Number>>();
                 termMap.put(CassandraUtils.termFrequencyKeyBytes, CassandraUtils.emptyArray);
@@ -300,8 +299,8 @@ public class IndexWriter
             }
         }
 
-        ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"), CassandraUtils.delimeterBytes, Integer
-                .toHexString(docNumber).getBytes("UTF-8"));
+        ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"), CassandraUtils.delimeterBytes,
+                Integer.toHexString(docNumber).getBytes("UTF-8"));
 
         // Store each field as a column under this docId
         for (Map.Entry<String, byte[]> field : fieldCache.entrySet())
@@ -311,18 +310,8 @@ public class IndexWriter
         }
 
         // Finally, Store meta-data so we can delete this document
-        //CassandraUtils.addMutations(workingMutations, CassandraUtils.docColumnFamily,
-        //        CassandraUtils.documentMetaFieldBytes, key, CassandraUtils.toBytes(allIndexedTerms));
-        
-        try {
-			CassandraUtils.addMutations(workingMutations, 
-					CassandraUtils.docColumnFamily,
-					CassandraUtils.documentMetaFieldBytes, 
-					key, 
-					toBytesUsingThrift(allIndexedTerms));
-		} catch (TException e) {
-			throw new RuntimeException(e);
-		}
+        CassandraUtils.addMutations(workingMutations, CassandraUtils.docColumnFamily,
+                CassandraUtils.documentMetaFieldBytes, key, toBytesUsingThrift(allIndexedTerms));
 
         if (rms != null)
         {
@@ -379,14 +368,14 @@ public class IndexWriter
             if (row.cf != null)
             {
                 Collection<IColumn> columns = row.cf.getSortedColumns();
-                
+
                 for (IColumn col : columns)
                 {
                     deleteLucandraDocument(indexName, CassandraUtils.readVInt(col.name()), autoCommit);
-                }                 
+                }
             }
         }
-    
+
     }
 
     private void deleteLucandraDocument(String indexName, int docNumber, boolean autoCommit) throws IOException
@@ -409,28 +398,15 @@ public class IndexWriter
         if (metaCol == null)
             return;
 
-        List<Term> terms;
-        try
-        {
-            //terms = (List<Term>) CassandraUtils.fromBytes(metaCol.value());
-        	terms = fromBytesUsingThrift(metaCol.value());
-        }
-        catch (TException e)
-        {
-            throw new RuntimeException(e);
-        }
-        /* catch (ClassNotFoundException e)
-        {
-            throw new RuntimeException(e);
-        }*/
+        List<ThriftTerm> terms = fromBytesUsingThrift(metaCol.value());
 
-        for (Term term : terms)
+        for (ThriftTerm term : terms)
         {
 
             try
             {
-                key = CassandraUtils.hashKeyBytes(indexNameBytes, CassandraUtils.delimeterBytes, term.field()
-                        .getBytes("UTF-8"), CassandraUtils.delimeterBytes, term.text().getBytes("UTF-8"));
+                key = CassandraUtils.hashKeyBytes(indexNameBytes, CassandraUtils.delimeterBytes, term.getField()
+                        .getBytes("UTF-8"), CassandraUtils.delimeterBytes, term.getText().getBytes("UTF-8"));
             }
             catch (UnsupportedEncodingException e)
             {
@@ -446,7 +422,7 @@ public class IndexWriter
         CassandraUtils.addMutations(workingMutations, CassandraUtils.docColumnFamily, (ByteBuffer) null, selfKey,
                 (ByteBuffer) null);
 
-        if(logger.isDebugEnabled())
+        if (logger.isDebugEnabled())
             logger.debug("Deleted all terms for: " + docNumber);
 
         appendMutations(indexName, workingMutations);
@@ -496,7 +472,7 @@ public class IndexWriter
 
             if (rows.isEmpty())
             {
-                if(logger.isDebugEnabled())
+                if (logger.isDebugEnabled())
                     logger.debug("Nothing to write for :" + indexName);
                 return;
             }
@@ -520,7 +496,7 @@ public class IndexWriter
             }
             else
             {
-                if(logger.isDebugEnabled())
+                if (logger.isDebugEnabled())
                     logger.debug("wrote " + rows.size());
             }
 
@@ -557,44 +533,39 @@ public class IndexWriter
 
         return mutationQ;
     }
-    
-    /** Write all terms to bytes using thrift serialization */
-    private ByteBuffer toBytesUsingThrift(List<Term> allTerms) throws TException
-    {
-    	if (allTerms.size() > 0) {
-	    	Factory tproc = new TBinaryProtocol.Factory();
-	    	List<ThriftTerm> terms = new ArrayList<ThriftTerm>(allTerms.size());
-	    	for (Term thisTerm : allTerms) {
-	    		terms.add(new ThriftTerm(thisTerm.field(), thisTerm.text()));
-	    	}
-	    	
-	    	DocumentMetadata data = new DocumentMetadata(terms);
-	
-			return ByteBuffer.wrap(new TSerializer(tproc).serialize(data));
-    	} else {
-    		return null;
-    	}
-    }
-    
-    /** Read the object from bytes string. */
-    private List<Term> fromBytesUsingThrift(ByteBuffer data) throws TException
-    {
 
-    	Factory tproc = new TBinaryProtocol.Factory();
-    	byte[] bytes = data.array();
-    	DocumentMetadata docMeta = new DocumentMetadata();
-    	
-    	new TDeserializer(tproc).deserialize(docMeta, bytes);
-    	
-    	List<ThriftTerm> terms  = docMeta.getTerms();
-    	if (terms.size() > 0) {
-	    	List<Term> result = new ArrayList<Term>(terms.size());
-	    	for (ThriftTerm thisTerm : terms) {
-	    		result.add(new Term(thisTerm.getField(), thisTerm.getText()));
-	    	}
-	    	return result;
-    	} else {
-    		return null;
-    	}
+    /** Write all terms to bytes using thrift serialization */
+    public static ByteBuffer toBytesUsingThrift(List<ThriftTerm> allTerms) throws IOException
+    {
+        DocumentMetadata data = new DocumentMetadata(allTerms);
+
+        try
+        {
+            return ByteBuffer.wrap(new TSerializer(protocolFactory).serialize(data));
+        }
+        catch (TException e)
+        {
+            throw new IOException(e);
+        }
+    }
+
+    /** Read the object from bytes string. */
+    public static List<ThriftTerm> fromBytesUsingThrift(ByteBuffer data) throws IOException
+    {
+        DocumentMetadata docMeta = new DocumentMetadata();
+
+        TTransport trans = new TMemoryInputTransport(data.array(), data.position(), data.remaining());
+        TProtocol deser = protocolFactory.getProtocol(trans);
+
+        try
+        {
+            docMeta.read(deser);
+        }
+        catch (TException e)
+        {
+            throw new IOException(e);
+        }
+
+        return docMeta.getTerms();
     }
 }

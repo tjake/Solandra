@@ -27,11 +27,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import lucandra.serializers.thrift.ThriftTerm;
+
 import org.apache.cassandra.db.ReadCommand;
 import org.apache.cassandra.db.Row;
 import org.apache.cassandra.db.SliceByNamesReadCommand;
 import org.apache.cassandra.thrift.ColumnParent;
-import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.TermVectorOffsetInfo;
@@ -72,7 +73,7 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector,
         try
         {
 
-            rows = CassandraUtils.robustRead(ConsistencyLevel.ONE, rc);
+            rows = CassandraUtils.robustRead(CassandraUtils.consistency, rc);
 
 
             if (rows.isEmpty())
@@ -81,25 +82,25 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector,
                 return; // this docId is missing
             }
 
-            List<Term> allTerms;
+            List<ThriftTerm> allTerms;
 
-            allTerms = (List<Term>) CassandraUtils.fromBytes(rows.get(0).cf.getColumn(
+            allTerms = IndexWriter.fromBytesUsingThrift(rows.get(0).cf.getColumn(
                     CassandraUtils.documentMetaFieldBytes).value());
 
             List<ReadCommand> readCommands = new ArrayList<ReadCommand>();
 
-            for (Term t : allTerms)
+            for (ThriftTerm t : allTerms)
             {
 
                 // skip the ones not of this field
-                if (!t.field().equals(field))
+                if (!t.getField().equals(field))
                     continue;
 
                 // add to multiget params
                 try
                 {
-                    key = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"), CassandraUtils.delimeterBytes, t.field()
-                            .getBytes("UTF-8"), CassandraUtils.delimeterBytes, t.text().getBytes("UTF-8"));
+                    key = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"), CassandraUtils.delimeterBytes, t.getField()
+                            .getBytes("UTF-8"), CassandraUtils.delimeterBytes, t.getText().getBytes("UTF-8"));
                 }
                 catch (UnsupportedEncodingException e)
                 {
@@ -119,11 +120,7 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector,
         {
             throw new RuntimeException(e);
         }
-        catch (ClassNotFoundException e)
-        {
-            throw new RuntimeException(e);
-        }
-
+        
         terms = new String[rows.size()];
         freqVec = new int[rows.size()];
         termPositions = new int[rows.size()][];

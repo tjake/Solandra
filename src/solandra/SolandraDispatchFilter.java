@@ -28,7 +28,6 @@ import org.apache.solr.common.params.CommonParams;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.core.SolandraCoreContainer;
-import org.apache.solr.core.SolandraCoreInfo;
 import org.apache.solr.core.SolrCore;
 import org.apache.solr.core.CoreContainer.Initializer;
 import org.apache.solr.request.*;

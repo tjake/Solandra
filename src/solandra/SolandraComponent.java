@@ -34,9 +34,7 @@ import com.google.common.collect.MapMaker;
 
 import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.db.Row;
-import org.apache.cassandra.db.Table;
 import org.apache.cassandra.db.filter.QueryPath;
-import org.apache.cassandra.dht.Token;
 import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.utils.ByteBufferUtil;

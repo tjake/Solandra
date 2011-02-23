@@ -20,12 +20,10 @@
 package solandra;
 
 import java.io.IOException;
-
 import javax.xml.parsers.ParserConfigurationException;
 
 import lucandra.CassandraUtils;
 
-import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.solr.core.CoreContainer;
 import org.apache.solr.core.SolandraCoreContainer;
 import org.apache.solr.core.SolrConfig;

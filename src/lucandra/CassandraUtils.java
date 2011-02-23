@@ -31,7 +31,6 @@ import java.util.concurrent.TimeoutException;
 
 import org.apache.cassandra.config.ConfigurationException;
 import org.apache.cassandra.config.DatabaseDescriptor;
-import org.apache.cassandra.config.KSMetaData;
 import org.apache.cassandra.db.*;
 import org.apache.cassandra.db.filter.QueryPath;
 import org.apache.cassandra.service.AbstractCassandraDaemon;
@@ -563,26 +562,6 @@ public class CassandraUtils
 
         return robustRead(cl,rc);
 
-    }
-
-    /** Read the object from bytes string. */
-    public static Object fromBytes(ByteBuffer data) throws IOException, ClassNotFoundException
-    {
-
-        ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(ByteBufferUtil.getArray(data)));
-        Object o = ois.readObject();
-        ois.close();
-        return o;
-    }
-
-    /** Write the object to bytes. */
-    public static ByteBuffer toBytes(Object o) throws IOException
-    {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ObjectOutputStream oos = new ObjectOutputStream(baos);
-        oos.writeObject(o);
-        oos.close();
-        return ByteBuffer.wrap(baos.toByteArray());
     }
 
     public static BigInteger md5hash(ByteBuffer data)

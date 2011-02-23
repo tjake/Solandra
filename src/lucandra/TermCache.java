@@ -9,9 +9,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.cassandra.db.*;
 import org.apache.cassandra.thrift.ColumnParent;
-import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.utils.ByteBufferUtil;
-import org.apache.cassandra.utils.FBUtilities;
 import org.apache.cassandra.utils.Pair;
 import org.apache.log4j.Logger;
 import org.apache.lucene.index.Term;

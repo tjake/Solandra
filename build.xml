@@ -34,8 +34,7 @@
 	<property name="app" location="solandra-app" />
 	<property name="resources" location="resources" />
 	
-	<property name="autogen" location="auto-gen" />
-	<property name="autogen.thrift.dir" location="${autogen}/thrift" />
+	<property name="autogen.thrift.dir" location="${basedir}/thrift" />
 
 	<!-- ivy properties -->
 	<property name="ivy.version" value="2.2.0" />
@@ -54,7 +53,6 @@
 		<mkdir dir="${ivy.dir}" />
 		<mkdir dir="${ivy.lib.dir}" />
 		<mkdir dir="${app}" />
-		<mkdir dir="${autogen.thrift.dir}" />
 		<!--
               Allow Ivy to be disabled with "-Dnoivy=".
               It is kind of a hack to pretend that we already found it,
@@ -285,8 +283,8 @@
 	
 	<!-- Generate thrift code.-->
 	<target name="gen-thrift-java" description="Generate Thrift Java artifacts">
-		<echo>Generating Thrift Java code from ${basedir}/schema/thrift/lucandra.thrift ....</echo>
-	    <exec executable="thrift" dir="${basedir}/schema" failonerror="true">
+		<echo>Generating Thrift Java code from ${basedir}/thrift/lucandra.thrift ....</echo>
+	    <exec executable="thrift" dir="${basedir}/thrift" failonerror="true">
 	        <arg line="--gen java:hashcode" />
 	        <arg line="-o ${autogen.thrift.dir}" />
 	        <arg line="lucandra.thrift" />
