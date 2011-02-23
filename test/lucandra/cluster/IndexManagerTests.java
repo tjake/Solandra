@@ -35,11 +35,6 @@ import lucandra.dht.RandomPartitioner;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import org.apache.cassandra.db.*;
-import org.apache.cassandra.db.filter.QueryPath;
-import org.apache.cassandra.thrift.ConsistencyLevel;
-import org.apache.cassandra.utils.ByteBufferUtil;
-
 public class IndexManagerTests
 {
     static String indexName = String.valueOf(System.nanoTime()); 
@@ -84,10 +79,17 @@ public class IndexManagerTests
     }
 
     @BeforeClass
-    public static void setUpBeforeClass()
+    public static void setUpBeforeClass() 
     {
         // start cassandra
-        CassandraUtils.startupServer();
+        try
+        {
+            CassandraUtils.startupServer();
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException(e);
+        }
     }
 
     @Test

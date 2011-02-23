@@ -29,7 +29,7 @@ From the Solandra base directory:
   
     mkdir /tmp/cassandra-data
     ant
-    cd solandra-app; ./start-solandra.sh -b #(-b adds the solandra specific cassandra schema)
+    cd solandra-app; ./start-solandra.sh 
   
 Now that Solandra is running you can run the demo:
   
@@ -50,11 +50,6 @@ To use an existing cassandra distribution perform the following steps.
     ant -Dcassandra={unzipped dir} cassandra-dist 
     
 4. You can now start solr within cassandra by using $CASSANDRA_HOME/bin/solandra command.  Cassandra now takes 2 optional properties -Dsolandra.context and -Dsolandra.port for the context path and the jetty port. 
-
-5. You will need to add the solandra specific schema
-    
-    $CASSANDRA_HOME/bin/cassandra-cli --host localhost < resources/cassandra/solandra.cml
-    
     
 ####Limitations####
 

@@ -40,7 +40,7 @@ fi
 
 
 # Parse any command line options.
-args=`getopt fbhdp:bD: "$@"`
+args=`getopt fchdp:bD: "$@"`
 eval set -- "$args"
 
 while true; do
@@ -54,16 +54,15 @@ while true; do
             shift
         ;;
         -h)
-            echo "Usage: $0 [-f] [-h] [-b] [-d] [-s num] [-p pidfile]"
+            echo "Usage: $0 [-f] [-h] [-c] [-d] [-p pidfile]"
 	    echo "  -f : run in foreground"
 	    echo "  -h : prints this help message"
-	    echo "  -b : adds solandra's cassandra schema"
+	    echo "  -c : starts solandra in client mode"
 	    echo "  -d : enables debuging port and logs to the foreground"
-	    echo "  -s : specify the number of shards to write to at once (default: 2)"
             exit 0
         ;;
-        -b)
-            schema="yes"
+        -c)
+            properties="$properties -Dsolandra.clientmode=true"
             shift
         ;;
         -d)
@@ -116,13 +115,4 @@ if [ "x$foreground" != "x" ]; then
 else
     exec $JAVA $JVM_OPTS $solandra_parms -jar start.jar $LOGGING etc/jetty.xml <&- &
     [ ! -z $pidfile ] && printf "%d" $! > $pidfile
-fi
-
-if [ "x$schema" != "x" ]
-then
-    sleep 1
-    echo "Waiting 10 seconds for solandra to start before bootstrapping schema..."
-    sleep 10
-    cd cassandra-tools && ./cassandra-cli --host localhost < solandra.cml
-    echo "Solandra ready"
 fi

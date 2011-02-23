@@ -3,7 +3,7 @@
 # explanations of configuration directives.
 
 # name of the cluster
-cluster_name: 'Lucandra Cluster'
+cluster_name: 'Solandra Cluster'
 
 # You should always specify InitialToken when setting up a production
 # cluster for the first time, and often when adding capacity later.
@@ -84,7 +84,7 @@ storage_port: 7000
 
 # Address to bind to and tell other nodes to connect to. You _must_
 # change this if you want multiple nodes to be able to communicate!
-listen_address:
+listen_address: 127.0.0.1
 
 # The address to bind the Thrift RPC service to
 rpc_address: localhost

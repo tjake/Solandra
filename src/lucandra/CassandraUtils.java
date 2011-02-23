@@ -21,6 +21,8 @@ package lucandra;
 
 import java.io.*;
 import java.math.BigInteger;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.*;
@@ -28,18 +30,21 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.cassandra.config.ConfigurationException;
+import org.apache.cassandra.config.DatabaseDescriptor;
+import org.apache.cassandra.config.KSMetaData;
 import org.apache.cassandra.db.*;
 import org.apache.cassandra.db.filter.QueryPath;
+import org.apache.cassandra.service.AbstractCassandraDaemon;
 import org.apache.cassandra.service.StorageProxy;
 import org.apache.cassandra.service.StorageService;
-import org.apache.cassandra.thrift.ConsistencyLevel;
-import org.apache.cassandra.thrift.InvalidRequestException;
-import org.apache.cassandra.thrift.UnavailableException;
+import org.apache.cassandra.thrift.*;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.cassandra.utils.FBUtilities;
 import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
 import org.apache.lucene.document.Fieldable;
 import org.apache.lucene.index.Term;
+import org.apache.thrift.TException;
 
 public class CassandraUtils
 {
@@ -55,6 +60,7 @@ public class CassandraUtils
     public static final ConsistencyLevel     consistency;
     
     
+    //Solandra global properties init
     static
     {      
         try
@@ -84,7 +90,26 @@ public class CassandraUtils
         }
     }
     
-    
+    //Initialize logging in such a way that it checks for config changes every 10 seconds.
+    static
+    {
+        String config = System.getProperty("log4j.configuration", "log4j-server.properties");
+        URL configLocation = null;
+        try 
+        {
+            // try loading from a physical location first.
+            configLocation = new URL(config);
+        }
+        catch (MalformedURLException ex) 
+        {
+            // load from the classpath.
+            configLocation = AbstractCassandraDaemon.class.getClassLoader().getResource(config);
+            if (configLocation == null)
+                throw new RuntimeException("Couldn't figure out log4j configuration.");
+        }
+        PropertyConfigurator.configureAndWatch(configLocation.getFile(), 10000);
+        org.apache.log4j.Logger.getLogger(AbstractCassandraDaemon.class).info("Logging initialized");
+    }
      
 
     public static final String               termVecColumnFamily    = "TI";
@@ -138,12 +163,12 @@ public class CassandraUtils
     	if(cassandraStarted){
     		throw new RuntimeException("You attempted to set the casandra started flag after it has started");
     	}
-    	
+    	   	
     	cassandraStarted = true;
     }
     
     
-    public static synchronized void startupClient()
+    public static synchronized void startupClient() throws IOException
     {
         if (cassandraStarted)
             return;
@@ -153,8 +178,16 @@ public class CassandraUtils
        
         try
         {
+            System.setProperty("cassandra-foreground", "1");
+            
+            
             StorageService.instance.initClient();
-            logger.info("Started solandra in client mode");
+            logger.info("Started Solandra in client mode... waiting for gossip information");
+            
+            Thread.sleep(10000);
+            
+           // createCassandraSchema();
+            
         }
         catch (IOException e2)
         {
@@ -166,16 +199,24 @@ public class CassandraUtils
             e2.printStackTrace();
             System.exit(2);
         }
+        catch (InterruptedException e)
+        {
+            e.printStackTrace();
+            System.exit(2);
+        }
         
         return;
         
     }
     
     // Start Cassandra up!!!
-    public static synchronized void startupServer()
-    {
+    public static synchronized void startupServer() throws IOException
+    {      
+        
+        if (cassandraStarted)
+            return;
 
-       
+        cassandraStarted = true;
         
         System.setProperty("cassandra-foreground", "1");
         
@@ -203,6 +244,8 @@ public class CassandraUtils
         try
         {
             daemon.getStartedLatch().await(1, TimeUnit.HOURS);
+            
+            createCassandraSchema();
         }
         catch (InterruptedException e1)
         {
@@ -210,6 +253,89 @@ public class CassandraUtils
             System.exit(3);
         }       
     }
+    
+    public static void createCassandraSchema() throws IOException
+    {
+        if(!cassandraStarted)
+        {
+            logger.error("start cassandra before adding schema");
+            return;
+        }
+        
+        if(DatabaseDescriptor.getNonSystemTables().contains(keySpace))
+        {
+            logger.info("Found Solandra specific schema");
+            return;
+        }
+        
+        List<CfDef> cfs = new ArrayList<CfDef>();
+            
+        CfDef cf = new CfDef();
+        cf.setName(docColumnFamily);
+        cf.setComparator_type("BytesType");
+        cf.setKey_cache_size(1000000000);
+        cf.setRow_cache_size(1000);
+        cf.setComment("Stores the document and field data for each doc with docId as key");
+        cf.setKeyspace(keySpace);
+     
+        cfs.add(cf);
+        
+        cf = new CfDef();
+        cf.setName(termVecColumnFamily);
+        cf.setComparator_type("lucandra.VIntType");
+        cf.setKey_cache_size(1000000000);
+        cf.setRow_cache_size(1000);
+        cf.setComment("Stores term information with indexName/field/term as composite key");
+        cf.setKeyspace(keySpace);
+        
+        cfs.add(cf);
+        
+        cf = new CfDef();
+        cf.setName(metaInfoColumnFamily);
+        cf.setComparator_type("BytesType");
+        cf.setKey_cache_size(1000000000);
+        cf.setRow_cache_size(0);
+        cf.setComment("Stores ordered list of terms for a given field with indexName/field as composite key");
+        cf.setKeyspace(keySpace);
+     
+        cfs.add(cf);
+     
+        cf = new CfDef();
+        cf.setName(schemaInfoColumnFamily);
+        cf.setColumn_type("Super");
+        cf.setComparator_type("BytesType");
+        cf.setKey_cache_size(1000000000);
+        cf.setRow_cache_size(1000);
+        cf.setComment("Stores solr and index id information");
+        cf.setKeyspace(keySpace);
+        
+        cfs.add(cf);
+            
+        KsDef solandraKS = new KsDef()
+                                .setName(keySpace)
+                                .setReplication_factor(1)
+                                .setStrategy_class("org.apache.cassandra.locator.SimpleStrategy")
+                                .setCf_defs(cfs);
+            
+            
+        CassandraServer cs = new CassandraServer();
+            
+        try
+        {
+            cs.system_add_keyspace(solandraKS);
+        }
+        catch (InvalidRequestException e)
+        {
+            throw new IOException(e);
+        }
+        catch (TException e)
+        {
+            throw new IOException(e);
+        }
+        
+        logger.info("Added Solandra specific schema");      
+    }
+    
 
     public static ByteBuffer createColumnName(Fieldable field)
     {
