@@ -312,7 +312,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader
                         }
 
                         byte[] value;
-                        ByteBuffer v = col.value();
+                        ByteBuffer v = ByteBuffer.wrap(CassandraUtils.decompress(ByteBufferUtil.getArray(col.value())));
                         int vlimit = v.limit() - v.position();
 
                         if (v.get(v.limit() - 1) != Byte.MAX_VALUE && v.get(v.limit() - 1) != Byte.MIN_VALUE)

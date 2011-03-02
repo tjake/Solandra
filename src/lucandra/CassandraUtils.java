@@ -28,6 +28,9 @@ import java.nio.charset.Charset;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.zip.DataFormatException;
+import java.util.zip.Deflater;
+import java.util.zip.Inflater;
 
 import org.apache.cassandra.config.ConfigurationException;
 import org.apache.cassandra.config.DatabaseDescriptor;
@@ -48,37 +51,42 @@ import org.apache.thrift.TException;
 public class CassandraUtils
 {
 
-    public static final Properties           properties;
-    public static final String               keySpace;
-    public static  int                       retryAttempts;
-    public static  int                       retryAttemptSleep; 
+    public static final Properties       properties;
+    public static final String           keySpace;
+    public static int                    retryAttempts;
+    public static int                    retryAttemptSleep;
+
+    // how often to check for cache invalidation
+    public static int                    cacheInvalidationInterval;
+
+    public static final ConsistencyLevel consistency;
     
-    //how often to check for cache invalidation
-    public static int                        cacheInvalidationInterval;
-  
-    public static final ConsistencyLevel     consistency;
-    
-    
-    //Solandra global properties init
+    public static boolean useCompression;
+
+    // Solandra global properties init
     static
-    {      
+    {
         try
         {
+
+            properties = new Properties();
+            properties.load(CassandraUtils.class.getClassLoader().getResourceAsStream("solandra.properties"));
+
+            keySpace = properties.getProperty("solandra.keyspace", "L");
+            retryAttempts = Integer.valueOf(properties.getProperty("cassandra.retries", "1024"));
+            retryAttemptSleep = Integer.valueOf(properties.getProperty("cassandra.retries.sleep", "100"));
+
+            // how often to check for cache invalidation
+            cacheInvalidationInterval = Integer.valueOf(properties.getProperty(
+                    "solandra.cache.invalidation.check.interval", "1000"));
+
+            consistency = ConsistencyLevel.valueOf(properties.getProperty("solandra.consistency", ConsistencyLevel.ONE
+                    .name()));
             
-			properties = new Properties();
-			properties.load(CassandraUtils.class.getClassLoader().getResourceAsStream("solandra.properties"));
-
-			keySpace = properties.getProperty("solandra.keyspace", "L");
-			retryAttempts = Integer.valueOf(properties.getProperty("cassandra.retries", "1024"));
-			retryAttemptSleep = Integer.valueOf(properties.getProperty("cassandra.retries.sleep", "100"));
-
-			// how often to check for cache invalidation
-			cacheInvalidationInterval = Integer.valueOf(properties.getProperty("solandra.cache.invalidation.check.interval", "1000"));
-
-			consistency = ConsistencyLevel.valueOf(properties.getProperty("solandra.consistency", ConsistencyLevel.ONE.name()));
+            useCompression = Boolean.valueOf(properties.getProperty("solandra.compression", "true"));
             
-        
-        } 
+
+        }
         catch (FileNotFoundException e)
         {
             throw new RuntimeException("Can't locate solandra.properties file");
@@ -88,18 +96,19 @@ public class CassandraUtils
             throw new RuntimeException("Error reading solandra.properties file");
         }
     }
-    
-    //Initialize logging in such a way that it checks for config changes every 10 seconds.
+
+    // Initialize logging in such a way that it checks for config changes every
+    // 10 seconds.
     static
     {
         String config = System.getProperty("log4j.configuration", "log4j-server.properties");
         URL configLocation = null;
-        try 
+        try
         {
             // try loading from a physical location first.
             configLocation = new URL(config);
         }
-        catch (MalformedURLException ex) 
+        catch (MalformedURLException ex)
         {
             // load from the classpath.
             configLocation = AbstractCassandraDaemon.class.getClassLoader().getResource(config);
@@ -109,64 +118,61 @@ public class CassandraUtils
         PropertyConfigurator.configureAndWatch(configLocation.getFile(), 10000);
         org.apache.log4j.Logger.getLogger(AbstractCassandraDaemon.class).info("Logging initialized");
     }
-     
 
-    public static final String               termVecColumnFamily    = "TI";
-    public static final String               docColumnFamily        = "Docs";
-    public static final String               metaInfoColumnFamily   = "TL";
-    public static final String               schemaInfoColumnFamily = "SI";
+    public static final String           termVecColumnFamily    = "TI";
+    public static final String           docColumnFamily        = "Docs";
+    public static final String           metaInfoColumnFamily   = "TL";
+    public static final String           schemaInfoColumnFamily = "SI";
 
-    public static final String               positionVectorKey      = "P";
-    public static final String               offsetVectorKey        = "O";
-    public static final String               termFrequencyKey       = "F";
-    public static final String               normsKey               = "N";
-    
-    public static final String               schemaKey              = "S";
-    public static final String               cachedCol              = "CC";
-    
-    public static final ByteBuffer           cachedColBytes         = ByteBufferUtil.bytes(cachedCol);
-    public static final ByteBuffer           positionVectorKeyBytes = ByteBufferUtil.bytes(positionVectorKey);
-    public static final ByteBuffer           offsetVectorKeyBytes   = ByteBufferUtil.bytes(offsetVectorKey);
-    public static final ByteBuffer           termFrequencyKeyBytes  = ByteBufferUtil.bytes(termFrequencyKey);
-    public static final ByteBuffer           normsKeyBytes          = ByteBufferUtil.bytes(normsKey);
+    public static final String           positionVectorKey      = "P";
+    public static final String           offsetVectorKey        = "O";
+    public static final String           termFrequencyKey       = "F";
+    public static final String           normsKey               = "N";
 
-    public static final ByteBuffer           schemaKeyBytes         = ByteBufferUtil.bytes(schemaKey);
-    
-    public static final List<Number>         emptyArray             = Arrays.asList(new Number[] {});
-    public static final String               delimeter              = new String("\uffff");
-    public static final byte[]               delimeterBytes         = ByteBufferUtil.bytes(delimeter).array();
+    public static final String           schemaKey              = "S";
+    public static final String           cachedCol              = "CC";
 
-    public static final String               finalToken             = new String("\ufffe\ufffe");
-    public static final ByteBuffer           finalTokenBytes        = ByteBufferUtil.bytes(finalToken);
+    public static final ByteBuffer       cachedColBytes         = ByteBufferUtil.bytes(cachedCol);
+    public static final ByteBuffer       positionVectorKeyBytes = ByteBufferUtil.bytes(positionVectorKey);
+    public static final ByteBuffer       offsetVectorKeyBytes   = ByteBufferUtil.bytes(offsetVectorKey);
+    public static final ByteBuffer       termFrequencyKeyBytes  = ByteBufferUtil.bytes(termFrequencyKey);
+    public static final ByteBuffer       normsKeyBytes          = ByteBufferUtil.bytes(normsKey);
 
-    public static final String               documentMetaField      = delimeter + "META" + delimeter;
-    public static final ByteBuffer           documentMetaFieldBytes = ByteBufferUtil.bytes(documentMetaField);
+    public static final ByteBuffer       schemaKeyBytes         = ByteBufferUtil.bytes(schemaKey);
 
-    public static final boolean              indexHashingEnabled    = Boolean.valueOf(System.getProperty(
-            "index.hashing", "true"));
-    
+    public static final List<Number>     emptyArray             = Arrays.asList(new Number[] {});
+    public static final String           delimeter              = new String("\uffff");
+    public static final byte[]           delimeterBytes         = ByteBufferUtil.bytes(delimeter).array();
 
-    
-    public static final QueryPath            metaColumnPath            = new QueryPath(CassandraUtils.docColumnFamily);
+    public static final String           finalToken             = new String("\ufffe\ufffe");
+    public static final ByteBuffer       finalTokenBytes        = ByteBufferUtil.bytes(finalToken);
 
-    public static final Charset UTF_8 = Charset.forName("UTF-8");
+    public static final String           documentMetaField      = delimeter + "META" + delimeter;
+    public static final ByteBuffer       documentMetaFieldBytes = ByteBufferUtil.bytes(documentMetaField);
 
-    private static final Logger              logger                 = Logger.getLogger(CassandraUtils.class);
+    public static final boolean          indexHashingEnabled    = Boolean.valueOf(System.getProperty("index.hashing",
+                                                                        "true"));
 
-    private static boolean                   cassandraStarted       = false;
+    public static final QueryPath        metaColumnPath         = new QueryPath(CassandraUtils.docColumnFamily);
 
-    public  static String                    fakeToken              = String.valueOf(System.nanoTime());
-    
-    
-    public static synchronized void setStartup(){
-    	if(cassandraStarted){
-    		throw new RuntimeException("You attempted to set the casandra started flag after it has started");
-    	}
-    	   	
-    	cassandraStarted = true;
+    public static final Charset          UTF_8                  = Charset.forName("UTF-8");
+
+    private static final Logger          logger                 = Logger.getLogger(CassandraUtils.class);
+
+    private static boolean               cassandraStarted       = false;
+
+    public static String                 fakeToken              = String.valueOf(System.nanoTime());
+
+    public static synchronized void setStartup()
+    {
+        if (cassandraStarted)
+        {
+            throw new RuntimeException("You attempted to set the casandra started flag after it has started");
+        }
+
+        cassandraStarted = true;
     }
-    
-    
+
     public static synchronized void startupClient() throws IOException
     {
         if (cassandraStarted)
@@ -174,19 +180,17 @@ public class CassandraUtils
 
         cassandraStarted = true;
 
-       
         try
         {
             System.setProperty("cassandra-foreground", "1");
-            
-            
+
             StorageService.instance.initClient();
             logger.info("Started Solandra in client mode... waiting for gossip information");
-            
+
             Thread.sleep(10000);
-            
-           // createCassandraSchema();
-            
+
+            // createCassandraSchema();
+
         }
         catch (IOException e2)
         {
@@ -203,32 +207,32 @@ public class CassandraUtils
             e.printStackTrace();
             System.exit(2);
         }
-        
+
         return;
-        
+
     }
-    
+
     // Start Cassandra up!!!
     public static synchronized void startupServer() throws IOException
-    {      
-        
+    {
+
         if (cassandraStarted)
             return;
 
         cassandraStarted = true;
-        
+
         System.setProperty("cassandra-foreground", "1");
-        
+
         final CassandraDaemon daemon = new CassandraDaemon();
-        
+
         try
         {
-            //run in own thread
+            // run in own thread
             new Thread(new Runnable() {
-                
+
                 public void run()
                 {
-                    daemon.activate();                   
+                    daemon.activate();
                 }
             }).start();
         }
@@ -239,39 +243,42 @@ public class CassandraUtils
             System.exit(2);
         }
 
-        //wait for startup to complete
+        // wait for startup to complete
         try
         {
             daemon.getStartedLatch().await(1, TimeUnit.HOURS);
-            
+
             createCassandraSchema();
         }
         catch (InterruptedException e1)
         {
             logger.error("Cassandra not started after 1 hour");
             System.exit(3);
-        }       
+        }
     }
-    
+
     public static void createCassandraSchema() throws IOException
     {
-        if(!cassandraStarted)
+        if (!cassandraStarted)
         {
             logger.error("start cassandra before adding schema");
             return;
         }
-        
-              
-        if(DatabaseDescriptor.getNonSystemTables().contains(keySpace))
+
+        if (DatabaseDescriptor.getNonSystemTables().contains(keySpace))
         {
             logger.info("Found Solandra specific schema");
             return;
         }
-     
-        int sleep = new Random().nextInt(60000);
-        logger.info("Sleeping "+sleep+"ms to stagger solandra schema creation");
+
         try
         {
+            Thread.sleep(1000);
+            
+            int sleep = new Random().nextInt(60000);
+            
+            logger.info("\nSleeping " + sleep + "ms to stagger solandra schema creation\n");
+       
             Thread.sleep(sleep);
         }
         catch (InterruptedException e1)
@@ -279,16 +286,15 @@ public class CassandraUtils
             e1.printStackTrace();
             System.exit(2);
         }
-        
-        if(DatabaseDescriptor.getNonSystemTables().contains(keySpace))
+
+        if (DatabaseDescriptor.getNonSystemTables().contains(keySpace))
         {
             logger.info("Found Solandra specific schema");
             return;
         }
-     
-        
+
         List<CfDef> cfs = new ArrayList<CfDef>();
-            
+
         CfDef cf = new CfDef();
         cf.setName(docColumnFamily);
         cf.setComparator_type("BytesType");
@@ -296,9 +302,9 @@ public class CassandraUtils
         cf.setRow_cache_size(1000);
         cf.setComment("Stores the document and field data for each doc with docId as key");
         cf.setKeyspace(keySpace);
-     
+
         cfs.add(cf);
-        
+
         cf = new CfDef();
         cf.setName(termVecColumnFamily);
         cf.setComparator_type("lucandra.VIntType");
@@ -306,9 +312,9 @@ public class CassandraUtils
         cf.setRow_cache_size(1000);
         cf.setComment("Stores term information with indexName/field/term as composite key");
         cf.setKeyspace(keySpace);
-        
+
         cfs.add(cf);
-        
+
         cf = new CfDef();
         cf.setName(metaInfoColumnFamily);
         cf.setComparator_type("BytesType");
@@ -316,9 +322,9 @@ public class CassandraUtils
         cf.setRow_cache_size(0);
         cf.setComment("Stores ordered list of terms for a given field with indexName/field as composite key");
         cf.setKeyspace(keySpace);
-     
+
         cfs.add(cf);
-     
+
         cf = new CfDef();
         cf.setName(schemaInfoColumnFamily);
         cf.setColumn_type("Super");
@@ -327,20 +333,16 @@ public class CassandraUtils
         cf.setRow_cache_size(1000);
         cf.setComment("Stores solr and index id information");
         cf.setKeyspace(keySpace);
-        
+
         cfs.add(cf);
-            
-        KsDef solandraKS = new KsDef()
-                                .setName(keySpace)
-                                .setReplication_factor(1)
-                                .setStrategy_class("org.apache.cassandra.locator.SimpleStrategy")
-                                .setCf_defs(cfs);
-            
-            
+
+        KsDef solandraKS = new KsDef().setName(keySpace).setReplication_factor(1).setStrategy_class(
+                "org.apache.cassandra.locator.SimpleStrategy").setCf_defs(cfs);
+
         CassandraServer cs = new CassandraServer();
-            
+
         try
-        {           
+        {
             cs.system_add_keyspace(solandraKS);
         }
         catch (InvalidRequestException e)
@@ -351,16 +353,15 @@ public class CassandraUtils
         {
             throw new IOException(e);
         }
-        
-        logger.info("Added Solandra specific schema");      
+
+        logger.info("Added Solandra specific schema");
     }
-    
 
     public static ByteBuffer createColumnName(Fieldable field)
     {
         return ByteBuffer.wrap(createColumnName(field.name(), field.stringValue()));
     }
-    
+
     public static ByteBuffer createColumnName(Term term)
     {
         return ByteBuffer.wrap(createColumnName(term.field(), term.text()));
@@ -383,8 +384,6 @@ public class CassandraUtils
         }
     }
 
-    
-    
     public static Term parseTerm(String termStr)
     {
 
@@ -405,10 +404,8 @@ public class CassandraUtils
 
     public static final int byteArrayToInt(ByteBuffer b)
     {
-        return (b.get(b.position() + 0) << 24)
-                + ((b.get(b.position() + 1) & 0xFF) << 16)
-                + ((b.get(b.position() + 2) & 0xFF) << 8)
-                + (b.get(b.position() + 3) & 0xFF);
+        return (b.get(b.position() + 0) << 24) + ((b.get(b.position() + 1) & 0xFF) << 16)
+                + ((b.get(b.position() + 2) & 0xFF) << 8) + (b.get(b.position() + 3) & 0xFF);
     }
 
     public static final ByteBuffer intVectorToByteArray(List<Number> intVector)
@@ -420,13 +417,11 @@ public class CassandraUtils
         if (intVector.get(0) instanceof Byte)
             return ByteBuffer.wrap(new byte[] { intVector.get(0).byteValue() });
 
-        
-       
-        ByteBuffer buffer = ByteBuffer.allocate(4 * (intVector.size()+1));
+        ByteBuffer buffer = ByteBuffer.allocate(4 * (intVector.size() + 1));
 
-        //Number of int's
+        // Number of int's
         buffer.putInt(intVector.size());
-        
+
         for (Number i : intVector)
         {
             buffer.putInt(i.intValue());
@@ -434,7 +429,6 @@ public class CassandraUtils
         buffer.flip();
         return buffer;
     }
-
 
     public static final int[] byteArrayToIntArray(ByteBuffer b)
     {
@@ -447,16 +441,12 @@ public class CassandraUtils
 
         for (int i = b.position(); i < b.limit(); i += 4)
         {
-            intArray[idx++] = (b.get(i) << 24) + ((b.get(i + 1) & 0xFF) << 16)
-                    + ((b.get(i + 2) & 0xFF) << 8) + (b.get(i + 3) & 0xFF);
+            intArray[idx++] = (b.get(i) << 24) + ((b.get(i + 1) & 0xFF) << 16) + ((b.get(i + 2) & 0xFF) << 8)
+                    + (b.get(i + 3) & 0xFF);
         }
 
         return intArray;
     }
-
-   
-
- 
 
     public static void addMutations(Map<ByteBuffer, RowMutation> mutationList, String columnFamily, byte[] column,
             ByteBuffer key, byte[] value)
@@ -499,11 +489,11 @@ public class CassandraUtils
         { // insert
 
             rm.add(new QueryPath(columnFamily, null, column), value, System.nanoTime());
-    
+
         }
     }
 
-    public static void robustInsert(ConsistencyLevel cl, RowMutation... mutations )
+    public static void robustInsert(ConsistencyLevel cl, RowMutation... mutations)
     {
 
         int attempts = 0;
@@ -523,7 +513,6 @@ public class CassandraUtils
             {
 
             }
-     
 
             try
             {
@@ -539,7 +528,7 @@ public class CassandraUtils
     }
 
     public static List<Row> robustRead(ConsistencyLevel cl, ReadCommand... rc) throws IOException
-    {      
+    {
         List<Row> rows = null;
         int attempts = 0;
         while (attempts++ < retryAttempts)
@@ -572,15 +561,16 @@ public class CassandraUtils
             }
         }
 
-        throw new IOException("Read command failed after "+retryAttempts+"attempts");
+        throw new IOException("Read command failed after " + retryAttempts + "attempts");
     }
 
-    public static List<Row> robustRead(ByteBuffer key, QueryPath qp, List<ByteBuffer> columns, ConsistencyLevel cl) throws IOException
+    public static List<Row> robustRead(ByteBuffer key, QueryPath qp, List<ByteBuffer> columns, ConsistencyLevel cl)
+            throws IOException
     {
 
         ReadCommand rc = new SliceByNamesReadCommand(CassandraUtils.keySpace, key, qp, columns);
 
-        return robustRead(cl,rc);
+        return robustRead(cl, rc);
 
     }
 
@@ -588,28 +578,28 @@ public class CassandraUtils
     {
         byte[] result = FBUtilities.hash(data);
         BigInteger hash = new BigInteger(result);
-        return hash.abs();        
+        return hash.abs();
     }
-    
+
     public static ByteBuffer hashBytes(byte[] key)
-    {      
-       
-            byte[] hashBytes = null;
-            try
-            {
-                hashBytes = md5hash(ByteBuffer.wrap(key)).toString().getBytes("UTF-8");
-            }
-            catch (UnsupportedEncodingException e)
-            {
-                throw new RuntimeException(e);
-            }
-            
-            ByteBuffer hashBuf = ByteBuffer.allocate(hashBytes.length+delimeterBytes.length);
-            hashBuf.put(hashBytes);
-            hashBuf.put(delimeterBytes);
-            hashBuf.flip();
-            
-            return hashBuf;
+    {
+
+        byte[] hashBytes = null;
+        try
+        {
+            hashBytes = md5hash(ByteBuffer.wrap(key)).toString().getBytes("UTF-8");
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            throw new RuntimeException(e);
+        }
+
+        ByteBuffer hashBuf = ByteBuffer.allocate(hashBytes.length + delimeterBytes.length);
+        hashBuf.put(hashBytes);
+        hashBuf.put(delimeterBytes);
+        hashBuf.flip();
+
+        return hashBuf;
     }
 
     public static ByteBuffer hashKeyBytes(byte[]... keys)
@@ -641,12 +631,13 @@ public class CassandraUtils
 
         // no hashing, just combine the arrays together
         int totalBytes = indexName.length;
-        for (int i = 1; i < keys.length; i++){
-         
-            //for index hashing we've already add the delimiter
-            if(indexHashingEnabled && i == 1)
+        for (int i = 1; i < keys.length; i++)
+        {
+
+            // for index hashing we've already add the delimiter
+            if (indexHashingEnabled && i == 1)
                 continue;
-            
+
             totalBytes += keys[i].length;
         }
 
@@ -656,26 +647,25 @@ public class CassandraUtils
 
         for (int i = 1; i < keys.length; i++)
         {
-            
-            //for index hashing we've already add the delimiter
-            if(indexHashingEnabled && i == 1)
+
+            // for index hashing we've already add the delimiter
+            if (indexHashingEnabled && i == 1)
                 continue;
-            
+
             System.arraycopy(keys[i], 0, hashedKey, currentLen, keys[i].length);
             currentLen += keys[i].length;
         }
 
-       
         return ByteBuffer.wrap(hashedKey);
     }
 
     public static int mreadVInt(ByteBuffer buf)
-    {       
+    {
         int length = buf.remaining();
-        
-        if(length == 0)
+
+        if (length == 0)
             return 0;
-        
+
         byte b = buf.get();
         int i = b & 0x7F;
         for (int pos = 1, shift = 7; (b & 0x80) != 0 && pos < length; shift += 7, pos++)
@@ -686,14 +676,14 @@ public class CassandraUtils
 
         return i;
     }
-    
+
     public static int readVInt(ByteBuffer buf)
-    {       
+    {
         int length = buf.remaining();
-        
-        if(length == 0)
+
+        if (length == 0)
             return 0;
-        
+
         byte b = buf.get(buf.position());
         int i = b & 0x7F;
         for (int pos = 1, shift = 7; (b & 0x80) != 0 && pos < length; shift += 7, pos++)
@@ -729,4 +719,73 @@ public class CassandraUtils
 
         return buf;
     }
+
+    public static byte[] compress(byte[] input)
+    {
+
+        if(!useCompression)
+            return input;
+        
+        Deflater compressor = new Deflater();
+        compressor.setLevel(Deflater.BEST_SPEED);
+
+        compressor.setInput(input);
+        compressor.finish();
+
+        ByteArrayOutputStream bos = new ByteArrayOutputStream(input.length);
+
+        byte[] buf = new byte[1024];
+
+        while (!compressor.finished())
+        {
+            int count = compressor.deflate(buf);
+            bos.write(buf, 0, count);
+        }
+        try
+        {
+            bos.close();
+        }
+        catch (IOException e)
+        {
+        }
+
+        return bos.toByteArray();
+       
+    }
+
+    public static byte[] decompress(byte[] input) throws IOException
+    {
+        if(!useCompression)
+            return input;
+        
+        Inflater decompressor = new Inflater();
+        decompressor.setInput(input);
+
+        ByteArrayOutputStream bos = new ByteArrayOutputStream(input.length);
+
+        byte[] buf = new byte[1024];
+
+        while (!decompressor.finished())
+        {
+            try
+            {
+                int count = decompressor.inflate(buf);
+                bos.write(buf, 0, count);
+            }
+            catch (DataFormatException e)
+            {
+                throw new IOException(e);
+            }
+        }
+        try
+        {
+            bos.close();
+        }
+        catch (IOException e)
+        {
+        }
+
+        return bos.toByteArray();
+    }
+
 }

@@ -306,7 +306,7 @@ public class IndexWriter
         for (Map.Entry<String, byte[]> field : fieldCache.entrySet())
         {
             CassandraUtils.addMutations(workingMutations, CassandraUtils.docColumnFamily, field.getKey().getBytes(
-                    "UTF-8"), key, field.getValue());
+                    "UTF-8"), key, CassandraUtils.compress(field.getValue()));
         }
 
         // Finally, Store meta-data so we can delete this document
@@ -375,7 +375,6 @@ public class IndexWriter
                 }
             }
         }
-
     }
 
     private void deleteLucandraDocument(String indexName, int docNumber, boolean autoCommit) throws IOException
@@ -398,15 +397,15 @@ public class IndexWriter
         if (metaCol == null)
             return;
 
-        List<ThriftTerm> terms = fromBytesUsingThrift(metaCol.value());
+        List<Term> terms = fromBytesUsingThrift(metaCol.value());
 
-        for (ThriftTerm term : terms)
+        for (Term term : terms)
         {
 
             try
             {
-                key = CassandraUtils.hashKeyBytes(indexNameBytes, CassandraUtils.delimeterBytes, term.getField()
-                        .getBytes("UTF-8"), CassandraUtils.delimeterBytes, term.getText().getBytes("UTF-8"));
+                key = CassandraUtils.hashKeyBytes(indexNameBytes, CassandraUtils.delimeterBytes, term.field()
+                        .getBytes("UTF-8"), CassandraUtils.delimeterBytes, term.text().getBytes("UTF-8"));
             }
             catch (UnsupportedEncodingException e)
             {
@@ -541,7 +540,7 @@ public class IndexWriter
 
         try
         {
-            return ByteBuffer.wrap(new TSerializer(protocolFactory).serialize(data));
+            return ByteBuffer.wrap(CassandraUtils.compress(new TSerializer(protocolFactory).serialize(data)));
         }
         catch (TException e)
         {
@@ -550,11 +549,13 @@ public class IndexWriter
     }
 
     /** Read the object from bytes string. */
-    public static List<ThriftTerm> fromBytesUsingThrift(ByteBuffer data) throws IOException
+    public static List<Term> fromBytesUsingThrift(ByteBuffer data) throws IOException
     {
         DocumentMetadata docMeta = new DocumentMetadata();
 
-        TTransport trans = new TMemoryInputTransport(data.array(), data.position(), data.remaining());
+        byte[] decompressedData = CassandraUtils.decompress(ByteBufferUtil.getArray(data));
+        
+        TTransport trans = new TMemoryInputTransport(decompressedData);
         TProtocol deser = protocolFactory.getProtocol(trans);
 
         try
@@ -566,6 +567,11 @@ public class IndexWriter
             throw new IOException(e);
         }
 
-        return docMeta.getTerms();
+        List<Term> terms = new ArrayList<Term>(docMeta.terms.size());
+        for(ThriftTerm term : docMeta.terms)
+        {
+            terms.add(new Term(term.field, term.text));
+        }
+        return terms;
     }
 }

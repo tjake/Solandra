@@ -82,25 +82,25 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector,
                 return; // this docId is missing
             }
 
-            List<ThriftTerm> allTerms;
+            List<Term> allTerms;
 
             allTerms = IndexWriter.fromBytesUsingThrift(rows.get(0).cf.getColumn(
                     CassandraUtils.documentMetaFieldBytes).value());
 
             List<ReadCommand> readCommands = new ArrayList<ReadCommand>();
 
-            for (ThriftTerm t : allTerms)
+            for (Term t : allTerms)
             {
 
                 // skip the ones not of this field
-                if (!t.getField().equals(field))
+                if (!t.field().equals(field))
                     continue;
 
                 // add to multiget params
                 try
                 {
-                    key = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"), CassandraUtils.delimeterBytes, t.getField()
-                            .getBytes("UTF-8"), CassandraUtils.delimeterBytes, t.getText().getBytes("UTF-8"));
+                    key = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"), CassandraUtils.delimeterBytes, t.field()
+                            .getBytes("UTF-8"), CassandraUtils.delimeterBytes, t.text().getBytes("UTF-8"));
                 }
                 catch (UnsupportedEncodingException e)
                 {
