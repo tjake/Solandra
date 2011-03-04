@@ -59,7 +59,7 @@ public class CassandraIndexManager
     public static final int                                          reserveSlabSize = Integer.valueOf(CassandraUtils.properties.getProperty("solandra.index.id.reserve.size", "16384"));
     
     private final int                                                offsetSlots     = maxDocsPerShard / reserveSlabSize;
-    private final int                                                expirationTime  = 120;                                          // seconds
+    private final int                                                expirationTime  = Integer.valueOf(CassandraUtils.properties.getProperty("solandra.index.id.expirationtime", "120"));                                          // seconds
 
     private final ConcurrentMap<String, LinkedBlockingQueue<IdInfo>> indexReserves   = new MapMaker().makeMap();
     private final ConcurrentMap<String, ShardInfo>                   indexShards     = new MapMaker().makeMap();                             
