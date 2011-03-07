@@ -298,8 +298,8 @@ public class CassandraUtils
         CfDef cf = new CfDef();
         cf.setName(docColumnFamily);
         cf.setComparator_type("BytesType");
-        cf.setKey_cache_size(1000000000);
-        cf.setRow_cache_size(1000);
+        cf.setKey_cache_size(0);
+        cf.setRow_cache_size(0);
         cf.setComment("Stores the document and field data for each doc with docId as key");
         cf.setKeyspace(keySpace);
 
@@ -308,8 +308,8 @@ public class CassandraUtils
         cf = new CfDef();
         cf.setName(termVecColumnFamily);
         cf.setComparator_type("lucandra.VIntType");
-        cf.setKey_cache_size(1000000000);
-        cf.setRow_cache_size(1000);
+        cf.setKey_cache_size(0);
+        cf.setRow_cache_size(0);
         cf.setComment("Stores term information with indexName/field/term as composite key");
         cf.setKeyspace(keySpace);
 
@@ -318,7 +318,7 @@ public class CassandraUtils
         cf = new CfDef();
         cf.setName(metaInfoColumnFamily);
         cf.setComparator_type("BytesType");
-        cf.setKey_cache_size(1000000000);
+        cf.setKey_cache_size(0);
         cf.setRow_cache_size(0);
         cf.setComment("Stores ordered list of terms for a given field with indexName/field as composite key");
         cf.setKeyspace(keySpace);
@@ -329,8 +329,8 @@ public class CassandraUtils
         cf.setName(schemaInfoColumnFamily);
         cf.setColumn_type("Super");
         cf.setComparator_type("BytesType");
-        cf.setKey_cache_size(1000000000);
-        cf.setRow_cache_size(1000);
+        cf.setKey_cache_size(0);
+        cf.setRow_cache_size(0);
         cf.setComment("Stores solr and index id information");
         cf.setKeyspace(keySpace);
 
@@ -731,9 +731,11 @@ public class CassandraUtils
 
         compressor.setInput(input);
         compressor.finish();
+      
 
         ByteArrayOutputStream bos = new ByteArrayOutputStream(input.length);
 
+       
         byte[] buf = new byte[1024];
 
         while (!compressor.finished())
