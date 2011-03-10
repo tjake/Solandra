@@ -331,7 +331,7 @@ public class IndexWriter
             commit(indexName, false);
     }
 
-    public void deleteDocuments(String indexName, Query query, boolean autoCommit) throws CorruptIndexException,
+    public TopDocs deleteDocuments(String indexName, Query query, boolean autoCommit) throws CorruptIndexException,
             IOException
     {
 
@@ -347,6 +347,7 @@ public class IndexWriter
             deleteLucandraDocument(indexName, doc.doc, autoCommit);
         }
 
+        return results;
     }
 
     public void deleteDocuments(String indexName, Term term, boolean autoCommit) throws CorruptIndexException,

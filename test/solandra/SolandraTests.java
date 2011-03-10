@@ -41,6 +41,7 @@ import org.apache.log4j.Logger;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.impl.CommonsHttpSolrServer;
 import org.apache.solr.client.solrj.response.QueryResponse;
+import org.apache.solr.client.solrj.response.UpdateResponse;
 import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.SolrInputDocument;
 
@@ -444,6 +445,17 @@ public class SolandraTests
 
         QueryResponse r = solrClient.query(q);
         assertEquals(3, r.getResults().getNumFound());
+    }
+    
+    public void testDeleteByQuery(CommonsHttpSolrServer solrClient) throws Exception
+    {
+       solrClient.deleteByQuery("*:*");
+       solrClient.commit(true,true);
+       
+       SolrQuery q = new SolrQuery().setQuery("*:*").addField("*").addField("score");
+       QueryResponse r = solrClient.query(q);
+
+       assertEquals(0, r.getResults().getNumFound());
     }
     
     @Test

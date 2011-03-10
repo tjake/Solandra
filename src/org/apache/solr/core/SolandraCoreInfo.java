@@ -29,6 +29,7 @@ public class SolandraCoreInfo
     public final String  indexName;
     public final Integer shard;
     public final boolean bulk;
+    public final boolean isShard;
     
     public  final static Pattern shardPattern = Pattern.compile("^(~?)([^\\.~]+)(\\.?[^~]*)~?(\\d*)$");
 
@@ -44,6 +45,7 @@ public class SolandraCoreInfo
         coreName  = m.group(2);
         indexName = m.group(3).isEmpty() ? coreName : coreName+m.group(3);
         shard     = m.group(4).isEmpty() ? 0 : Integer.valueOf(m.group(4));
+        isShard   = !m.group(4).isEmpty();
     }
     
 
