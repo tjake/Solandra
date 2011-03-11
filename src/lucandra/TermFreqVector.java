@@ -152,14 +152,12 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector,
 
                     termPositions[i] = termInfo.positions;
                 }
-                
-                
-                if(termInfo.hasPositions)
-                    freqVec[i] = termPositions[i].length;
+                               
+                freqVec[i] = termInfo.freq;
 
                 if (termInfo == null || !termInfo.hasOffsets)
                 {
-                    termOffsets[i] = TermVectorOffsetInfo.EMPTY_OFFSET_INFO;
+                    termOffsets[i] = null;
                 }
                 else
                 {

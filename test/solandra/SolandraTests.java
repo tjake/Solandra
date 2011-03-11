@@ -71,7 +71,7 @@ public class SolandraTests
                                                     + "</types>\n"
                                                     + "<fields>\n"
                                                     + "<field name=\"url\" type=\"string\" indexed=\"true\" stored=\"true\"/>\n"
-                                                    + "<field name=\"text\"  type=\"text\" indexed=\"true\"  stored=\"true\" termVectors=\"true\" termPositions=\"true\" termOffsets=\"true\" />\n"
+                                                    + "<field name=\"text\"  type=\"text\" indexed=\"true\"  stored=\"true\" termVectors=\"true\" termPositions=\"true\" termOffsets=\"true\"/>\n"
                                                     + "<field name=\"title\" type=\"text\" indexed=\"true\"  stored=\"true\"/>\n"
                                                     + "<field name=\"price\" type=\"tint\" indexed=\"true\"  stored=\"true\"/>\n"
                                                     + "</fields>\n" + "<uniqueKey>url</uniqueKey>\n"
