@@ -39,6 +39,7 @@ import org.junit.Test;
 
 import org.apache.log4j.Logger;
 import org.apache.solr.client.solrj.SolrQuery;
+import org.apache.solr.client.solrj.SolrQuery.ORDER;
 import org.apache.solr.client.solrj.impl.CommonsHttpSolrServer;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.client.solrj.response.UpdateResponse;
@@ -642,30 +643,7 @@ public class SolandraTests
 
         URL url = new URL("http://localhost:" + port + "/solandra/" + otherIndexName + "/update?commit=true");
 
-        // write
-        try
-        {
-            Iterator<String> it = docs.iterator();
-            while (it.hasNext())
-            {
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestProperty("Content-Type", "text/xml");
-                conn.setDoOutput(true);
-
-                OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream());
-                wr.write(it.next());
-                wr.flush();
-                wr.close();
-                assertEquals(200, conn.getResponseCode());
-            }
-
-            otherClient.commit(true,true);
-        }
-        catch (IOException e)
-        {
-            e.printStackTrace();
-            fail();
-        }
+        writeDocs(docs, url);
 
         SolrQuery q = new SolrQuery().setQuery("*:*").addField("*").addField("score");
 
@@ -719,29 +697,7 @@ public class SolandraTests
                 .add("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">TransportDef</field><field name=\"uuid\">458724cf-202e-49c3-9863-0e9c176cc27a</field><field name=\"ownerUUID\">550e8400-e29b-41d4-a716-446655440001</field><field name=\"name\">SNMP Manager</field><field name=\"desc\">This transport provides SNMP Manager functionality.</field><field name=\"json\">{\"TransportDef\":{\"uuid\":\"458724cf-202e-49c3-9863-0e9c176cc27a\",\"ownerUUID\":\"550e8400-e29b-41d4-a716-446655440001\",\"name\":\"SNMP Manager\",\"version\":\"1.0.0.0\",\"desc\":\"This transport provides SNMP Manager functionality.\",\"author\":\"Ladd Asper\",\"helpText\":\"TBD\",\"numSchedulerThreads\":10,\"initializeInstructionDef\":{\"parameterDefs\":[{\"minLength\":0,\"maxLength\":0,\"defaultValue\":\"0.0.0.0\",\"key\":\"Trap IP Address\",\"name\":\"Trap IP Address\",\"desc\":\"Trap IP Address\",\"type\":\"String\"},{\"minValue\":0.0,\"maxValue\":65535.0,\"stepSize\":0.0,\"precision\":0,\"defaultValue\":\"162\",\"key\":\"Trap Port Number\",\"name\":\"Trap Port Number\",\"desc\":\"Trap Port Number\",\"type\":\"Number\"},{\"isSelected\":true,\"key\":\"Listen for traps\",\"name\":\"Listen for traps\",\"desc\":\"Listen for traps\",\"type\":\"SimpleBool\"},{\"isSelected\":true,\"key\":\"start\",\"name\":\"start\",\"desc\":\"start\",\"type\":\"SimpleBool\"}],\"key\":\"initialize\",\"name\":\"Set configuration values and initialize this transport.\",\"desc\":\"Set configuration values and initialize this transport.\"}}}</field></doc></add>");
         URL url = new URL("http://localhost:" + port + "/solandra/" + otherIndexName + "/update?commit=true");
 
-        // write
-        try
-        {
-            Iterator<String> it = docs.iterator();
-            while (it.hasNext())
-            {
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestProperty("Content-Type", "text/xml");
-                conn.setDoOutput(true);
-
-                OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream());
-                wr.write(it.next());
-                wr.flush();
-                wr.close();
-                assertEquals(200, conn.getResponseCode());
-            }
-
-        }
-        catch (IOException e)
-        {
-            e.printStackTrace();
-            fail();
-        }
+        writeDocs(docs, url);
 
         SolrQuery q = new SolrQuery().setQuery("*:*").addField("*").addField("score");
 
@@ -796,7 +752,7 @@ public class SolandraTests
         {
             otherClient.deleteById(it.next());
         }
-        otherClient.commit();
+            otherClient.commit();
 
         SolrQuery q = new SolrQuery().setQuery("*:*");
 
@@ -900,6 +856,27 @@ public class SolandraTests
 
         URL url = new URL("http://localhost:" + port + "/solandra/~" + otherIndexName + "/update?commit=true");
 
+        writeDocs(docs, url);
+
+        SolrQuery q = new SolrQuery().setQuery("*:*");
+
+        try
+        {
+            QueryResponse r = otherClient.query(q);
+            assertEquals(42, r.getResults().getNumFound());
+        }
+        catch (Exception ex)
+        {
+            ex.printStackTrace();
+        }
+    }
+
+    /**
+     * @param docs
+     * @param url
+     */
+    private void writeDocs(Collection<String> docs, URL url)
+    {
         // write
         try
         {
@@ -922,18 +899,6 @@ public class SolandraTests
         {
             e.printStackTrace();
             fail();
-        }
-
-        SolrQuery q = new SolrQuery().setQuery("*:*");
-
-        try
-        {
-            QueryResponse r = otherClient.query(q);
-            assertEquals(42, r.getResults().getNumFound());
-        }
-        catch (Exception ex)
-        {
-            ex.printStackTrace();
         }
     }
 
@@ -964,6 +929,37 @@ public class SolandraTests
         assertEquals(7, r.getResults().getNumFound());
     }
 
-    
+    @Test
+    public void testLongRangeQueries() throws Exception
+    {
+        Collection<String> docs = Arrays.asList(
+                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">Datapoint</field><field name=\"uuid\">002ab136-a6b4-42b1-af78-7d87bf133a60</field><field name=\"ownerUUID\">4941f74b-2b50-4ea5-9f0e-0a49ed11adb0</field><field name=\"generatorUUID\">ff1df93f-a19f-4088-97e9-14f165aacab4</field><field name=\"key\">dp6</field><field name=\"name\">Generated datapoint 6</field><field name=\"modTime\">1300214308085</field><field name=\"json\">{\"Datapoint\":{\"uuid\":\"002ab136-a6b4-42b1-af78-7d87bf133a60\",\"ownerUUID\":\"4941f74b-2b50-4ea5-9f0e-0a49ed11adb0\",\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"dp6\",\"name\":\"Generated datapoint 6\",\"value\":\"11\",\"modTime\":1300214308085}}</field></doc></add>",
+                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">Datapoint</field><field name=\"uuid\">002ab136-a6b4-42b1-af78-7d87bf133a61</field><field name=\"ownerUUID\">4941f74b-2b50-4ea5-9f0e-0a49ed11adb0</field><field name=\"generatorUUID\">ff1df93f-a19f-4088-97e9-14f165aacab4</field><field name=\"key\">dp6</field><field name=\"name\">Generated datapoint 6</field><field name=\"modTime\">1300214313085</field><field name=\"json\">{\"Datapoint\":{\"uuid\":\"002ab136-a6b4-42b1-af78-7d87bf133a61\",\"ownerUUID\":\"4941f74b-2b50-4ea5-9f0e-0a49ed11adb0\",\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"dp6\",\"name\":\"Generated datapoint 6\",\"value\":\"13\",\"modTime\":1300214313085}}</field></doc></add>",
+                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">Datapoint</field><field name=\"uuid\">002ab136-a6b4-42b1-af78-7d87bf133a62</field><field name=\"ownerUUID\">4941f74b-2b50-4ea5-9f0e-0a49ed11adb0</field><field name=\"generatorUUID\">ff1df93f-a19f-4088-97e9-14f165aacab4</field><field name=\"key\">dp6</field><field name=\"name\">Generated datapoint 6</field><field name=\"modTime\">1300214318085</field><field name=\"json\">{\"Datapoint\":{\"uuid\":\"002ab136-a6b4-42b1-af78-7d87bf133a62\",\"ownerUUID\":\"4941f74b-2b50-4ea5-9f0e-0a49ed11adb0\",\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"dp6\",\"name\":\"Generated datapoint 6\",\"value\":\"18\",\"modTime\":1300214318085}}</field></doc></add>",
+                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">Datapoint</field><field name=\"uuid\">002ab136-a6b4-42b1-af78-7d87bf133a63</field><field name=\"ownerUUID\">4941f74b-2b50-4ea5-9f0e-0a49ed11adb0</field><field name=\"generatorUUID\">ff1df93f-a19f-4088-97e9-14f165aacab4</field><field name=\"key\">dp6</field><field name=\"name\">Generated datapoint 6</field><field name=\"modTime\">1300214323085</field><field name=\"json\">{\"Datapoint\":{\"uuid\":\"002ab136-a6b4-42b1-af78-7d87bf133a63\",\"ownerUUID\":\"4941f74b-2b50-4ea5-9f0e-0a49ed11adb0\",\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"dp6\",\"name\":\"Generated datapoint 6\",\"value\":\"19\",\"modTime\":1300214323085}}</field></doc></add>",
+                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">Datapoint</field><field name=\"uuid\">002ab136-a6b4-42b1-af78-7d87bf133a64</field><field name=\"ownerUUID\">4941f74b-2b50-4ea5-9f0e-0a49ed11adb0</field><field name=\"generatorUUID\">ff1df93f-a19f-4088-97e9-14f165aacab4</field><field name=\"key\">dp6</field><field name=\"name\">Generated datapoint 6</field><field name=\"modTime\">1300214328085</field><field name=\"json\">{\"Datapoint\":{\"uuid\":\"002ab136-a6b4-42b1-af78-7d87bf133a64\",\"ownerUUID\":\"4941f74b-2b50-4ea5-9f0e-0a49ed11adb0\",\"generatorUUID\":\"ff1df93f-a19f-4088-97e9-14f165aacab4\",\"key\":\"dp6\",\"name\":\"Generated datapoint 6\",\"value\":\"14\",\"modTime\":1300214328085}}</field></doc></add>"
+            );
+        URL url = new URL("http://localhost:" + port + "/solandra/" + otherIndexName + "/update?commit=true&batch=true");
+
+        writeDocs(docs, url);
+
+        SolrQuery q;
+        QueryResponse r;
+
+        q = new SolrQuery().setQuery("messageType:[* TO *]");
+        r = otherClient.query(q);
+        assertEquals(47, r.getResults().getNumFound());
+
+        q = new SolrQuery().setQuery("messageType:Datapoint");
+        r = otherClient.query(q);
+        assertEquals(5, r.getResults().getNumFound());
+
+        // 1 ms after the first and before the last
+        q = new SolrQuery().setQuery("messageType:Datapoint AND modTime:[1300214308086 TO 1300214328084] AND ownerUUID:4941f74b-2b50-4ea5-9f0e-0a49ed11adb0");
+        q.setSortField("modTime", ORDER.desc);
+        r = otherClient.query(q);
+        assertEquals(3, r.getResults().getNumFound());
+        assertTrue(((String)r.getResults().get(0).getFieldValue("json")).contains("1300214323085"));
+    }
 
 }
