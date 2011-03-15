@@ -477,18 +477,18 @@ public class CassandraUtils
 
             if (column != null)
             {
-                rm.delete(new QueryPath(columnFamily, null, column), System.nanoTime());
+                rm.delete(new QueryPath(columnFamily, null, column), System.currentTimeMillis()-1);
             }
             else
             {
-                rm.delete(new QueryPath(columnFamily), System.nanoTime());
+                rm.delete(new QueryPath(columnFamily), System.currentTimeMillis()-1);
             }
 
         }
         else
         { // insert
 
-            rm.add(new QueryPath(columnFamily, null, column), value, System.nanoTime());
+            rm.add(new QueryPath(columnFamily, null, column), value, System.currentTimeMillis());
 
         }
     }

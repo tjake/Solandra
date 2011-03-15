@@ -659,6 +659,7 @@ public class SolandraTests
                 assertEquals(200, conn.getResponseCode());
             }
 
+            otherClient.commit(true,true);
         }
         catch (IOException e)
         {
@@ -692,7 +693,6 @@ public class SolandraTests
     @Test
     public void testAllMessageTypeSearch() throws Exception
     {
-
         SolrQuery q = new SolrQuery().setQuery("messageType:[* TO *]");
 
         QueryResponse r = otherClient.query(q);
@@ -795,8 +795,8 @@ public class SolandraTests
         while (it.hasNext())
         {
             otherClient.deleteById(it.next());
-            otherClient.commit();
         }
+        otherClient.commit();
 
         SolrQuery q = new SolrQuery().setQuery("*:*");
 
@@ -898,7 +898,7 @@ public class SolandraTests
         docs
                 .add("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><add><doc><field name=\"messageType\">InstructionDef</field><field name=\"ownerUUID\">29c9d1e1-86d0-499f-801a-bd03618deb35</field><field name=\"generatorUUID\">29c9d1e1-86d0-499f-801a-bd03618deb35</field><field name=\"key\">stop</field><field name=\"name\">Stop this transport.</field><field name=\"desc\">Stop this transport.</field><field name=\"uuid\">867441f2-ff91-4bc4-aa28-a7c1c4900d02</field><field name=\"json\">{\"InstructionDef\":{\"uuid\":\"867441f2-ff91-4bc4-aa28-a7c1c4900d02\",\"ownerUUID\":\"29c9d1e1-86d0-499f-801a-bd03618deb35\",\"generatorUUID\":\"29c9d1e1-86d0-499f-801a-bd03618deb35\",\"key\":\"stop\",\"name\":\"Stop this transport.\",\"desc\":\"Stop this transport.\"}}</field></doc></add>");
 
-        URL url = new URL("http://localhost:" + port + "/solandra/" + otherIndexName + "/update?commit=true&batch=true");
+        URL url = new URL("http://localhost:" + port + "/solandra/~" + otherIndexName + "/update?commit=true");
 
         // write
         try

@@ -87,7 +87,7 @@ public class LucandraTermEnum extends TermEnum
         // current term is in tree
         if (termView.size() < 2)
         {
-            logger.info("Reached end of term list");
+            //logger.info("Reached end of term list");
             currentTermEntry = null;
             return false;
         }
@@ -95,12 +95,11 @@ public class LucandraTermEnum extends TermEnum
         termView = termView.tailMap(currentTermEntry.getKey(), false);
         currentTermEntry = termView.firstEntry();
 
-        // rebuffer on last key
+        // rebuffer from last key
         if (termView.size() == 1)
-        {
-            
-            logger.info("Rebuffering terms");
-            
+        {         
+            //logger.info("Rebuffering terms");
+                     
             termView = termCache.skipTo(currentTermEntry.getKey());
 
             if (termView.size() < 2 && termView.firstEntry().getKey().equals(currentTermEntry))

@@ -102,6 +102,9 @@ public class SolandraIndexWriter extends UpdateHandler
     {
         super(core);
 
+        if(CassandraUtils.cacheInvalidationInterval == 0)
+            return;
+        
         try
         {
 
@@ -298,7 +301,8 @@ public class SolandraIndexWriter extends UpdateHandler
     {
         writer.commit(indexName, blocked);
 
-        SolandraIndexWriter.flushQueue.add(indexName);
+        if(CassandraUtils.cacheInvalidationInterval > 0)
+            SolandraIndexWriter.flushQueue.add(indexName);
     }
 
     public void delete(DeleteUpdateCommand cmd) throws IOException
@@ -357,14 +361,14 @@ public class SolandraIndexWriter extends UpdateHandler
 
                     // Delete key -> docId lookup
                     RowMutation rm = new RowMutation(CassandraUtils.keySpace, keyKey);
-                    rm.delete(new QueryPath(CassandraUtils.schemaInfoColumnFamily, keyCol), System.nanoTime());
+                    rm.delete(new QueryPath(CassandraUtils.schemaInfoColumnFamily, keyCol), System.currentTimeMillis());
 
                     // Delete docId so it can be reused
                     // TODO: update shard info with this docid
                     ByteBuffer idKey = CassandraUtils.hashKeyBytes(subIndex.getBytes("UTF-8"),
                             CassandraUtils.delimeterBytes, "ids".getBytes("UTF-8"));
                     RowMutation rm2 = new RowMutation(CassandraUtils.keySpace, idKey);
-                    rm2.delete(new QueryPath(CassandraUtils.schemaInfoColumnFamily, sidName), System.nanoTime());
+                    rm2.delete(new QueryPath(CassandraUtils.schemaInfoColumnFamily, sidName), System.currentTimeMillis());
 
                     CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm, rm2);
 
@@ -456,7 +460,7 @@ public class SolandraIndexWriter extends UpdateHandler
                 for (ScoreDoc doc : results.scoreDocs)
                 {
                     ByteBuffer id = ByteBufferUtil.bytes(String.valueOf(doc.doc));
-                    rm.delete(new QueryPath(CassandraUtils.schemaInfoColumnFamily, id), System.nanoTime());
+                    rm.delete(new QueryPath(CassandraUtils.schemaInfoColumnFamily, id), System.currentTimeMillis());
                 }
 
                 CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm);

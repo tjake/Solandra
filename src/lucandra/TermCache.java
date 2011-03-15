@@ -10,7 +10,6 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import org.apache.cassandra.db.*;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.utils.ByteBufferUtil;
-import org.apache.cassandra.utils.Pair;
 import org.apache.log4j.Logger;
 import org.apache.lucene.index.Term;
 
@@ -59,10 +58,10 @@ public class TermCache
 
         if (tailEntry != null)
         {
-            range = tailEntry.getValue();
-
-            //skip must be within range and not be a wildcard to skip rebuffering
-            if (skip.compareTo(range.left) >= 0 && (!range.right.equals(emptyTerm) && skip.compareTo(range.right) < 0) && !skip.text().isEmpty())
+            range = tailEntry.getValue();           
+            
+            //skip term must be within a buffered range avoid rebuffering
+            if (skip.compareTo(range.left) >= 0 && (!range.right.equals(emptyTerm) && skip.compareTo(range.right) < 0))
             {                
                 needsBuffering = false;
             }
@@ -75,6 +74,8 @@ public class TermCache
             range = bufferTerms(skip, bufferSize);
         }
 
+        //logger.info(range);
+        
         if (skip.compareTo(range.left) >= 0 && (!range.right.equals(emptyTerm)) && skip.compareTo(range.right) <= 0)
         {
             subList = termList.subMap(skip, true, range.right, true);
@@ -136,20 +137,12 @@ public class TermCache
                 logger.debug("Found " + columns.size() + " terms under field " + startTerm.field());
         }
 
-        Term endTerm;
         Pair<Term, Term> queryRange;
 
         if (!columns.isEmpty())
         {
-            // Yuck, need last column
-            IColumn lastColumn = null;
-            Iterator<IColumn> it = columns.iterator();
-
-            while (it.hasNext())
-                lastColumn = it.next();
-
-            endTerm = CassandraUtils.parseTerm(ByteBufferUtil.string(lastColumn.name(), CassandraUtils.UTF_8));
-            queryRange = new Pair<Term, Term>(startTerm, endTerm);
+            //end of range will get filled in later
+            queryRange = new Pair<Term, Term>(startTerm, null);
         }
         else
         {
@@ -166,6 +159,9 @@ public class TermCache
         List<ReadCommand> reads = new ArrayList<ReadCommand>(columns.size());
         for (IColumn column : columns)
         {
+            if(!column.isLive() || column instanceof DeletedColumn)
+                continue;
+            
             Term term = CassandraUtils.parseTerm(ByteBufferUtil.string(column.name(), CassandraUtils.UTF_8));
 
             localRanges.put(term, queryRange);
@@ -199,15 +195,17 @@ public class TermCache
                     + (System.currentTimeMillis() - start) + "ms");
 
         }
-
+        
         if (actualReadSize > 0)
         {
             for (Row row : rows)
             {
 
                 if (row.cf == null)
+                {
+                    logger.info("Encountered deleted row");
                     continue;
-
+                }
                 String key = ByteBufferUtil.string(row.key.key, CassandraUtils.UTF_8);
 
                 // term keys look like wikipedia/body/wiki
@@ -230,6 +228,10 @@ public class TermCache
                         if (columnsToRemove == null)
                             columnsToRemove = new ArrayList<IColumn>();
 
+                        if(logger.isDebugEnabled())
+                            logger.debug("Removing "+col+" documents from "+term);
+
+                        
                         columnsToRemove.add(col);
                     }
 
@@ -238,7 +240,7 @@ public class TermCache
                 }
 
                 if (columnsToRemove != null)
-                {
+                {                   
                     columns.removeAll(columnsToRemove);
                 }
 
@@ -248,6 +250,11 @@ public class TermCache
                         logger.debug("saving term: " + term + " with " + columns.size() + " docs");
 
                     termList.put(term, convertTermInfo(columns));
+                    
+                    //update end of range
+                    if(queryRange.right == null || queryRange.right.compareTo(term) < 0)
+                        queryRange.right = term;
+                    
                 }
                 else
                 {
@@ -256,6 +263,9 @@ public class TermCache
                 }
             }
 
+            if(queryRange.right == null)
+                queryRange.right = emptyTerm;
+            
             // to recall we did this query
             termQueryBoundries.putAll(localRanges);
         }

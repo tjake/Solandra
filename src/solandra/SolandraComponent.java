@@ -54,12 +54,10 @@ public class SolandraComponent extends SearchComponent
 {
     private static AtomicBoolean hasSolandraSchema = new AtomicBoolean(false);
     private static final Logger logger = Logger.getLogger(SolandraComponent.class);
-    private final Random        random;
     private final static Map<String,Long> cacheCheck = new MapMaker().makeMap();
     
     public SolandraComponent()
     {
-        random = new Random(System.currentTimeMillis());
     }
 
     public String getDescription()
@@ -84,8 +82,8 @@ public class SolandraComponent extends SearchComponent
 
     private boolean flushCache(String indexName) throws IOException
     {   
-        //if(CassandraUtils.cacheInvalidationInterval == 0)
-        //    return true;
+        if(CassandraUtils.cacheInvalidationInterval == 0)
+            return true;
         
         Long lastCheck = SolandraComponent.cacheCheck.get(indexName);
     
