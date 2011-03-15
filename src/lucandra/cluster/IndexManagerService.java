@@ -25,7 +25,7 @@ import lucandra.CassandraUtils;
 public class IndexManagerService
 {
     public static final CassandraIndexManager instance;
-    public static final Integer               shardsAtOnce = Integer.valueOf(CassandraUtils.properties.getProperty("solandra.shards.at.once", "4"));
+    public static final Integer               shardsAtOnce = Integer.valueOf(CassandraUtils.properties.getProperty("solandra.shards.at.once", "1"));
 
     static
     {   

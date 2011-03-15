@@ -36,39 +36,37 @@ import org.apache.lucene.index.TermEnum;
 
 public class LucandraTermEnum extends TermEnum
 {
-    //Shared info for a given index
-    private final IndexReader        indexReader;
-    private final String             indexName;
-    private final ReaderCache        readerCache;
-    private final TermCache          termCache;
-    
-    //Local info this enum 
-    private Map.Entry<Term, LucandraTermInfo[]>      currentTermEntry;
+    // Shared info for a given index
+    private final IndexReader                                indexReader;
+    private final String                                     indexName;
+    private final ReaderCache                                readerCache;
+    private final TermCache                                  termCache;
+
+    // Local info this enum
+    private Map.Entry<Term, LucandraTermInfo[]>              currentTermEntry;
     private ConcurrentNavigableMap<Term, LucandraTermInfo[]> termView;
-    
-    
- 
-    private static final Logger                  logger         = Logger.getLogger(LucandraTermEnum.class);
+
+    private static final Logger                              logger = Logger.getLogger(LucandraTermEnum.class);
 
     public LucandraTermEnum(IndexReader indexReader) throws IOException
     {
         this.indexReader = indexReader;
-        indexName        = indexReader.getIndexName();
-        readerCache      = indexReader.getCache();
-        termCache        = readerCache.termCache; 
+        indexName = indexReader.getIndexName();
+        readerCache = indexReader.getCache();
+        termCache = readerCache.termCache;
     }
 
     public boolean skipTo(Term term) throws IOException
     {
         if (term == null)
             return false;
-        
-        termView         = termCache.skipTo(term);            
+
+        termView = termCache.skipTo(term);
         currentTermEntry = termView.firstEntry();
-        
+
         return currentTermEntry != null;
     }
-    
+
     @Override
     public void close() throws IOException
     {
@@ -78,7 +76,7 @@ public class LucandraTermEnum extends TermEnum
     @Override
     public int docFreq()
     {
-        
+
         int freq = currentTermEntry == null ? 0 : currentTermEntry.getValue().length;
         return freq;
     }
@@ -86,29 +84,33 @@ public class LucandraTermEnum extends TermEnum
     @Override
     public boolean next() throws IOException
     {
-        //current term is in tree
-        if(termView.size() < 2)
+        // current term is in tree
+        if (termView.size() < 2)
         {
+            logger.info("Reached end of term list");
             currentTermEntry = null;
             return false;
         }
-        
+
         termView = termView.tailMap(currentTermEntry.getKey(), false);
         currentTermEntry = termView.firstEntry();
-        
-        //rebuffer on last key
-        if(termView.size() == 1)
+
+        // rebuffer on last key
+        if (termView.size() == 1)
         {
-           termView = termCache.skipTo(currentTermEntry.getKey());
-        
-           if(termView.size() < 2 && termView.firstEntry().getKey().equals(currentTermEntry))
-           {
-               currentTermEntry = null;
-               return false;
-           }
+            
+            logger.info("Rebuffering terms");
+            
+            termView = termCache.skipTo(currentTermEntry.getKey());
+
+            if (termView.size() < 2 && termView.firstEntry().getKey().equals(currentTermEntry))
+            {
+                currentTermEntry = null;
+                return false;
+            }
         }
-        
-        return true;      
+
+        return true;
     }
 
     @Override
@@ -117,30 +119,27 @@ public class LucandraTermEnum extends TermEnum
         return currentTermEntry == null ? null : currentTermEntry.getKey();
     }
 
-   
     public final LucandraTermInfo[] getTermDocFreq()
     {
-        if(currentTermEntry == null)
+        if (currentTermEntry == null)
             return null;
 
         Term term = currentTermEntry.getKey();
 
         LucandraTermInfo[] docIds = currentTermEntry.getValue();
 
-        
         // set normalizations
         indexReader.addDocumentNormalizations(docIds, term.field(), readerCache);
 
         return docIds;
     }
-    
-    
+
     public LucandraTermInfo[] loadFilteredTerms(Term term, List<ByteBuffer> docNums) throws IOException
     {
         long start = System.currentTimeMillis();
         ColumnParent parent = new ColumnParent();
         parent.setColumn_family(CassandraUtils.termVecColumnFamily);
- 
+
         ByteBuffer key;
         try
         {
@@ -151,23 +150,24 @@ public class LucandraTermEnum extends TermEnum
         {
             throw new RuntimeException("JVM doesn't support UTF-8", e2);
         }
- 
+
         ReadCommand rc = new SliceByNamesReadCommand(CassandraUtils.keySpace, key, parent, docNums);
- 
+
         List<Row> rows = CassandraUtils.robustRead(CassandraUtils.consistency, rc);
- 
+
         LucandraTermInfo[] termInfo = null;
- 
+
         if (rows != null && rows.size() > 0 && rows.get(0) != null && rows.get(0).cf != null)
-        {     
+        {
             termInfo = TermCache.convertTermInfo(rows.get(0).cf.getSortedColumns());
         }
-        
+
         long end = System.currentTimeMillis();
-        
-        if(logger.isDebugEnabled())
-            logger.debug("loadFilterdTerms: " + term + "(" + termInfo == null ? 0 : termInfo.length + ") took " + (end - start) + "ms");
- 
+
+        if (logger.isDebugEnabled())
+            logger.debug("loadFilterdTerms: " + term + "(" + termInfo == null ? 0 : termInfo.length + ") took "
+                    + (end - start) + "ms");
+
         return termInfo;
     }
 
