@@ -202,6 +202,9 @@ public class SolandraCoreContainer extends CoreContainer
         CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm);
 
         logger.debug("Wrote Schema for " + indexName);
+        
+        //remove any existing cores
+        cache.remove(indexName);
     }
 
     public static String getCoreMetaInfo(String indexName) throws IOException
