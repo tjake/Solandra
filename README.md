@@ -16,7 +16,7 @@ Java >= 1.6
 ####Features:######
 
   - Supports most out-of-the-box Solr functionality (search, faceting, highlights)
-  - Replication, Sharding, Caching and Compaction managed by Cassandra
+  - Replication, sharding, caching, and compaction managed by Cassandra
   - Multi-master (read/write to any node)
   - Writes become available as soon as write succeeds
   - Easily add new SolrCores w/o restart across the cluster
@@ -36,7 +36,7 @@ Now that Solandra is running you can run the demo:
     cd ../../reuters-demo
     ./1-download_data.sh
     ./2-import_data.sh
-    While data is loading open the file ./website/index.html in your favorite browser
+    While data is loading, open the file ./website/index.html in your favorite browser.
 
 
 ####Embedding in an existing cassandra distribution####
@@ -53,7 +53,7 @@ To use an existing Cassandra distribution perform the following steps.
 
 ####Limitations####
 
-Solandra uses Solr's built in distributed searching meachanism,
-most of its limitations covered here:
+Solandra uses Solr's built in distributed searching meachanism.
+Most of its limitations are covered here:
 
 [http://wiki.apache.org/solr/DistributedSearch#Distributed_Searching_Limitations](http://wiki.apache.org/solr/DistributedSearch#Distributed_Searching_Limitations)
