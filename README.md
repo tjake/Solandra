@@ -7,7 +7,7 @@ documents are stored and disributed using Cassandra's data model.
 
 Solandra makes managing and dynamically growing Solr simple(r). 
 
-For more information please see the [wiki](https://github.com/tjake/Lucandra/wiki)
+For more information please see the [wiki](https://github.com/tjake/Solandra/wiki)
 
 ####Requirements:####
 
