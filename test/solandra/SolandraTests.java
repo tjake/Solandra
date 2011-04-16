@@ -186,8 +186,17 @@ public class SolandraTests
                 testUnicode(solrClient);
                 logger.info("testUnicode");
 
+                testDeleteTerm(solrClient);
+                logger.info("testDeleteTerm");
+                
                 testUpdateDocument(solrClient);
                 logger.info("testUpdateDocument");
+                
+                testWildcardSearch(solrClient);
+                logger.info("testWildCardSearch");
+                              
+                testDeleteByQuery(solrClient);
+                logger.info("testDeleteByQuery");
             }
         }
     }
@@ -277,6 +286,7 @@ public class SolandraTests
         SolrQuery q = new SolrQuery().setQuery("text:Solandra").addField("*").addField("score");
 
         QueryResponse r = solrClient.query(q);
+        
         assertEquals(1, r.getResults().getNumFound());
 
         solrClient.deleteById("http://www.test.com");
@@ -945,7 +955,7 @@ public class SolandraTests
 
         SolrQuery q;
         QueryResponse r;
-
+        
         q = new SolrQuery().setQuery("messageType:[* TO *]");
         r = otherClient.query(q);
         assertEquals(47, r.getResults().getNumFound());

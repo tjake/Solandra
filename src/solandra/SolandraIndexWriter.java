@@ -418,9 +418,9 @@ public class SolandraIndexWriter extends UpdateHandler
                 long maxId = IndexManagerService.instance.getMaxId(indexName);
                 Integer maxShard = CassandraIndexManager.getShardFromDocId(maxId);
                 
-                for (int i = 1; i <= maxShard; i++)
+                for (int i = 0; i <= maxShard; i++)
                 {
-                    String subIndex = indexName + "~" + coreInfo.shard;
+                    String subIndex = indexName + "~" + i;
 
                     InetAddress addr = getIndexLocation(subIndex);
                     if(addr.equals(FBUtilities.getLocalAddress()))
@@ -459,17 +459,20 @@ public class SolandraIndexWriter extends UpdateHandler
 
                 for (ScoreDoc doc : results.scoreDocs)
                 {
-                    ByteBuffer id = ByteBufferUtil.bytes(String.valueOf(doc.doc));
+                    //Scale the doc ID to the sharded id.
+         //           int shard = Integer.valueOf(subIndex.substring(subIndex.lastIndexOf('~')+1));
+                    ByteBuffer id = ByteBufferUtil.bytes(String.valueOf(doc.doc));// + (CassandraIndexManager.maxDocsPerShard * shard))));
                     rm.delete(new QueryPath(CassandraUtils.schemaInfoColumnFamily, id), System.currentTimeMillis());
                 }
 
                 CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm);
-                madeIt = true;
+               
 
-                return;
+                
             }
 
-          
+            madeIt = true;
+           
 
         }
         finally

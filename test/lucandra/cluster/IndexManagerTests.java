@@ -40,27 +40,7 @@ public class IndexManagerTests
     static String indexName = String.valueOf(System.nanoTime()); 
     
    
-    @Test
-    public void testCustomRandomPartitioner()
-    {
-        String[] keys = new String[] { "0", "83316744970572273156255124564039073023",
-                "22040284005381836676397683785200205813", "43045609512509978730039130609641356928",
-                "35329030817634227734261170198958572329", "127605887595351923798765477786913079295" };
-
-        RandomPartitioner rp = new RandomPartitioner();
-
-        for (String key : keys)
-        {
-            byte[] keyBytes = key.getBytes();
-
-            ByteBuffer hashBuf = ByteBuffer.allocate(keyBytes.length + CassandraUtils.delimeterBytes.length);
-            hashBuf.put(keyBytes);
-            hashBuf.put(CassandraUtils.delimeterBytes);
-            hashBuf.flip();
-
-            assertEquals(rp.getToken(hashBuf).token.abs().toString(), key);
-        }
-    }
+   
 
     private class TestCassandraIndexManager extends CassandraIndexManager
     {
@@ -91,6 +71,97 @@ public class IndexManagerTests
             throw new RuntimeException(e);
         }
     }
+    
+    
+    @Test
+    public void testCassandraIncrement3()
+    {
+
+        indexName = String.valueOf(System.nanoTime());
+
+        ExecutorService svc = Executors.newFixedThreadPool(16);
+
+        final TestCassandraIndexManager idx = new TestCassandraIndexManager(1);
+        
+        List<Callable<Set<Long>>> callables = new ArrayList<Callable<Set<Long>>>();
+        for (int i = 0; i < 16; i++)
+        {
+            Callable<Set<Long>> r = new Callable<Set<Long>>() {
+
+                public Set<Long> call()
+                {
+
+                    long startTime = System.currentTimeMillis();
+
+                    Set<Long> all = new HashSet<Long>(CassandraIndexManager.maxDocsPerShard);
+
+                    for (int i = 0; i < CassandraIndexManager.maxDocsPerShard / 10; i++)
+                    {
+                        Long id = null;
+                        try
+                        {
+                            id = idx.getNextId("i"+i, "i" + i);
+                        }
+                        catch (IOException e)
+                        {
+                            throw new RuntimeException(e);
+                        }
+                        
+
+                        if (i % 10000 == 0)
+                        {
+                            long endTime = System.currentTimeMillis();
+                            System.err.println(Thread.currentThread().getName() + " id:" + id + ", 10k iterations in "
+                                    + (endTime - startTime) / 1000 + " sec");
+                            startTime = endTime;
+                        }
+                    }
+
+                    return all;
+                }
+
+            };
+
+            callables.add(r);
+        }
+
+        try
+        {
+            List<Future<Set<Long>>> results = svc.invokeAll(callables);
+
+
+            for (Future<Set<Long>> result : results)
+            {
+                Set<Long> thread = result.get();
+
+                
+            }
+        }
+        catch (InterruptedException e1)
+        {
+            // TODO Auto-generated catch block
+            e1.printStackTrace();
+        }
+        catch (ExecutionException e)
+        {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+
+        svc.shutdown();
+
+        try
+        {
+            svc.awaitTermination(10, TimeUnit.MINUTES);
+        }
+        catch (InterruptedException e)
+        {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+
+    }
+    
 
     @Test
     public void testCassandraIncrement() throws IOException
@@ -246,4 +317,26 @@ public class IndexManagerTests
 
     }
 
+    @Test
+    public void testCustomRandomPartitioner()
+    {
+        String[] keys = new String[] { "0", "83316744970572273156255124564039073023",
+                "22040284005381836676397683785200205813", "43045609512509978730039130609641356928",
+                "35329030817634227734261170198958572329", "127605887595351923798765477786913079295" };
+
+        RandomPartitioner rp = new RandomPartitioner();
+
+        for (String key : keys)
+        {
+            byte[] keyBytes = key.getBytes();
+
+            ByteBuffer hashBuf = ByteBuffer.allocate(keyBytes.length + CassandraUtils.delimeterBytes.length);
+            hashBuf.put(keyBytes);
+            hashBuf.put(CassandraUtils.delimeterBytes);
+            hashBuf.flip();
+
+            assertEquals(rp.getToken(hashBuf).token.abs().toString(), key);
+        }
+    }
+    
 }

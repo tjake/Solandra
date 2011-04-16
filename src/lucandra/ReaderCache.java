@@ -20,14 +20,14 @@
 package lucandra;
 
 import java.io.IOException;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 import lucandra.cluster.CassandraIndexManager;
 
 import com.google.common.collect.MapMaker;
 
 import org.apache.lucene.document.Document;
+import org.apache.lucene.index.IndexReader.ReaderFinishedListener;
 import org.apache.lucene.util.OpenBitSet;
 
 public class ReaderCache
@@ -38,6 +38,7 @@ public class ReaderCache
     public final Map<String, byte[]>  fieldNorms;
     public final OpenBitSet docHits;
     public final Object fieldCacheKey;
+    public final Collection<ReaderFinishedListener> readerFinishedListeners;
     
     public ReaderCache(String indexName) throws IOException
     {
@@ -47,6 +48,7 @@ public class ReaderCache
         termCache           = new TermCache(indexName);
         fieldNorms          = new MapMaker().makeMap();
         docHits             = new OpenBitSet(CassandraIndexManager.maxDocsPerShard);
+        readerFinishedListeners = new ArrayList<ReaderFinishedListener>();
         
         fieldCacheKey = UUID.randomUUID();
     }

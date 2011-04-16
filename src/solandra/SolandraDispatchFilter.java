@@ -24,18 +24,16 @@ import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.solr.common.params.CommonParams;
-import org.apache.solr.common.util.NamedList;
-import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.core.SolandraCoreContainer;
-import org.apache.solr.core.SolrCore;
 import org.apache.solr.core.CoreContainer.Initializer;
 import org.apache.solr.request.*;
+import org.apache.solr.response.SolrQueryResponse;
 import org.apache.solr.servlet.SolrDispatchFilter;
 import org.apache.solr.servlet.cache.Method;
 
 public class SolandraDispatchFilter extends SolrDispatchFilter
 {
+
 
     private static final String schemaPrefix = "/schema";
 
@@ -131,7 +129,7 @@ public class SolandraDispatchFilter extends SolrDispatchFilter
 
         return init;
     }
-
+    
     @Override
     protected void execute(HttpServletRequest req, SolrRequestHandler handler, SolrQueryRequest sreq,
             SolrQueryResponse rsp)
@@ -158,31 +156,7 @@ public class SolandraDispatchFilter extends SolrDispatchFilter
         super.execute(req, handler, sreq, rsp);
     }
 
-    private void handleAdminRequest(HttpServletRequest req, ServletResponse response, SolrRequestHandler handler,
-            SolrQueryRequest solrReq) throws IOException
-    {
-        SolrQueryResponse solrResp = new SolrQueryResponse();
-        final NamedList<Object> responseHeader = new SimpleOrderedMap<Object>();
-        solrResp.add("responseHeader", responseHeader);
-        NamedList toLog = solrResp.getToLog();
-        toLog.add("webapp", req.getContextPath());
-        toLog.add("path", solrReq.getContext().get("path"));
-        toLog.add("params", "{" + solrReq.getParamString() + "}");
-        handler.handleRequest(solrReq, solrResp);
-        SolrCore.setResponseHeaderValues(handler, solrReq, solrResp);
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < toLog.size(); i++)
-        {
-            String name = toLog.getName(i);
-            Object val = toLog.getVal(i);
-            sb.append(name).append("=").append(val).append(" ");
-        }
-        QueryResponseWriter respWriter = SolrCore.DEFAULT_RESPONSE_WRITERS
-                .get(solrReq.getParams().get(CommonParams.WT));
-        if (respWriter == null)
-            respWriter = SolrCore.DEFAULT_RESPONSE_WRITERS.get("standard");
-        writeResponse(solrResp, response, respWriter, solrReq, Method.getMethod(req.getMethod()));
-    }
+   
 
     private void writeResponse(SolrQueryResponse solrRsp, ServletResponse response, QueryResponseWriter responseWriter,
             SolrQueryRequest solrReq, Method reqMethod) throws IOException

@@ -19,6 +19,7 @@
  */
 package lucandra;
 
+import java.io.IOError;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -52,7 +53,6 @@ import solandra.SolandraFieldSelector;
 
 public class IndexReader extends org.apache.lucene.index.IndexReader
 {
-
     private final static int                                numDocs       = CassandraIndexManager.maxDocsPerShard;
     private final static byte                               defaultNorm   = Similarity.encodeNorm(1.0f);
 
@@ -382,7 +382,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader
     }
 
     @Override
-    public Object getFieldCacheKey()
+    public Object getCoreCacheKey()
     {
 
         try
@@ -395,6 +395,19 @@ public class IndexReader extends org.apache.lucene.index.IndexReader
         }
 
     }
+    
+    public void addReaderFinishedListener(ReaderFinishedListener listener)
+    {
+        try
+        {
+            getCache().readerFinishedListeners.add(listener);
+        }
+        catch(IOException e)
+        {
+            throw new IOError(e);
+        }
+    }
+
 
     @Override
     public Collection getFieldNames(FieldOption fieldOption)
@@ -504,7 +517,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader
     public TermEnum terms(Term term) throws IOException
     {
 
-        TermEnum termEnum = new LucandraTermEnum(this);
+        LucandraTermEnum termEnum = new LucandraTermEnum(this);
 
         termEnum.skipTo(term);
 
@@ -593,6 +606,12 @@ public class IndexReader extends org.apache.lucene.index.IndexReader
         {
             throw new RuntimeException(e);
         }
+    }
+
+    protected void doCommit(Map<String, String> arg0) throws IOException
+    {
+        // TODO Auto-generated method stub
+        
     }
 
 }

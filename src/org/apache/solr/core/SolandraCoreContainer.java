@@ -43,6 +43,7 @@ import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.log4j.Logger;
 import org.apache.solr.schema.IndexSchema;
+import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 
@@ -168,9 +169,10 @@ public class SolandraCoreContainer extends CoreContainer
                     CassandraUtils.schemaKeyBytes).value();
             InputStream stream = new ByteArrayInputStream(ByteBufferUtil.getArray(buf));
 
+           
             SolrConfig solrConfig = new SolrConfig(solrConfigFile);
 
-            IndexSchema schema = new IndexSchema(solrConfig, indexName, stream);
+            IndexSchema schema = new IndexSchema(solrConfig, indexName, new InputSource(stream));
 
             core = new SolrCore(indexName, "/tmp", solrConfig, schema, null);
 

@@ -157,6 +157,9 @@ public class LucandraAllTermDocs implements TermDocs
                         
             Integer id  = Integer.valueOf(ByteBufferUtil.string(sc.name()));
                        
+            if(!sc.isLive())
+                continue;
+                
             for(IColumn c : sc.getSubColumns())
             {
                 //valid id

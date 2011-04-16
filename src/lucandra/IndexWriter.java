@@ -48,6 +48,7 @@ import org.apache.lucene.analysis.tokenattributes.TermAttribute;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Fieldable;
 import org.apache.lucene.index.CorruptIndexException;
+import org.apache.lucene.index.FieldInvertState;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.*;
 import org.apache.thrift.TDeserializer;
@@ -211,9 +212,12 @@ public class IndexWriter
                 if (!field.getOmitNorms())
                 {
                     bnorm = new ArrayList<Number>();
-                    float norm = doc.getBoost();
-                    norm *= field.getBoost();
-                    norm *= similarity.lengthNorm(field.name(), tokensInField);
+               
+                    final FieldInvertState invertState = new FieldInvertState();
+                    invertState.setBoost(doc.getBoost() * field.getBoost());
+                    invertState.setLength(tokensInField);
+                    final float norm = similarity.computeNorm(field.name(), invertState);
+                    
                     bnorm.add(Similarity.encodeNorm(norm));
                 }
 

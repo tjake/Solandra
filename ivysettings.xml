@@ -25,14 +25,12 @@
     </filesystem>
     <chain name="chain" dual="true">
       <ibiblio name="java.net2" root="http://download.java.net/maven/2/" m2compatible="true"/>
-      <ibiblio name="cloudera" root="https://repository.cloudera.com/content/repositories/releases/" m2compatible="true" />
       <ibiblio name="ibiblio" m2compatible="true" />
     </chain>
   </resolvers>
   <modules>
     <module organisation="net.java.dev.jna" name="jna" resolver="chain" />
     <module organisation="org.apache.cassandra" name="*" resolver="chain" />
-    <module organisation="com.cloudera.*" name="*" resolver="chain" />
     <module organisation="com.reardencommerce" name="*" resolver="chain" />
     <module organisation="libthrift" name="*" resolver="chain" />
     <module organisation="snakeyaml" name="*" resolver="chain" />

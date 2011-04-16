@@ -43,8 +43,7 @@ public class LucandraFilter extends Filter {
     public DocIdSet getDocIdSet(IndexReader reader) throws IOException {
         OpenBitSet result = new OpenBitSet(reader.maxDoc());
 
-        OpenBitSet docsHit = ((lucandra.IndexReader) reader).getDocsHit();
-        
+        OpenBitSet docsHit = ((lucandra.IndexReader) reader).getDocsHit();       
        
         List<ByteBuffer> filteredValues = new ArrayList<ByteBuffer>();
         for(int i=0; i<docsHit.capacity(); i++){          
