@@ -275,7 +275,7 @@ public class CassandraUtils
         {
             Thread.sleep(1000);
             
-            int sleep = new Random().nextInt(60000);
+            int sleep = new Random().nextInt(6000);
             
             logger.info("\nSleeping " + sleep + "ms to stagger solandra schema creation\n");
        
