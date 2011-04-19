@@ -20,6 +20,8 @@
 package lucandra;
 
 import java.io.*;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.math.BigInteger;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -46,10 +48,12 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 import org.apache.lucene.document.Fieldable;
 import org.apache.lucene.index.Term;
+import org.apache.lucene.search.FieldCache;
 import org.apache.thrift.TException;
 
 public class CassandraUtils
 {
+    private static final Logger          logger                 = Logger.getLogger(CassandraUtils.class);
 
     public static final Properties       properties;
     public static final String           keySpace;
@@ -84,6 +88,24 @@ public class CassandraUtils
                     .name()));
             
             useCompression = Boolean.valueOf(properties.getProperty("solandra.compression", "true"));
+            
+            try
+            {
+                setFinalStatic(FieldCache.class.getDeclaredField("DEFAULT"), new org.apache.lucene.search.LucandraFieldCache());
+                logger.info("Sucessfully Hijacked FieldCacheImpl");
+            }
+            catch (SecurityException e)
+            {
+                logger.info("Unable to hijack the FieldCache");
+            }
+            catch (NoSuchFieldException e)
+            {
+               throw new RuntimeException(e);
+            }
+            catch (Exception e)
+            {
+              throw new RuntimeException(e);
+            }
             
 
         }
@@ -122,6 +144,8 @@ public class CassandraUtils
     public static final String           termVecColumnFamily    = "TI";
     public static final String           docColumnFamily        = "Docs";
     public static final String           metaInfoColumnFamily   = "TL";
+    public static final String           fieldCacheColumnFamily = "FC";
+
     public static final String           schemaInfoColumnFamily = "SI";
 
     public static final String           positionVectorKey      = "P";
@@ -157,8 +181,7 @@ public class CassandraUtils
 
     public static final Charset          UTF_8                  = Charset.forName("UTF-8");
 
-    private static final Logger          logger                 = Logger.getLogger(CassandraUtils.class);
-
+   
     private static boolean               cassandraStarted       = false;
 
     public static String                 fakeToken              = String.valueOf(System.nanoTime());
@@ -311,6 +334,16 @@ public class CassandraUtils
         cf.setKey_cache_size(0);
         cf.setRow_cache_size(0);
         cf.setComment("Stores term information with indexName/field/term as composite key");
+        cf.setKeyspace(keySpace);
+
+        cfs.add(cf);
+        
+        cf = new CfDef();
+        cf.setName(fieldCacheColumnFamily);
+        cf.setComparator_type("lucandra.VIntType");
+        cf.setKey_cache_size(0);
+        cf.setRow_cache_size(0);
+        cf.setComment("Stores term per doc per field");
         cf.setKeyspace(keySpace);
 
         cfs.add(cf);
@@ -790,4 +823,15 @@ public class CassandraUtils
         return bos.toByteArray();
     }
 
+    //Java lets you do EVIL things
+    public static void setFinalStatic(Field field, Object newValue) throws Exception {
+        field.setAccessible(true);
+
+        Field modifiersField = Field.class.getDeclaredField("modifiers");
+        modifiersField.setAccessible(true);
+        modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+
+        field.set(null, newValue);
+     }
+    
 }

@@ -100,6 +100,8 @@ public class IndexWriter
         for (Fieldable field : (List<Fieldable>) doc.getFields())
         {
 
+            ThriftTerm firstTerm = null;
+            
             // Indexed field
             if (field.isIndexed() && field.isTokenized())
             {
@@ -112,8 +114,8 @@ public class IndexWriter
                 }
 
                 // collect term information per field
-                Map<Term, Map<ByteBuffer, List<Number>>> allTermInformation = new HashMap<Term, Map<ByteBuffer, List<Number>>>();
-
+                Map<Term, Map<ByteBuffer, List<Number>>> allTermInformation = new HashMap<Term, Map<ByteBuffer, List<Number>>>();             
+                
                 int lastOffset = 0;
                 if (position > 0)
                 {
@@ -149,7 +151,12 @@ public class IndexWriter
                     tokensInField++;
                     Term term = new Term(field.name(), termAttribute.term());
 
-                    allIndexedTerms.add(new ThriftTerm(field.name(), termAttribute.term()));
+                    ThriftTerm tterm  = new ThriftTerm(field.name(), termAttribute.term());
+                    
+                    if(firstTerm == null)
+                        firstTerm = tterm;
+                    
+                    allIndexedTerms.add(tterm);
 
                     // fetch all collected information for this term
                     Map<ByteBuffer, List<Number>> termInfo = allTermInformation.get(term);
@@ -250,7 +257,12 @@ public class IndexWriter
             // Untokenized fields go in without a termPosition
             if (field.isIndexed() && !field.isTokenized())
             {
-                allIndexedTerms.add(new ThriftTerm(field.name(), field.stringValue()));
+                ThriftTerm tterm = new ThriftTerm(field.name(), field.stringValue());
+                
+                if(firstTerm == null)
+                    firstTerm = tterm;
+                
+                allIndexedTerms.add(tterm);
 
                 ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"),
                         CassandraUtils.delimeterBytes, field.name().getBytes("UTF-8"), CassandraUtils.delimeterBytes,
@@ -301,9 +313,17 @@ public class IndexWriter
                     fieldCache.put(field.name(), newValue);
                 }
             }
+            
+            //Store for field cache
+            if(firstTerm != null)
+            {   
+                ByteBuffer fieldCacheKey = CassandraUtils.hashKeyBytes(indexNameBytes, CassandraUtils.delimeterBytes, firstTerm.field.getBytes());
+                CassandraUtils.addMutations(workingMutations, CassandraUtils.fieldCacheColumnFamily, CassandraUtils.writeVInt(docNumber), fieldCacheKey, firstTerm.text.getBytes("UTF-8"));
+            }
+            
         }
 
-        ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"), CassandraUtils.delimeterBytes,
+        ByteBuffer key = CassandraUtils.hashKeyBytes(indexNameBytes, CassandraUtils.delimeterBytes,
                 Integer.toHexString(docNumber).getBytes("UTF-8"));
 
         // Store each field as a column under this docId
@@ -404,8 +424,19 @@ public class IndexWriter
 
         List<Term> terms = fromBytesUsingThrift(metaCol.value());
 
+        Set<String> fields = new HashSet<String>();
+        
         for (Term term : terms)
         {
+            //remove from field cache
+            if(!fields.contains(term.field()))
+            {
+                ByteBuffer fieldCacheKey = CassandraUtils.hashKeyBytes(indexNameBytes, CassandraUtils.delimeterBytes, term.field().getBytes());
+                
+                CassandraUtils.addMutations(workingMutations, CassandraUtils.fieldCacheColumnFamily, CassandraUtils.writeVInt(docNumber), fieldCacheKey, (ByteBuffer) null);
+                
+                fields.add(term.field());
+            }
 
             try
             {
