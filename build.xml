@@ -149,7 +149,12 @@
 	  <echo message="running tests" />
 	  <mkdir dir="${build}/output" />
 	  <junit fork="on" failureproperty="testfailed">
-	    <classpath refid="solandra.classpath" />
+
+	    <classpath>	      
+	      <path refid="solandra.classpath"/>
+	      <pathelement location="${basedir}/solandra-app/"/>
+	    </classpath>
+
 	    <formatter type="xml" usefile="true" />
 	    <formatter type="brief" usefile="false" />
 	    
@@ -158,6 +163,9 @@
 	    </batchtest>
 	    
 	    <jvmarg value="-Xmx1G" />
+	    <jvmarg value="-Dlog4j.configuration=file:///${basedir}/resources/log4j.properties"/>
+	    <jvmarg value="-Dlog4j.defaultInitOverride=true" />
+	    
 	  </junit>
 	  <fail if="testfailed" message="Some test(s) failed." />
 	</target>

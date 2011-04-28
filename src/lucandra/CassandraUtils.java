@@ -123,7 +123,7 @@ public class CassandraUtils
     // 10 seconds.
     static
     {
-        String config = System.getProperty("log4j.configuration", "log4j-server.properties");
+        String config = System.getProperty("log4j.configuration", "log4j.properties");
         URL configLocation = null;
         try
         {
