@@ -171,6 +171,9 @@ public class SolandraTests
                 testAddData(solrClient);
                 logger.info("testAddData");
 
+                testPhraseSearch(solrClient);
+                logger.info("testPhraseSearch");
+                
                 testAllSearch(solrClient);
                 logger.info("testAllSearch");
 

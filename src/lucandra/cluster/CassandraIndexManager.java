@@ -655,9 +655,7 @@ public class CassandraIndexManager
                 rsvpdByNode.put(node, rsvpd);
 
                 if (logger.isDebugEnabled())
-                    logger.debug("offset for shard " + node.shard + " " + nextOffset);
-
-                
+                    logger.debug("offset for shard " + node.shard + " " + nextOffset);               
             }
         }
 
