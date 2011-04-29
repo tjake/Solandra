@@ -95,7 +95,7 @@ public class IndexManagerTests
 
                     Set<Long> all = new HashSet<Long>(CassandraIndexManager.maxDocsPerShard);
 
-                    for (int i = 0; i < CassandraIndexManager.maxDocsPerShard / 10; i++)
+                    for (int i = 0; i < 10000; i++)
                     {
                         Long id = null;
                         try
