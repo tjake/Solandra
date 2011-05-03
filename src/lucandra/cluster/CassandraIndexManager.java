@@ -816,7 +816,7 @@ public class CassandraIndexManager
 
             RowMutation rm = updateNodeOffset(indexName, getToken(), nodes.shard, randomSeq[0]); // offset
             // 0
-        //    RowMutation rm2 = updateNodeOffset(indexName + "~" + nodes.shard, getToken(), nodes.shard, randomSeq[0]); // offset
+            RowMutation rm2 = updateNodeOffset(indexName + "~" + nodes.shard, getToken(), nodes.shard, randomSeq[0]); // offset
             // 0
 
             CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm);          
@@ -842,20 +842,21 @@ public class CassandraIndexManager
         AtomicInteger o = null;
         NodeInfo      n = si.shards.get(shard);
         
-        
-        if(n != null)
-            o = n.nodes.get(myToken);
-        else
-           throw new RuntimeException("missing node info");
-        
-        if (o == null)
-            n.nodes.put(myToken, new AtomicInteger(offset));
-        else
-            o.set(offset);
+        if(!indexName.contains("~")) 
+        {    
+            if (n != null)
+                o = n.nodes.get(myToken);
+            else
+                throw new RuntimeException("missing node info");
 
-        if (logger.isDebugEnabled())
-            logger.debug("updated node offset for " + indexName + "(" + shard + ")(" + myToken + ") to " + offset);
+            if (o == null)
+                n.nodes.put(myToken, new AtomicInteger(offset));
+            else
+                o.set(offset);
 
+            if (logger.isDebugEnabled())
+                logger.debug("updated node offset for " + indexName + "(" + shard + ")(" + myToken + ") to " + offset);
+        }
         return rm;
     }
 
