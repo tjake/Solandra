@@ -67,7 +67,7 @@ public class CassandraIndexManager
                                                                                    "16384"));
 
     private final int                              offsetSlots     = maxDocsPerShard / reserveSlabSize;
-    private final int                              expirationTime  = 120;                                          // seconds
+    public final int                              expirationTime  = 120;                                          // seconds
 
     private final ConcurrentMap<String, AllNodeRsvps>  indexReserves = new MapMaker().makeMap();
     
@@ -213,7 +213,7 @@ public class CassandraIndexManager
 
         ReadCommand cmd = new SliceFromReadCommand(CassandraUtils.keySpace, key, new ColumnParent(
                 CassandraUtils.schemaInfoColumnFamily), ByteBufferUtil.EMPTY_BYTE_BUFFER,
-                ByteBufferUtil.EMPTY_BYTE_BUFFER, false, 100);
+                ByteBufferUtil.EMPTY_BYTE_BUFFER, false, Integer.MAX_VALUE);
 
         List<Row> rows = CassandraUtils.robustRead(ConsistencyLevel.QUORUM, cmd);
 
@@ -236,39 +236,21 @@ public class CassandraIndexManager
                 {
                     String shardStr = ByteBufferUtil.string(c.name());
                     Integer shardNum = Integer.valueOf(shardStr);
-
-                    // goto each shard and get local offset
-                    cmd = new SliceFromReadCommand(CassandraUtils.keySpace, CassandraUtils.hashKeyBytes((indexName
-                            + "~" + shardStr).getBytes("UTF-8"), CassandraUtils.delimeterBytes, "shards"
-                            .getBytes("UTF-8")), new ColumnParent(CassandraUtils.schemaInfoColumnFamily),
-                            ByteBufferUtil.EMPTY_BYTE_BUFFER, ByteBufferUtil.EMPTY_BYTE_BUFFER, false, 100);
-
-                    List<Row> lrows = CassandraUtils.robustRead(ConsistencyLevel.QUORUM, cmd);
-
-                    if (lrows != null && !lrows.isEmpty())
+                    
+                    assert c instanceof SuperColumn;
+                    
+                    NodeInfo nodes = new NodeInfo(shardNum);
+                    
+                    for(IColumn subCol : c.getSubColumns())
                     {
-                        assert rows.size() == 1;
-
-                        Row lrow = lrows.get(0);
-
-                        if (lrow.cf != null && !lrow.cf.isMarkedForDelete())
-                        {
-                            for (IColumn lc : lrow.cf.getSortedColumns())
-                            {
-                                NodeInfo nodes = new NodeInfo(shardNum);
-
-                                for (IColumn s : lc.getSubColumns())
-                                {
-                                    String token = ByteBufferUtil.string(s.name());
-                                    AtomicInteger offset = new AtomicInteger(Integer.valueOf(ByteBufferUtil.string(s
-                                            .value())));
-
-                                    nodes.nodes.put(token, offset);
-                                }
-
-                                shards.shards.put(shardNum, nodes);
-                            }
-                        }
+                        
+                        String token = ByteBufferUtil.string(subCol.name());
+                        AtomicInteger offset = new AtomicInteger(Integer.valueOf(ByteBufferUtil.string(subCol.value())));
+                    
+                       
+                        nodes.nodes.put(token, offset);
+                      
+                        shards.shards.put(shardNum, nodes);               
                     }
                 }
             }
@@ -814,11 +796,8 @@ public class CassandraIndexManager
         {
             logger.info("added new shard for " + indexName + " " + nodes.shard + " with offset " + randomSeq[0]);
 
-            RowMutation rm = updateNodeOffset(indexName, getToken(), nodes.shard, randomSeq[0]); // offset
-            // 0
-        //    RowMutation rm2 = updateNodeOffset(indexName + "~" + nodes.shard, getToken(), nodes.shard, randomSeq[0]); // offset
-            // 0
-
+            RowMutation rm = updateNodeOffset(indexName, getToken(), nodes.shard, randomSeq[0]); // offset 0
+       
             CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm);          
         }
 
@@ -842,20 +821,27 @@ public class CassandraIndexManager
         AtomicInteger o = null;
         NodeInfo      n = si.shards.get(shard);
         
-        
-        if(n != null)
-            o = n.nodes.get(myToken);
-        else
-           throw new RuntimeException("missing node info");
-        
-        if (o == null)
-            n.nodes.put(myToken, new AtomicInteger(offset));
-        else
-            o.set(offset);
+        if(!indexName.contains("~")) 
+        {    
+            if (n != null)
+                o = n.nodes.get(myToken);
+            else
+                throw new RuntimeException("missing node info");
 
-        if (logger.isDebugEnabled())
-            logger.debug("updated node offset for " + indexName + "(" + shard + ")(" + myToken + ") to " + offset);
+            if (o == null)
+                n.nodes.put(myToken, new AtomicInteger(offset));
+            else
+                o.set(offset);
 
+            if (logger.isDebugEnabled())
+                logger.debug("updated node offset for " + indexName + "(" + shard + ")(" + myToken + ") to " + offset);
+        }
+        else
+        {
+            throw new RuntimeException("inner shard offset update attempt: "+indexName);
+        }
+        
+        
         return rm;
     }
 
