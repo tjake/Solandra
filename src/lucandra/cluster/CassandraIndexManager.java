@@ -239,7 +239,7 @@ public class CassandraIndexManager
 
                     // goto each shard and get local offset
                     cmd = new SliceFromReadCommand(CassandraUtils.keySpace, CassandraUtils.hashKeyBytes((indexName
-                            + "~" + shardStr).getBytes("UTF-8"), CassandraUtils.delimeterBytes, "shards"
+                            ).getBytes("UTF-8"), CassandraUtils.delimeterBytes, "shards"
                             .getBytes("UTF-8")), new ColumnParent(CassandraUtils.schemaInfoColumnFamily),
                             ByteBufferUtil.EMPTY_BYTE_BUFFER, ByteBufferUtil.EMPTY_BYTE_BUFFER, false, 100);
 
