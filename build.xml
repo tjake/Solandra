@@ -216,7 +216,7 @@
           <mkdir dir="${app}/lib" />
           <mkdir dir="${app}/work" />
           <copy todir="${app}/lib">
-            <fileset dir="${lib}" includes="jetty*.jar,servlet*.jar,jsp*.jar"/>
+            <fileset dir="${lib}" includes="jetty*.jar,servlet*.jar,jsp*.jar,velocity*.jar"/>
           </copy>
           <copy todir="${app}/etc">
             <fileset dir="${resources}/solr" includes="jetty.xml,jetty-logging.xml,webdefault.xml"/>
@@ -263,7 +263,7 @@
       <!-- copy over all the new jar files -->
 	
       <copy todir="${cassandra}/lib">
-	<fileset dir="${lib}" includes="jetty*.jar,servlet*.jar,jsp*.jar, solr*.jar, lucene*.jar, commons*.jar" />
+	<fileset dir="${lib}" includes="jetty*.jar,servlet*.jar,jsp*.jar, solr*.jar, lucene*.jar, commons*.jar, veclocity*.jar" />
 	<fileset dir="${basedir}" includes="solandra.jar" />
       </copy>
 
