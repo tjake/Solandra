@@ -30,11 +30,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import lucandra.CassandraUtils;
 import lucandra.dht.RandomPartitioner;
 
+import org.apache.log4j.Logger;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class IndexManagerTests
 {
+    private static final Logger logger = Logger.getLogger(IndexManagerTests.class);
     static String indexName = String.valueOf(System.nanoTime());
 
     private class TestCassandraIndexManager extends CassandraIndexManager
@@ -109,7 +111,7 @@ public class IndexManagerTests
                         if (j % 100 == 0)
                         {
                             long endTime = System.currentTimeMillis();
-                            System.err.println(Thread.currentThread().getName() + " id:" + id + ", 100 iterations in "
+                            logger.info(Thread.currentThread().getName() + " id:" + id + ", 100 iterations in "
                                     + (endTime - startTime) / 1000 + " sec");
                             startTime = endTime;
                         }
@@ -177,7 +179,7 @@ public class IndexManagerTests
 
             assertNotNull(id);
 
-            // System.err.println(CassandraIndexManager.getShardFromDocId(id));
+            // logger.info(CassandraIndexManager.getShardFromDocId(id));
             AtomicInteger counter = shardStats.get(CassandraIndexManager.getShardFromDocId(id));
             if (counter == null)
             {
@@ -191,7 +193,7 @@ public class IndexManagerTests
             if (i % 10000 == 0)
             {
                 long endTime = System.currentTimeMillis();
-                System.err.println("added:" + id + ", 10k iterations in " + (endTime - startTime) / 1000 + " sec "
+                logger.info("added:" + id + ", 10k iterations in " + (endTime - startTime) / 1000 + " sec "
                         + shardStats);
                 startTime = endTime;
             }
@@ -209,7 +211,7 @@ public class IndexManagerTests
             if (i % 10000 == 0)
             {
                 long endTime = System.currentTimeMillis();
-                System.err.println("updated:" + id + ", 10k iterations in " + (endTime - startTime) / 1000 + " sec");
+                logger.info("updated:" + id + ", 10k iterations in " + (endTime - startTime) / 1000 + " sec");
                 startTime = endTime;
             }
 
@@ -266,7 +268,7 @@ public class IndexManagerTests
                                 }
 
                             long endTime = System.currentTimeMillis();
-                            System.err.println(Thread.currentThread().getName() + " id:" + id + ", 10k iterations in "
+                            logger.info(Thread.currentThread().getName() + " id:" + id + ", 10k iterations in "
                                     + (endTime - startTime) / 1000 + " sec");
                             startTime = endTime;
                         }
@@ -292,7 +294,7 @@ public class IndexManagerTests
             {
                 if (!all.add(id))
                 {
-                    System.err.println(id + " already exists " + all.size());
+                    logger.error(id + " already exists " + all.size());
                     hasError = true;
                 }
             }
