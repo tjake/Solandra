@@ -19,12 +19,14 @@
  */
 package lucandra;
 
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 
 import org.apache.cassandra.db.marshal.AbstractType;
 import org.apache.cassandra.db.marshal.MarshalException;
+import org.apache.cassandra.utils.ByteBufferUtil;
 
-public class VIntType extends AbstractType {
+public class VIntType extends AbstractType<BigInteger> {
 
     public static final VIntType instance = new VIntType();
     
@@ -60,6 +62,16 @@ public class VIntType extends AbstractType {
         if(i1 == i2) return 0;
         
         return i1 < i2 ?  -1 : 1;
+    }
+
+    public BigInteger compose(ByteBuffer bytes)
+    {
+        return new BigInteger(ByteBufferUtil.getArray(bytes));
+    }
+
+    public ByteBuffer decompose(BigInteger value)
+    {
+        return ByteBuffer.wrap(value.toByteArray());
     }
 
 
