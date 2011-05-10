@@ -126,6 +126,7 @@ public class CassandraIndexManager
                 if(info.ttl < System.currentTimeMillis())
                 {
                     rsvpList.set(pos, null);
+                    break;
                 }
                 
                 int nextId = info.currentId.incrementAndGet();
@@ -137,6 +138,7 @@ public class CassandraIndexManager
                 else
                 {
                     rsvpList.set(pos, null);
+                    break;
                 }              
             }
                    
@@ -247,13 +249,16 @@ public class CassandraIndexManager
                         String token = ByteBufferUtil.string(subCol.name());
                         AtomicInteger offset = new AtomicInteger(Integer.valueOf(ByteBufferUtil.string(subCol.value())));
                     
-                       
                         nodes.nodes.put(token, offset);
                       
                         shards.shards.put(shardNum, nodes);               
                     }
                 }
             }
+        }
+        else
+        {
+            logger.info("No shard info found for :"+indexName);
         }
 
         if (currentShards == null)
@@ -270,7 +275,6 @@ public class CassandraIndexManager
         }
 
         return indexShards.get(indexName);
-
     }
 
     public void deleteId(String indexName, long id)
@@ -497,10 +501,8 @@ public class CassandraIndexManager
                 }
             }
 
-            // logger.info(myToken+ "  startingOffset = "+startingOffset+
-            // ", nextOffset = "+nextOffset);
-
-           
+            if(logger.isTraceEnabled())
+                logger.trace(myToken+ "  startingOffset = "+startingOffset+", nextOffset = "+nextOffset);
             
             synchronized (node)
             {
@@ -625,8 +627,9 @@ public class CassandraIndexManager
                     
                     allNewRsvps.rsvpList.add(new RsvpInfo(nextOffset, numReserved, node));
 
-                    logger.info("Reserved " + numReserved + " ids for " + myToken + " shard " + node.shard
-                            + " from slot " + getRandomSequenceOffset(nextOffset));
+                    if(logger.isTraceEnabled())
+                        logger.trace("Reserved " + numReserved + " ids for " + myToken + " shard " + node.shard
+                                + " from slot " + getRandomSequenceOffset(nextOffset));
                 }
                 else
                 {
@@ -653,7 +656,9 @@ public class CassandraIndexManager
         {
             if (indexReserves.putIfAbsent(indexName, allNewRsvps) != null)
             {
-                logger.info("reserves changed, using those instead");
+                if(logger.isTraceEnabled())
+                    logger.trace("reserves changed, using those instead");
+               
                 allNewRsvps = indexReserves.get(indexName);
             }
         }
@@ -661,13 +666,15 @@ public class CassandraIndexManager
         {
             if (!indexReserves.replace(indexName, currentRsvpd, allNewRsvps))
             {
-                logger.info("already reserved by someone else, using those");
+                if(logger.isTraceEnabled())
+                    logger.info("already reserved by someone else, using those");
+                
                 return indexReserves.get(indexName).getNextId();
             }
         }
 
-        if (logger.isDebugEnabled())
-            logger.debug("Reserved " + allNewRsvps.rsvpList.size() + " ids for " + myToken);
+        if (logger.isTraceEnabled())
+            logger.trace("Reserved " + allNewRsvps.rsvpList.size() + " ids for " + myToken);
 
         return allNewRsvps.getNextId();
     }
@@ -722,7 +729,7 @@ public class CassandraIndexManager
                     // this means shard was started by another node
                     offset = new AtomicInteger(randomSeq[0]);
 
-                    logger.info("shard started by another node initializing with " + randomSeq[0]);
+                    logger.info("shard "+nodes.shard+" started by another node initializing "+myToken+" with " + randomSeq[0]);
 
                     RowMutation rm = updateNodeOffset(shards.indexName, myToken, nodes.shard, offset.get());
                     CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm);
@@ -730,14 +737,14 @@ public class CassandraIndexManager
 
                 int randomSeqOffset = getRandomSequenceOffset(offset.get());
 
-                if (logger.isDebugEnabled())
-                    logger.info(myToken + ": shard = " + shard.getKey() + ", offset = " + offset.get()
+                if (logger.isTraceEnabled())
+                    logger.trace(myToken + ": shard = " + shard.getKey() + ", offset = " + offset.get()
                             + ", offsetLookup = " + randomSeqOffset + ", offsetSlots =  " + offsetSlots);
 
                 // can we still use this shard (other nodes havent gobbled up
                 // the ids)?
-                // if(randomSeqOffset+1 == offsetSlots)
-                // logger.info(myToken+": shard = "+shard.getKey()+", offset = "+offset.get()+", offsetLookup = "+randomSeqOffset+", offsetSlots =  "+offsetSlots);
+                if(randomSeqOffset+1 == offsetSlots && logger.isTraceEnabled())
+                    logger.trace(myToken+": shard = "+shard.getKey()+", offset = "+offset.get()+", offsetLookup = "+randomSeqOffset+", offsetSlots =  "+offsetSlots);
 
                 if (randomSeqOffset + 1 < offsetSlots)
                 {
