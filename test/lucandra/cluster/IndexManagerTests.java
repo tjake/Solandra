@@ -33,9 +33,16 @@ import lucandra.dht.RandomPartitioner;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+
 public class IndexManagerTests
 {
     static String indexName = String.valueOf(System.nanoTime());
+    static
+    {
+        Logger.getLogger(CassandraIndexManager.class).setLevel(Level.TRACE);
+    }
 
     private class TestCassandraIndexManager extends CassandraIndexManager
     {
@@ -55,7 +62,7 @@ public class IndexManagerTests
 
     @BeforeClass
     public static void setUpBeforeClass()
-    {
+    { 
         // start cassandra
         try
         {
@@ -67,7 +74,7 @@ public class IndexManagerTests
         }
     }
 
-    // @Test
+    //@Test
     public void testCassandraIncrement3()
     {
 
@@ -158,7 +165,7 @@ public class IndexManagerTests
 
     }
 
-    // @Test
+    //@Test
     public void testCassandraIncrement() throws IOException
     {
 
