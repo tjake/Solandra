@@ -19,6 +19,7 @@
  */
 package solandra;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -33,6 +34,8 @@ import org.mortbay.jetty.Handler;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.FilterHolder;
+import org.mortbay.xml.XmlConfiguration;
+import org.xml.sax.SAXException;
 
 
 public class JettySolandraRunner 
@@ -52,10 +55,36 @@ public class JettySolandraRunner
     dispatchFilter.setInitParameter("solrconfig-filename", solrConfigFilename);
   }
   
-  private void init( String context, int port )
+  private void init( String context, int port ) 
   {
     this.context = context;
-    server = new Server( port );    
+    server = new Server( port );   
+    
+    InputStream configStream = JettySolandraRunner.class.getResourceAsStream("jetty.xml");  
+   
+    if(configStream != null)
+    {
+        XmlConfiguration configuration;
+        try
+        {
+            configuration = new XmlConfiguration(configStream);
+            configuration.configure(server); 
+        }
+        catch (SAXException e)
+        {
+            throw new RuntimeException(e);
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException(e);
+        }
+        catch (Exception e)
+        {
+            throw new RuntimeException(e);
+        } 
+      
+    }
+  
     server.setStopAtShutdown( true );
 
     // Initialize the servlets
