@@ -263,8 +263,10 @@ public class CassandraIndexManager
 
         if (currentShards == null)
         {
-            if (indexShards.putIfAbsent(indexName, shards) == null)
-                return shards;
+            currentShards = indexShards.putIfAbsent(indexName, shards);
+               
+            if(currentShards == null)
+                return shards;            
         }
         else if (indexShards.replace(indexName, currentShards, shards))
         {
@@ -274,7 +276,12 @@ public class CassandraIndexManager
             return shards;
         }
 
-        return indexShards.get(indexName);
+        for(Map.Entry<Integer, NodeInfo> entry : shards.shards.entrySet())
+        {
+            currentShards.shards.put(entry.getKey(), entry.getValue());
+        }
+        
+        return currentShards;
     }
 
     public void deleteId(String indexName, long id)
@@ -510,7 +517,7 @@ public class CassandraIndexManager
                 AllNodeRsvps possiblyNewRsvpd = indexReserves.get(indexName);
                 if (possiblyNewRsvpd != currentRsvpd || startingOffset != offset.get())
                 {
-                    return possiblyNewRsvpd == null ? null : possiblyNewRsvpd.getNextId();
+                //    return possiblyNewRsvpd == null ? null : possiblyNewRsvpd.getNextId();
                 }
 
                 

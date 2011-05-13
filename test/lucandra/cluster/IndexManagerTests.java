@@ -41,7 +41,7 @@ public class IndexManagerTests
     static String indexName = String.valueOf(System.nanoTime());
     static
     {
-        Logger.getLogger(CassandraIndexManager.class).setLevel(Level.TRACE);
+       // Logger.getLogger(CassandraIndexManager.class).setLevel(Level.TRACE);
     }
 
     private class TestCassandraIndexManager extends CassandraIndexManager
@@ -314,7 +314,7 @@ public class IndexManagerTests
 
     }
 
-    @Test
+   // @Test
     public void testCustomRandomPartitioner()
     {
         String[] keys = new String[] { "0", "83316744970572273156255124564039073023",

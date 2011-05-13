@@ -170,6 +170,31 @@
 	  <fail if="testfailed" message="Some test(s) failed." />
 	</target>
 
+       <target name="test-long" depends="compile.tests">
+         <echo message="running tests" />
+         <mkdir dir="${build}/output" />
+         <junit fork="on" failureproperty="testfailed">
+
+           <classpath>       
+             <path refid="solandra.classpath"/>
+             <pathelement location="${basedir}/solandra-app/"/>
+           </classpath>
+
+           <formatter type="xml" usefile="true" />
+           <formatter type="brief" usefile="false" />
+           
+           <batchtest todir="${build}/output">
+             <fileset dir="${build.test.classes}" includes="**/IndexManagerTests.class" />
+           </batchtest>
+           
+           <jvmarg value="-Xmx1G" />
+           <jvmarg value="-Dlog4j.configuration=file:///${basedir}/resources/log4j.properties"/>
+           <jvmarg value="-Dlog4j.defaultInitOverride=true" />
+           
+         </junit>
+         <fail if="testfailed" message="Some test(s) failed." />
+       </target>
+
 	<target name="solandra.jar" depends="compile,compile.tests">
 		<jar jarfile="solandra.jar" basedir="${build.classes}" />
 		<jar jarfile="solandra-tests.jar" basedir="${build.test.classes}" />
