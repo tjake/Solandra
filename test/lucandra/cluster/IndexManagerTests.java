@@ -33,8 +33,6 @@ import lucandra.dht.RandomPartitioner;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 
 public class IndexManagerTests
 {
