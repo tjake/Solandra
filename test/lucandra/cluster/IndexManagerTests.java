@@ -229,7 +229,6 @@ public class IndexManagerTests
 
         ExecutorService svc = Executors.newFixedThreadPool(16);
 
-        final TestCassandraIndexManager idx = new TestCassandraIndexManager(4);
 
         List<Callable<Set<Long>>> callables = new ArrayList<Callable<Set<Long>>>();
         for (int i = 0; i < 16; i++)
@@ -238,12 +237,14 @@ public class IndexManagerTests
 
                 public Set<Long> call()
                 {
+                    TestCassandraIndexManager idx = new TestCassandraIndexManager(4);
 
+                    
                     long startTime = System.currentTimeMillis();
 
                     Set<Long> all = new HashSet<Long>(CassandraIndexManager.maxDocsPerShard);
 
-                    for (int i = 0; i < 1100000 / 16; i++)
+                    for (int i = 0; i < CassandraIndexManager.maxDocsPerShard / 10; i++)
                     {
                         Long id = null;
                         try
@@ -259,7 +260,12 @@ public class IndexManagerTests
 
                         if (i % 10000 == 0)
                         {
-                           /*if (i < 20000)
+                            long endTime = System.currentTimeMillis();
+                            System.err.println(Thread.currentThread().getName() + " id:" + id + ", 10k iterations in "
+                                    + (endTime - startTime) / 1000 + " sec");
+                            startTime = endTime;
+                            
+                           if (i < 20000)
                                 try
                                 {
                                     Thread.sleep(120 * 1000);
@@ -268,12 +274,9 @@ public class IndexManagerTests
                                 {
                                     // TODO Auto-generated catch block
                                     e.printStackTrace();
-                                }*/
+                                }
 
-                            long endTime = System.currentTimeMillis();
-                            System.err.println(Thread.currentThread().getName() + " id:" + id + ", 10k iterations in "
-                                    + (endTime - startTime) / 1000 + " sec");
-                            startTime = endTime;
+                           
                         }
                     }
 
