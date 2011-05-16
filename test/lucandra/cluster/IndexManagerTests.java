@@ -243,7 +243,7 @@ public class IndexManagerTests
 
                     Set<Long> all = new HashSet<Long>(CassandraIndexManager.maxDocsPerShard);
 
-                    for (int i = 0; i < CassandraIndexManager.maxDocsPerShard / 10; i++)
+                    for (int i = 0; i < 1100000 / 16; i++)
                     {
                         Long id = null;
                         try
@@ -255,11 +255,11 @@ public class IndexManagerTests
                             throw new RuntimeException(e);
                         }
 
-                        assertTrue(id + " already exists " + all.size(), all.add(id));
+                        assertTrue(id + " already exists " + all.size() +" shard="+CassandraIndexManager.getShardFromDocId(id)+" id="+CassandraIndexManager.getShardedDocId(id), all.add(id));
 
                         if (i % 10000 == 0)
                         {
-                           if (i < 20000)
+                           /*if (i < 20000)
                                 try
                                 {
                                     Thread.sleep(120 * 1000);
@@ -268,7 +268,7 @@ public class IndexManagerTests
                                 {
                                     // TODO Auto-generated catch block
                                     e.printStackTrace();
-                                }
+                                }*/
 
                             long endTime = System.currentTimeMillis();
                             System.err.println(Thread.currentThread().getName() + " id:" + id + ", 10k iterations in "
@@ -297,7 +297,7 @@ public class IndexManagerTests
             {
                 if (!all.add(id))
                 {
-                    System.err.println(id + " already exists " + all.size());
+                    System.err.println(id + " already exists " + all.size()+" shard="+CassandraIndexManager.getShardFromDocId(id)+" id="+CassandraIndexManager.getShardedDocId(id));
                     hasError = true;
                 }
             }

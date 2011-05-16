@@ -66,7 +66,7 @@ public class CassandraIndexManager
                                                                                       "16384"));
 
     private final int                                 offsetSlots     = maxDocsPerShard / reserveSlabSize;
-    public final int                                  expirationTime  = 120;                                            // seconds
+    public final int                                  expirationTime  = 2;                                            // seconds
 
     private final ConcurrentMap<String, AllNodeRsvps> indexReserves   = new MapMaker().makeMap();
 
@@ -88,13 +88,56 @@ public class CassandraIndexManager
     }
 
     private class NodeInfo
-    {
+    {    
         public Integer                    shard;
         public Map<String, AtomicInteger> nodes = new HashMap<String, AtomicInteger>();
 
         public NodeInfo(Integer shard)
         {
             this.shard = shard;
+        }
+
+        public int hashCode()
+        {
+            final int prime = 31;
+            int result = 1;
+            result = prime * result + getOuterType().hashCode();
+            result = prime * result + ((nodes == null) ? 0 : nodes.hashCode());
+            result = prime * result + ((shard == null) ? 0 : shard.hashCode());
+            return result;
+        }
+
+        public boolean equals(Object obj)
+        {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            NodeInfo other = (NodeInfo) obj;
+            if (!getOuterType().equals(other.getOuterType()))
+                return false;
+            if (nodes == null)
+            {
+                if (other.nodes != null)
+                    return false;
+            }
+            else if (!nodes.equals(other.nodes))
+                return false;
+            if (shard == null)
+            {
+                if (other.shard != null)
+                    return false;
+            }
+            else if (!shard.equals(other.shard))
+                return false;
+            return true;
+        }
+        
+        private CassandraIndexManager getOuterType()
+        {
+            return CassandraIndexManager.this;
         }
     }
 
@@ -158,6 +201,42 @@ public class CassandraIndexManager
             this.endId = endId;
             this.node = node;
         }
+
+        public int hashCode()
+        {
+            final int prime = 31;
+            int result = 1;
+            result = prime * result + getOuterType().hashCode();
+            result = prime * result + ((node == null) ? 0 : node.hashCode());
+            return result;
+        }
+
+        public boolean equals(Object obj)
+        {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            RsvpInfo other = (RsvpInfo) obj;
+            if (!getOuterType().equals(other.getOuterType()))
+                return false;
+            if (node == null)
+            {
+                if (other.node != null)
+                    return false;
+            }
+            else if (!node.equals(other.node))
+                return false;
+            return true;
+        }
+
+        private CassandraIndexManager getOuterType()
+        {
+            return CassandraIndexManager.this;
+        }
+        
     }
 
     public CassandraIndexManager(int shardsAtOnce)
@@ -191,7 +270,7 @@ public class CassandraIndexManager
         randomSeq = shuffle(randomSeq, r);
     }
 
-    private ShardInfo getShardInfo(String indexName, boolean force) throws IOException
+    private synchronized ShardInfo getShardInfo(String indexName, boolean force) throws IOException
     {
 
         ShardInfo shards = indexShards.get(indexName);
@@ -219,7 +298,10 @@ public class CassandraIndexManager
         List<Row> rows = CassandraUtils.robustRead(ConsistencyLevel.QUORUM, cmd);
 
         shards = new ShardInfo(indexName);
-        if (rows != null || !rows.isEmpty())
+        AllNodeRsvps allNodeRsvps = new AllNodeRsvps();
+        
+        
+        if (rows != null && !rows.isEmpty())
         {
             assert rows.size() == 1;
 
@@ -249,8 +331,14 @@ public class CassandraIndexManager
                         AtomicInteger offset = new AtomicInteger(Integer.valueOf(ByteBufferUtil.string(subCol.value())));
 
                         nodes.nodes.put(token, offset);
-
                         shards.shards.put(shardNum, nodes);
+                        
+                        
+                        int seqVal = getRandomSequenceOffset(offset.get()+1);
+                        
+                        logger.info("Reserved shard"+shardStr+"("+token+"):"+offset.get()+" TO " + (randomSeq[seqVal]+reserveSlabSize));
+
+                        allNodeRsvps.rsvpList.add(new RsvpInfo(offset.get()+1, (randomSeq[seqVal]+reserveSlabSize), nodes));
                     }
                 }
             }
@@ -265,24 +353,43 @@ public class CassandraIndexManager
             currentShards = indexShards.putIfAbsent(indexName, shards);
 
             if (currentShards == null)
+            {
+                indexReserves.put(indexName, allNodeRsvps);
+                
                 return shards;
+            }
         }
         else if (indexShards.replace(indexName, currentShards, shards))
         {
 
             logger.info(indexName + " has " + shards.shards.size() + " shards");
 
-            return shards;
+            
+            currentShards = shards;
         }
-
-        for (Map.Entry<Integer, NodeInfo> entry : shards.shards.entrySet())
+        else
         {
-            currentShards.shards.put(entry.getKey(), entry.getValue());
+            //Merge together active and new
+            for (Map.Entry<Integer, NodeInfo> entry : shards.shards.entrySet())
+            {
+                currentShards.shards.put(entry.getKey(), entry.getValue());
+            }
         }
 
+        AllNodeRsvps currentNodeRsvps = indexReserves.get(indexName);
+        
+        for (RsvpInfo rsvp : allNodeRsvps.rsvpList)
+        {
+            if(!currentNodeRsvps.rsvpList.contains(rsvp))
+            {
+                currentNodeRsvps.rsvpList.add(rsvp);
+            }
+        }
+        
         return currentShards;
     }
 
+    //TODO
     public void deleteId(String indexName, long id)
     {
 
