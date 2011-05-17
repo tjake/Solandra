@@ -362,7 +362,7 @@ public class IndexWriter
         IndexReader reader = new IndexReader(indexName);
         IndexSearcher searcher = new IndexSearcher(reader);
 
-        TopDocs results = searcher.search(query, 1000);
+        TopDocs results = searcher.search(query, CassandraIndexManager.maxDocsPerShard);
 
         for (int i = 0; i < results.totalHits; i++)
         {
