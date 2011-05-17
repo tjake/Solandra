@@ -72,7 +72,7 @@ public class IndexManagerTests
         }
     }
 
-    //@Test
+    @Test
     public void testCassandraIncrement3()
     {
 
@@ -163,7 +163,7 @@ public class IndexManagerTests
 
     }
 
-   // @Test
+    @Test
     public void testCassandraIncrement() throws IOException
     {
 
@@ -231,7 +231,7 @@ public class IndexManagerTests
 
 
         List<Callable<Set<Long>>> callables = new ArrayList<Callable<Set<Long>>>();
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < 16; i++)
         {
             final int iidx = i;
             
@@ -302,7 +302,7 @@ public class IndexManagerTests
                 {
                     System.err.println(id + " already exists " + all.size()+" shard="+CassandraIndexManager.getShardFromDocId(id)+" id="+CassandraIndexManager.getShardedDocId(id));
                     hasError = true;
-                    break;
+                    
                 }
             }
         }
