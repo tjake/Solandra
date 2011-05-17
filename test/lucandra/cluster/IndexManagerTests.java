@@ -163,7 +163,7 @@ public class IndexManagerTests
 
     }
 
-    //@Test
+   // @Test
     public void testCassandraIncrement() throws IOException
     {
 
@@ -202,7 +202,7 @@ public class IndexManagerTests
             }
         }
 
-        assertEquals(7, CassandraIndexManager.getShardFromDocId(idx.getMaxId(indexName)));
+        assertEquals(3, CassandraIndexManager.getShardFromDocId(idx.getMaxId(indexName)));
 
         // Update
         for (int i = 0; i < CassandraIndexManager.maxDocsPerShard * 2; i++)
@@ -231,8 +231,10 @@ public class IndexManagerTests
 
 
         List<Callable<Set<Long>>> callables = new ArrayList<Callable<Set<Long>>>();
-        for (int i = 0; i < 16; i++)
+        for (int i = 0; i < 3; i++)
         {
+            final int iidx = i;
+            
             Callable<Set<Long>> r = new Callable<Set<Long>>() {
 
                 public Set<Long> call()
@@ -249,7 +251,7 @@ public class IndexManagerTests
                         Long id = null;
                         try
                         {
-                            id = idx.getNextId(indexName, "i" + i);
+                            id = idx.getNextId(indexName, "i" + i+"_"+iidx);
                         }
                         catch (IOException e)
                         {
@@ -258,7 +260,7 @@ public class IndexManagerTests
 
                         assertTrue(id + " already exists " + all.size() +" shard="+CassandraIndexManager.getShardFromDocId(id)+" id="+CassandraIndexManager.getShardedDocId(id), all.add(id));
 
-                        if (i % 10000 == 0)
+                        if (i > 0 && i % 10000 == 0)
                         {
                             long endTime = System.currentTimeMillis();
                             System.err.println(Thread.currentThread().getName() + " id:" + id + ", 10k iterations in "
@@ -274,9 +276,7 @@ public class IndexManagerTests
                                 {
                                     // TODO Auto-generated catch block
                                     e.printStackTrace();
-                                }
-
-                           
+                                }                         
                         }
                     }
 
@@ -302,6 +302,7 @@ public class IndexManagerTests
                 {
                     System.err.println(id + " already exists " + all.size()+" shard="+CassandraIndexManager.getShardFromDocId(id)+" id="+CassandraIndexManager.getShardedDocId(id));
                     hasError = true;
+                    break;
                 }
             }
         }
