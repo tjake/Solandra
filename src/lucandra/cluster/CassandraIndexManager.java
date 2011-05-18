@@ -354,21 +354,29 @@ public class CassandraIndexManager
                             continue;
                             
                         AtomicInteger offset = new AtomicInteger(Integer.valueOf(ByteBufferUtil.string(subCol.value())));
-                        
                        
-                        //int startSeqOffset = getRandomSequenceOffset(offset.get());
+                        //Load this reserve if there is more to go.
+                        if(offset.get() < maxDocsPerShard)
+                        {
+                       
+                            int startSeqOffset = getRandomSequenceOffset(offset.get());
                         
-                        int seqOffset = getRandomSequenceOffset(offset.get()+1);
+                            int seqOffset = getRandomSequenceOffset(offset.get()+1);
                         
-                        //Leave a mark at each shard so we track the offsets hit.
+                            if(startSeqOffset == seqOffset)
+                            {
+                            
+                                //Leave a mark at each shard so we track the offsets hit.
                         
-                        nodes.nodes.put(token, offset);
-                        shards.shards.put(shardNum, nodes);
+                                nodes.nodes.put(token, offset);
+                                shards.shards.put(shardNum, nodes);
                        
                         
-                        logger.info("Found reserved shard"+shardStr+"("+token+"):"+(offset.get()+1)+" TO " + (randomSeq[seqOffset]+reserveSlabSize));
+                                logger.info("Found reserved shard"+shardStr+"("+token+"):"+(offset.get()+1)+" TO " + (randomSeq[seqOffset]+reserveSlabSize));
 
-                        allNodeRsvps.rsvpList.add(new RsvpInfo(offset.get()+1, (randomSeq[seqOffset]+reserveSlabSize), nodes.shard, token));
+                                allNodeRsvps.rsvpList.add(new RsvpInfo(offset.get()+1, (randomSeq[seqOffset]+reserveSlabSize), nodes.shard, token));
+                            }
+                        }
                     }
                 }
             }
