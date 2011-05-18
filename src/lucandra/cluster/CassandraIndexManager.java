@@ -349,34 +349,26 @@ public class CassandraIndexManager
 
                         String token = ByteBufferUtil.string(subCol.name());
                         
-                        //filter out tokens that aren't ours.
-                        if(!token.equals(getToken()))
-                            continue;
-                            
+                                                 
                         AtomicInteger offset = new AtomicInteger(Integer.valueOf(ByteBufferUtil.string(subCol.value())));
+                        int startSeqOffset = getRandomSequenceOffset(offset.get());
+                        
+                        //Leave a mark at each shard so we track the offsets hit.                      
+                        nodes.nodes.put(token, offset);
+                        shards.shards.put(shardNum, nodes); 
                        
+                        
                         //Load this reserve if there is more to go.
                         if(offset.get() < maxDocsPerShard)
-                        {
-                       
-                            int startSeqOffset = getRandomSequenceOffset(offset.get());
-                        
+                        {                                            
                             int seqOffset = getRandomSequenceOffset(offset.get()+1);
                         
                             if(startSeqOffset == seqOffset)
                             {
-                            
-                                //Leave a mark at each shard so we track the offsets hit.
-                        
-                                nodes.nodes.put(token, offset);
-                                shards.shards.put(shardNum, nodes);
-                       
-                        
                                 logger.info("Found reserved shard"+shardStr+"("+token+"):"+(offset.get()+1)+" TO " + (randomSeq[seqOffset]+reserveSlabSize));
-
-                                allNodeRsvps.rsvpList.add(new RsvpInfo(offset.get()+1, (randomSeq[seqOffset]+reserveSlabSize), nodes.shard, token));
-                            }
-                        }
+                                allNodeRsvps.rsvpList.add(new RsvpInfo(offset.get()+1, (randomSeq[seqOffset]+reserveSlabSize), nodes.shard, token));                       
+                            }    
+                        }                               
                     }
                 }
             }
@@ -908,17 +900,10 @@ public class CassandraIndexManager
            
             AtomicInteger offset = nodes.nodes.get(myToken);
 
-            // new shard for this node
+            // skip shards we don't know about.
             if (offset == null)
             {
-                // this means shard was started by another node
-                offset = new AtomicInteger(-1);
-
-                logger.info("shard " + nodes.shard + " started by another node initializing " + myToken + " with "
-                        + -1);
-
-                RowMutation rm = updateNodeOffset(shards.indexName, myToken, nodes.shard, offset.get());
-                CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm);
+                continue;
             }
 
             int randomSeqOffset = getRandomSequenceOffset(offset.get());

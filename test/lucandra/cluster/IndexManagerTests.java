@@ -72,7 +72,7 @@ public class IndexManagerTests
         }
     }
 
-    @Test
+    //@Test
     public void testCassandraIncrement3()
     {
 
@@ -111,10 +111,10 @@ public class IndexManagerTests
                             throw new RuntimeException(e);
                         }
 
-                        if (j % 100 == 0)
+                        if (j % 500 == 0)
                         {
                             long endTime = System.currentTimeMillis();
-                            System.err.println(Thread.currentThread().getName() + " id:" + id + ", 100 iterations in "
+                            System.err.println(Thread.currentThread().getName() + " id:" + id + ", 500 iterations in "
                                     + (endTime - startTime) / 1000 + " sec");
                             startTime = endTime;
                         }
@@ -231,7 +231,7 @@ public class IndexManagerTests
 
 
         List<Callable<Set<Long>>> callables = new ArrayList<Callable<Set<Long>>>();
-        for (int i = 0; i < 16; i++)
+        for (int i = 0; i < 3; i++)
         {
             final int iidx = i;
             
