@@ -88,23 +88,30 @@ public class CassandraUtils
                     .name()));
             
             useCompression = Boolean.valueOf(properties.getProperty("solandra.compression", "true"));
-            
-            try
-            {
-                setFinalStatic(FieldCache.class.getDeclaredField("DEFAULT"), new org.apache.lucene.search.LucandraFieldCache());
-                logger.info("Sucessfully Hijacked FieldCacheImpl");
+
+            if(Boolean.valueOf(properties.getProperty("solandra.custom.fieldcache", "false")))
+            {           
+                try
+                {
+                    setFinalStatic(FieldCache.class.getDeclaredField("DEFAULT"), new org.apache.lucene.search.LucandraFieldCache());
+                    logger.info("Sucessfully Hijacked FieldCacheImpl");
+                }
+                catch (SecurityException e)
+                {
+                    logger.info("Unable to hijack the FieldCache");
+                }
+                catch (NoSuchFieldException e)
+                {
+                    throw new RuntimeException(e);
+                }
+                catch (Exception e)
+                {
+                    throw new RuntimeException(e);
+                }
             }
-            catch (SecurityException e)
+            else
             {
-                logger.info("Unable to hijack the FieldCache");
-            }
-            catch (NoSuchFieldException e)
-            {
-               throw new RuntimeException(e);
-            }
-            catch (Exception e)
-            {
-              throw new RuntimeException(e);
+                logger.info("not using custom field cache")
             }
             
 
