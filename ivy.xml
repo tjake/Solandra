@@ -36,7 +36,7 @@
     <dependency org="org.mortbay.jetty" name="jetty-util" rev="6.1.26" conf="* -> *,!sources,!javadoc" />
     <dependency org="org.mortbay.jetty" name="jsp-2.1" rev="6.1.14" conf="* -> *,!sources,!javadoc" />
 
-    <dependency org="org.apache.cassandra" name="cassandra-all" rev="0.7.5" conf="* -> *,!sources,!javadoc" />
+    <dependency org="org.apache.cassandra" name="cassandra-all" rev="0.7.6" conf="* -> *,!sources,!javadoc" />
     <dependency org="net.java.dev.jna" name="jna" rev="3.2.7" conf="* -> *,!sources,!javadoc" />
   </dependencies>
 </ivy-module>
