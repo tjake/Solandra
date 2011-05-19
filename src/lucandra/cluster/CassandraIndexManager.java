@@ -359,7 +359,7 @@ public class CassandraIndexManager
                        
                         
                         //Load this reserve if there is more to go.
-                        if(offset.get() < maxDocsPerShard)
+                        if(offset.get() < (maxDocsPerShard - 1))
                         {                                            
                             int seqOffset = getRandomSequenceOffset(offset.get()+1);
                         
@@ -860,7 +860,7 @@ public class CassandraIndexManager
             return -1;
         
         if (offset >= CassandraIndexManager.maxDocsPerShard)
-            throw new IllegalArgumentException("offset can not be > " + CassandraIndexManager.maxDocsPerShard);
+            throw new IllegalArgumentException("offset can not be >= " + CassandraIndexManager.maxDocsPerShard);
 
         for (int randomSeqOffset = 0; randomSeqOffset < randomSeq.length; randomSeqOffset++)
         {
