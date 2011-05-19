@@ -26,15 +26,14 @@ import java.nio.charset.CharacterCodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import lucandra.CassandraUtils;
 
 import com.google.common.collect.MapMaker;
-
-import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
 
 import org.apache.cassandra.db.*;
 import org.apache.cassandra.db.filter.QueryPath;
@@ -45,7 +44,6 @@ import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.cassandra.utils.FBUtilities;
 import org.apache.log4j.Logger;
 
-
 //Instead of grabbing all of them just grab a contiguous slab via offset
 public class CassandraIndexManager
 {
@@ -53,27 +51,29 @@ public class CassandraIndexManager
     // To increase throughput we distribute docs across a number of shards at
     // once
     // The idea being different shards live on different boxes
-    protected final int                            shardsAtOnce;
+    protected final int                               shardsAtOnce;
 
-    private int[]                                  randomSeq;
+    private int[]                                     randomSeq;
 
-    public static final int                        maxDocsPerShard = Integer.valueOf(CassandraUtils.properties
-                                                                           .getProperty(
-                                                                                   "solandra.maximum.docs.per.shard",
-                                                                                   "131072"));
-    public static final int                        reserveSlabSize = Integer.valueOf(CassandraUtils.properties
-                                                                           .getProperty(
-                                                                                   "solandra.index.id.reserve.size",
-                                                                                   "16384"));
+    public static final int                           maxDocsPerShard = Integer
+                                                                              .valueOf(CassandraUtils.properties
+                                                                                      .getProperty(
+                                                                                              "solandra.maximum.docs.per.shard",
+                                                                                              "131072"));
+    public static final int                           reserveSlabSize = Integer.valueOf(CassandraUtils.properties
+                                                                              .getProperty(
+                                                                                      "solandra.index.id.reserve.size",
+                                                                                      "16384"));
 
-    private final int                              offsetSlots     = maxDocsPerShard / reserveSlabSize;
-    public final int                              expirationTime  = 120;                                          // seconds
+    private final int                                 offsetSlots     = (maxDocsPerShard / reserveSlabSize);
+    public final int                                  expirationTime  = 120;                                            // seconds
 
-    private final ConcurrentMap<String, AllNodeRsvps>  indexReserves = new MapMaker().makeMap();
-    
-    private final ConcurrentMap<String, ShardInfo> indexShards     = new MapMaker().makeMap();
+    private final ConcurrentMap<String, AllNodeRsvps> indexReserves   = new MapMaker().makeMap();
 
-    private static final Logger                    logger          = Logger.getLogger(CassandraIndexManager.class);
+    private final ConcurrentMap<String, ShardInfo>    indexShards     = new MapMaker().makeMap();
+    private final ConcurrentMap<String, ShardInfo>    indexUsed       = new MapMaker().makeMap();
+
+    private static final Logger                       logger          = Logger.getLogger(CassandraIndexManager.class);
 
     private class ShardInfo
     {
@@ -89,7 +89,7 @@ public class CassandraIndexManager
     }
 
     private class NodeInfo
-    {
+    {    
         public Integer                    shard;
         public Map<String, AtomicInteger> nodes = new HashMap<String, AtomicInteger>();
 
@@ -97,66 +97,166 @@ public class CassandraIndexManager
         {
             this.shard = shard;
         }
+
+        public int hashCode()
+        {
+            final int prime = 31;
+            int result = 1;
+            result = prime * result + getOuterType().hashCode();
+            result = prime * result + ((nodes == null) ? 0 : nodes.hashCode());
+            result = prime * result + ((shard == null) ? 0 : shard.hashCode());
+            return result;
+        }
+
+        public boolean equals(Object obj)
+        {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            NodeInfo other = (NodeInfo) obj;
+            if (!getOuterType().equals(other.getOuterType()))
+                return false;
+            if (nodes == null)
+            {
+                if (other.nodes != null)
+                    return false;
+            }
+            else if (!nodes.equals(other.nodes))
+                return false;
+            if (shard == null)
+            {
+                if (other.shard != null)
+                    return false;
+            }
+            else if (!shard.equals(other.shard))
+                return false;
+            return true;
+        }
+        
+        private CassandraIndexManager getOuterType()
+        {
+            return CassandraIndexManager.this;
+        }
     }
 
     private class AllNodeRsvps
     {
-        public final AtomicLong incrementor  = new AtomicLong(0);
-        public final List<RsvpInfo> rsvpList = new ArrayList<RsvpInfo>();  
-        
+        public final AtomicLong     incrementor = new AtomicLong(0);
+        public final List<RsvpInfo> rsvpList    = new ArrayList<RsvpInfo>();
+
         public Long getNextId()
-        {            
-            if(rsvpList.isEmpty())
+        {
+            if (rsvpList.isEmpty())
+            {
                 return null;
+            }
             
             long start = incrementor.incrementAndGet();
-            long len   = rsvpList.size();
-            long end   = start + len;
-            
-            for(long i=start; i<end; i++)
+            long len = rsvpList.size();
+            long end = start + len;
+
+            for (long i = start; i < end; i++)
             {
-                int pos = (int)(i % len);
-                
+                int pos = (int) (i % len);
+
                 RsvpInfo info = rsvpList.get(pos);
-            
-                if(info == null)
+
+                if (info == null)
                     continue;
-                
-                //clear expired ids
-                if(info.ttl < System.currentTimeMillis())
+
+                // clear expired ids
+                if (info.ttl < System.currentTimeMillis())
                 {
                     rsvpList.set(pos, null);
+                    continue;
                 }
+
+                //We can only increment our token
+                if(info.token.equals(getToken()))
+                {              
+                    int nextId = info.currentId.incrementAndGet();
                 
-                int nextId = info.currentId.incrementAndGet();
-                
-                if(nextId <= info.endId)
-                {
-                    return (long)(maxDocsPerShard * info.node.shard) + nextId;
+                    
+                    //logger.info(info.token+" "+info.shard+" "+info.currentId.get());
+                    
+                    if (nextId <= info.endId)
+                    {
+                        return (long) (maxDocsPerShard * info.shard) + nextId;
+                    }
+                    else
+                    {
+                        rsvpList.set(pos, null);
+                    }
                 }
-                else
-                {
-                    rsvpList.set(pos, null);
-                }              
             }
-                   
+
             return null;
         }
     }
-    
+
     private class RsvpInfo
     {
-        public NodeInfo      node;
+        public String      token;
+        public Integer     shard;
         public AtomicInteger currentId;
         public final int     endId;
         public final long    ttl = System.currentTimeMillis() + (expirationTime * 1000);
 
-        public RsvpInfo(int startId, int endId, NodeInfo node)
+        public RsvpInfo(int startId, int endId, int shard, String token)
         {
             currentId = new AtomicInteger(startId);
             this.endId = endId;
-            this.node  = node;
+            this.token = token;
+            this.shard = shard;
         }
+
+        public int hashCode()
+        {
+            final int prime = 31;
+            int result = 1;
+            result = prime * result + getOuterType().hashCode();
+            result = prime * result + ((shard == null) ? 0 : shard.hashCode());
+            result = prime * result + ((token == null) ? 0 : token.hashCode());
+            return result;
+        }
+
+        public boolean equals(Object obj)
+        {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            RsvpInfo other = (RsvpInfo) obj;
+            if (!getOuterType().equals(other.getOuterType()))
+                return false;
+            if (shard == null)
+            {
+                if (other.shard != null)
+                    return false;
+            }
+            else if (!shard.equals(other.shard))
+                return false;
+            if (token == null)
+            {
+                if (other.token != null)
+                    return false;
+            }
+            else if (!token.equals(other.token))
+                return false;
+            return true;
+        }
+
+        private CassandraIndexManager getOuterType()
+        {
+            return CassandraIndexManager.this;
+        }
+
+       
     }
 
     public CassandraIndexManager(int shardsAtOnce)
@@ -190,7 +290,7 @@ public class CassandraIndexManager
         randomSeq = shuffle(randomSeq, r);
     }
 
-    private ShardInfo getShardInfo(String indexName, boolean force) throws IOException
+    private  ShardInfo getShardInfo(String indexName, boolean force) throws IOException
     {
 
         ShardInfo shards = indexShards.get(indexName);
@@ -218,7 +318,10 @@ public class CassandraIndexManager
         List<Row> rows = CassandraUtils.robustRead(ConsistencyLevel.QUORUM, cmd);
 
         shards = new ShardInfo(indexName);
-        if (rows != null || !rows.isEmpty())
+        AllNodeRsvps allNodeRsvps = new AllNodeRsvps();
+        
+        
+        if (rows != null && !rows.isEmpty())
         {
             assert rows.size() == 1;
 
@@ -236,43 +339,87 @@ public class CassandraIndexManager
                 {
                     String shardStr = ByteBufferUtil.string(c.name());
                     Integer shardNum = Integer.valueOf(shardStr);
-                    
+
                     assert c instanceof SuperColumn;
-                    
+
                     NodeInfo nodes = new NodeInfo(shardNum);
-                    
-                    for(IColumn subCol : c.getSubColumns())
+
+                    for (IColumn subCol : c.getSubColumns())
                     {
-                        
+
                         String token = ByteBufferUtil.string(subCol.name());
+                        
+                                                 
                         AtomicInteger offset = new AtomicInteger(Integer.valueOf(ByteBufferUtil.string(subCol.value())));
-                    
-                       
+                        int startSeqOffset = getRandomSequenceOffset(offset.get());
+                        
+                        //Leave a mark at each shard so we track the offsets hit.                      
                         nodes.nodes.put(token, offset);
-                      
-                        shards.shards.put(shardNum, nodes);               
+                        shards.shards.put(shardNum, nodes); 
+                       
+                        
+                        //Load this reserve if there is more to go.
+                        if(offset.get() < (maxDocsPerShard - 1))
+                        {                                            
+                            int seqOffset = getRandomSequenceOffset(offset.get()+1);
+                        
+                            if(startSeqOffset == seqOffset)
+                            {
+                                logger.info("Found reserved shard"+shardStr+"("+token+"):"+(offset.get()+1)+" TO " + (randomSeq[seqOffset]+reserveSlabSize));
+                                allNodeRsvps.rsvpList.add(new RsvpInfo(offset.get()+1, (randomSeq[seqOffset]+reserveSlabSize), nodes.shard, token));                       
+                            }    
+                        }                               
                     }
                 }
             }
         }
+        else
+        {
+            logger.info("No shard info found for :" + indexName);
+        }
 
         if (currentShards == null)
         {
-            if (indexShards.putIfAbsent(indexName, shards) == null)
+            currentShards = indexShards.putIfAbsent(indexName, shards);
+
+            if (currentShards == null)
+            {
+                indexReserves.put(indexName, allNodeRsvps);
+                
                 return shards;
+            }
         }
         else if (indexShards.replace(indexName, currentShards, shards))
         {
 
             logger.info(indexName + " has " + shards.shards.size() + " shards");
 
-            return shards;
+            
+            currentShards = shards;
+        }
+        else
+        {
+            //Merge together active and new
+            for (Map.Entry<Integer, NodeInfo> entry : shards.shards.entrySet())
+            {
+                currentShards.shards.put(entry.getKey(), entry.getValue());
+            }
         }
 
-        return indexShards.get(indexName);
-
+        AllNodeRsvps currentNodeRsvps = indexReserves.get(indexName);
+        
+        for (RsvpInfo rsvp : allNodeRsvps.rsvpList)
+        {
+            if(!currentNodeRsvps.rsvpList.contains(rsvp))
+            {
+                currentNodeRsvps.rsvpList.add(rsvp);
+            }
+        }
+        
+        return currentShards;
     }
 
+    //TODO
     public void deleteId(String indexName, long id)
     {
 
@@ -387,9 +534,9 @@ public class CassandraIndexManager
         if (id == null)
             throw new IllegalStateException(myToken + ": Unable to reserve an id");
 
-        int shard     = getShardFromDocId(id);
+        int shard = getShardFromDocId(id);
         int shardedId = getShardedDocId(id);
-        
+
         ByteBuffer idCol = ByteBufferUtil.bytes(String.valueOf(shardedId));
         ByteBuffer keyCol = ByteBuffer.wrap(key.getBytes("UTF-8"));
 
@@ -404,7 +551,6 @@ public class CassandraIndexManager
         // Permanently link the key to the id
         ByteBuffer keyKey = CassandraUtils.hashKeyBytes((indexName + "~" + key).getBytes("UTF-8"),
                 CassandraUtils.delimeterBytes, "keys".getBytes("UTF-8"));
-
 
         ByteBuffer idVal = ByteBuffer.wrap(id.toString().getBytes("UTF-8"));
 
@@ -446,13 +592,13 @@ public class CassandraIndexManager
         for (NodeInfo nodes : shards.shards.values())
         {
             for (String token : nodes.nodes.keySet())
-                rms.add(updateNodeOffset(indexName, token, nodes.shard, randomSeq[0]));
+                rms.add(updateNodeOffset(indexName, token, nodes.shard, -1));
         }
 
         CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rms.toArray(new RowMutation[] {}));
     }
 
-    private Long nextReservedId(String indexName, NodeInfo[] shards, String myToken) throws IOException
+    private synchronized Long nextReservedId(String indexName, NodeInfo[] shards, String myToken) throws IOException
     {
         if (logger.isDebugEnabled())
             logger.debug("in reserveIds for index " + indexName);
@@ -460,18 +606,25 @@ public class CassandraIndexManager
         AllNodeRsvps currentRsvpd = indexReserves.get(indexName);
 
         if (currentRsvpd != null)
-        {                      
+        {
             Long nextId = currentRsvpd.getNextId();
-            
-            if(nextId != null)
+
+            if (nextId != null)
                 return nextId;
-            
+
             if (logger.isDebugEnabled())
-                logger.debug("need more ids for " + myToken);           
+                logger.debug("need more ids for " + myToken);
         }
 
         AllNodeRsvps allNewRsvps = new AllNodeRsvps();
+        ShardInfo    usedShardInfo = indexUsed.get(indexName);
+        if(usedShardInfo == null)
+        {
+            usedShardInfo = new ShardInfo(indexName);
+            indexUsed.put(indexName, usedShardInfo);
+        }
         
+            
         // Pick a new shard
         for (NodeInfo node : shards)
         {
@@ -485,6 +638,13 @@ public class CassandraIndexManager
             // goto next offset marker (unless its the first or last)
             int randomSequenceOffset = getRandomSequenceOffset(startingOffset);
 
+            NodeInfo usedNodeInfo = usedShardInfo.shards.get(node.shard);
+            if(usedNodeInfo == null)
+            {
+                usedNodeInfo = new NodeInfo(node.shard);
+                usedShardInfo.shards.put(node.shard, usedNodeInfo);
+            }
+            
             if (startingOffset != randomSeq[0])
             {
                 if (randomSequenceOffset != (offsetSlots - 1))
@@ -497,23 +657,37 @@ public class CassandraIndexManager
                 }
             }
 
-            // logger.info(myToken+ "  startingOffset = "+startingOffset+
-            // ", nextOffset = "+nextOffset);
+            if (logger.isTraceEnabled())
+                logger.trace(myToken + "  startingOffset = " + startingOffset + ", nextOffset = " + nextOffset);
 
-           
-            
-            synchronized (node)
+            while(true)
             {
-                // First, make sure another thread didn't already do this work
-                AllNodeRsvps possiblyNewRsvpd = indexReserves.get(indexName);
-                if (possiblyNewRsvpd != currentRsvpd || startingOffset != offset.get())
+              
+                //Avoid re-checking used slabs
+                if(usedNodeInfo != null)
                 {
-                    return possiblyNewRsvpd == null ? null : possiblyNewRsvpd.getNextId();
-                }
+                    if(usedNodeInfo.nodes.get(""+nextOffset) != null)
+                    {
+                        CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, updateNodeOffset(indexName, myToken, node.shard, nextOffset));
 
+                        
+                        // try next offset               
+                        int seqOffset = getRandomSequenceOffset(nextOffset);
+                        if( seqOffset < (offsetSlots - 1))
+                        {
+                            nextOffset = randomSeq[seqOffset+1];
+                            continue;
+                        } 
+                        else
+                        {
+                            break;
+                        }
+                    }
+                }
+                
                 
                 ByteBuffer key = CassandraUtils.hashKeyBytes((indexName + "~" + node.shard).getBytes("UTF-8"),
-                        CassandraUtils.delimeterBytes, "ids".getBytes("UTF-8"));
+                        CassandraUtils.delimeterBytes, "rsvp".getBytes("UTF-8"));
 
                 // Write the reserves
                 RowMutation rm = new RowMutation(CassandraUtils.keySpace, key);
@@ -570,27 +744,22 @@ public class CassandraIndexManager
                 // See which ones we successfully reserved
                 for (IColumn c : supercol.getSubColumns())
                 {
-
+                    
                     // someone already took this id
                     if (!(c instanceof ExpiringColumn) && !(c instanceof DeletedColumn))
                     {
                         if (logger.isDebugEnabled())
-                            try
-                            {
-                                logger.debug(offset + " was taken by " + ByteBufferUtil.string(c.name()));
-                            }
-                            catch (CharacterCodingException e)
-                            {
-
-                            }
-
+                            logger.debug(offset + " was taken by " + ByteBufferUtil.string(c.name()));
+                           
                         winningToken = null;
                         break;
                     }
 
                     // expired reservation
                     if (c.isMarkedForDelete())
+                    {
                         continue;
+                    }
 
                     if (c.timestamp() == minTtl && winningToken.compareTo(c.name()) <= 0)
                     {
@@ -601,7 +770,7 @@ public class CassandraIndexManager
                     {
                         minTtl = c.timestamp();
                         winningToken = c.name();
-                    }
+                    }                    
                 }
 
                 String winningTokenStr;
@@ -615,45 +784,53 @@ public class CassandraIndexManager
                 }
 
                 // we won!
-                if (winningToken != null && winningTokenStr.equals(myToken))
+                if (winningTokenStr.equals(myToken))
                 {
-                    int numReserved = nextOffset;
-                    for (int i = nextOffset; i == nextOffset || i % reserveSlabSize != 0; i++)
-                    {                        
-                        numReserved++;
-                    }
-                    
-                    allNewRsvps.rsvpList.add(new RsvpInfo(nextOffset, numReserved, node));
+                    //Mark this as permanently taken
+                     rm = new RowMutation(CassandraUtils.keySpace, key);
 
-                    logger.info("Reserved " + numReserved + " ids for " + myToken + " shard " + node.shard
-                            + " from slot " + getRandomSequenceOffset(nextOffset));
+                     rm.add(new QueryPath(CassandraUtils.schemaInfoColumnFamily, id, ByteBuffer.wrap(myToken
+                             .getBytes("UTF-8"))), off, System.currentTimeMillis());
+  
+                     CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm);
+
+                     //Add to active rsvp list
+                     allNewRsvps.rsvpList.add(new RsvpInfo(nextOffset, (nextOffset + reserveSlabSize - 1) , node.shard, myToken));
+                    
+                    //if (logger.isTraceEnabled())
+                        logger.info("Reserved " + reserveSlabSize + " ids for " + myToken + " shard " + node.shard
+                                + " from slot " + getRandomSequenceOffset(nextOffset)+" "+nextOffset+" TO "+(nextOffset + reserveSlabSize - 1));                   
+                        
+                    break;
                 }
                 else
                 {
-                    // we lost, try try again...
-
-                    // secial case, otherwise we never move on
-                    if (nextOffset == randomSeq[0])
-                        nextOffset += 1;
-
-                    // mark this offset as taken and move on
-                    updateNodeOffset(indexName, myToken, node.shard, nextOffset);
-                    continue;
+                    //Mark this offset as taken.
+                    CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, updateNodeOffset(indexName, myToken, node.shard, nextOffset));
+                    usedNodeInfo.nodes.put(""+nextOffset, new AtomicInteger(1));
+                    
+                    // we lost, try try again...  
+                    int seqOffset = getRandomSequenceOffset(nextOffset);
+                    if( seqOffset < (offsetSlots - 1))
+                    {
+                        nextOffset = randomSeq[seqOffset+1];
+                    } 
+                    else
+                    {
+                        break;
+                    }
                 }
-
-
-                if (logger.isDebugEnabled())
-                    logger.debug("offset for shard " + node.shard + " " + nextOffset);
             }
         }
-
 
         // check that offset is the same as when we started
         if (currentRsvpd == null)
         {
             if (indexReserves.putIfAbsent(indexName, allNewRsvps) != null)
             {
-                logger.info("reserves changed, using those instead");
+                //if (logger.isTraceEnabled())
+                    logger.info("reserves changed, using those instead");
+
                 allNewRsvps = indexReserves.get(indexName);
             }
         }
@@ -661,27 +838,35 @@ public class CassandraIndexManager
         {
             if (!indexReserves.replace(indexName, currentRsvpd, allNewRsvps))
             {
-                logger.info("already reserved by someone else, using those");
+                if (logger.isTraceEnabled())
+                    logger.info("already reserved by someone else, using those");
+
                 return indexReserves.get(indexName).getNextId();
             }
         }
 
-        if (logger.isDebugEnabled())
-            logger.debug("Reserved " + allNewRsvps.rsvpList.size() + " ids for " + myToken);
+        if (logger.isTraceEnabled())
+            logger.trace("Reserved " + allNewRsvps.rsvpList.size() + " shards for " + myToken);
 
+            
+            
         return allNewRsvps.getNextId();
     }
 
     private int getRandomSequenceOffset(int offset)
     {
+        
+        if(offset < 0)
+            return -1;
+        
         if (offset >= CassandraIndexManager.maxDocsPerShard)
-            throw new IllegalArgumentException("offset can not be > " + CassandraIndexManager.maxDocsPerShard);
+            throw new IllegalArgumentException("offset can not be >= " + CassandraIndexManager.maxDocsPerShard);
 
         for (int randomSeqOffset = 0; randomSeqOffset < randomSeq.length; randomSeqOffset++)
         {
             int randomSequenceStart = randomSeq[randomSeqOffset];
 
-            if (randomSequenceStart <= offset && offset < randomSequenceStart + reserveSlabSize)
+            if (offset >= randomSequenceStart && offset < randomSequenceStart + reserveSlabSize)
                 return randomSeqOffset;
         }
 
@@ -701,71 +886,57 @@ public class CassandraIndexManager
 
         assert shards != null;
 
-        synchronized (shards)
+        String myToken = getToken();
+
+        NodeInfo[] picked = new NodeInfo[shardsAtOnce];
+
+        int pickedShard = 0;
+        
+        
+        for (Map.Entry<Integer, NodeInfo> shard : shards.shards.entrySet())
         {
-            String myToken = getToken();
+            NodeInfo nodes = shard.getValue();
 
-            NodeInfo[] picked = new NodeInfo[shardsAtOnce];
+           
+            AtomicInteger offset = nodes.nodes.get(myToken);
 
-            int maxShard = -1;
-            int pickedShard = 0;
-
-            for (Map.Entry<Integer, NodeInfo> shard : shards.shards.entrySet())
+            // skip shards we don't know about.
+            if (offset == null)
             {
-                NodeInfo nodes = shard.getValue();
-
-                AtomicInteger offset = nodes.nodes.get(myToken);
-
-                // new shard for this node
-                if (offset == null)
-                {
-                    // this means shard was started by another node
-                    offset = new AtomicInteger(randomSeq[0]);
-
-                    logger.info("shard started by another node initializing with " + randomSeq[0]);
-
-                    RowMutation rm = updateNodeOffset(shards.indexName, myToken, nodes.shard, offset.get());
-                    CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm);
-                }
-
-                int randomSeqOffset = getRandomSequenceOffset(offset.get());
-
-                if (logger.isDebugEnabled())
-                    logger.info(myToken + ": shard = " + shard.getKey() + ", offset = " + offset.get()
-                            + ", offsetLookup = " + randomSeqOffset + ", offsetSlots =  " + offsetSlots);
-
-                // can we still use this shard (other nodes havent gobbled up
-                // the ids)?
-                // if(randomSeqOffset+1 == offsetSlots)
-                // logger.info(myToken+": shard = "+shard.getKey()+", offset = "+offset.get()+", offsetLookup = "+randomSeqOffset+", offsetSlots =  "+offsetSlots);
-
-                if (randomSeqOffset + 1 < offsetSlots)
-                {
-                    picked[pickedShard] = nodes;
-                    pickedShard++;
-                    if (pickedShard >= shardsAtOnce)
-                        return picked;
-                }
-
-                if (shard.getKey() > maxShard)
-                    maxShard = shard.getKey();
-
+                continue;
             }
 
-            // new shards
-            for (int i = pickedShard; i < shardsAtOnce; i++)
+            int randomSeqOffset = getRandomSequenceOffset(offset.get());
+
+            if (logger.isTraceEnabled())
+                logger.trace(myToken + ": shard = " + shard.getKey() + ", offset = " + offset.get()
+                        + ", offsetLookup = " + randomSeqOffset + ", offsetSlots =  " + offsetSlots);
+
+            
+            if (randomSeqOffset != (offsetSlots-1))
             {
-                picked[i] = addNewShard(shards.indexName);
+                picked[pickedShard] = nodes;
+                pickedShard++;
+                if (pickedShard >= shardsAtOnce)
+                    return picked;
             }
 
-            return picked;
         }
+
+        // new shards
+        for (int i = pickedShard; i < shardsAtOnce; i++)
+        {
+            picked[i] = addNewShard(shards.indexName);
+        }
+
+        return picked;
+
     }
 
     private NodeInfo addNewShard(String indexName) throws IOException
     {
         ShardInfo shards = getShardInfo(indexName, false);
-
+        
         // get max shard
         Integer maxShard = -1;
 
@@ -775,15 +946,12 @@ public class CassandraIndexManager
 
             Integer currentOffset = null;
             for (Map.Entry<String, AtomicInteger> e1 : max.getValue().nodes.entrySet())
-            {
-                if (e1.getValue().get() > 0)
-                {
-                    currentOffset = e1.getValue().get();
-                    break;
-                }
+            {             
+                currentOffset = e1.getValue().get();
+                break;               
             }
 
-            if (currentOffset != null && currentOffset > 0)
+            if (currentOffset != null)
             {
                 maxShard = max.getKey();
             }
@@ -794,35 +962,37 @@ public class CassandraIndexManager
         NodeInfo dupNodes = null;
         if ((dupNodes = shards.shards.putIfAbsent(nodes.shard, nodes)) == null)
         {
-            logger.info("added new shard for " + indexName + " " + nodes.shard + " with offset " + randomSeq[0]);
+            logger.info("added new shard for " + indexName + "("+getToken()+") " + nodes.shard);
 
-            RowMutation rm = updateNodeOffset(indexName, getToken(), nodes.shard, randomSeq[0]); // offset 0
-       
-            CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm);          
+            RowMutation rm = updateNodeOffset(indexName, getToken(), nodes.shard, -1); 
+                                                                                             
+            CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm);
         }
-
+      
+        
         return dupNodes == null ? nodes : dupNodes;
     }
 
     private RowMutation updateNodeOffset(String indexName, String myToken, Integer shard, Integer offset)
             throws IOException
     {
+              
         // Update last offset info for this shard
         ByteBuffer shardKey = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"), CassandraUtils.delimeterBytes,
                 "shards".getBytes("UTF-8"));
         RowMutation rm = new RowMutation(CassandraUtils.keySpace, shardKey);
 
-        rm.add(new QueryPath(CassandraUtils.schemaInfoColumnFamily, ByteBuffer.wrap(String.valueOf(shard)
-                .getBytes("UTF-8")), ByteBuffer.wrap(myToken.getBytes("UTF-8"))), ByteBuffer.wrap(String
-                .valueOf(offset).getBytes("UTF-8")), System.currentTimeMillis());
+        rm.add(new QueryPath(CassandraUtils.schemaInfoColumnFamily, ByteBuffer.wrap(String.valueOf(shard).getBytes(
+                "UTF-8")), ByteBuffer.wrap(myToken.getBytes("UTF-8"))), ByteBuffer.wrap(String.valueOf(offset)
+                .getBytes("UTF-8")), System.currentTimeMillis());
 
         // update locally
-        ShardInfo     si = getShardInfo(indexName, false);
+        ShardInfo si = getShardInfo(indexName, false);
         AtomicInteger o = null;
-        NodeInfo      n = si.shards.get(shard);
-        
-        if(!indexName.contains("~")) 
-        {    
+        NodeInfo n = si.shards.get(shard);
+
+        if (!indexName.contains("~"))
+        {
             if (n != null)
                 o = n.nodes.get(myToken);
             else
@@ -833,15 +1003,14 @@ public class CassandraIndexManager
             else
                 o.set(offset);
 
-            if (logger.isDebugEnabled())
-                logger.debug("updated node offset for " + indexName + "(" + shard + ")(" + myToken + ") to " + offset);
+            // if (logger.isDebugEnabled())
+            //logger.info("updated node offset for " + indexName + "(" + shard + ")(" + myToken + ") to " + offset);
         }
         else
         {
-            throw new RuntimeException("inner shard offset update attempt: "+indexName);
+            throw new RuntimeException("inner shard offset update attempt: " + indexName);
         }
-        
-        
+
         return rm;
     }
 

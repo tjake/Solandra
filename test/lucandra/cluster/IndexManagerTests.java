@@ -30,14 +30,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 import lucandra.CassandraUtils;
 import lucandra.dht.RandomPartitioner;
 
-import org.apache.log4j.Logger;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+
 public class IndexManagerTests
 {
-    private static final Logger logger = Logger.getLogger(IndexManagerTests.class);
     static String indexName = String.valueOf(System.nanoTime());
+    static
+    {
+       // Logger.getLogger(CassandraIndexManager.class).setLevel(Level.TRACE);
+    }
 
     private class TestCassandraIndexManager extends CassandraIndexManager
     {
@@ -57,7 +60,7 @@ public class IndexManagerTests
 
     @BeforeClass
     public static void setUpBeforeClass()
-    {
+    { 
         // start cassandra
         try
         {
@@ -69,7 +72,7 @@ public class IndexManagerTests
         }
     }
 
-    // @Test
+    //@Test
     public void testCassandraIncrement3()
     {
 
@@ -108,10 +111,10 @@ public class IndexManagerTests
                             throw new RuntimeException(e);
                         }
 
-                        if (j % 100 == 0)
+                        if (j % 500 == 0)
                         {
                             long endTime = System.currentTimeMillis();
-                            logger.info(Thread.currentThread().getName() + " id:" + id + ", 100 iterations in "
+                            System.err.println(Thread.currentThread().getName() + " id:" + id + ", 500 iterations in "
                                     + (endTime - startTime) / 1000 + " sec");
                             startTime = endTime;
                         }
@@ -160,7 +163,7 @@ public class IndexManagerTests
 
     }
 
-    // @Test
+    @Test
     public void testCassandraIncrement() throws IOException
     {
 
@@ -179,7 +182,7 @@ public class IndexManagerTests
 
             assertNotNull(id);
 
-            // logger.info(CassandraIndexManager.getShardFromDocId(id));
+            // System.err.println(CassandraIndexManager.getShardFromDocId(id));
             AtomicInteger counter = shardStats.get(CassandraIndexManager.getShardFromDocId(id));
             if (counter == null)
             {
@@ -193,13 +196,13 @@ public class IndexManagerTests
             if (i % 10000 == 0)
             {
                 long endTime = System.currentTimeMillis();
-                logger.info("added:" + id + ", 10k iterations in " + (endTime - startTime) / 1000 + " sec "
+                System.err.println("added:" + id + ", 10k iterations in " + (endTime - startTime) / 1000 + " sec "
                         + shardStats);
                 startTime = endTime;
             }
         }
 
-        assertEquals(7, CassandraIndexManager.getShardFromDocId(idx.getMaxId(indexName)));
+        assertEquals(3, CassandraIndexManager.getShardFromDocId(idx.getMaxId(indexName)));
 
         // Update
         for (int i = 0; i < CassandraIndexManager.maxDocsPerShard * 2; i++)
@@ -211,7 +214,7 @@ public class IndexManagerTests
             if (i % 10000 == 0)
             {
                 long endTime = System.currentTimeMillis();
-                logger.info("updated:" + id + ", 10k iterations in " + (endTime - startTime) / 1000 + " sec");
+                System.err.println("updated:" + id + ", 10k iterations in " + (endTime - startTime) / 1000 + " sec");
                 startTime = endTime;
             }
 
@@ -226,16 +229,19 @@ public class IndexManagerTests
 
         ExecutorService svc = Executors.newFixedThreadPool(16);
 
-        final TestCassandraIndexManager idx = new TestCassandraIndexManager(4);
 
         List<Callable<Set<Long>>> callables = new ArrayList<Callable<Set<Long>>>();
-        for (int i = 0; i < 16; i++)
+        for (int i = 0; i < 3; i++)
         {
+            final int iidx = i;
+            
             Callable<Set<Long>> r = new Callable<Set<Long>>() {
 
                 public Set<Long> call()
                 {
+                    TestCassandraIndexManager idx = new TestCassandraIndexManager(4);
 
+                    
                     long startTime = System.currentTimeMillis();
 
                     Set<Long> all = new HashSet<Long>(CassandraIndexManager.maxDocsPerShard);
@@ -245,17 +251,22 @@ public class IndexManagerTests
                         Long id = null;
                         try
                         {
-                            id = idx.getNextId(indexName, "i" + i);
+                            id = idx.getNextId(indexName, "i" + i+"_"+iidx);
                         }
                         catch (IOException e)
                         {
                             throw new RuntimeException(e);
                         }
 
-                        assertTrue(id + " already exists " + all.size(), all.add(id));
+                        assertTrue(id + " already exists " + all.size() +" shard="+CassandraIndexManager.getShardFromDocId(id)+" id="+CassandraIndexManager.getShardedDocId(id), all.add(id));
 
-                        if (i % 10000 == 0)
+                        if (i > 0 && i % 10000 == 0)
                         {
+                            long endTime = System.currentTimeMillis();
+                            System.err.println(Thread.currentThread().getName() + " id:" + id + ", 10k iterations in "
+                                    + (endTime - startTime) / 1000 + " sec");
+                            startTime = endTime;
+                            
                            if (i < 20000)
                                 try
                                 {
@@ -265,12 +276,7 @@ public class IndexManagerTests
                                 {
                                     // TODO Auto-generated catch block
                                     e.printStackTrace();
-                                }
-
-                            long endTime = System.currentTimeMillis();
-                            logger.info(Thread.currentThread().getName() + " id:" + id + ", 10k iterations in "
-                                    + (endTime - startTime) / 1000 + " sec");
-                            startTime = endTime;
+                                }                         
                         }
                     }
 
@@ -294,8 +300,9 @@ public class IndexManagerTests
             {
                 if (!all.add(id))
                 {
-                    logger.error(id + " already exists " + all.size());
+                    System.err.println(id + " already exists " + all.size()+" shard="+CassandraIndexManager.getShardFromDocId(id)+" id="+CassandraIndexManager.getShardedDocId(id));
                     hasError = true;
+                    
                 }
             }
         }
@@ -309,7 +316,7 @@ public class IndexManagerTests
 
     }
 
-    @Test
+   // @Test
     public void testCustomRandomPartitioner()
     {
         String[] keys = new String[] { "0", "83316744970572273156255124564039073023",

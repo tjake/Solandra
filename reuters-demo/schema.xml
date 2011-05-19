@@ -221,8 +221,8 @@
 
  <fields>
    <field name="id" type="string" indexed="true" stored="true" required="true" /> 
-   <field name="title" type="text" indexed="true" stored="true"/>
-   <field name="text" type="text" indexed="true" stored="true"/>
+   <field name="title" type="text" indexed="true" stored="true" termPositions="true"/>
+   <field name="text" type="text" indexed="true" stored="true" termPositions="true"/>
    <field name="date" type="date" indexed="true" stored="true"/>
    <field name="dateline" type="text" indexed="true" stored="true"/>
    <field name="places" type="string" indexed="true" stored="true" multiValued="true" omitNorms="true" termVectors="true" />

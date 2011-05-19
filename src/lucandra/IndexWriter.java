@@ -36,7 +36,9 @@ import lucandra.serializers.thrift.ThriftTerm;
 import com.google.common.collect.MapMaker;
 
 import org.apache.cassandra.db.*;
+import org.apache.cassandra.db.filter.QueryPath;
 import org.apache.cassandra.thrift.ColumnParent;
+import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.cassandra.utils.Pair;
 import org.apache.log4j.Logger;
@@ -355,23 +357,45 @@ public class IndexWriter
             commit(indexName, false);
     }
 
-    public TopDocs deleteDocuments(String indexName, Query query, boolean autoCommit) throws CorruptIndexException,
+    public long deleteDocuments(String indexName, Query query, boolean autoCommit) throws CorruptIndexException,
             IOException
     {
 
         IndexReader reader = new IndexReader(indexName);
         IndexSearcher searcher = new IndexSearcher(reader);
 
-        TopDocs results = searcher.search(query, 1000);
+        
+        // Also delete the id lookup
+        ByteBuffer idKey = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"),
+                CassandraUtils.delimeterBytes, "ids".getBytes("UTF-8"));
 
-        for (int i = 0; i < results.totalHits; i++)
+        RowMutation rm = new RowMutation(CassandraUtils.keySpace, idKey);
+
+        
+        TopDocs results = null;
+        long total = 0;
+        do
         {
-            ScoreDoc doc = results.scoreDocs[i];
+            results = searcher.search(query, 1024);
 
-            deleteLucandraDocument(indexName, doc.doc, autoCommit);
-        }
+            for (int i = 0; i < results.totalHits; i++)
+            {
+                ScoreDoc doc = results.scoreDocs[i];
 
-        return results;
+                deleteLucandraDocument(indexName, doc.doc, true);
+            
+                //Scale the doc ID to the sharded id.
+                ByteBuffer buf = ByteBufferUtil.bytes(String.valueOf(doc.doc));
+                rm.delete(new QueryPath(CassandraUtils.schemaInfoColumnFamily, buf), System.currentTimeMillis());
+            }
+            
+            
+            CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm);
+            
+            total += results.totalHits;
+        }while(results.totalHits > 0);
+       
+        return total;
     }
 
     public void deleteDocuments(String indexName, Term term, boolean autoCommit) throws CorruptIndexException,
