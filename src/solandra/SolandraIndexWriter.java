@@ -449,26 +449,8 @@ public class SolandraIndexWriter extends UpdateHandler
             for(String subIndex : localShards)
             {
                 Query q = QueryParsing.parseQuery(cmd.query, schema);
-                TopDocs results = writer.deleteDocuments(subIndex, q, false);
-
-                // Also delete the id lookup
-                ByteBuffer idKey = CassandraUtils.hashKeyBytes(subIndex.getBytes("UTF-8"),
-                        CassandraUtils.delimeterBytes, "ids".getBytes("UTF-8"));
-
-                RowMutation rm = new RowMutation(CassandraUtils.keySpace, idKey);
-
-                for (ScoreDoc doc : results.scoreDocs)
-                {
-                    //Scale the doc ID to the sharded id.
-         //           int shard = Integer.valueOf(subIndex.substring(subIndex.lastIndexOf('~')+1));
-                    ByteBuffer id = ByteBufferUtil.bytes(String.valueOf(doc.doc));// + (CassandraIndexManager.maxDocsPerShard * shard))));
-                    rm.delete(new QueryPath(CassandraUtils.schemaInfoColumnFamily, id), System.currentTimeMillis());
-                }
-
-                CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm);
-               
-
-                
+                long total = writer.deleteDocuments(subIndex, q, true);
+                logger.info("Deleted "+ total + " Documents");              
             }
 
             madeIt = true;
