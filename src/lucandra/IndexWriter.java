@@ -319,10 +319,15 @@ public class IndexWriter
             //Store for field cache
             if(firstTerm != null)
             {   
+                
                 ByteBuffer fieldCacheKey = CassandraUtils.hashKeyBytes(indexNameBytes, CassandraUtils.delimeterBytes, firstTerm.field.getBytes());
                 CassandraUtils.addMutations(workingMutations, CassandraUtils.fieldCacheColumnFamily, CassandraUtils.writeVInt(docNumber), fieldCacheKey, firstTerm.text.getBytes("UTF-8"));
+           
+                if(logger.isDebugEnabled())
+                    logger.debug(indexName+" - firstTerm: "+ByteBufferUtil.string(fieldCacheKey));
+
             }
-            
+           
         }
 
         ByteBuffer key = CassandraUtils.hashKeyBytes(indexNameBytes, CassandraUtils.delimeterBytes,

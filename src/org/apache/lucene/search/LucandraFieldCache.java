@@ -831,7 +831,8 @@ public class LucandraFieldCache implements FieldCache
 
         byte[] indexNameBytes = indexName.getBytes("UTF-8");
 
-        logger.info("Loading field cache from " + indexName + " " + field);
+        if(logger.isDebugEnabled())
+            logger.debug("Loading field cache from " + indexName + " " + field);
 
         ColumnParent fieldCacheParent = new ColumnParent(CassandraUtils.fieldCacheColumnFamily);
         ByteBuffer fieldCacheKey = CassandraUtils.hashKeyBytes(indexNameBytes, CassandraUtils.delimeterBytes, field
@@ -842,12 +843,12 @@ public class LucandraFieldCache implements FieldCache
                 ByteBufferUtil.EMPTY_BYTE_BUFFER, false, Integer.MAX_VALUE));
 
         if (rows.isEmpty())
-            throw new IOException("Field cache data missing");
-
+            return Collections.emptyList();
+        
         Row row = rows.get(0);
         if (row.cf == null)
-            throw new IOException("Field cache data missing");
-
+            return Collections.emptyList();
+        
         return row.cf.getSortedColumns();
     }
 

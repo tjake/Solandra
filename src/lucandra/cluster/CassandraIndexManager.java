@@ -442,9 +442,11 @@ public class CassandraIndexManager
             Integer currentOffset = null;
             for (Map.Entry<String, AtomicInteger> e1 : e.getValue().nodes.entrySet())
             {
-                if (e1.getValue().get() > 0)
+                int val = e1.getValue().get();
+                
+                if ( val > 0 )
                 {
-                    currentOffset = e1.getValue().get();
+                    currentOffset = val;
                     break;
                 }
             }
