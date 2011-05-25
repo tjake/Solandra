@@ -31,7 +31,6 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.zip.DataFormatException;
-import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 
 import org.apache.cassandra.config.ConfigurationException;
@@ -50,6 +49,8 @@ import org.apache.lucene.document.Fieldable;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.FieldCache;
 import org.apache.thrift.TException;
+import org.xerial.snappy.Snappy;
+import org.xerial.snappy.SnappyException;
 
 public class CassandraUtils
 {
@@ -753,74 +754,34 @@ public class CassandraUtils
         return buf;
     }
 
-    public static byte[] compress(byte[] input)
+    public static byte[] compress(byte[] input) throws IOException
     {
 
         if(!useCompression)
-            return input;
-        
-        Deflater compressor = new Deflater();
-        compressor.setLevel(Deflater.BEST_SPEED);
-
-        compressor.setInput(input);
-        compressor.finish();
-      
-
-        ByteArrayOutputStream bos = new ByteArrayOutputStream(input.length);
-
-       
-        byte[] buf = new byte[1024];
-
-        while (!compressor.finished())
-        {
-            int count = compressor.deflate(buf);
-            bos.write(buf, 0, count);
-        }
+            return input;      
         try
         {
-            bos.close();
+            return Snappy.compress(input);
         }
-        catch (IOException e)
+        catch (SnappyException e)
         {
-        }
-
-        return bos.toByteArray();
-       
+           throw new IOException(e);
+        }      
     }
 
     public static byte[] decompress(byte[] input) throws IOException
     {
         if(!useCompression)
             return input;
-        
-        Inflater decompressor = new Inflater();
-        decompressor.setInput(input);
-
-        ByteArrayOutputStream bos = new ByteArrayOutputStream(input.length);
-
-        byte[] buf = new byte[1024];
-
-        while (!decompressor.finished())
-        {
-            try
-            {
-                int count = decompressor.inflate(buf);
-                bos.write(buf, 0, count);
-            }
-            catch (DataFormatException e)
-            {
-                throw new IOException(e);
-            }
-        }
+              
         try
         {
-            bos.close();
+            return Snappy.uncompress(input);
         }
-        catch (IOException e)
+        catch (SnappyException e)
         {
+            throw new IOException(e);
         }
-
-        return bos.toByteArray();
     }
 
     //Java lets you do EVIL things

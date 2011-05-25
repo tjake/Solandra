@@ -38,6 +38,7 @@
 
     <dependency org="org.apache.cassandra" name="cassandra-all" rev="0.7.6" conf="* -> *,!sources,!javadoc" />
     <dependency org="net.java.dev.jna" name="jna" rev="3.2.7" conf="* -> *,!sources,!javadoc" />
+    <dependency org="org.xerial.snappy" name="snappy-java" rev="1.0.1-rc4" conf="* -> *,!sources,!javadoc" />
   </dependencies>
 </ivy-module>
 
