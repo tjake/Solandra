@@ -68,12 +68,14 @@ public class SolandraTests
                                                                      + "<analyzer><tokenizer class=\"solr.StandardTokenizerFactory\"/></analyzer>\n"
                                                                      + "</fieldType>\n"
                                                                      + "<fieldType name=\"string\" class=\"solr.StrField\"/>\n"
+                                                                     + "<fieldType name=\"sint\" class=\"solr.SortableIntField\" omitNorms=\"true\"/>\n"
                                                                      + "</types>\n"
                                                                      + "<fields>\n"
                                                                      + "<field name=\"url\" type=\"string\" indexed=\"true\" stored=\"true\"/>\n"
                                                                      + "<field name=\"text\"  type=\"text\" indexed=\"true\"  stored=\"true\" termVectors=\"true\" termPositions=\"true\" termOffsets=\"true\"/>\n"
                                                                      + "<field name=\"title\" type=\"text\" indexed=\"true\"  stored=\"true\"/>\n"
                                                                      + "<field name=\"price\" type=\"tint\" indexed=\"true\"  stored=\"true\"/>\n"
+                                                                     + "<dynamicField name=\"*_i\" stored=\"false\" type=\"sint\" multiValued=\"false\" indexed=\"true\"/>"
                                                                      + "</fields>\n"
                                                                      + "<uniqueKey>url</uniqueKey>\n"
                                                                      + "<defaultSearchField>title</defaultSearchField>\n"
@@ -197,9 +199,14 @@ public class SolandraTests
                 
                 testWildcardSearch(solrClient);
                 logger.info("testWildCardSearch");
-                              
+                                             
+                testQueryFilter(solrClient);
+                logger.info("testQueryFilter");
+                
                 testDeleteByQuery(solrClient);
                 logger.info("testDeleteByQuery");
+                
+            
             }
         }
     }
@@ -308,6 +315,7 @@ public class SolandraTests
         doc.addField("title", "test1");
         doc.addField("url", "http://www.test.com");
         doc.addField("text", "this is a test of Solandra \u5639\u563b");
+        doc.addField("user_id_i", 10);
         doc.addField("price", 1000);
 
         solrClient.add(doc);
@@ -317,6 +325,7 @@ public class SolandraTests
         doc.addField("title", "test2");
         doc.addField("url", "http://www.test2.com");
         doc.addField("text", "this is a test2 of Solandra");
+        doc.addField("user_id_i", 10);
         doc.addField("price", 10000);
 
         solrClient.add(doc);
@@ -326,6 +335,7 @@ public class SolandraTests
         doc.addField("title", "test3");
         doc.addField("url", "http://www.test3.com");
         doc.addField("text", "this is a test3 of Solandra");
+        doc.addField("user_id_i", 100);
         doc.addField("price", 100000);
 
         solrClient.add(doc);
@@ -335,6 +345,7 @@ public class SolandraTests
         doc.addField("title", "test4");
         doc.addField("url", "http://www.test4.com");
         doc.addField("text", "this is a test4 of Solandra");
+        doc.addField("user_id_i", 100);
         doc.addField("price", 10);
 
         solrClient.add(doc);
@@ -427,6 +438,7 @@ public class SolandraTests
         doc.addField("title", "test1");
         doc.addField("url", "http://www.test.com");
         doc.addField("text", "this is a test of Solandra");
+        doc.addField("user_id_i", 10);
         doc.addField("price", 1000);
 
         solrClient.add(doc);
@@ -456,6 +468,16 @@ public class SolandraTests
 
         assertEquals(0, r.getResults().getNumFound());
     }
+    
+    public void testQueryFilter(CommonsHttpSolrServer solrClient) throws Exception
+    {
+        SolrQuery q = new SolrQuery().setQuery("text:Solandra").addFilterQuery("user_id_i:10");
+
+        QueryResponse r = solrClient.query(q);
+
+        assertEquals(2, r.getResults().getNumFound());
+    }
+    
 
     @Test
     public void setAddOtherSchema() throws Exception
@@ -884,10 +906,6 @@ public class SolandraTests
         }
     }
 
-    /**
-     * @param docs
-     * @param url
-     */
     private void writeDocs(Collection<String> docs, URL url)
     {
         // write

@@ -136,19 +136,17 @@ public class LucandraTermDocs implements TermDocs, TermPositions
     // this should be used to find a already loaded doc
     public boolean skipTo(int target) throws IOException
     {
-
         // find the target
         if (termDocs == null)
             return false;
 
         docPosition = 0;
-
-        do
+        
+        while (target > doc())
         {
             if (!next())
                 return false;
         }
-        while (target > doc());
 
         return true;
     }
