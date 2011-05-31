@@ -68,6 +68,29 @@ public class CassandraUtils
     
     public static boolean useCompression;
 
+    
+    // Initialize logging in such a way that it checks for config changes every
+    // 10 seconds.
+    static
+    {
+        String config = System.getProperty("log4j.configuration", "log4j.properties");
+        URL configLocation = null;
+        try
+        {
+            // try loading from a physical location first.
+            configLocation = new URL(config);
+        }
+        catch (MalformedURLException ex)
+        {
+            // load from the classpath.
+            configLocation = AbstractCassandraDaemon.class.getClassLoader().getResource(config);
+            if (configLocation == null)
+                throw new RuntimeException("Couldn't figure out log4j configuration.");
+        }
+        PropertyConfigurator.configureAndWatch(configLocation.getFile(), 10000);
+        org.apache.log4j.Logger.getLogger(AbstractCassandraDaemon.class).info("Logging initialized");
+    }
+    
     // Solandra global properties init
     static
     {
@@ -120,27 +143,7 @@ public class CassandraUtils
         }
     }
 
-    // Initialize logging in such a way that it checks for config changes every
-    // 10 seconds.
-    static
-    {
-        String config = System.getProperty("log4j.configuration", "log4j.properties");
-        URL configLocation = null;
-        try
-        {
-            // try loading from a physical location first.
-            configLocation = new URL(config);
-        }
-        catch (MalformedURLException ex)
-        {
-            // load from the classpath.
-            configLocation = AbstractCassandraDaemon.class.getClassLoader().getResource(config);
-            if (configLocation == null)
-                throw new RuntimeException("Couldn't figure out log4j configuration.");
-        }
-        PropertyConfigurator.configureAndWatch(configLocation.getFile(), 10000);
-        org.apache.log4j.Logger.getLogger(AbstractCassandraDaemon.class).info("Logging initialized");
-    }
+  
 
     public static final String           termVecColumnFamily    = "TI";
     public static final String           docColumnFamily        = "Docs";
