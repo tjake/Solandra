@@ -227,7 +227,7 @@ public class SolandraTests
     public void addSchema(final String indexName) throws Exception
     {
 
-        URL url = new URL("http://localhost:" + port + "/solandra/schema/" + indexName);
+        URL url = new URL("http://localhost:" + port + "/solandra/schema/" + indexName + "/schema.xml");
 
         // write
         try
@@ -483,7 +483,7 @@ public class SolandraTests
     public void setAddOtherSchema() throws Exception
     {
 
-        otherClient = new CommonsHttpSolrServer("http://localhost:" + port + "/solandra/" + otherIndexName);
+        otherClient = new CommonsHttpSolrServer("http://localhost:" + port + "/solandra/" + otherIndexName );
 
         String otherSchema = "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
                 + "<schema name=\"config\" version=\"1.2\">\n"
@@ -511,7 +511,7 @@ public class SolandraTests
                 + "<field name=\"json\" type=\"text_ws\" indexed=\"false\" stored=\"true\" />\n" + "</fields>\n"
                 + "<uniqueKey>uuid</uniqueKey>\n" + "<defaultSearchField>uuid</defaultSearchField>\n" + "</schema>\n";
 
-        URL url = new URL("http://localhost:" + port + "/solandra/schema/" + otherIndexName);
+        URL url = new URL("http://localhost:" + port + "/solandra/schema/" + otherIndexName + "/schema.xml");
 
         // write
         try

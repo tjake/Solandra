@@ -46,6 +46,8 @@ import org.apache.solr.schema.IndexSchema;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
+import solandra.SolandraResourceLoader;
+
 
 public class SolandraCoreContainer extends CoreContainer
 {
@@ -55,10 +57,7 @@ public class SolandraCoreContainer extends CoreContainer
     
     private static final Logger                              logger    = Logger.getLogger(SolandraCoreContainer.class);
     private final static InstrumentedCache<String, SolrCore> cache     = new InstrumentedCache<String, SolrCore>(1024);
-    private final static QueryPath                           queryPath = new QueryPath(
-                                                                               CassandraUtils.schemaInfoColumnFamily,
-                                                                               CassandraUtils.schemaKeyBytes);
-
+   
     private final String                                     solrConfigFile;
     private final SolrCore                                   singleCore;
 
@@ -122,22 +121,15 @@ public class SolandraCoreContainer extends CoreContainer
     }
     
     public static String readSchemaXML(String indexName) throws IOException
-    {        
+    {               
+        ByteBuffer schema = readCoreResource(indexName, CassandraUtils.schemaKey);
         
-        List<Row> rows = CassandraUtils.robustRead(ByteBuffer.wrap((indexName + "/schema").getBytes("UTF-8")), queryPath,
-                Arrays.asList(CassandraUtils.schemaKeyBytes), ConsistencyLevel.QUORUM);
-
-        if (rows.isEmpty())
-            throw new IOException("invalid index: "+indexName);
-
-        if (rows.size() > 1)
-            throw new IllegalStateException("More than one schema found for this index");
-
-        if (rows.get(0).cf == null)
-            throw new IOException("invalid index: "+indexName);
-
-        ByteBuffer schema = rows.get(0).cf.getColumn(CassandraUtils.schemaKeyBytes).getSubColumn(
-                CassandraUtils.schemaKeyBytes).value();
+        //Schema resource not found for the core
+        if (schema == null)
+        {
+        	throw new IOException(String.format("invalid core '%s'", indexName));
+        }
+        
         return ByteBufferUtil.string(schema);
     }
 
@@ -151,32 +143,27 @@ public class SolandraCoreContainer extends CoreContainer
         {
             // get from cassandra
             if (logger.isDebugEnabled())
-                logger.debug("loading indexInfo for: " + indexName);
-
-            List<Row> rows = CassandraUtils.robustRead(ByteBuffer.wrap((indexName + "/schema").getBytes("UTF-8")), queryPath,
-                    Arrays.asList(CassandraUtils.schemaKeyBytes), ConsistencyLevel.QUORUM);
-
-            if (rows.isEmpty())
-                throw new IOException("invalid index");
-
-            if (rows.size() > 1)
-                throw new IllegalStateException("More than one schema found for this index");
-
-            if (rows.get(0).cf == null)
-                throw new IOException("invalid index");
-
-            ByteBuffer buf = rows.get(0).cf.getColumn(CassandraUtils.schemaKeyBytes).getSubColumn(
-                    CassandraUtils.schemaKeyBytes).value();
+                logger.debug("loading index schema for: " + indexName);
+            
+            ByteBuffer buf = readCoreResource(indexName, CassandraUtils.schemaKey);
+            
+            //Schema resource not found for the core
+            if (buf == null)
+            {
+            	throw new IOException(String.format("invalid core '%s'", indexName));
+            }
+            
             InputStream stream = new ByteArrayInputStream(ByteBufferUtil.getArray(buf));
 
-           
-            SolrConfig solrConfig = new SolrConfig(solrConfigFile);
+            SolrResourceLoader resourceLoader = new SolandraResourceLoader(indexName, null);
+            SolrConfig solrConfig = new SolrConfig(resourceLoader, solrConfigFile, null);
 
             IndexSchema schema = new IndexSchema(solrConfig, indexName, new InputSource(stream));
 
             core = new SolrCore(indexName, "/tmp", solrConfig, schema, null);
 
-            logger.debug("Loaded core from cassandra: " + indexName);
+            if (logger.isDebugEnabled())
+            	logger.debug("Loaded core from cassandra: " + indexName);
 
             cache.put(indexName, core);
         }
@@ -185,23 +172,8 @@ public class SolandraCoreContainer extends CoreContainer
     }
 
     public static void writeSchema(String indexName, String schemaXml) throws IOException
-    {
-        RowMutation rm = new RowMutation(CassandraUtils.keySpace, ByteBuffer.wrap((indexName + "/schema").getBytes("UTF-8")));
-
-        try
-        {
-
-            rm.add(new QueryPath(CassandraUtils.schemaInfoColumnFamily, CassandraUtils.schemaKeyBytes,
-                    CassandraUtils.schemaKeyBytes), ByteBuffer.wrap(schemaXml.getBytes("UTF-8")), System
-                    .currentTimeMillis());
-
-        }
-        catch (UnsupportedEncodingException e)
-        {
-            throw new RuntimeException(e);
-        }
-
-        CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm);
+    {        
+        writeCoreResource(indexName, CassandraUtils.schemaKey, schemaXml);
 
         logger.debug("Wrote Schema for " + indexName);
         
@@ -209,6 +181,7 @@ public class SolandraCoreContainer extends CoreContainer
         cache.remove(indexName);
     }
 
+    
     public static String getCoreMetaInfo(String indexName) throws IOException
     {
 
@@ -255,5 +228,86 @@ public class SolandraCoreContainer extends CoreContainer
     {
         return Arrays.asList(core.getName());
     }
+    
+	public static ByteBuffer readCoreResource(String coreName, String resourceName) throws IOException
+	{
+		
+		if (coreName == null || resourceName == null)
+		{
+			return null;
+		}
+		
+		ByteBuffer resourceValue = null;
+		
+		ByteBuffer coreNameBytes = ByteBufferUtil.bytes(coreName);
+		ByteBuffer resourceNameBytes = ByteBufferUtil.bytes(resourceName);
 
+		QueryPath queryPath = new QueryPath(
+				CassandraUtils.schemaInfoColumnFamily,
+				coreNameBytes);
+		
+		List<Row> rows = CassandraUtils.robustRead(
+				coreNameBytes,
+				queryPath,
+				Arrays.asList(resourceNameBytes),
+				ConsistencyLevel.QUORUM);
+
+		if (rows.isEmpty())
+			throw new IOException("invalid core: " + coreName);
+
+		if (rows.size() > 1)
+		{
+			throw new IllegalStateException(
+					String.format("More than one resource named '%s' found for core '%s'",
+							resourceName, coreName));
+		}
+
+		/*
+		 * Named resource does exist for the core, return its value.
+		 * Otherwise return null.
+		 */
+		if (rows.get(0).cf != null)
+		{
+			resourceValue = rows.get(0).cf
+				.getColumn(coreNameBytes)
+				.getSubColumn(resourceNameBytes).value();
+		}
+		
+		return resourceValue;
+	}
+	
+    public static void writeCoreResource(String coreName, String resourceName, String resourceValue) throws IOException
+    {
+
+		//TODO (jschmidt): do some parameter validation (not null etc.)
+		
+		if (logger.isDebugEnabled())
+		{
+			logger.debug(String.format("Writing resource '%s' to core '%s'", resourceName, coreName));
+			logger.debug(resourceValue);
+		}
+		
+		ByteBuffer coreNameBytes = ByteBufferUtil.bytes(coreName);
+		ByteBuffer resourceNameBytes = ByteBufferUtil.bytes(resourceName);
+		
+		RowMutation rm = new RowMutation(CassandraUtils.keySpace, coreNameBytes);
+
+		QueryPath queryPath = new QueryPath(
+				CassandraUtils.schemaInfoColumnFamily,
+				coreNameBytes,
+				resourceNameBytes);
+
+        rm.add(
+        		queryPath,
+        		ByteBufferUtil.bytes(resourceValue),
+        		System.currentTimeMillis());
+
+        CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm);
+        
+        if (logger.isDebugEnabled())
+        {
+        	logger.debug(String.format("wrote resource '%s' to core '%s'",
+        			resourceName, coreName));	
+        }       
+    }
 }
