@@ -213,10 +213,8 @@ public class SolandraIndexWriter extends UpdateHandler
             Long docId = null;
             RowMutation[] rms = null;
 
-            // Allow this to be bypassed
-            String batchMode = SolandraCoreContainer.activeRequest.get().getParameter("batch");
-
-            if (!coreInfo.bulk && !cmd.allowDups && (batchMode == null || !batchMode.equals("true")))
+            
+            if (!coreInfo.bulk && !cmd.allowDups)
                 docId = IndexManagerService.instance.getId(coreInfo.indexName, key);
 
             boolean isUpdate = false;
