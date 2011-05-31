@@ -22,7 +22,9 @@ package solandra;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import lucandra.CassandraUtils;
@@ -37,50 +39,19 @@ import org.apache.cassandra.db.Row;
 import org.apache.cassandra.db.filter.QueryPath;
 import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.thrift.ConsistencyLevel;
-import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.cassandra.utils.FBUtilities;
 import org.apache.log4j.Logger;
-import org.apache.lucene.document.FieldSelector;
 import org.apache.solr.common.params.ShardParams;
 import org.apache.solr.handler.component.ResponseBuilder;
-import org.apache.solr.handler.component.SearchComponent;
-import org.apache.solr.highlight.SolrHighlighter;
-import org.apache.solr.schema.SchemaField;
-import org.apache.solr.search.DocIterator;
-import org.apache.solr.search.DocList;
 import org.apache.solr.search.SolrIndexReader;
 
-public class SolandraComponent extends SearchComponent
+public final class SolandraComponent 
 {
     private static AtomicBoolean hasSolandraSchema = new AtomicBoolean(false);
     private static final Logger logger = Logger.getLogger(SolandraComponent.class);
     private final static Map<String,Long> cacheCheck = new MapMaker().makeMap();
-    
-    public SolandraComponent()
-    {
-    }
 
-    public String getDescription()
-    {
-        return "Reopens Lucandra readers";
-    }
-
-    public String getSource()
-    {
-        return null;
-    }
-
-    public String getSourceId()
-    {
-        return null;
-    }
-
-    public String getVersion()
-    {
-        return "1.0";
-    }
-
-    private boolean flushCache(String indexName) throws IOException
+    public static boolean flushCache(String indexName) throws IOException
     {   
         if(CassandraUtils.cacheInvalidationInterval == 0)
             return true;
@@ -108,17 +79,16 @@ public class SolandraComponent extends SearchComponent
                 return true;
             }
         }
-    
-            
+              
         return false;
     }
     
-    public void prepare(ResponseBuilder rb) throws IOException
+    public static boolean prepare(ResponseBuilder rb) throws IOException
     {
 
         // Only applies to my lucandra index readers
         if (!(((SolrIndexReader) rb.req.getSearcher().getIndexReader()).getWrappedReader() instanceof lucandra.IndexReader))
-            return;
+            return false;
         
         if(!hasSolandraSchema.get())
         {
@@ -144,14 +114,14 @@ public class SolandraComponent extends SearchComponent
             if(flushCache(indexName))
                 reader.reopen();
             
-            return;
+            return false;
         }
 
         String indexName = (String) rb.req.getContext().get("solandra-index");
 
         if (indexName == null || indexName.equals(""))
         {
-            return; // 
+            return false; // 
         }
         else
         {
@@ -178,7 +148,7 @@ public class SolandraComponent extends SearchComponent
                 {
                     reader.reopen();                
                 }
-                return;
+                return false;
             }
             
             // assign shards
@@ -205,58 +175,10 @@ public class SolandraComponent extends SearchComponent
 
             // assign to shards
             rb.shards = shards;
+            
+            return true;
         }
-    }
-
-    public void process(ResponseBuilder rb) throws IOException
-    {
         
-        DocList list = rb.getResults().docList;
-
-        DocIterator it = list.iterator();
-
-        List<Integer> docIds = new ArrayList<Integer>(list.size());
-        
-        while (it.hasNext())
-            docIds.add(it.next());
-
-        if(logger.isDebugEnabled())
-            logger.debug("Fetching " + docIds.size() + " Docs");
-
-        if (docIds.size() > 0)
-        {
-
-            List<ByteBuffer> fieldFilter = null;
-            Set<String> returnFields = rb.rsp.getReturnFields();
-            if (returnFields != null)
-            {
-
-                // copy return fields list
-                fieldFilter = new ArrayList<ByteBuffer>(returnFields.size());
-                for (String field : returnFields)
-                {
-                    fieldFilter.add(ByteBufferUtil.bytes(field));
-                }
-
-                // add highlight fields
-                SolrHighlighter highligher = rb.req.getCore().getHighlighter();
-                if (highligher.isHighlightingEnabled(rb.req.getParams()))
-                {
-                    for (String field : highligher.getHighlightFields(rb.getQuery(), rb.req, null))
-                        if (!returnFields.contains(field))
-                            fieldFilter.add(ByteBufferUtil.bytes(field));
-                }
-                // fetch unique key if one exists.
-                SchemaField keyField = rb.req.getSearcher().getSchema().getUniqueKeyField();
-                if (null != keyField)
-                    if (!returnFields.contains(keyField))
-                        fieldFilter.add(ByteBufferUtil.bytes(keyField.getName()));
-            }
-
-            FieldSelector selector = new SolandraFieldSelector(docIds, fieldFilter);
-
-            //This will bulk load these docs
-            rb.req.getSearcher().getReader().document(docIds.get(0), selector);
-        }
+        return false;
     }
 }
