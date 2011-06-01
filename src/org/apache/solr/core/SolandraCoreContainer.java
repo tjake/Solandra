@@ -51,8 +51,8 @@ import solandra.SolandraResourceLoader;
 
 public class SolandraCoreContainer extends CoreContainer
 {
-    public  final static ThreadLocal<SolandraCoreInfo>        coreInfo      = new ThreadLocal<SolandraCoreInfo>();
-    public  final static ThreadLocal<HttpServletRequest>      activeRequest = new ThreadLocal<HttpServletRequest>();
+    public  final static ThreadLocal<SolandraCoreInfo>        coreInfo      = new InheritableThreadLocal<SolandraCoreInfo>();
+    public  final static ThreadLocal<HttpServletRequest>      activeRequest = new InheritableThreadLocal<HttpServletRequest>();
 
     
     private static final Logger                              logger    = Logger.getLogger(SolandraCoreContainer.class);
