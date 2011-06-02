@@ -19,6 +19,9 @@
  */
 package org.apache.solr.core;
 
+import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
+import com.googlecode.concurrentlinkedhashmap.Weighers;
+
 import java.io.*;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
@@ -32,7 +35,9 @@ import lucandra.CassandraUtils;
 import lucandra.cluster.CassandraIndexManager;
 import lucandra.cluster.IndexManagerService;
 
-import org.apache.cassandra.cache.InstrumentedCache;
+import org.apache.cassandra.cache.ConcurrentLinkedHashCache;
+import org.apache.cassandra.cache.ICache;
+import org.apache.cassandra.cache.InstrumentingCache;
 import org.apache.cassandra.db.Row;
 import org.apache.cassandra.db.RowMutation;
 import org.apache.cassandra.db.Table;
@@ -53,10 +58,13 @@ public class SolandraCoreContainer extends CoreContainer
 {
     public  final static ThreadLocal<SolandraCoreInfo>        coreInfo      = new InheritableThreadLocal<SolandraCoreInfo>();
     public  final static ThreadLocal<HttpServletRequest>      activeRequest = new InheritableThreadLocal<HttpServletRequest>();
+    public  final static int                                  CAPACITY      = 1024;
 
     
     private static final Logger                              logger    = Logger.getLogger(SolandraCoreContainer.class);
-    private final static InstrumentedCache<String, SolrCore> cache     = new InstrumentedCache<String, SolrCore>(1024);
+
+    private static final ICache<String, SolrCore>            map       = ConcurrentLinkedHashCache.create(CAPACITY);
+    private static final InstrumentingCache<String, SolrCore> cache    = new InstrumentingCache<String, SolrCore>(map,"SOLRtable","SOLRname");
    
     private final String                                     solrConfigFile;
     private final SolrCore                                   singleCore;

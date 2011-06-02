@@ -21,6 +21,7 @@ package lucandra;
 
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.sql.Types;
 
 import org.apache.cassandra.db.marshal.AbstractType;
 import org.apache.cassandra.db.marshal.MarshalException;
@@ -74,10 +75,57 @@ public class VIntType extends AbstractType<BigInteger> {
         return ByteBuffer.wrap(value.toByteArray());
     }
 
+    @Override
+    public String toString(BigInteger bigInteger) {
+        return bigInteger.toString();
+    }
+
 
     public void validate(ByteBuffer bytes) throws MarshalException
     {
         
+    }
+
+    @Override
+    public Class<BigInteger> getType() {
+        return BigInteger.class;
+    }
+
+    @Override
+    public boolean isSigned() {
+        return true;
+    }
+
+    public boolean isCaseSensitive()
+    {
+        return false;
+    }
+
+
+    public boolean isCurrency()
+    {
+        return false;
+    }
+
+    @Override
+    public int getPrecision(BigInteger obj) {
+        return  obj.toString().length();
+    }
+
+    @Override
+    public int getScale(BigInteger obj) {
+        return 0;
+    }
+
+    @Override
+    public int getJdbcType() {
+        return Types.BIGINT;
+    }
+
+
+    public boolean needsQuotes()
+    {
+        return false;
     }
 
 }
