@@ -29,7 +29,7 @@ From the Solandra base directory:
 
     mkdir /tmp/cassandra-data
     ant
-    cd solandra-app; ./start-solandra.sh
+    cd solandra-app; bin/solandra
 
 Now that Solandra is running you can run the demo:
 
