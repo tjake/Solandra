@@ -22,7 +22,7 @@ package solandra;
 import lucandra.CassandraUtils;
 
 
-public class CassandraStarter {
+public class SolandraServer {
 
 	/**
 	 * @param args
