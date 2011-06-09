@@ -390,6 +390,10 @@ public class CassandraUtils
         {
             throw new IOException(e);
         }
+        catch (SchemaDisagreementException e)
+        {
+             throw new IOException(e);
+        }
 
         logger.info("Added Solandra specific schema");
     }

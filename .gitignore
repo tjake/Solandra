@@ -8,4 +8,5 @@ solandra-app/
 *.war
 /target
 /solandra
-cassandra/
+.DS_Store
+reuters-demo/data/*
