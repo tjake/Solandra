@@ -233,23 +233,20 @@
 	<target name="dist" depends="solandra.jar">
 		<delete dir="${app}" />
 		<mkdir dir="${app}" />
-		<mkdir dir="${app}/logs" />
-		<mkdir dir="${app}/etc" />
+		<mkdir dir="${app}/conf" />
 		<mkdir dir="${app}/lib" />
 		<mkdir dir="${app}/bin" />
-		<mkdir dir="${app}/conf" />
-		<mkdir dir="${app}/work" />
 		<copy todir="${app}/lib">
 			<fileset dir="${lib}" includes="*.jar" />
 			<fileset dir="${basedir}" includes="solandra.jar" />	
 		</copy>
 		<copy todir="${app}/conf" overwrite="false">
-			<fileset dir="${resources}/solr" includes="solrconfig.xml,schema.xml,*.txt" />
+			<fileset dir="${resources}/solr" includes="solrconfig.xml,schema.xml,*.txt,jetty.xml,jetty-logging.xml" />
 			<fileset dir="${resources}" includes="solandra.properties,cassandra.yaml" />
 			<fileset dir="${resources}/cassandra" includes="cassandra-env.sh,solandra.properties,cassandra.yaml,log4j-tools.properties" />			
 		</copy>
 		<copy todir="${app}/bin" overwrite="false">
-			<fileset dir="${resources}/cassandra" includes="solandra,solandra.cml,cassandra-cli,nodetool,cassandra.in.sh," />
+			<fileset dir="${resources}/cassandra" includes="solandra,cassandra-cli,nodetool,cassandra.in.sh," />
 		</copy>
 		<chmod dir="${app}/bin" perm="755" includes="solandra,cassandra-cli,nodetool" />
 			<echo>Solandra successfully built</echo>
@@ -257,8 +254,6 @@
 			<echo>cd ${app}; bin/solandra</echo>
 	</target>
 	
-
-
 	<target name="set.cassandra">
 		<fail unless="cassandra.found">path to cassandra not found use -Dcassandra=...</fail>
 	</target>
@@ -277,7 +272,7 @@
 		<!-- copy over all the new jar files -->
 
 		<copy todir="${cassandra}/lib">
-			<fileset dir="${lib}" includes="jetty*.jar,servlet*.jar,jsp*.jar, solr*.jar, lucene*.jar, commons*.jar, veclocity*.jar" />
+			<fileset dir="${lib}" includes="jetty*.jar,servlet*.jar,jsp*.jar, solr*.jar, lucene*.jar, commons*.jar, veclocity*.jar, snappy*.jar" />
 			<fileset dir="${basedir}" includes="solandra.jar" />
 		</copy>
 
