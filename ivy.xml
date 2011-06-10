@@ -27,8 +27,8 @@
     <dependency org="commons-cli" name="commons-cli" rev="1.1" conf="* -> *,!sources,!javadoc"/>
     <dependency org="commons-lang" name="commons-lang" rev="2.4" conf="* -> *,!sources,!javadoc"/>
     <dependency org="commons-collections" name="commons-collections" rev="3.2.1" conf="* -> *,!sources,!javadoc"/>
-    <dependency org="org.apache.solr" name="solr-core" rev="3.1.0" conf="* -> *,!javadoc">
-      <exclude org="org.mortbay.jetty"/> 
+    <dependency org="org.apache.solr" name="solr-core" rev="3.2.0" conf="* -> *,!javadoc">
+      <exclude org="org.mortbay.jetty"/>  
       <exclude org="org.slf4j"/>
     </dependency>
 
@@ -38,7 +38,7 @@
 
     <dependency org="org.apache.cassandra" name="cassandra-all" rev="0.8.0" conf="* -> *,!sources,!javadoc" />
     <dependency org="net.java.dev.jna" name="jna" rev="3.2.7" conf="* -> *,!sources,!javadoc" />
-    <dependency org="org.xerial.snappy" name="snappy-java" rev="1.0.1-rc4" conf="* -> *,!sources,!javadoc" />
+    <dependency org="org.xerial.snappy" name="snappy-java" rev="1.0.3-rc2" conf="* -> *,!sources,!javadoc" />
   </dependencies>
 </ivy-module>
 
