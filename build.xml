@@ -272,7 +272,7 @@
 		<!-- copy over all the new jar files -->
 
 		<copy todir="${cassandra}/lib">
-			<fileset dir="${lib}" includes="jetty*.jar,servlet*.jar,jsp*.jar, solr*.jar, lucene*.jar, commons*.jar, veclocity*.jar, snappy*.jar" />
+			<fileset dir="${lib}" includes="jetty*.jar,servlet*.jar,jsp*.jar, solr*.jar, lucene*.jar, commons*.jar, velocity*.jar, snappy*.jar" />
 			<fileset dir="${basedir}" includes="solandra.jar" />
 		</copy>
 
@@ -288,7 +288,7 @@
 
 		<replace file="${cassandra}/bin/solandra" failOnNoReplacements="true">
 			<replacetoken>classname="org.apache.cassandra.thrift.CassandraDaemon"</replacetoken>
-			<replacevalue>classname="solandra.CassandraStarter"</replacevalue>
+			<replacevalue>classname="solandra.SolandraServer"</replacevalue>
 		</replace>
 
 		<chmod dir="${cassandra}/bin" perm="755" includes="solandra" />
