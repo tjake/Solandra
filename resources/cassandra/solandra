@@ -130,7 +130,7 @@ launch_service()
 }
 
 # Parse any command line options.
-args=`getopt vfhp:bD: "$@"`
+args=`getopt vhp:cbD: "$@"`
 eval set -- "$args"
 
 classname="solandra.SolandraServer"
@@ -141,17 +141,20 @@ while true; do
             pidfile="$2"
             shift 2
         ;;
-        -f)
-            foreground="yes"
-            shift
-        ;;
         -h)
-            echo "Usage: $0 [-f] [-h] [-p pidfile]"
+            echo "Usage: $0 [-h] [-c] [-p pidfile]"
+            echo "  -v : print cassandra version"
+            echo "  -h : prints this help message"
+            echo "  -c : starts solandra in client mode"
             exit 0
         ;;
         -v)
             $JAVA -cp $CLASSPATH org.apache.cassandra.tools.GetVersion
             exit 0
+        ;;
+        -c)
+            properties="$properties -Dsolandra.clientmode=true"
+            shift
         ;;
         -D)
             properties="$properties -D$2"
