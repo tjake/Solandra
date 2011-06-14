@@ -21,28 +21,28 @@ import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.thrift.*;
-import org.apache.thrift.async.*;
-import org.apache.thrift.meta_data.*;
-import org.apache.thrift.transport.*;
-import org.apache.thrift.protocol.*;
-
 /**
  * Term Information..
  */
-public class ThriftTerm implements TBase<ThriftTerm, ThriftTerm._Fields>, java.io.Serializable, Cloneable {
-  private static final TStruct STRUCT_DESC = new TStruct("ThriftTerm");
+public class ThriftTerm implements org.apache.thrift.TBase<ThriftTerm, ThriftTerm._Fields>, java.io.Serializable, Cloneable {
+  private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("ThriftTerm");
 
-  private static final TField FIELD_FIELD_DESC = new TField("field", TType.STRING, (short)1);
-  private static final TField TEXT_FIELD_DESC = new TField("text", TType.STRING, (short)2);
+  private static final org.apache.thrift.protocol.TField FIELD_FIELD_DESC = new org.apache.thrift.protocol.TField("field", org.apache.thrift.protocol.TType.STRING, (short)1);
+  private static final org.apache.thrift.protocol.TField TEXT_FIELD_DESC = new org.apache.thrift.protocol.TField("text", org.apache.thrift.protocol.TType.STRING, (short)2);
+  private static final org.apache.thrift.protocol.TField IS_BINARY_FIELD_DESC = new org.apache.thrift.protocol.TField("is_binary", org.apache.thrift.protocol.TType.BOOL, (short)3);
+  private static final org.apache.thrift.protocol.TField LONG_VAL_FIELD_DESC = new org.apache.thrift.protocol.TField("longVal", org.apache.thrift.protocol.TType.I64, (short)4);
 
   public String field;
-  public String text;
+  public ByteBuffer text;
+  public boolean is_binary;
+  public long longVal;
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
-  public enum _Fields implements TFieldIdEnum {
+  public enum _Fields implements org.apache.thrift.TFieldIdEnum {
     FIELD((short)1, "field"),
-    TEXT((short)2, "text");
+    TEXT((short)2, "text"),
+    IS_BINARY((short)3, "is_binary"),
+    LONG_VAL((short)4, "longVal");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -61,6 +61,10 @@ public class ThriftTerm implements TBase<ThriftTerm, ThriftTerm._Fields>, java.i
           return FIELD;
         case 2: // TEXT
           return TEXT;
+        case 3: // IS_BINARY
+          return IS_BINARY;
+        case 4: // LONG_VAL
+          return LONG_VAL;
         default:
           return null;
       }
@@ -101,40 +105,50 @@ public class ThriftTerm implements TBase<ThriftTerm, ThriftTerm._Fields>, java.i
   }
 
   // isset id assignments
+  private static final int __IS_BINARY_ISSET_ID = 0;
+  private static final int __LONGVAL_ISSET_ID = 1;
+  private BitSet __isset_bit_vector = new BitSet(2);
 
-  public static final Map<_Fields, FieldMetaData> metaDataMap;
+  public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
-    Map<_Fields, FieldMetaData> tmpMap = new EnumMap<_Fields, FieldMetaData>(_Fields.class);
-    tmpMap.put(_Fields.FIELD, new FieldMetaData("field", TFieldRequirementType.REQUIRED, 
-        new FieldValueMetaData(TType.STRING)));
-    tmpMap.put(_Fields.TEXT, new FieldMetaData("text", TFieldRequirementType.REQUIRED, 
-        new FieldValueMetaData(TType.STRING)));
+    Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
+    tmpMap.put(_Fields.FIELD, new org.apache.thrift.meta_data.FieldMetaData("field", org.apache.thrift.TFieldRequirementType.REQUIRED, 
+        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
+    tmpMap.put(_Fields.TEXT, new org.apache.thrift.meta_data.FieldMetaData("text", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
+        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING        , true)));
+    tmpMap.put(_Fields.IS_BINARY, new org.apache.thrift.meta_data.FieldMetaData("is_binary", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
+        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.BOOL)));
+    tmpMap.put(_Fields.LONG_VAL, new org.apache.thrift.meta_data.FieldMetaData("longVal", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
+        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I64)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
-    FieldMetaData.addStructMetaDataMap(ThriftTerm.class, metaDataMap);
+    org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(ThriftTerm.class, metaDataMap);
   }
 
   public ThriftTerm() {
   }
 
   public ThriftTerm(
-    String field,
-    String text)
+    String field)
   {
     this();
     this.field = field;
-    this.text = text;
   }
 
   /**
    * Performs a deep copy on <i>other</i>.
    */
   public ThriftTerm(ThriftTerm other) {
+    __isset_bit_vector.clear();
+    __isset_bit_vector.or(other.__isset_bit_vector);
     if (other.isSetField()) {
       this.field = other.field;
     }
     if (other.isSetText()) {
-      this.text = other.text;
+      this.text = org.apache.thrift.TBaseHelper.copyBinary(other.text);
+;
     }
+    this.is_binary = other.is_binary;
+    this.longVal = other.longVal;
   }
 
   public ThriftTerm deepCopy() {
@@ -145,6 +159,10 @@ public class ThriftTerm implements TBase<ThriftTerm, ThriftTerm._Fields>, java.i
   public void clear() {
     this.field = null;
     this.text = null;
+    setIs_binaryIsSet(false);
+    this.is_binary = false;
+    setLongValIsSet(false);
+    this.longVal = 0;
   }
 
   public String getField() {
@@ -160,7 +178,7 @@ public class ThriftTerm implements TBase<ThriftTerm, ThriftTerm._Fields>, java.i
     this.field = null;
   }
 
-  /** Returns true if field field is set (has been asigned a value) and false otherwise */
+  /** Returns true if field field is set (has been assigned a value) and false otherwise */
   public boolean isSetField() {
     return this.field != null;
   }
@@ -171,11 +189,21 @@ public class ThriftTerm implements TBase<ThriftTerm, ThriftTerm._Fields>, java.i
     }
   }
 
-  public String getText() {
-    return this.text;
+  public byte[] getText() {
+    setText(org.apache.thrift.TBaseHelper.rightSize(text));
+    return text == null ? null : text.array();
   }
 
-  public ThriftTerm setText(String text) {
+  public ByteBuffer bufferForText() {
+    return text;
+  }
+
+  public ThriftTerm setText(byte[] text) {
+    setText(text == null ? (ByteBuffer)null : ByteBuffer.wrap(text));
+    return this;
+  }
+
+  public ThriftTerm setText(ByteBuffer text) {
     this.text = text;
     return this;
   }
@@ -184,7 +212,7 @@ public class ThriftTerm implements TBase<ThriftTerm, ThriftTerm._Fields>, java.i
     this.text = null;
   }
 
-  /** Returns true if field text is set (has been asigned a value) and false otherwise */
+  /** Returns true if field text is set (has been assigned a value) and false otherwise */
   public boolean isSetText() {
     return this.text != null;
   }
@@ -193,6 +221,52 @@ public class ThriftTerm implements TBase<ThriftTerm, ThriftTerm._Fields>, java.i
     if (!value) {
       this.text = null;
     }
+  }
+
+  public boolean isIs_binary() {
+    return this.is_binary;
+  }
+
+  public ThriftTerm setIs_binary(boolean is_binary) {
+    this.is_binary = is_binary;
+    setIs_binaryIsSet(true);
+    return this;
+  }
+
+  public void unsetIs_binary() {
+    __isset_bit_vector.clear(__IS_BINARY_ISSET_ID);
+  }
+
+  /** Returns true if field is_binary is set (has been assigned a value) and false otherwise */
+  public boolean isSetIs_binary() {
+    return __isset_bit_vector.get(__IS_BINARY_ISSET_ID);
+  }
+
+  public void setIs_binaryIsSet(boolean value) {
+    __isset_bit_vector.set(__IS_BINARY_ISSET_ID, value);
+  }
+
+  public long getLongVal() {
+    return this.longVal;
+  }
+
+  public ThriftTerm setLongVal(long longVal) {
+    this.longVal = longVal;
+    setLongValIsSet(true);
+    return this;
+  }
+
+  public void unsetLongVal() {
+    __isset_bit_vector.clear(__LONGVAL_ISSET_ID);
+  }
+
+  /** Returns true if field longVal is set (has been assigned a value) and false otherwise */
+  public boolean isSetLongVal() {
+    return __isset_bit_vector.get(__LONGVAL_ISSET_ID);
+  }
+
+  public void setLongValIsSet(boolean value) {
+    __isset_bit_vector.set(__LONGVAL_ISSET_ID, value);
   }
 
   public void setFieldValue(_Fields field, Object value) {
@@ -209,7 +283,23 @@ public class ThriftTerm implements TBase<ThriftTerm, ThriftTerm._Fields>, java.i
       if (value == null) {
         unsetText();
       } else {
-        setText((String)value);
+        setText((ByteBuffer)value);
+      }
+      break;
+
+    case IS_BINARY:
+      if (value == null) {
+        unsetIs_binary();
+      } else {
+        setIs_binary((Boolean)value);
+      }
+      break;
+
+    case LONG_VAL:
+      if (value == null) {
+        unsetLongVal();
+      } else {
+        setLongVal((Long)value);
       }
       break;
 
@@ -224,11 +314,17 @@ public class ThriftTerm implements TBase<ThriftTerm, ThriftTerm._Fields>, java.i
     case TEXT:
       return getText();
 
+    case IS_BINARY:
+      return new Boolean(isIs_binary());
+
+    case LONG_VAL:
+      return new Long(getLongVal());
+
     }
     throw new IllegalStateException();
   }
 
-  /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+  /** Returns true if field corresponding to fieldID is set (has been assigned a value) and false otherwise */
   public boolean isSet(_Fields field) {
     if (field == null) {
       throw new IllegalArgumentException();
@@ -239,6 +335,10 @@ public class ThriftTerm implements TBase<ThriftTerm, ThriftTerm._Fields>, java.i
       return isSetField();
     case TEXT:
       return isSetText();
+    case IS_BINARY:
+      return isSetIs_binary();
+    case LONG_VAL:
+      return isSetLongVal();
     }
     throw new IllegalStateException();
   }
@@ -274,6 +374,24 @@ public class ThriftTerm implements TBase<ThriftTerm, ThriftTerm._Fields>, java.i
         return false;
     }
 
+    boolean this_present_is_binary = true && this.isSetIs_binary();
+    boolean that_present_is_binary = true && that.isSetIs_binary();
+    if (this_present_is_binary || that_present_is_binary) {
+      if (!(this_present_is_binary && that_present_is_binary))
+        return false;
+      if (this.is_binary != that.is_binary)
+        return false;
+    }
+
+    boolean this_present_longVal = true && this.isSetLongVal();
+    boolean that_present_longVal = true && that.isSetLongVal();
+    if (this_present_longVal || that_present_longVal) {
+      if (!(this_present_longVal && that_present_longVal))
+        return false;
+      if (this.longVal != that.longVal)
+        return false;
+    }
+
     return true;
   }
 
@@ -291,6 +409,16 @@ public class ThriftTerm implements TBase<ThriftTerm, ThriftTerm._Fields>, java.i
     if (present_text)
       builder.append(text);
 
+    boolean present_is_binary = true && (isSetIs_binary());
+    builder.append(present_is_binary);
+    if (present_is_binary)
+      builder.append(is_binary);
+
+    boolean present_longVal = true && (isSetLongVal());
+    builder.append(present_longVal);
+    if (present_longVal)
+      builder.append(longVal);
+
     return builder.toHashCode();
   }
 
@@ -307,7 +435,7 @@ public class ThriftTerm implements TBase<ThriftTerm, ThriftTerm._Fields>, java.i
       return lastComparison;
     }
     if (isSetField()) {
-      lastComparison = TBaseHelper.compareTo(this.field, typedOther.field);
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.field, typedOther.field);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -317,7 +445,27 @@ public class ThriftTerm implements TBase<ThriftTerm, ThriftTerm._Fields>, java.i
       return lastComparison;
     }
     if (isSetText()) {
-      lastComparison = TBaseHelper.compareTo(this.text, typedOther.text);
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.text, typedOther.text);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetIs_binary()).compareTo(typedOther.isSetIs_binary());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetIs_binary()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.is_binary, typedOther.is_binary);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetLongVal()).compareTo(typedOther.isSetLongVal());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetLongVal()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.longVal, typedOther.longVal);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -329,32 +477,48 @@ public class ThriftTerm implements TBase<ThriftTerm, ThriftTerm._Fields>, java.i
     return _Fields.findByThriftId(fieldId);
   }
 
-  public void read(TProtocol iprot) throws TException {
-    TField field;
+  public void read(org.apache.thrift.protocol.TProtocol iprot) throws org.apache.thrift.TException {
+    org.apache.thrift.protocol.TField field;
     iprot.readStructBegin();
     while (true)
     {
       field = iprot.readFieldBegin();
-      if (field.type == TType.STOP) { 
+      if (field.type == org.apache.thrift.protocol.TType.STOP) { 
         break;
       }
       switch (field.id) {
         case 1: // FIELD
-          if (field.type == TType.STRING) {
+          if (field.type == org.apache.thrift.protocol.TType.STRING) {
             this.field = iprot.readString();
           } else { 
-            TProtocolUtil.skip(iprot, field.type);
+            org.apache.thrift.protocol.TProtocolUtil.skip(iprot, field.type);
           }
           break;
         case 2: // TEXT
-          if (field.type == TType.STRING) {
-            this.text = iprot.readString();
+          if (field.type == org.apache.thrift.protocol.TType.STRING) {
+            this.text = iprot.readBinary();
           } else { 
-            TProtocolUtil.skip(iprot, field.type);
+            org.apache.thrift.protocol.TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        case 3: // IS_BINARY
+          if (field.type == org.apache.thrift.protocol.TType.BOOL) {
+            this.is_binary = iprot.readBool();
+            setIs_binaryIsSet(true);
+          } else { 
+            org.apache.thrift.protocol.TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        case 4: // LONG_VAL
+          if (field.type == org.apache.thrift.protocol.TType.I64) {
+            this.longVal = iprot.readI64();
+            setLongValIsSet(true);
+          } else { 
+            org.apache.thrift.protocol.TProtocolUtil.skip(iprot, field.type);
           }
           break;
         default:
-          TProtocolUtil.skip(iprot, field.type);
+          org.apache.thrift.protocol.TProtocolUtil.skip(iprot, field.type);
       }
       iprot.readFieldEnd();
     }
@@ -364,7 +528,7 @@ public class ThriftTerm implements TBase<ThriftTerm, ThriftTerm._Fields>, java.i
     validate();
   }
 
-  public void write(TProtocol oprot) throws TException {
+  public void write(org.apache.thrift.protocol.TProtocol oprot) throws org.apache.thrift.TException {
     validate();
 
     oprot.writeStructBegin(STRUCT_DESC);
@@ -374,8 +538,20 @@ public class ThriftTerm implements TBase<ThriftTerm, ThriftTerm._Fields>, java.i
       oprot.writeFieldEnd();
     }
     if (this.text != null) {
-      oprot.writeFieldBegin(TEXT_FIELD_DESC);
-      oprot.writeString(this.text);
+      if (isSetText()) {
+        oprot.writeFieldBegin(TEXT_FIELD_DESC);
+        oprot.writeBinary(this.text);
+        oprot.writeFieldEnd();
+      }
+    }
+    if (isSetIs_binary()) {
+      oprot.writeFieldBegin(IS_BINARY_FIELD_DESC);
+      oprot.writeBool(this.is_binary);
+      oprot.writeFieldEnd();
+    }
+    if (isSetLongVal()) {
+      oprot.writeFieldBegin(LONG_VAL_FIELD_DESC);
+      oprot.writeI64(this.longVal);
       oprot.writeFieldEnd();
     }
     oprot.writeFieldStop();
@@ -394,25 +570,36 @@ public class ThriftTerm implements TBase<ThriftTerm, ThriftTerm._Fields>, java.i
       sb.append(this.field);
     }
     first = false;
-    if (!first) sb.append(", ");
-    sb.append("text:");
-    if (this.text == null) {
-      sb.append("null");
-    } else {
-      sb.append(this.text);
+    if (isSetText()) {
+      if (!first) sb.append(", ");
+      sb.append("text:");
+      if (this.text == null) {
+        sb.append("null");
+      } else {
+        org.apache.thrift.TBaseHelper.toString(this.text, sb);
+      }
+      first = false;
     }
-    first = false;
+    if (isSetIs_binary()) {
+      if (!first) sb.append(", ");
+      sb.append("is_binary:");
+      sb.append(this.is_binary);
+      first = false;
+    }
+    if (isSetLongVal()) {
+      if (!first) sb.append(", ");
+      sb.append("longVal:");
+      sb.append(this.longVal);
+      first = false;
+    }
     sb.append(")");
     return sb.toString();
   }
 
-  public void validate() throws TException {
+  public void validate() throws org.apache.thrift.TException {
     // check for required fields
     if (field == null) {
-      throw new TProtocolException("Required field 'field' was not present! Struct: " + toString());
-    }
-    if (text == null) {
-      throw new TProtocolException("Required field 'text' was not present! Struct: " + toString());
+      throw new org.apache.thrift.protocol.TProtocolException("Required field 'field' was not present! Struct: " + toString());
     }
   }
 

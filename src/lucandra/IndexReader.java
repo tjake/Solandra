@@ -26,6 +26,8 @@ import java.util.*;
 import java.util.concurrent.ConcurrentMap;
 
 import lucandra.cluster.CassandraIndexManager;
+import lucandra.serializers.thrift.DocumentMetadata;
+import lucandra.serializers.thrift.ThriftTerm;
 
 import com.google.common.collect.MapMaker;
 
@@ -34,19 +36,19 @@ import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.SimpleAnalyzer;
-import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.document.FieldSelector;
+import org.apache.lucene.analysis.tokenattributes.TypeAttribute;
+import org.apache.lucene.document.*;
 import org.apache.lucene.document.Field.Index;
 import org.apache.lucene.document.Field.Store;
 import org.apache.lucene.index.*;
+import org.apache.lucene.index.IndexWriter.MaxFieldLength;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.TermFreqVector;
-import org.apache.lucene.index.IndexWriter.MaxFieldLength;
 import org.apache.lucene.search.Similarity;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.LockObtainFailedException;
 import org.apache.lucene.store.RAMDirectory;
+import org.apache.lucene.util.NumericUtils;
 import org.apache.lucene.util.OpenBitSet;
 
 import solandra.SolandraFieldSelector;
@@ -311,49 +313,30 @@ public class IndexReader extends org.apache.lucene.index.IndexReader
                             continue;
                         }
 
-                        byte[] value;
-                        ByteBuffer v = ByteBuffer.wrap(CassandraUtils.decompress(ByteBufferUtil.getArray(col.value())));
-                        int vlimit = v.limit() - v.position();
-
-                        if (v.get(v.limit() - 1) != Byte.MAX_VALUE && v.get(v.limit() - 1) != Byte.MIN_VALUE)
+                        DocumentMetadata dm = lucandra.IndexWriter.fromBytesUsingThrift(col.value());
+                                       
+                        for(ThriftTerm term : dm.getTerms())
                         {
-                            throw new CorruptIndexException("Lucandra field is not properly encoded: " + docNum + "("
-                                    + fieldName + ")");
-
-                        }
-                        else if (v.get(v.limit() - 1) == Byte.MAX_VALUE)
-                        { // Binary
-                            value = new byte[vlimit - 1];
-                            ByteBufferUtil.arrayCopy(v, v.position(), value, 0, vlimit - 1);
-
-                            field = new Field(fieldName, value, Store.YES);
-                            cacheDoc.add(field);
-                        }
-                        else if (v.get(v.limit() - 1) == Byte.MIN_VALUE)
-                        { // String
-                            value = new byte[vlimit - 1];
-                            ByteBufferUtil.arrayCopy(v, v.position(), value, 0, vlimit - 1);
-
-                            // Check for multi-fields
-                            String fieldString = new String(value, "UTF-8");
-
-                            if (fieldString.indexOf(CassandraUtils.delimeter) >= 0)
+                            Fieldable f = null; 
+                            
+                            if( term.isSetLongVal() )
                             {
-                                StringTokenizer tok = new StringTokenizer(fieldString, CassandraUtils.delimeter);
-                                while (tok.hasMoreTokens())
-                                {
-                                    field = new Field(fieldName, tok.nextToken(), Store.YES, Index.ANALYZED);
-                                    cacheDoc.add(field);
-                                }
+                                f =  new NumericField(term.getField()).setLongValue(term.getLongVal());            
+                            }                                           
+                            else if(term.isSetIs_binary())
+                            {
+                                if(term.is_binary)
+                                    f = new Field(term.getField(), term.getText());
+                                else 
+                                    f = new Field(term.getField(), new String(term.getText()), Store.YES, Index.ANALYZED);
                             }
                             else
-                            {
+                                throw new RuntimeException("Malformed term");
+                            
+                            cacheDoc.add(f);
 
-                                field = new Field(fieldName, fieldString, Store.YES, Index.ANALYZED);
-                                cacheDoc.add(field);
-                            }
-                        }
-                    }
+                        }                      
+                    } 
                 }
 
                 // Mark the required doc

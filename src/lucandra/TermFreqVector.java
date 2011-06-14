@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import lucandra.serializers.thrift.DocumentMetadata;
 import lucandra.serializers.thrift.ThriftTerm;
 
 import org.apache.cassandra.db.ReadCommand;
@@ -82,25 +83,24 @@ public class TermFreqVector implements org.apache.lucene.index.TermFreqVector,
                 return; // this docId is missing
             }
 
-            List<Term> allTerms;
+           
 
-            allTerms = IndexWriter.fromBytesUsingThrift(rows.get(0).cf.getColumn(
+            DocumentMetadata allTerms = IndexWriter.fromBytesUsingThrift(rows.get(0).cf.getColumn(
                     CassandraUtils.documentMetaFieldBytes).value());
 
             List<ReadCommand> readCommands = new ArrayList<ReadCommand>();
 
-            for (Term t : allTerms)
+            for (ThriftTerm t : allTerms.getTerms())
             {
-
                 // skip the ones not of this field
-                if (!t.field().equals(field))
+                if (!t.getField().equals(field))
                     continue;
 
                 // add to multiget params
                 try
                 {
-                    key = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"), CassandraUtils.delimeterBytes, t.field()
-                            .getBytes("UTF-8"), CassandraUtils.delimeterBytes, t.text().getBytes("UTF-8"));
+                    key = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"), CassandraUtils.delimeterBytes, t.getField()
+                            .getBytes("UTF-8"), CassandraUtils.delimeterBytes, t.getText());
                 }
                 catch (UnsupportedEncodingException e)
                 {
