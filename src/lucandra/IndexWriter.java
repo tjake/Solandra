@@ -19,9 +19,7 @@
  */
 package lucandra;
 
-import java.io.IOException;
-import java.io.StringReader;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.ConcurrentMap;
@@ -44,22 +42,19 @@ import org.apache.cassandra.utils.Pair;
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
-import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
-import org.apache.lucene.analysis.tokenattributes.TermAttribute;
+import org.apache.lucene.analysis.tokenattributes.*;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Fieldable;
+import org.apache.lucene.document.NumericField;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.FieldInvertState;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.*;
-import org.apache.thrift.TDeserializer;
 import org.apache.thrift.TException;
 import org.apache.thrift.TSerializer;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
-import org.apache.thrift.protocol.TBinaryProtocol.Factory;
 import org.apache.thrift.transport.TMemoryInputTransport;
 import org.apache.thrift.transport.TTransport;
 
@@ -89,8 +84,8 @@ public class IndexWriter
         ByteBuffer indexTermsKey = CassandraUtils.hashKeyBytes(indexNameBytes, CassandraUtils.delimeterBytes, "terms"
                 .getBytes("UTF-8"));
 
-        List<ThriftTerm> allIndexedTerms = new ArrayList<ThriftTerm>();
-        Map<String, byte[]> fieldCache = new HashMap<String, byte[]>(1024);
+        DocumentMetadata allIndexedTerms = new DocumentMetadata();
+        Map<String, DocumentMetadata> fieldCache = new HashMap<String, DocumentMetadata>(1024);
 
         // By default we don't handle indexSharding
         // We round robin replace the index
@@ -99,21 +94,27 @@ public class IndexWriter
         ByteBuffer docId = ByteBuffer.wrap(CassandraUtils.writeVInt(docNumber));
         int position = 0;
 
-        for (Fieldable field : (List<Fieldable>) doc.getFields())
+        for (Fieldable field : doc.getFields())
         {
 
             ThriftTerm firstTerm = null;
+                       
             
             // Indexed field
             if (field.isIndexed() && field.isTokenized())
             {
-
                 TokenStream tokens = field.tokenStreamValue();
 
                 if (tokens == null)
                 {
-                    tokens = analyzer.tokenStream(field.name(), new StringReader(field.stringValue()));
+                    Reader tokReader = field.readerValue();
+                    
+                    if (tokReader == null)                   
+                        tokReader = new StringReader(field.stringValue());
+                                                        
+                    tokens = analyzer.reusableTokenStream(field.name(), tokReader);
                 }
+               
 
                 // collect term information per field
                 Map<Term, Map<ByteBuffer, List<Number>>> allTermInformation = new HashMap<Term, Map<ByteBuffer, List<Number>>>();             
@@ -138,11 +139,12 @@ public class IndexWriter
                 // positions
                 PositionIncrementAttribute posIncrAttribute = null;
                 if (field.isStorePositionWithTermVector())
-                    posIncrAttribute = (PositionIncrementAttribute) tokens
-                            .addAttribute(PositionIncrementAttribute.class);
+                    posIncrAttribute = (PositionIncrementAttribute) tokens.addAttribute(PositionIncrementAttribute.class);
 
-                TermAttribute termAttribute = (TermAttribute) tokens.addAttribute(TermAttribute.class);
-
+                //term as string
+                CharTermAttribute termAttribute = (CharTermAttribute) tokens.addAttribute(CharTermAttribute.class);
+ 
+                
                 // store normalizations of field per term per document rather
                 // than per field.
                 // this adds more to write but less to read on other side
@@ -151,14 +153,14 @@ public class IndexWriter
                 while (tokens.incrementToken())
                 {
                     tokensInField++;
-                    Term term = new Term(field.name(), termAttribute.term());
-
-                    ThriftTerm tterm  = new ThriftTerm(field.name(), termAttribute.term());
+                    Term term = new Term(field.name(), termAttribute.toString());
+                    
+                    ThriftTerm tterm  = new ThriftTerm(term.field()).setText(ByteBuffer.wrap(term.text().getBytes("UTF-8"))).setIs_binary(false);
                     
                     if(firstTerm == null)
                         firstTerm = tterm;
                     
-                    allIndexedTerms.add(tterm);
+                    allIndexedTerms.addToTerms(tterm);
 
                     // fetch all collected information for this term
                     Map<ByteBuffer, List<Number>> termInfo = allTermInformation.get(term);
@@ -227,7 +229,7 @@ public class IndexWriter
                     invertState.setLength(tokensInField);
                     final float norm = similarity.computeNorm(field.name(), invertState);
                     
-                    bnorm.add(Similarity.encodeNorm(norm));
+                    bnorm.add(Similarity.getDefault().encodeNormValue(norm));
                 }
 
                 for (Map.Entry<Term, Map<ByteBuffer, List<Number>>> term : allTermInformation.entrySet())
@@ -259,12 +261,12 @@ public class IndexWriter
             // Untokenized fields go in without a termPosition
             if (field.isIndexed() && !field.isTokenized())
             {
-                ThriftTerm tterm = new ThriftTerm(field.name(), field.stringValue());
+                ThriftTerm tterm = new ThriftTerm(field.name()).setText(ByteBuffer.wrap(field.stringValue().getBytes("UTF-8"))).setIs_binary(false);
                 
                 if(firstTerm == null)
                     firstTerm = tterm;
                 
-                allIndexedTerms.add(tterm);
+                allIndexedTerms.addToTerms(tterm);
 
                 ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"),
                         CassandraUtils.delimeterBytes, field.name().getBytes("UTF-8"), CassandraUtils.delimeterBytes,
@@ -284,60 +286,49 @@ public class IndexWriter
 
             // Stores each field as a column under this doc key
             if (field.isStored())
-            {
-
-                byte[] _value = field.isBinary() ? field.getBinaryValue() : field.stringValue().getBytes("UTF-8");
-
-                // first byte flags if binary or not
-                byte[] value = new byte[_value.length + 1];
-                System.arraycopy(_value, 0, value, 0, _value.length);
-
-                value[value.length - 1] = (byte) (field.isBinary() ? Byte.MAX_VALUE : Byte.MIN_VALUE);
-
+            {               
+                ThriftTerm tt = new ThriftTerm(field.name());
+                
+                if (field instanceof NumericField)
+                {
+                    Number n = ((NumericField) field).getNumericValue();
+                    tt.setLongVal(n.longValue());
+                }
+                
+                byte[] value = field.isBinary() ? field.getBinaryValue() : field.stringValue().getBytes("UTF-8");               
+                tt.setText(ByteBuffer.wrap(value)).setIs_binary(field.isBinary());
+                                
+                
                 // logic to handle multiple fields w/ same name
-                byte[] currentValue = fieldCache.get(field.name());
+                DocumentMetadata currentValue = fieldCache.get(field.name());
                 if (currentValue == null)
                 {
-                    fieldCache.put(field.name(), value);
+                    currentValue = new DocumentMetadata();
+                    fieldCache.put(field.name(), currentValue);
                 }
-                else
-                {
-
-                    // append new data
-                    byte[] newValue = new byte[currentValue.length + CassandraUtils.delimeterBytes.length
-                            + value.length - 1];
-                    System.arraycopy(currentValue, 0, newValue, 0, currentValue.length - 1);
-                    System.arraycopy(CassandraUtils.delimeterBytes, 0, newValue, currentValue.length - 1,
-                            CassandraUtils.delimeterBytes.length);
-                    System.arraycopy(value, 0, newValue,
-                            currentValue.length + CassandraUtils.delimeterBytes.length - 1, value.length);
-
-                    fieldCache.put(field.name(), newValue);
-                }
+                
+                currentValue.addToTerms(tt);
             }
             
             //Store for field cache
             if(firstTerm != null)
-            {   
-                
+            {                  
                 ByteBuffer fieldCacheKey = CassandraUtils.hashKeyBytes(indexNameBytes, CassandraUtils.delimeterBytes, firstTerm.field.getBytes());
-                CassandraUtils.addMutations(workingMutations, CassandraUtils.fieldCacheColumnFamily, CassandraUtils.writeVInt(docNumber), fieldCacheKey, firstTerm.text.getBytes("UTF-8"));
+                CassandraUtils.addMutations(workingMutations, CassandraUtils.fieldCacheColumnFamily, CassandraUtils.writeVInt(docNumber), fieldCacheKey, firstTerm.text);
            
                 if(logger.isDebugEnabled())
                     logger.debug(indexName+" - firstTerm: "+ByteBufferUtil.string(fieldCacheKey));
-
-            }
-           
+            }          
         }
 
         ByteBuffer key = CassandraUtils.hashKeyBytes(indexNameBytes, CassandraUtils.delimeterBytes,
                 Integer.toHexString(docNumber).getBytes("UTF-8"));
 
         // Store each field as a column under this docId
-        for (Map.Entry<String, byte[]> field : fieldCache.entrySet())
+        for (Map.Entry<String, DocumentMetadata> field : fieldCache.entrySet())
         {
             CassandraUtils.addMutations(workingMutations, CassandraUtils.docColumnFamily, field.getKey().getBytes(
-                    "UTF-8"), key, CassandraUtils.compress(field.getValue()));
+                    "UTF-8"), key, toBytesUsingThrift(field.getValue()));
         }
 
         // Finally, Store meta-data so we can delete this document
@@ -451,26 +442,26 @@ public class IndexWriter
         if (metaCol == null)
             return;
 
-        List<Term> terms = fromBytesUsingThrift(metaCol.value());
+        DocumentMetadata terms = fromBytesUsingThrift(metaCol.value());
 
         Set<String> fields = new HashSet<String>();
         
-        for (Term term : terms)
+        for (ThriftTerm term : terms.getTerms())
         {
             //remove from field cache
-            if(!fields.contains(term.field()))
+            if(!fields.contains(term.getField()))
             {
-                ByteBuffer fieldCacheKey = CassandraUtils.hashKeyBytes(indexNameBytes, CassandraUtils.delimeterBytes, term.field().getBytes());
+                ByteBuffer fieldCacheKey = CassandraUtils.hashKeyBytes(indexNameBytes, CassandraUtils.delimeterBytes, term.getField().getBytes());
                 
                 CassandraUtils.addMutations(workingMutations, CassandraUtils.fieldCacheColumnFamily, CassandraUtils.writeVInt(docNumber), fieldCacheKey, (ByteBuffer) null);
                 
-                fields.add(term.field());
+                fields.add(term.getField());
             }
 
             try
             {
-                key = CassandraUtils.hashKeyBytes(indexNameBytes, CassandraUtils.delimeterBytes, term.field()
-                        .getBytes("UTF-8"), CassandraUtils.delimeterBytes, term.text().getBytes("UTF-8"));
+                key = CassandraUtils.hashKeyBytes(indexNameBytes, CassandraUtils.delimeterBytes, term.getField()
+                        .getBytes("UTF-8"), CassandraUtils.delimeterBytes, term.getText());
             }
             catch (UnsupportedEncodingException e)
             {
@@ -599,9 +590,8 @@ public class IndexWriter
     }
 
     /** Write all terms to bytes using thrift serialization */
-    public static ByteBuffer toBytesUsingThrift(List<ThriftTerm> allTerms) throws IOException
+    public static ByteBuffer toBytesUsingThrift(DocumentMetadata data) throws IOException
     {
-        DocumentMetadata data = new DocumentMetadata(allTerms);
 
         try
         {
@@ -614,7 +604,7 @@ public class IndexWriter
     }
 
     /** Read the object from bytes string. */
-    public static List<Term> fromBytesUsingThrift(ByteBuffer data) throws IOException
+    public static DocumentMetadata fromBytesUsingThrift(ByteBuffer data) throws IOException
     {
         DocumentMetadata docMeta = new DocumentMetadata();
 
@@ -632,11 +622,6 @@ public class IndexWriter
             throw new IOException(e);
         }
 
-        List<Term> terms = new ArrayList<Term>(docMeta.terms.size());
-        for(ThriftTerm term : docMeta.terms)
-        {
-            terms.add(new Term(term.field, term.text));
-        }
-        return terms;
+        return docMeta;
     }
 }
