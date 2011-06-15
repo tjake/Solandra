@@ -17,9 +17,9 @@
 NAME=$1
 FILE=$2
 
-URL=http://localhost:8983/solandra/schema/$NAME
+URL=http://localhost:8983/solandra/$NAME
 
-curl $URL --data-binary @$FILE -H 'Content-type:text/xml; charset=utf-8' 
+curl $URL --data-binary @$FILE -H 'Content-type:text/xml; charset=utf-8' > /dev/null
 
 echo "posted $FILE to $URL"
 

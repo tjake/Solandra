@@ -402,7 +402,6 @@ public class SolandraIndexWriter extends UpdateHandler
 
             SolandraCoreInfo coreInfo = SolandraCoreContainer.coreInfo.get();
             String indexName = coreInfo.indexName;
-            boolean isShard = coreInfo.isShard;
 
          
             List<String> localShards = new ArrayList<String>();
@@ -447,8 +446,9 @@ public class SolandraIndexWriter extends UpdateHandler
             for(String subIndex : localShards)
             {
                 Query q = QueryParsing.parseQuery(cmd.query, schema);
-                long total = writer.deleteDocuments(subIndex, q, true);
-                logger.info("Deleted "+ total + " Documents");              
+                long total = writer.deleteDocuments(subIndex, q, false);
+                commit(subIndex, true);
+                logger.info("Deleted "+ total + " Documents in "+subIndex); 
             }
 
             madeIt = true;
