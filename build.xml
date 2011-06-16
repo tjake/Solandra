@@ -163,7 +163,7 @@
 			</batchtest>
 
 			<jvmarg value="-Xmx1G" />
-			<jvmarg value="-Dlog4j.configuration=file:///${basedir}/resources/log4j.properties" />
+			<jvmarg value="-Dlog4j.configuration=file:///${basedir}/resources/cassandra/log4j-tools.properties" />
 			<jvmarg value="-Dlog4j.defaultInitOverride=true" />
 
 		</junit>
@@ -214,18 +214,18 @@
 	<target name="war" depends="solandra.jar">
 		<war destfile="solandra.war" webxml="${resources}/solr/web.xml">
 			<lib dir="${lib}">
-				<exclude name="jetty*.jar" />
-				<exclude name="servlet-api*.jar" />
-				<exclude name="easymock.jar" />
+			  <exclude name="jetty*.jar" />
+			  <exclude name="servlet-api*.jar" />
+			  <exclude name="easymock.jar" />
 			</lib>
 			<lib dir="${cassandra.base}/lib">
-				<include name="**/*.jar" />
+			  <include name="**/*.jar" />
 			</lib>
 			<lib dir="${cassandra.base}/build">
-				<include name="**/*.jar" />
+			  <include name="**/*.jar" />
 			</lib>
 			<classes dir="${resources}">
-				<include name="*.properties" />
+			  <include name="*.properties" />
 			</classes>
 			<lib file="solandra.jar" />
 		</war>
@@ -237,21 +237,21 @@
 		<mkdir dir="${app}/lib" />
 		<mkdir dir="${app}/bin" />
 		<copy todir="${app}/lib">
-			<fileset dir="${lib}" includes="*.jar" />
-			<fileset dir="${basedir}" includes="solandra.jar" />	
+		  <fileset dir="${lib}" includes="*.jar" />
+		  <fileset dir="${basedir}" includes="solandra.jar" />	
 		</copy>
 		<copy todir="${app}/conf" overwrite="false">
-			<fileset dir="${resources}/solr" includes="solrconfig.xml,schema.xml,*.txt,jetty.xml,jetty-logging.xml" />
-			<fileset dir="${resources}" includes="solandra.properties,cassandra.yaml" />
-			<fileset dir="${resources}/cassandra" includes="cassandra-env.sh,solandra.properties,cassandra.yaml,log4j-tools.properties" />			
+		  <fileset dir="${resources}/solr" includes="solrconfig.xml,schema.xml,*.txt,jetty.xml,jetty-logging.xml" />
+		  <fileset dir="${resources}" includes="solandra.properties" />
+		  <fileset dir="${resources}/cassandra" includes="cassandra-env.sh,solandra.properties,cassandra.yaml,log4j-tools.properties,log4j-server.properties" />
 		</copy>
 		<copy todir="${app}/bin" overwrite="false">
-			<fileset dir="${resources}/cassandra" includes="solandra,cassandra-cli,nodetool,cassandra.in.sh,solandra.bat" />
+		  <fileset dir="${resources}/cassandra" includes="solandra,cassandra-cli,nodetool,cassandra.in.sh,solandra.bat" />
 		</copy>
 		<chmod dir="${app}/bin" perm="755" includes="solandra,cassandra-cli,nodetool" />
-			<echo>Solandra successfully built</echo>
-			<echo>You can excute the following command to start the server.</echo>
-			<echo>cd ${app}; bin/solandra</echo>
+		<echo>Solandra successfully built</echo>
+		<echo>You can excute the following command to start the server.</echo>
+		<echo>cd ${app}; bin/solandra</echo>
 	</target>
 	
 	<target name="set.cassandra">
