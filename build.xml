@@ -246,7 +246,7 @@
 			<fileset dir="${resources}/cassandra" includes="cassandra-env.sh,solandra.properties,cassandra.yaml,log4j-tools.properties" />			
 		</copy>
 		<copy todir="${app}/bin" overwrite="false">
-			<fileset dir="${resources}/cassandra" includes="solandra,cassandra-cli,nodetool,cassandra.in.sh," />
+			<fileset dir="${resources}/cassandra" includes="solandra,cassandra-cli,nodetool,cassandra.in.sh,solandra.bat" />
 		</copy>
 		<chmod dir="${app}/bin" perm="755" includes="solandra,cassandra-cli,nodetool" />
 			<echo>Solandra successfully built</echo>
