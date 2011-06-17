@@ -19,10 +19,9 @@
  */
 package org.apache.solr.core;
 
-import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
-import com.googlecode.concurrentlinkedhashmap.Weighers;
-
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -183,7 +182,7 @@ public class SolandraCoreContainer extends CoreContainer
     {        
         writeCoreResource(indexName, CassandraUtils.schemaKey, schemaXml);
 
-        logger.debug("Wrote Schema for " + indexName);
+        logger.info("Wrote Schema for " + indexName);
         
         //remove any existing cores
         cache.remove(indexName);
