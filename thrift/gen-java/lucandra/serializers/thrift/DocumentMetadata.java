@@ -21,15 +21,21 @@ import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class DocumentMetadata implements org.apache.thrift.TBase<DocumentMetadata, DocumentMetadata._Fields>, java.io.Serializable, Cloneable {
-  private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("DocumentMetadata");
+import org.apache.thrift.*;
+import org.apache.thrift.async.*;
+import org.apache.thrift.meta_data.*;
+import org.apache.thrift.transport.*;
+import org.apache.thrift.protocol.*;
 
-  private static final org.apache.thrift.protocol.TField TERMS_FIELD_DESC = new org.apache.thrift.protocol.TField("terms", org.apache.thrift.protocol.TType.LIST, (short)1);
+public class DocumentMetadata implements TBase<DocumentMetadata, DocumentMetadata._Fields>, java.io.Serializable, Cloneable {
+  private static final TStruct STRUCT_DESC = new TStruct("DocumentMetadata");
+
+  private static final TField TERMS_FIELD_DESC = new TField("terms", TType.LIST, (short)1);
 
   public List<ThriftTerm> terms;
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
-  public enum _Fields implements org.apache.thrift.TFieldIdEnum {
+  public enum _Fields implements TFieldIdEnum {
     TERMS((short)1, "terms");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
@@ -88,14 +94,14 @@ public class DocumentMetadata implements org.apache.thrift.TBase<DocumentMetadat
 
   // isset id assignments
 
-  public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
+  public static final Map<_Fields, FieldMetaData> metaDataMap;
   static {
-    Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
-    tmpMap.put(_Fields.TERMS, new org.apache.thrift.meta_data.FieldMetaData("terms", org.apache.thrift.TFieldRequirementType.REQUIRED, 
-        new org.apache.thrift.meta_data.ListMetaData(org.apache.thrift.protocol.TType.LIST, 
-            new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, ThriftTerm.class))));
+    Map<_Fields, FieldMetaData> tmpMap = new EnumMap<_Fields, FieldMetaData>(_Fields.class);
+    tmpMap.put(_Fields.TERMS, new FieldMetaData("terms", TFieldRequirementType.REQUIRED, 
+        new ListMetaData(TType.LIST, 
+            new StructMetaData(TType.STRUCT, ThriftTerm.class))));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
-    org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(DocumentMetadata.class, metaDataMap);
+    FieldMetaData.addStructMetaDataMap(DocumentMetadata.class, metaDataMap);
   }
 
   public DocumentMetadata() {
@@ -158,7 +164,7 @@ public class DocumentMetadata implements org.apache.thrift.TBase<DocumentMetadat
     this.terms = null;
   }
 
-  /** Returns true if field terms is set (has been assigned a value) and false otherwise */
+  /** Returns true if field terms is set (has been asigned a value) and false otherwise */
   public boolean isSetTerms() {
     return this.terms != null;
   }
@@ -191,7 +197,7 @@ public class DocumentMetadata implements org.apache.thrift.TBase<DocumentMetadat
     throw new IllegalStateException();
   }
 
-  /** Returns true if field corresponding to fieldID is set (has been assigned a value) and false otherwise */
+  /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
   public boolean isSet(_Fields field) {
     if (field == null) {
       throw new IllegalArgumentException();
@@ -254,7 +260,7 @@ public class DocumentMetadata implements org.apache.thrift.TBase<DocumentMetadat
       return lastComparison;
     }
     if (isSetTerms()) {
-      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.terms, typedOther.terms);
+      lastComparison = TBaseHelper.compareTo(this.terms, typedOther.terms);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -266,20 +272,20 @@ public class DocumentMetadata implements org.apache.thrift.TBase<DocumentMetadat
     return _Fields.findByThriftId(fieldId);
   }
 
-  public void read(org.apache.thrift.protocol.TProtocol iprot) throws org.apache.thrift.TException {
-    org.apache.thrift.protocol.TField field;
+  public void read(TProtocol iprot) throws TException {
+    TField field;
     iprot.readStructBegin();
     while (true)
     {
       field = iprot.readFieldBegin();
-      if (field.type == org.apache.thrift.protocol.TType.STOP) { 
+      if (field.type == TType.STOP) { 
         break;
       }
       switch (field.id) {
         case 1: // TERMS
-          if (field.type == org.apache.thrift.protocol.TType.LIST) {
+          if (field.type == TType.LIST) {
             {
-              org.apache.thrift.protocol.TList _list0 = iprot.readListBegin();
+              TList _list0 = iprot.readListBegin();
               this.terms = new ArrayList<ThriftTerm>(_list0.size);
               for (int _i1 = 0; _i1 < _list0.size; ++_i1)
               {
@@ -291,11 +297,11 @@ public class DocumentMetadata implements org.apache.thrift.TBase<DocumentMetadat
               iprot.readListEnd();
             }
           } else { 
-            org.apache.thrift.protocol.TProtocolUtil.skip(iprot, field.type);
+            TProtocolUtil.skip(iprot, field.type);
           }
           break;
         default:
-          org.apache.thrift.protocol.TProtocolUtil.skip(iprot, field.type);
+          TProtocolUtil.skip(iprot, field.type);
       }
       iprot.readFieldEnd();
     }
@@ -305,14 +311,14 @@ public class DocumentMetadata implements org.apache.thrift.TBase<DocumentMetadat
     validate();
   }
 
-  public void write(org.apache.thrift.protocol.TProtocol oprot) throws org.apache.thrift.TException {
+  public void write(TProtocol oprot) throws TException {
     validate();
 
     oprot.writeStructBegin(STRUCT_DESC);
     if (this.terms != null) {
       oprot.writeFieldBegin(TERMS_FIELD_DESC);
       {
-        oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, this.terms.size()));
+        oprot.writeListBegin(new TList(TType.STRUCT, this.terms.size()));
         for (ThriftTerm _iter3 : this.terms)
         {
           _iter3.write(oprot);
@@ -341,10 +347,10 @@ public class DocumentMetadata implements org.apache.thrift.TBase<DocumentMetadat
     return sb.toString();
   }
 
-  public void validate() throws org.apache.thrift.TException {
+  public void validate() throws TException {
     // check for required fields
     if (terms == null) {
-      throw new org.apache.thrift.protocol.TProtocolException("Required field 'terms' was not present! Struct: " + toString());
+      throw new TProtocolException("Required field 'terms' was not present! Struct: " + toString());
     }
   }
 

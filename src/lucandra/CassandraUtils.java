@@ -390,7 +390,7 @@ public class CassandraUtils
         {
             throw new IOException(e);
         }
-        catch (SchemaDisagreementException e)
+        catch (Exception e)
         {
              throw new IOException(e);
         }

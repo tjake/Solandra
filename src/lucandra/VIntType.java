@@ -75,7 +75,6 @@ public class VIntType extends AbstractType<BigInteger> {
         return ByteBuffer.wrap(value.toByteArray());
     }
 
-    @Override
     public String toString(BigInteger bigInteger) {
         return bigInteger.toString();
     }
@@ -86,12 +85,10 @@ public class VIntType extends AbstractType<BigInteger> {
         
     }
 
-    @Override
     public Class<BigInteger> getType() {
         return BigInteger.class;
     }
 
-    @Override
     public boolean isSigned() {
         return true;
     }
@@ -107,17 +104,15 @@ public class VIntType extends AbstractType<BigInteger> {
         return false;
     }
 
-    @Override
     public int getPrecision(BigInteger obj) {
         return  obj.toString().length();
     }
 
-    @Override
+    
     public int getScale(BigInteger obj) {
         return 0;
     }
 
-    @Override
     public int getJdbcType() {
         return Types.BIGINT;
     }
