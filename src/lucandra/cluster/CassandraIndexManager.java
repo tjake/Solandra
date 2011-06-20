@@ -154,19 +154,19 @@ public class CassandraIndexManager
                 return null;
             }
             
-            long start = incrementor.incrementAndGet();
             long len = rsvpList.size();
-            long end = start + len;
 
-            for (long i = start; i < end; i++)
-            {
-                int pos = (int) (i % len);
+            for (long i = 0; i < len; i++)
+            {               
+                int pos = (int) (incrementor.incrementAndGet() % len);
 
                 RsvpInfo info = rsvpList.get(pos);
 
                 if (info == null)
+                {
                     continue;
-
+                }
+                    
                 // clear expired ids
                 if (info.ttl < System.currentTimeMillis())
                 {
@@ -178,10 +178,7 @@ public class CassandraIndexManager
                 if(info.token.equals(getToken()))
                 {              
                     int nextId = info.currentId.incrementAndGet();
-                
-                    
-                    //logger.info(info.token+" "+info.shard+" "+info.currentId.get());
-                    
+                                    
                     if (nextId <= info.endId)
                     {
                         return (long) (maxDocsPerShard * info.shard) + nextId;
@@ -190,7 +187,7 @@ public class CassandraIndexManager
                     {
                         rsvpList.set(pos, null);
                     }
-                }
+                } 
             }
 
             return null;
@@ -290,7 +287,7 @@ public class CassandraIndexManager
         randomSeq = shuffle(randomSeq, r);
     }
 
-    private  ShardInfo getShardInfo(String indexName, boolean force) throws IOException
+    private synchronized ShardInfo getShardInfo(String indexName, boolean force) throws IOException
     {
 
         ShardInfo shards = indexShards.get(indexName);
