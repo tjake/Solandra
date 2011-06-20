@@ -34,9 +34,6 @@ import lucandra.CassandraUtils;
 import lucandra.cluster.CassandraIndexManager;
 import lucandra.cluster.IndexManagerService;
 
-import org.apache.cassandra.cache.ConcurrentLinkedHashCache;
-import org.apache.cassandra.cache.ICache;
-import org.apache.cassandra.cache.InstrumentingCache;
 import org.apache.cassandra.db.Row;
 import org.apache.cassandra.db.RowMutation;
 import org.apache.cassandra.db.Table;
@@ -46,6 +43,7 @@ import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.log4j.Logger;
+import org.apache.solr.common.util.ConcurrentLRUCache;
 import org.apache.solr.schema.IndexSchema;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
@@ -62,8 +60,7 @@ public class SolandraCoreContainer extends CoreContainer
     
     private static final Logger                              logger    = Logger.getLogger(SolandraCoreContainer.class);
 
-    private static final ICache<String, SolrCore>            map       = ConcurrentLinkedHashCache.create(CAPACITY);
-    private static final InstrumentingCache<String, SolrCore> cache    = new InstrumentingCache<String, SolrCore>(map,"SOLRtable","SOLRname");
+    private static final ConcurrentLRUCache<String, SolrCore> cache  = new ConcurrentLRUCache<String, SolrCore>(CAPACITY, CAPACITY/2);
    
     private final String                                     solrConfigFile;
     private final SolrCore                                   singleCore;

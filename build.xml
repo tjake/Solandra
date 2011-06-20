@@ -116,6 +116,7 @@
 		<pathelement location="${build.test.classes}" />
 		<pathelement location="${resources}" />
 		<pathelement location="${resources}/solr" />
+		<pathelement location="${resources}/cassandra" />
 		<fileset dir="${lib}">
 			<include name="**/*.jar" />
 			<exclude name="**/*cassandra*.jar" if="cassandra.found" />
