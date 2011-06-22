@@ -140,6 +140,11 @@
     -->
     <enableLazyFieldLoading>true</enableLazyFieldLoading>
 
+    <fieldValueCache
+      class="solr.LRUCache"
+      size="0"
+      initialSize="0"
+      autowarmCount="0"/> 
 
    <!-- An optimization for use with the queryResultCache.  When a search
          is requested, a superset of the requested number of document ids
