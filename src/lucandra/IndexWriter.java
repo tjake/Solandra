@@ -22,9 +22,7 @@ package lucandra;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.*;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -61,7 +59,7 @@ import org.apache.thrift.transport.TTransport;
 
 public class IndexWriter
 {
-    private static final ConcurrentMap<String, Pair<AtomicInteger, LinkedBlockingQueue<RowMutation>>> mutationList    = new MapMaker()
+    private static final ConcurrentMap<String, Pair<AtomicInteger, ConcurrentLinkedQueue<RowMutation>>> mutationList    = new MapMaker()
                                                                                                                               .makeMap();
     private Similarity                                                                                similarity      = Similarity
                                                                                                                               .getDefault();
@@ -337,7 +335,7 @@ public class IndexWriter
 
         if (rms != null)
         {
-            Pair<AtomicInteger, LinkedBlockingQueue<RowMutation>> mutationQ = getMutationQueue(indexName);
+            Pair<AtomicInteger, ConcurrentLinkedQueue<RowMutation>> mutationQ = getMutationQueue(indexName);
 
             List<RowMutation> rows = new ArrayList(Arrays.asList(rms));
             rows.addAll(workingMutations.values());
@@ -526,7 +524,7 @@ public class IndexWriter
     public void commit(String indexName, boolean blocked)
     {
 
-        Pair<AtomicInteger, LinkedBlockingQueue<RowMutation>> mutationQ = getMutationQueue(indexName);
+        Pair<AtomicInteger, ConcurrentLinkedQueue<RowMutation>> mutationQ = getMutationQueue(indexName);
 
         boolean success = false;
 
@@ -543,8 +541,11 @@ public class IndexWriter
             // marked active write
             mutationQ.left.incrementAndGet();
 
-            mutationQ.right.drainTo(rows);
+            Iterator<RowMutation> it = mutationQ.right.iterator();
+            while(it.hasNext())
+                rows.add(it.next());
 
+            
             if (rows.isEmpty())
             {
                 if (logger.isDebugEnabled())
@@ -552,8 +553,9 @@ public class IndexWriter
                 return;
             }
 
+            mutationQ.right.removeAll(rows);
             CassandraUtils.robustInsert(CassandraUtils.consistency, rows.toArray(new RowMutation[] {}));
-
+            
             success = true;
         }
         catch (InterruptedException e)
@@ -585,21 +587,21 @@ public class IndexWriter
     private void appendMutations(String indexName, Map<ByteBuffer, RowMutation> mutations)
     {
 
-        Pair<AtomicInteger, LinkedBlockingQueue<RowMutation>> mutationQ = getMutationQueue(indexName);
+        Pair<AtomicInteger, ConcurrentLinkedQueue<RowMutation>> mutationQ = getMutationQueue(indexName);
 
         mutationQ.right.addAll(mutations.values());
     }
 
-    private Pair<AtomicInteger, LinkedBlockingQueue<RowMutation>> getMutationQueue(String indexName)
+    private Pair<AtomicInteger, ConcurrentLinkedQueue<RowMutation>> getMutationQueue(String indexName)
     {
 
-        Pair<AtomicInteger, LinkedBlockingQueue<RowMutation>> mutationQ = mutationList.get(indexName);
+        Pair<AtomicInteger, ConcurrentLinkedQueue<RowMutation>> mutationQ = mutationList.get(indexName);
 
         if (mutationQ == null)
         {
-            mutationQ = new Pair<AtomicInteger, LinkedBlockingQueue<RowMutation>>(new AtomicInteger(0),
-                    new LinkedBlockingQueue<RowMutation>());
-            Pair<AtomicInteger, LinkedBlockingQueue<RowMutation>> liveQ = mutationList
+            mutationQ = new Pair<AtomicInteger, ConcurrentLinkedQueue<RowMutation>>(new AtomicInteger(0),
+                    new ConcurrentLinkedQueue<RowMutation>());
+            Pair<AtomicInteger, ConcurrentLinkedQueue<RowMutation>> liveQ = mutationList
                     .putIfAbsent(indexName, mutationQ);
 
             if (liveQ != null)

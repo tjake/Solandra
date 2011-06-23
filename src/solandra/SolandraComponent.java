@@ -49,7 +49,7 @@ public final class SolandraComponent
 {
     private static AtomicBoolean hasSolandraSchema = new AtomicBoolean(false);
     private static final Logger logger = Logger.getLogger(SolandraComponent.class);
-    private final static Map<String,Long> cacheCheck = new MapMaker().makeMap();
+    public final static Map<String,Long> cacheCheck = new MapMaker().makeMap();
 
     public static boolean flushCache(String indexName) throws IOException
     {   

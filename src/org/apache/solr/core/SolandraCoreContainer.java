@@ -195,7 +195,12 @@ public class SolandraCoreContainer extends CoreContainer
         String schemaXML = readSchemaXML(info.coreName);
         long   maxId     = IndexManagerService.instance.getMaxId(indexName);
         int    numShards = CassandraIndexManager.getShardFromDocId(maxId);        
+        long   totalDocs = 0;
         
+        for(int i=0; i<=numShards; i++)
+        {
+        
+        }
         
         StringBuilder sb = new StringBuilder();
         
