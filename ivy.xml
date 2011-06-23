@@ -32,6 +32,8 @@
       <exclude org="org.slf4j"/>
     </dependency>
 
+    <dependency org="org.apache.lucene" name="lucene-core" rev="3.2.0" conf="* -> *,!javadoc"/>
+
     <dependency org="org.mortbay.jetty" name="jetty" rev="6.1.26" conf="* -> *,!sources,!javadoc" />
     <dependency org="org.mortbay.jetty" name="jetty-util" rev="6.1.26" conf="* -> *,!sources,!javadoc" />
     <dependency org="org.mortbay.jetty" name="jsp-2.1" rev="6.1.14" conf="* -> *,!sources,!javadoc" />
