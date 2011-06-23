@@ -102,9 +102,6 @@ public class SolandraIndexWriter extends UpdateHandler
     {
         super(core);
 
-        if(CassandraUtils.cacheInvalidationInterval == 0)
-            return;
-        
         try
         {
 
@@ -143,7 +140,7 @@ public class SolandraIndexWriter extends UpdateHandler
                             }
                             else
                             {
-
+                                //Flush any buffered writes
                                 for (Map.Entry<String, AtomicInteger> entry : bufferedWrites.entrySet())
                                 {
                                     if (entry.getValue().intValue() > 0)
@@ -164,7 +161,7 @@ public class SolandraIndexWriter extends UpdateHandler
                 private void flush(String core) throws IOException
                 {
                     // Make sure all writes are in for this core
-                    writer.commit(core, false);
+                    writer.commit(core, true);
 
                     ByteBuffer cacheKey = CassandraUtils.hashKeyBytes((core).getBytes("UTF-8"),
                             CassandraUtils.delimeterBytes, "cache".getBytes("UTF-8"));
@@ -173,6 +170,7 @@ public class SolandraIndexWriter extends UpdateHandler
                     rm.add(new QueryPath(CassandraUtils.schemaInfoColumnFamily, CassandraUtils.cachedColBytes,
                             CassandraUtils.cachedColBytes), ByteBufferUtil.EMPTY_BYTE_BUFFER, System
                             .currentTimeMillis());
+                                        
                     CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm);
                 }
 
@@ -299,8 +297,7 @@ public class SolandraIndexWriter extends UpdateHandler
     {
         writer.commit(indexName, blocked);
 
-        if(CassandraUtils.cacheInvalidationInterval > 0)
-            SolandraIndexWriter.flushQueue.add(indexName);
+        SolandraIndexWriter.flushQueue.add(indexName);
     }
 
     public void delete(DeleteUpdateCommand cmd) throws IOException

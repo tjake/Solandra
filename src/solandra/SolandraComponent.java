@@ -63,7 +63,7 @@ public final class SolandraComponent
         
             ByteBuffer keyKey = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"), CassandraUtils.delimeterBytes, "cache".getBytes("UTF-8"));
 
-            List<Row> rows = CassandraUtils.robustRead(keyKey, new QueryPath(CassandraUtils.schemaInfoColumnFamily), Arrays
+            List<Row> rows = CassandraUtils.robustRead(keyKey, new QueryPath(CassandraUtils.schemaInfoColumnFamily, CassandraUtils.cachedColBytes), Arrays
                     .asList(CassandraUtils.cachedColBytes), ConsistencyLevel.QUORUM);
             
             
@@ -74,8 +74,8 @@ public final class SolandraComponent
                     rows.get(0).cf.getColumn(CassandraUtils.cachedColBytes).getSubColumn(CassandraUtils.cachedColBytes).timestamp() >= lastCheck)
             {
                 if(logger.isDebugEnabled())
-                    logger.debug("Flushed cache: "+indexName);
-                
+                    logger.debug("Flushed cache: "+indexName);                 
+                    
                 return true;
             }
         }
