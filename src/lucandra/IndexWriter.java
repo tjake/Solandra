@@ -135,9 +135,8 @@ public class IndexWriter
                     offsetAttribute = (OffsetAttribute) tokens.addAttribute(OffsetAttribute.class);
 
                 // positions
-                PositionIncrementAttribute posIncrAttribute = null;
-                if (field.isStorePositionWithTermVector())
-                    posIncrAttribute = (PositionIncrementAttribute) tokens
+                // these are always gathered in later lucene versions
+                PositionIncrementAttribute posIncrAttribute = (PositionIncrementAttribute) tokens
                             .addAttribute(PositionIncrementAttribute.class);
 
                 // term as string
@@ -186,7 +185,6 @@ public class IndexWriter
                     }
 
                     // position vector
-                    if (field.isStorePositionWithTermVector())
                     {
                         position += (posIncrAttribute.getPositionIncrement() - 1);
 
