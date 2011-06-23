@@ -287,7 +287,7 @@ public class CassandraIndexManager
         randomSeq = shuffle(randomSeq, r);
     }
 
-    private synchronized ShardInfo getShardInfo(String indexName, boolean force) throws IOException
+    private ShardInfo getShardInfo(String indexName, boolean force) throws IOException
     {
 
         ShardInfo shards = indexShards.get(indexName);
@@ -503,7 +503,7 @@ public class CassandraIndexManager
         return StorageService.instance.getTokenMetadata().getToken(FBUtilities.getLocalAddress()).toString();
     }
 
-    public long getNextId(String indexName, String key, RowMutation[] rowMutations) throws IOException
+    public synchronized long getNextId(String indexName, String key, RowMutation[] rowMutations) throws IOException
     {
         if (rowMutations.length != 3)
             throw new IllegalArgumentException("rowMutations must be length 3");
@@ -597,7 +597,7 @@ public class CassandraIndexManager
         CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rms.toArray(new RowMutation[] {}));
     }
 
-    private synchronized Long nextReservedId(String indexName, NodeInfo[] shards, String myToken) throws IOException
+    private Long nextReservedId(String indexName, NodeInfo[] shards, String myToken) throws IOException
     {
         if (logger.isDebugEnabled())
             logger.debug("in reserveIds for index " + indexName);
