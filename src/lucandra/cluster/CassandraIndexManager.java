@@ -899,10 +899,11 @@ public class CassandraIndexManager
            
             AtomicInteger offset = nodes.nodes.get(myToken);
 
-            // skip shards we don't know about.
+            // initialize shards we didn't know about
             if (offset == null)
             {
-                continue;
+                updateNodeOffset(shards.indexName, myToken, shard.getKey(), -1);
+                offset = nodes.nodes.get(myToken);
             }
 
             int randomSeqOffset = getRandomSequenceOffset(offset.get());
