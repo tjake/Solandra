@@ -244,10 +244,10 @@
 		<copy todir="${app}/conf" overwrite="false">
 		  <fileset dir="${resources}/solr" includes="solrconfig.xml,schema.xml,*.txt,jetty.xml,jetty-logging.xml" />
 		  <fileset dir="${resources}" includes="solandra.properties" />
-		  <fileset dir="${resources}/cassandra" includes="cassandra-env.sh,solandra.properties,cassandra.yaml,log4j-tools.properties,log4j-server.properties" />
+		  <fileset dir="${resources}/cassandra" includes="solandra-env.sh,solandra.properties,cassandra.yaml,log4j-tools.properties,log4j-server.properties" />
 		</copy>
 		<copy todir="${app}/bin" overwrite="false">
-		  <fileset dir="${resources}/cassandra" includes="solandra,cassandra-cli,nodetool,cassandra.in.sh,solandra.bat" />
+		  <fileset dir="${resources}/cassandra" includes="solandra,cassandra-cli,nodetool,solandra.in.sh,solandra.bat" />
 		</copy>
 		<chmod dir="${app}/bin" perm="755" includes="solandra,cassandra-cli,nodetool" />
 		<echo>Solandra successfully built</echo>

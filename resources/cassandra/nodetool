@@ -21,18 +21,18 @@ if [ `basename $0` = 'nodeprobe' ]; then
     echo "***************************************************************" >&2
 fi
 
-if [ "x$CASSANDRA_INCLUDE" = "x" ]; then
-    for include in /usr/share/cassandra/cassandra.in.sh \
-                   /usr/local/share/cassandra/cassandra.in.sh \
-                   /opt/cassandra/cassandra.in.sh \
-                   `dirname $0`/cassandra.in.sh; do
+if [ "x$SOLANDRA_INCLUDE" = "x" ]; then
+    for include in /usr/share/solandra/solandra.in.sh \
+                   /usr/local/share/solandra/solandra.in.sh \
+                   /opt/solandra/solandra.in.sh \
+                   `dirname $0`/solandra.in.sh; do
         if [ -r $include ]; then
             . $include
             break
         fi
     done
-elif [ -r $CASSANDRA_INCLUDE ]; then
-    . $CASSANDRA_INCLUDE
+elif [ -r $SOLANDRA_INCLUDE ]; then
+    . $SOLANDRA_INCLUDE
 fi
 
 # Use JAVA_HOME if set, otherwise look for java in PATH
@@ -42,8 +42,8 @@ else
     JAVA=`which java`
 fi
 
-if [ -z $CASSANDRA_CONF -o -z $CLASSPATH ]; then
-    echo "You must set the CASSANDRA_CONF and CLASSPATH vars" >&2
+if [ -z $SOLANDRA_CONF -o -z $CLASSPATH ]; then
+    echo "You must set the SOLANDRA_CONF and CLASSPATH vars" >&2
     exit 1
 fi
 
@@ -51,11 +51,11 @@ fi
 case "`uname`" in
     CYGWIN*) 
         CLASSPATH=`cygpath -p -w "$CLASSPATH"`
-        CASSANDRA_CONF=`cygpath -p -w "$CASSANDRA_CONF"`
+        SOLANDRA_CONF=`cygpath -p -w "$SOLANDRA_CONF"`
     ;;
 esac
 
-$JAVA -cp $CLASSPATH -Dstorage-config=$CASSANDRA_CONF \
+$JAVA -cp $CLASSPATH -Dstorage-config=$SOLANDRA_CONF \
         -Dlog4j.configuration=log4j-tools.properties \
         org.apache.cassandra.tools.NodeCmd $@
 
