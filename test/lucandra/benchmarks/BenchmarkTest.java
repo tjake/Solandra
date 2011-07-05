@@ -21,14 +21,16 @@ package lucandra.benchmarks;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.solr.client.solrj.SolrQuery;
-import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.SolrQuery.ORDER;
+import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.CommonsHttpSolrServer;
 import org.apache.solr.client.solrj.impl.StreamingUpdateSolrServer;
 import org.apache.solr.client.solrj.response.QueryResponse;
@@ -49,10 +51,10 @@ public class BenchmarkTest {
     private static String queryString = "text:benchmark";
     private static int threadId = 0;
     private static int port = 8983;
-    private static String url = "http://localhost";
+    public  static String urls[] = {"http://localhost"};
     private static String[] types = new String[]{"1","2","3","4","5","6","7","8","9","10"};
     private static Random  random = new Random(System.currentTimeMillis()); 
-    private static CommonsHttpSolrServer streamingClient = null;
+    private static Map<String,CommonsHttpSolrServer> streamingClients = new HashMap<String,CommonsHttpSolrServer>();
     
     private static Runnable getRunnable() {
 
@@ -78,19 +80,21 @@ public class BenchmarkTest {
                 
                 private CommonsHttpSolrServer getStreamingServer(String url) throws MalformedURLException
                 {
+                    CommonsHttpSolrServer server = streamingClients.get(url);
                     
-                    if(streamingClient == null)
+                    if(server == null)
                     {
                         synchronized (url.intern())
                         {
-                            if(streamingClient == null)
+                            if((server = streamingClients.get(url)) == null)
                             {
-                                streamingClient =  new StreamingUpdateSolrServer(url, 512, numClients);
+                                server =  new StreamingUpdateSolrServer(url, 512, 1+(numClients/urls.length));
+                                streamingClients.put(url, server);
                             }
                         }
                     }                 
                     
-                    return streamingClient;
+                    return server;
                 }
                 
                 public void run() {
@@ -100,9 +104,9 @@ public class BenchmarkTest {
                         String fullUrl;
                         
                         if(indexName.equals(""))
-                            fullUrl = url + ":" + port +  "/solr";
+                            fullUrl = urls[myThreadId % urls.length] + ":" + port +  "/solr";
                         else
-                            fullUrl = url + ":" + port +  "/solandra/"+indexName;
+                            fullUrl = urls[myThreadId % urls.length] + ":" + port +  "/solandra/"+indexName;
                         
                         if(type == Type.write)
                             solrClient = getStreamingServer(fullUrl);
@@ -204,7 +208,8 @@ public class BenchmarkTest {
         System.err.print(BenchmarkTest.class.getSimpleName() + " [--clients=<client-count>] [--loops=<loop-count>] [--type=<test-type>]\n"
                 + "\tclients        Number of client threads to create: Default is " + numClients + "\n"
                 + "\tloops          The number of remote thrift calls each client makes.  Default is " + numLoops + "\n"
-                + "\ttype           The type of operation to test. Options are:\n" + "\t\tread\n\t\twrite\n\t\tboth (default)\n");
+                + "\ttype           The type of operation to test. Options are:\n" + "\t\tread\n\t\twrite\n\t\tboth (default)\n"
+                + "\turl            A comma delimited list of servers. default is http://localhost\n");
 
         System.exit(0);
     }
@@ -235,6 +240,9 @@ public class BenchmarkTest {
 
                     if (arg.equalsIgnoreCase("type"))
                         type = Type.valueOf(value);
+                    
+                    if (arg.equalsIgnoreCase("url"))
+                        urls  = value.split(",");
                     
                     if(arg.equalsIgnoreCase("solr"))
                         indexName = "";
