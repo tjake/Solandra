@@ -902,8 +902,9 @@ public class CassandraIndexManager
             // initialize shards we didn't know about
             if (offset == null)
             {
-                updateNodeOffset(shards.indexName, myToken, shard.getKey(), -1);
+                RowMutation rm = updateNodeOffset(shards.indexName, myToken, shard.getKey(), -1);
                 offset = nodes.nodes.get(myToken);
+                CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm);
             }
 
             int randomSeqOffset = getRandomSequenceOffset(offset.get());
@@ -935,7 +936,7 @@ public class CassandraIndexManager
 
     private NodeInfo addNewShard(String indexName) throws IOException
     {
-        ShardInfo shards = getShardInfo(indexName, false);
+        ShardInfo shards = getShardInfo(indexName, true);
         
         // get max shard
         Integer maxShard = -1;
