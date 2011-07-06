@@ -673,7 +673,7 @@ public class CassandraIndexManager
                 {
                     if(usedNodeInfo.nodes.get(""+nextOffset) != null)
                     {
-                        CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, updateNodeOffset(indexName, myToken, node.shard, nextOffset));
+                        updateNodeOffset(indexName, myToken, node.shard, nextOffset);
 
                         
                         // try next offset               
