@@ -68,7 +68,6 @@ public class CassandraIndexManager
     public final int                                  expirationTime  = 120;                                            // seconds
 
     private final ConcurrentMap<String, AllNodeRsvps> indexReserves   = new MapMaker().makeMap();
-
     private final ConcurrentMap<String, ShardInfo>    indexShards     = new MapMaker().makeMap();
     private final ConcurrentMap<String, ShardInfo>    indexUsed       = new MapMaker().makeMap();
 
@@ -76,15 +75,26 @@ public class CassandraIndexManager
 
     private class ShardInfo
     {
-        public final String                                   indexName;
-        public final long                                     ttl    = System.currentTimeMillis()
-                                                                             + (expirationTime * 1000) - 1000;
+        public final String                              indexName;
+        private long                                     ttl;   
         public final ConcurrentSkipListMap<Integer, NodeInfo> shards = new ConcurrentSkipListMap<Integer, NodeInfo>();
 
         public ShardInfo(String indexName)
         {
             this.indexName = indexName;
+            renew();
         }
+        
+        public void renew()
+        {
+            ttl = System.currentTimeMillis() + (expirationTime * 1000) - 1000;   
+        }
+        
+        public long ttl()
+        {
+            return ttl;
+        }
+        
     }
 
     private class NodeInfo
@@ -286,9 +296,9 @@ public class CassandraIndexManager
         randomSeq = shuffle(randomSeq, r);
     }
 
-    private ShardInfo getShardInfo(String indexName, boolean force) throws IOException
-    {
-
+    private synchronized ShardInfo getShardInfo(String indexName, boolean force) throws IOException
+    { 
+        
         ShardInfo shards = indexShards.get(indexName);
         ShardInfo currentShards = shards;
 
@@ -361,9 +371,12 @@ public class CassandraIndexManager
                         
                             if(startSeqOffset == seqOffset)
                             {
-                                logger.info("Found reserved shard"+shardStr+"("+token+"):"+(offset.get()+1)+" TO " + (randomSeq[seqOffset]+reserveSlabSize));
-                                allNodeRsvps.rsvpList.add(new RsvpInfo(offset.get()+1, (randomSeq[seqOffset]+reserveSlabSize), nodes.shard, token));                       
-                            }    
+                                if(token.equals(getToken()))
+                                {                               
+                                    logger.info("Found reserved shard"+shardStr+"("+token+"):"+(offset.get()+1)+" TO " + (randomSeq[seqOffset]+reserveSlabSize));
+                                    allNodeRsvps.rsvpList.add(new RsvpInfo(offset.get()+1, (randomSeq[seqOffset]+reserveSlabSize), nodes.shard, token));                       
+                                }
+                            }
                         }                               
                     }
                 }
@@ -376,7 +389,7 @@ public class CassandraIndexManager
 
         if (currentShards == null)
         {
-            currentShards = indexShards.putIfAbsent(indexName, shards);
+            currentShards = indexShards.put(indexName, shards);
 
             if (currentShards == null)
             {
@@ -385,21 +398,15 @@ public class CassandraIndexManager
                 return shards;
             }
         }
-        else if (indexShards.replace(indexName, currentShards, shards))
-        {
-
-            logger.info(indexName + " has " + shards.shards.size() + " shards");
-
-            
-            currentShards = shards;
-        }
         else
         {
             //Merge together active and new
             for (Map.Entry<Integer, NodeInfo> entry : shards.shards.entrySet())
             {
-                currentShards.shards.put(entry.getKey(), entry.getValue());
+                currentShards.shards.putIfAbsent(entry.getKey(), entry.getValue());
             }
+            
+            currentShards.renew();
         }
 
         AllNodeRsvps currentNodeRsvps = indexReserves.get(indexName);
@@ -758,17 +765,18 @@ public class CassandraIndexManager
                     {
                         continue;
                     }
-
-                    if (c.timestamp() == minTtl && winningToken.compareTo(c.name()) <= 0)
-                    {
-                        winningToken = c.name();
-                    }
-
+                    
                     if (c.timestamp() < minTtl)
                     {
                         minTtl = c.timestamp();
                         winningToken = c.name();
-                    }                    
+                    }      
+                    
+                    //incase of a tie the token is the tiebreaker
+                    if (c.timestamp() == minTtl && winningToken.compareTo(c.name()) <= 0)
+                    {
+                        winningToken = c.name();
+                    }                                  
                 }
 
                 String winningTokenStr;
