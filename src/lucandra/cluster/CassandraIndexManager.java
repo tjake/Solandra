@@ -54,6 +54,7 @@ public class CassandraIndexManager
 
     private int[]                                     randomSeq;
 
+    private final Random r;
     public static final int                           maxDocsPerShard = Integer
                                                                               .valueOf(CassandraUtils.properties
                                                                                       .getProperty(
@@ -78,7 +79,8 @@ public class CassandraIndexManager
         public final String                              indexName;
         private long                                     ttl;   
         public final ConcurrentSkipListMap<Integer, NodeInfo> shards = new ConcurrentSkipListMap<Integer, NodeInfo>();
-
+        
+        
         public ShardInfo(String indexName)
         {
             this.indexName = indexName;
@@ -87,7 +89,7 @@ public class CassandraIndexManager
         
         public void renew()
         {
-            ttl = System.currentTimeMillis() + (expirationTime * 1000) - 1000;   
+            ttl = System.currentTimeMillis() + (expirationTime * 1000) + r.nextInt(5000);   
         }
         
         public long ttl()
@@ -272,7 +274,7 @@ public class CassandraIndexManager
         logger.info("Shards at once: " + shardsAtOnce);
 
         // get our unique sequence
-        Random r = null;
+        
         try
         {
             r = new Random(getNodeSeed(getToken()));
@@ -705,6 +707,14 @@ public class CassandraIndexManager
 
                 CassandraUtils.robustInsert(ConsistencyLevel.QUORUM, rm);
 
+                //Give it time to sink in, in-case clocks are off...
+                try
+                {
+                    Thread.sleep(100);
+                } catch (InterruptedException e1)
+                {
+                }
+                
                 // Read the columns back
                 IColumn supercol = null;
                 int attempts = 0;
