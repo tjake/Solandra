@@ -246,7 +246,7 @@ public class IndexManagerTests
 
                     Set<Long> all = new HashSet<Long>(CassandraIndexManager.maxDocsPerShard);
 
-                    for (int i = 0; i < CassandraIndexManager.maxDocsPerShard / 10; i++)
+                    for (int i = 0; i < CassandraIndexManager.maxDocsPerShard; i++)
                     {
                         Long id = null;
                         try
@@ -270,6 +270,7 @@ public class IndexManagerTests
                            if (i < 20000)
                                 try
                                 {
+                                    System.err.println("waiting for reserve expiration");
                                     Thread.sleep(120 * 1000);
                                 }
                                 catch (InterruptedException e)
@@ -316,6 +317,86 @@ public class IndexManagerTests
 
     }
 
+    @Test
+    public void testCassandraIncrement4() throws Exception
+    {
+
+        indexName = String.valueOf(System.nanoTime());
+
+        ExecutorService svc = Executors.newFixedThreadPool(16);
+        
+        final Random rnd = new Random();
+        List<Callable<Object>> callables = new ArrayList<Callable<Object>>();
+        for (int i = 0; i < 3; i++)
+        {
+            final int iidx = i;
+           
+            
+            Callable<Object> r = new Callable<Object>() {
+
+                public Object call()
+                {
+                    TestCassandraIndexManager idx = new TestCassandraIndexManager(4);
+
+                    
+                    long startTime = System.currentTimeMillis();
+
+
+                    for (int i = 0; i < CassandraIndexManager.maxDocsPerShard/32; i++)
+                    {
+                        String iname =  indexName+rnd.nextInt(3);
+                        
+                        Long id = null;
+                        try
+                        {
+                            id = idx.getNextId(iname, "i" + i+"_"+iidx);
+                        }
+                        catch (IOException e)
+                        {
+                            throw new RuntimeException(e);
+                        }
+
+                        try
+                        {
+                            assertTrue(iname+" has > 4 shards",CassandraIndexManager.getShardFromDocId(idx.getMaxId(iname)) < 4);
+                        } catch (IOException e1)
+                        {
+                            // TODO Auto-generated catch block
+                            e1.printStackTrace();
+                        }
+
+                        if (i > 0 && i % 10000 == 0)
+                        {
+                            long endTime = System.currentTimeMillis();
+                            System.err.println(Thread.currentThread().getName() + " id:" + id + ", 10k iterations in "
+                                    + (endTime - startTime) / 1000 + " sec");
+                            startTime = endTime;
+                            
+                                                 
+                        }
+                    }
+                    return null;
+                }
+            };
+
+            callables.add(r);
+        }
+
+        List<Future<Object>> results = svc.invokeAll(callables);
+
+   
+        for (Future<Object> result : results)
+        {
+            Object thread = result.get();
+        }
+        
+      
+        svc.shutdown();
+
+        svc.awaitTermination(10, TimeUnit.MINUTES);
+
+    }
+    
    // @Test
     public void testCustomRandomPartitioner()
     {
