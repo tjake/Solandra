@@ -233,8 +233,8 @@ public class SolandraIndexWriter extends UpdateHandler
             if (docId != null)
             {
                 isUpdate = true;
-                // if(logger.isDebugEnabled())
-                logger.info("update for document " + docId);
+                if(logger.isDebugEnabled())
+                    logger.debug("update for document " + docId);
             }
             else
             {

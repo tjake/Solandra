@@ -84,25 +84,21 @@ public class LucandraTermEnum extends TermEnum
     @Override
     public boolean next() throws IOException
     {
-        // current term is in tree
-        if (termView.size() < 2)
-        {
-            //logger.info("Reached end of term list");
-            currentTermEntry = null;
+        if(currentTermEntry == null)
             return false;
-        }
-
+        
+        // current term is in tree
         termView = termView.tailMap(currentTermEntry.getKey(), false);
-        currentTermEntry = termView.firstEntry();
+        currentTermEntry = termView.firstEntry() == null ? currentTermEntry : termView.firstEntry();
 
         // rebuffer from last key
-        if (termView.size() == 1)
+        if (termView.size() == 0)
         {         
             //logger.info("Rebuffering terms");
                      
             termView = termCache.skipTo(currentTermEntry.getKey());
 
-            if (termView.size() < 2 && termView.firstEntry().getKey().equals(currentTermEntry))
+            if (termView.size() < 2 && termView.firstEntry().getKey().equals(currentTermEntry.getKey()))
             {
                 currentTermEntry = null;
                 return false;

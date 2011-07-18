@@ -74,7 +74,7 @@ public class TermCache
             range = bufferTerms(skip, bufferSize);
         }
 
-        //logger.info(range);
+        //logger.info(Thread.currentThread().getName()+" rebuffered "+needsBuffering+" "+range);
         
         if (skip.compareTo(range.left) >= 0 && (!range.right.equals(emptyTerm)) && skip.compareTo(range.right) <= 0)
         {
@@ -203,7 +203,7 @@ public class TermCache
 
                 if (row.cf == null)
                 {
-                    logger.info("Encountered deleted row");
+                    //logger.info("Encountered deleted row");
                     continue;
                 }
                 String key = ByteBufferUtil.string(row.key.key, CassandraUtils.UTF_8);

@@ -26,12 +26,15 @@ import lucandra.cluster.CassandraIndexManager;
 
 import com.google.common.collect.MapMaker;
 
+import org.apache.log4j.Logger;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.IndexReader.ReaderFinishedListener;
 import org.apache.lucene.util.OpenBitSet;
 
 public class ReaderCache
 {
+    private static final Logger logger = Logger.getLogger(ReaderCache.class);
+    
     public final String indexName;
     public final Map<Integer, Document> documents;
     public final TermCache termCache;
@@ -50,7 +53,7 @@ public class ReaderCache
         docHits             = new OpenBitSet(CassandraIndexManager.maxDocsPerShard);
         readerFinishedListeners = new ArrayList<ReaderFinishedListener>();
         
-        fieldCacheKey = UUID.randomUUID();
+        fieldCacheKey = UUID.randomUUID();        
     }
     
     

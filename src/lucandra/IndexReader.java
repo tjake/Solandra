@@ -44,6 +44,8 @@ import org.apache.lucene.index.*;
 import org.apache.lucene.index.IndexWriter.MaxFieldLength;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.TermFreqVector;
+import org.apache.lucene.search.FieldCache;
+import org.apache.lucene.search.LucandraFieldCache;
 import org.apache.lucene.search.Similarity;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.LockObtainFailedException;
@@ -113,11 +115,15 @@ public class IndexReader extends org.apache.lucene.index.IndexReader
 
     public void clearCache()
     {
-
         String activeIndex = getIndexName();
 
         if (activeIndex != null)
         {
+            if(FieldCache.DEFAULT instanceof LucandraFieldCache)
+            {
+                LucandraFieldCache.purgeReader.finished(this);
+            }
+            
             globalCache.remove(activeIndex);
         }
 
@@ -367,7 +373,6 @@ public class IndexReader extends org.apache.lucene.index.IndexReader
     @Override
     public Object getCoreCacheKey()
     {
-
         try
         {
             return getCache().fieldCacheKey;

@@ -160,7 +160,7 @@ public class LucandraFieldCache implements FieldCache
     {
     }
 
-    final static IndexReader.ReaderFinishedListener purgeReader = new IndexReader.ReaderFinishedListener() {
+    public final static IndexReader.ReaderFinishedListener purgeReader = new IndexReader.ReaderFinishedListener() {
                                                                    
                                                                     public void finished(IndexReader reader)
                                                                     {
