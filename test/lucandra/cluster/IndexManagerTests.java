@@ -163,6 +163,7 @@ public class IndexManagerTests
 
     }
 
+    //Add and update ids from many shards at once (single node), verify no dups
     @Test
     public void testCassandraIncrement() throws IOException
     {
@@ -221,6 +222,9 @@ public class IndexManagerTests
         }
     }
 
+    
+    //Tests id generations across many nodes and many shards
+    //waits for reserves to time out
     @Test
     public void testCassandraIncrement2() throws Exception
     {
@@ -317,6 +321,7 @@ public class IndexManagerTests
 
     }
 
+    //Tests the number of shards created
     @Test
     public void testCassandraIncrement4() throws Exception
     {

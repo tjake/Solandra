@@ -98,7 +98,13 @@ public class LucandraTermEnum extends TermEnum
                      
             termView = termCache.skipTo(currentTermEntry.getKey());
 
-            if (termView.size() < 2 && termView.firstEntry().getKey().equals(currentTermEntry.getKey()))
+            if (termView.size() == 0)
+            {
+                
+            }
+            
+            if (termView.size() == 0 || 
+                 (termView.size() == 1 && termView.firstEntry().getKey().equals(currentTermEntry.getKey())))
             {
                 currentTermEntry = null;
                 return false;
