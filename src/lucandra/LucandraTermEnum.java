@@ -103,6 +103,12 @@ public class LucandraTermEnum extends TermEnum
                 currentTermEntry = null;
                 return false;
             }
+            else
+            {
+                termView = termView.tailMap(currentTermEntry.getKey(), false);
+                currentTermEntry = termView.firstEntry();
+            }
+            
         }
 
         return true;
