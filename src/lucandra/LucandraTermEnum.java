@@ -84,7 +84,7 @@ public class LucandraTermEnum extends TermEnum
     @Override
     public boolean next() throws IOException
     {
-        if(currentTermEntry == null)
+        if(termView.size() == 0)
             return false;
         
         // current term is in tree
@@ -94,14 +94,8 @@ public class LucandraTermEnum extends TermEnum
         // rebuffer from last key
         if (termView.size() == 0)
         {         
-            //logger.info("Rebuffering terms");
-                     
+            //logger.info("Rebuffering terms");                 
             termView = termCache.skipTo(currentTermEntry.getKey());
-
-            if (termView.size() == 0)
-            {
-                
-            }
             
             if (termView.size() == 0 || 
                  (termView.size() == 1 && termView.firstEntry().getKey().equals(currentTermEntry.getKey())))
