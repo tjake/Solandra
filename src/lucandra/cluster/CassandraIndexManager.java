@@ -25,17 +25,29 @@ import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.*;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.Random;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import lucandra.CassandraUtils;
+import lucandra.Pair;
 
-import com.google.common.collect.MapMaker;
-
-import org.apache.cassandra.db.*;
+import org.apache.cassandra.db.DeletedColumn;
+import org.apache.cassandra.db.ExpiringColumn;
+import org.apache.cassandra.db.IColumn;
+import org.apache.cassandra.db.ReadCommand;
+import org.apache.cassandra.db.Row;
+import org.apache.cassandra.db.RowMutation;
+import org.apache.cassandra.db.SliceFromReadCommand;
+import org.apache.cassandra.db.SuperColumn;
 import org.apache.cassandra.db.filter.QueryPath;
 import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.thrift.ColumnParent;
@@ -460,6 +472,25 @@ public class CassandraIndexManager
     public Long getId(String indexName, String key) throws IOException
     {
         return checkForUpdate(indexName, key);
+    }
+    
+    
+    public RowMutation getIdMutation(String indexName, String key, Long id) throws IOException
+    {
+        
+        int shard = getShardFromDocId(id);
+        ByteBuffer idCol  = ByteBufferUtil.bytes(String.valueOf(getShardedDocId(id)));
+        ByteBuffer keyCol = ByteBuffer.wrap(key.getBytes("UTF-8"));
+        
+        // Permanently mark the id as taken
+        ByteBuffer idKey = CassandraUtils.hashKeyBytes((indexName + "~" + shard).getBytes("UTF-8"),
+                CassandraUtils.delimeterBytes, "ids".getBytes("UTF-8"));
+
+        RowMutation rm = new RowMutation(CassandraUtils.keySpace, idKey);
+        rm.add(new QueryPath(CassandraUtils.schemaInfoColumnFamily, idCol, ByteBuffer.wrap(getToken().getBytes("UTF-8"))), keyCol, System.currentTimeMillis());
+        
+        
+        return rm;
     }
 
     public Long checkForUpdate(String indexName, String key) throws IOException

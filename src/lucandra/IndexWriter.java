@@ -508,9 +508,8 @@ public class IndexWriter
             boolean autoCommit) throws CorruptIndexException, IOException
     {
 
-        deleteDocuments(indexName, updateTerm, autoCommit);
-        addDocument(indexName, doc, analyzer, docNumber, autoCommit, null);
-
+        deleteDocuments(indexName, updateTerm, false);
+        addDocument(indexName, doc, analyzer, docNumber, autoCommit, null);     
     }
 
     public int docCount()
@@ -592,6 +591,14 @@ public class IndexWriter
         mutationQ.right.addAll(mutations.values());
     }
 
+    // append complete mutations to the list
+    public void appendMutations(String indexName, RowMutation... mutations)
+    {
+        Pair<AtomicInteger, ConcurrentLinkedQueue<RowMutation>> mutationQ = getMutationQueue(indexName);
+
+        mutationQ.right.addAll(Arrays.asList(mutations));
+    }
+    
     private Pair<AtomicInteger, ConcurrentLinkedQueue<RowMutation>> getMutationQueue(String indexName)
     {
 

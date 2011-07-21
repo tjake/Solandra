@@ -23,19 +23,22 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URL;
 import java.nio.ByteBuffer;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import lucandra.CassandraUtils;
+import lucandra.Pair;
 import lucandra.cluster.CassandraIndexManager;
 import lucandra.cluster.IndexManagerService;
-
-import com.google.common.collect.MapMaker;
-
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.MultiThreadedHttpConnectionManager;
 
 import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.db.IColumn;
@@ -46,9 +49,11 @@ import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.cassandra.utils.FBUtilities;
+import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.MultiThreadedHttpConnectionManager;
 import org.apache.log4j.Logger;
 import org.apache.lucene.index.Term;
-import org.apache.lucene.search.*;
+import org.apache.lucene.search.Query;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.CommonsHttpSolrServer;
 import org.apache.solr.common.SolrException;
@@ -59,7 +64,14 @@ import org.apache.solr.core.SolandraCoreInfo;
 import org.apache.solr.core.SolrCore;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.QueryParsing;
-import org.apache.solr.update.*;
+import org.apache.solr.update.AddUpdateCommand;
+import org.apache.solr.update.CommitUpdateCommand;
+import org.apache.solr.update.DeleteUpdateCommand;
+import org.apache.solr.update.MergeIndexesCommand;
+import org.apache.solr.update.RollbackUpdateCommand;
+import org.apache.solr.update.UpdateHandler;
+
+import com.google.common.collect.MapMaker;
 
 public class SolandraIndexWriter extends UpdateHandler
 {
@@ -225,7 +237,7 @@ public class SolandraIndexWriter extends UpdateHandler
 
             Long docId = null;
             RowMutation[] rms = null;
-
+            
             if (!coreInfo.bulk && !cmd.allowDups)
                 docId = IndexManagerService.instance.getId(coreInfo.indexName, key);
 
@@ -233,8 +245,10 @@ public class SolandraIndexWriter extends UpdateHandler
             if (docId != null)
             {
                 isUpdate = true;
+                            
                 if(logger.isDebugEnabled())
                     logger.debug("update for document " + docId);
+             
             }
             else
             {
@@ -259,12 +273,17 @@ public class SolandraIndexWriter extends UpdateHandler
             Term idTerm = this.idTerm.createTerm(cmd.indexedId);
 
             if (isUpdate)
+            {
                 writer.updateDocument(indexName, idTerm, cmd.getLuceneDocument(schema), schema.getAnalyzer(),
                         shardedId, false);
+            
+                writer.appendMutations(indexName, IndexManagerService.instance.getIdMutation(coreInfo.indexName, key, docId));
+            }
             else
+            {
                 writer.addDocument(indexName, cmd.getLuceneDocument(schema), schema.getAnalyzer(), shardedId, false,
                         rms);
-
+            }
             rc = 1;
 
             // Notify readers
