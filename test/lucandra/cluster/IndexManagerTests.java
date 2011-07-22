@@ -177,7 +177,7 @@ public class IndexManagerTests
         Map<Integer, AtomicInteger> shardStats = new HashMap<Integer, AtomicInteger>();
 
         // Add
-        for (int i = 0; i < CassandraIndexManager.maxDocsPerShard * 2; i++)
+        for (int i = 0; i < CassandraIndexManager.maxDocsPerShard; i++)
         {
             Long id = idx.getNextId(indexName, "i" + i);
 
@@ -206,7 +206,7 @@ public class IndexManagerTests
         assertEquals(3, CassandraIndexManager.getShardFromDocId(idx.getMaxId(indexName)));
 
         // Update
-        for (int i = 0; i < CassandraIndexManager.maxDocsPerShard * 2; i++)
+        for (int i = 0; i < CassandraIndexManager.maxDocsPerShard; i++)
         {
             Long id = idx.getId(indexName, "i" + i);
 
@@ -275,7 +275,7 @@ public class IndexManagerTests
                                 try
                                 {
                                     System.err.println("waiting for reserve expiration");
-                                    Thread.sleep(120 * 1000);
+                                    Thread.sleep((120 * 1000)+5000);
                                 }
                                 catch (InterruptedException e)
                                 {
