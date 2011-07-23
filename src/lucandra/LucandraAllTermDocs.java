@@ -33,6 +33,7 @@ import org.apache.log4j.Logger;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.TermDocs;
 import org.apache.lucene.index.TermEnum;
+import org.apache.lucene.util.OpenBitSet;
 
 public class LucandraAllTermDocs implements TermDocs
 {
@@ -41,7 +42,7 @@ public class LucandraAllTermDocs implements TermDocs
     private String        indexName;
     private int           idx;      // tracks where we are in the doc buffer
     private int           fillSize; // tracks how much the buffer was filled with docs from cassandra
-    private int[]         docBuffer = new int[CassandraIndexManager.maxDocsPerShard+1]; // max number of docs we pull
+    private OpenBitSet    docBuffer = new OpenBitSet(CassandraIndexManager.maxDocsPerShard+1); // max number of docs we pull
     private int           doc       = -1;
     private int           maxDoc;
 
@@ -49,7 +50,6 @@ public class LucandraAllTermDocs implements TermDocs
     {
         indexName = indexReader.getIndexName();
         maxDoc = indexReader.maxDoc();
-        Arrays.fill(docBuffer, 0);
         
         idx = 0;
         fillSize = 0;
@@ -106,8 +106,8 @@ public class LucandraAllTermDocs implements TermDocs
         while (i < length && doc < maxDoc && fillSize > 0)
         {
 
-            docs[i] = doc;
-            freqs[i] = docBuffer[doc];
+            docs[i]  = doc;
+            freqs[i] = docBuffer.getBit(doc);
             ++i;
 
             next();
@@ -120,7 +120,7 @@ public class LucandraAllTermDocs implements TermDocs
         doc = target;
         for (; idx < maxDoc; idx++)
         {
-                if (idx >= doc && docBuffer[idx] > 0){
+                if (idx >= doc && docBuffer.getBit(idx) > 0){
                     doc = idx;
                     return true; 
                 }
@@ -164,7 +164,7 @@ public class LucandraAllTermDocs implements TermDocs
             {
                 //valid id
                 if( !(c instanceof ExpiringColumn)){
-                    docBuffer[id] = 1;
+                    docBuffer.set(id);
                     fillSize++;
                 }
             }
