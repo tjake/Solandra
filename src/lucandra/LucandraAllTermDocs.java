@@ -138,37 +138,51 @@ public class LucandraAllTermDocs implements TermDocs
         
         ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"), CassandraUtils.delimeterBytes, "ids".getBytes("UTF-8"));
 
-        ReadCommand cmd = new SliceFromReadCommand(CassandraUtils.keySpace, key,
-                new ColumnParent(CassandraUtils.schemaInfoColumnFamily), ByteBufferUtil.EMPTY_BYTE_BUFFER,
-                ByteBufferUtil.EMPTY_BYTE_BUFFER, false, Integer.MAX_VALUE);
+        ByteBuffer startCol = ByteBufferUtil.EMPTY_BYTE_BUFFER;
+        int pageSize = 4096;
+        
+        while(true)
+        {
+        
+            ReadCommand cmd = new SliceFromReadCommand(CassandraUtils.keySpace, key,
+                    new ColumnParent(CassandraUtils.schemaInfoColumnFamily), startCol,
+                    ByteBufferUtil.EMPTY_BYTE_BUFFER, false, pageSize);
 
         
-        List<Row> rows = CassandraUtils.robustRead(CassandraUtils.consistency, cmd);
+            List<Row> rows = CassandraUtils.robustRead(CassandraUtils.consistency, cmd);
 
-        if(rows.isEmpty())
-            return;
+            if(rows.isEmpty())
+                return;
         
-        Row row = rows.get(0);
+            Row row = rows.get(0);
 
-        if(row == null || row.cf == null)
-            return;
+            if(row == null || row.cf == null)
+                return;
         
-        for(IColumn sc : row.cf.getSortedColumns()){
+            int actualPageSize = 0;
+            for(IColumn sc : row.cf.getSortedColumns()){
                         
-            Integer id  = Integer.valueOf(ByteBufferUtil.string(sc.name()));
-                       
-            if(!sc.isLive())
-                continue;
+                actualPageSize++;
+                              
+                if(sc.name().equals(startCol))
+                    continue;
                 
-            for(IColumn c : sc.getSubColumns())
-            {
-                //valid id
-                if( !(c instanceof ExpiringColumn)){
-                    docBuffer.set(id);
-                    fillSize++;
-                }
-            }
-        }     
-    }
+                startCol = sc.name();
 
+                if(!sc.isLive())
+                    continue;
+                                                           
+                Integer id  = Integer.valueOf(ByteBufferUtil.string(sc.name()));
+
+                docBuffer.set(id);
+                fillSize++;               
+            }     
+            
+            if(actualPageSize < pageSize)
+                break;
+            
+            if(logger.isDebugEnabled())
+                logger.debug("Read "+fillSize+ " "+ ByteBufferUtil.string(startCol));
+        }
+    }
 }
