@@ -24,6 +24,7 @@ import java.net.MalformedURLException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -56,6 +57,7 @@ public class BenchmarkTest {
     private static Random  random = new Random(System.currentTimeMillis()); 
     private static Map<String,CommonsHttpSolrServer> streamingClients = new HashMap<String,CommonsHttpSolrServer>();
     
+    
     private static Runnable getRunnable() {
 
         try {
@@ -73,7 +75,7 @@ public class BenchmarkTest {
                     SolrInputDocument doc =  new SolrInputDocument();
                     doc.addField("text", text);
                     doc.addField("type", types[random.nextInt(types.length-1)]);
-                    doc.addField("id", ""+System.nanoTime()+Math.random());
+                    doc.addField("id", UUID.randomUUID());
 
                     return doc;
                 }
@@ -106,7 +108,7 @@ public class BenchmarkTest {
                         if(indexName.equals(""))
                             fullUrl = urls[myThreadId % urls.length] + ":" + port +  "/solr";
                         else
-                            fullUrl = urls[myThreadId % urls.length] + ":" + port +  "/solandra/"+indexName;
+                            fullUrl = urls[myThreadId % urls.length] + ":" + port +  "/solandra/" + (type == Type.write ? "~" : "") + indexName;
                         
                         if(type == Type.write)
                             solrClient = getStreamingServer(fullUrl);

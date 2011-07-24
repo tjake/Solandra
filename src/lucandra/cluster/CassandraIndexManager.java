@@ -194,11 +194,9 @@ public class CassandraIndexManager
 
                     if (nextId <= info.endId)
                     {
-                        long id =  (long) (maxDocsPerShard * info.shard) + nextId;
-                        if(id == 1048577)                       
-                            logger.error("FOUND ID: "+nextId + " "+info.shard+" "+getToken());
-                        return id;
-                    } else
+                        return (long) (maxDocsPerShard * info.shard) + nextId;
+                    } 
+                    else
                     {
                         rsvpList.set(pos, null);
                     }
@@ -379,7 +377,7 @@ public class CassandraIndexManager
                             // Load this reserve if there is more to go.
                             if (offset.get() < (maxDocsPerShard - 1))
                             {
-                                int seqOffset = getRandomSequenceOffset(offset.get() + 1);
+                                int seqOffset = getRandomSequenceOffset(offset.get() + 100);
                                 int prevSeqOffset = getRandomSequenceOffset(offset.get() - 1);
 
                                 // Only save if this is not on a slot boundry
@@ -388,9 +386,9 @@ public class CassandraIndexManager
                                     if (token.equals(getToken()))
                                     {
                                         logger.info("Found reserved shard" + shardStr + "(" + token + "):"
-                                                + (offset.get() + 1) + " TO "
+                                                + (offset.get() + 100) + " TO "
                                                 + (randomSeq[seqOffset] + reserveSlabSize));
-                                        allNodeRsvps.rsvpList.add(new RsvpInfo(offset.get() + 1, (randomSeq[seqOffset]
+                                        allNodeRsvps.rsvpList.add(new RsvpInfo(offset.get() + 100, (randomSeq[seqOffset]
                                                 + reserveSlabSize - 1), nodes.shard, token, nextTTL));
                                     }
                                 }

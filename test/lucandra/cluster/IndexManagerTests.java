@@ -225,7 +225,7 @@ public class IndexManagerTests
     
     //Tests id generations across many nodes and many shards
     //waits for reserves to time out
-    @Test
+    //@Test
     public void testCassandraIncrement2() throws Exception
     {
 
@@ -322,7 +322,7 @@ public class IndexManagerTests
     }
 
     //Tests the number of shards created
-    @Test
+    //@Test
     public void testCassandraIncrement4() throws Exception
     {
 
@@ -347,7 +347,7 @@ public class IndexManagerTests
                     long startTime = System.currentTimeMillis();
 
 
-                    for (int i = 0; i < CassandraIndexManager.maxDocsPerShard/32; i++)
+                    for (int i = 0; i < CassandraIndexManager.maxDocsPerShard; i++)
                     {
                         String iname =  indexName+rnd.nextInt(3);
                         
