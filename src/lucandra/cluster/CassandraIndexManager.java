@@ -374,8 +374,8 @@ public class CassandraIndexManager
                             nodes.nodes.put(token, offset);
                             shards.shards.put(shardNum, nodes);
 
-                            // Load this reserve if there is more to go.
-                            if (offset.get() < (maxDocsPerShard - 1))
+                            // Load this reserve if there is at least 100 more to go.
+                            if ((offset.get()+100) < (maxDocsPerShard - 1))
                             {
                                 int seqOffset = getRandomSequenceOffset(offset.get() + 100);
                                 int prevSeqOffset = getRandomSequenceOffset(offset.get() - 1);
@@ -388,7 +388,7 @@ public class CassandraIndexManager
                                         logger.info("Found reserved shard" + shardStr + "(" + token + "):"
                                                 + (offset.get() + 100) + " TO "
                                                 + (randomSeq[seqOffset] + reserveSlabSize));
-                                        allNodeRsvps.rsvpList.add(new RsvpInfo(offset.get() + 100, (randomSeq[seqOffset]
+                                        allNodeRsvps.rsvpList.add(new RsvpInfo(offset.get() + 100   , (randomSeq[seqOffset]
                                                 + reserveSlabSize - 1), nodes.shard, token, nextTTL));
                                     }
                                 }
