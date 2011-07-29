@@ -328,7 +328,19 @@ public class IndexReader extends org.apache.lucene.index.IndexReader
                             if( term.isSetLongVal() )
                             {
                                 f =  new NumericField(term.getField()).setLongValue(term.getLongVal());            
-                            }                                           
+                            }
+                            else if(term.isSetDoubleVal())
+                            {
+                                f =  new NumericField(term.getField()).setDoubleValue(term.getDoubleVal());
+                            }
+                            else if(term.isSetIntVal())
+                            {
+                                f =  new NumericField(term.getField()).setIntValue(term.getIntVal());
+                            }
+                            else if(term.isSetFloatVal())
+                            {
+                                f =  new NumericField(term.getField()).setFloatValue((float)term.getFloatVal());
+                            }
                             else if(term.isSetIs_binary())
                             {
                                 if(term.is_binary)

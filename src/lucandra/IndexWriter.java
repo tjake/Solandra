@@ -45,6 +45,7 @@ import org.apache.lucene.analysis.tokenattributes.*;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Fieldable;
 import org.apache.lucene.document.NumericField;
+import org.apache.lucene.document.NumericField.DataType;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.FieldInvertState;
 import org.apache.lucene.index.Term;
@@ -289,7 +290,14 @@ public class IndexWriter
                 if (field instanceof NumericField)
                 {
                     Number n = ((NumericField) field).getNumericValue();
-                    tt.setLongVal(n.longValue());
+                    switch(((NumericField) field).getDataType())
+                    {
+                    case LONG: tt.setLongVal(n.longValue()); break;
+                    case INT: tt.setIntVal(n.intValue()); break;
+                    case FLOAT: tt.setFloatVal(n.floatValue()); break;
+                    case DOUBLE: tt.setDoubleVal(n.doubleValue()); break;
+                    default: throw new IllegalStateException("Unknown numeric type in field: "+field);
+                    };
                 }
 
                 byte[] value = field.isBinary() ? field.getBinaryValue() : field.stringValue().getBytes("UTF-8");
