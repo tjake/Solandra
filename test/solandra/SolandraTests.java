@@ -273,11 +273,13 @@ public class SolandraTests extends SolandraTestRunner
 
     public void testUnicode(CommonsHttpSolrServer solrClient) throws Exception
     {
-        SolrQuery q = new SolrQuery().setQuery("text:\u5639\u563b").addField("*").addField("score");
+        SolrQuery q = new SolrQuery().setQuery("text:\u5639\u563b").addField("*").addField("text");
 
         QueryResponse r = solrClient.query(q);
 
         assertEquals(1, r.getResults().getNumFound());
+        
+        assertEquals("this is a test of Solandra \u5639\u563b", r.getResults().get(0).getFieldValue("text"));
     }
 
     public void testDeleteTerm(CommonsHttpSolrServer solrClient) throws Exception

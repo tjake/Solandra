@@ -346,7 +346,7 @@ public class IndexReader extends org.apache.lucene.index.IndexReader
                                 if(term.is_binary)
                                     f = new Field(term.getField(), term.getText());
                                 else 
-                                    f = new Field(term.getField(), new String(term.getText()), Store.YES, Index.ANALYZED);
+                                    f = new Field(term.getField(), new String(term.getText(),"UTF-8"), Store.YES, Index.ANALYZED);
                             }
                             else
                                 throw new RuntimeException("Malformed term");
