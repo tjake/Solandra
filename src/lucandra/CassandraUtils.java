@@ -778,14 +778,8 @@ public class CassandraUtils
 
         if(!useCompression)
             return input;      
-        try
-        {
-            return Snappy.compress(input);
-        }
-        catch (SnappyException e)
-        {
-           throw new IOException(e);
-        }      
+       
+        return Snappy.compress(input);          
     }
 
     public static byte[] decompress(byte[] input) throws IOException
@@ -793,14 +787,7 @@ public class CassandraUtils
         if(!useCompression)
             return input;
               
-        try
-        {
-            return Snappy.uncompress(input);
-        }
-        catch (SnappyException e)
-        {
-            throw new IOException(e);
-        }
+        return Snappy.uncompress(input);    
     }
 
     //Java lets you do EVIL things
