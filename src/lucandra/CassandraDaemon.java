@@ -28,11 +28,8 @@ public class CassandraDaemon extends org.apache.cassandra.thrift.CassandraDaemon
     
     public void start()
     {
-        
-        startedLatch.countDown();
-        
-        // TODO Auto-generated method stub
         super.start();
+        startedLatch.countDown();
     }
 
     public CountDownLatch getStartedLatch()
