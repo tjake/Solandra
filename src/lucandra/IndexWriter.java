@@ -67,6 +67,13 @@ public class IndexWriter
     private static final Logger                                                                       logger          = Logger.getLogger(IndexWriter.class);
     private static TProtocolFactory                                                                   protocolFactory = new TBinaryProtocol.Factory();
 
+    static final Map<ByteBuffer, List<Number>> emptyTermMap = new ConcurrentSkipListMap<ByteBuffer, List<Number>>();
+    static
+    {
+        emptyTermMap.put(CassandraUtils.termFrequencyKeyBytes, CassandraUtils.emptyArray);
+        emptyTermMap.put(CassandraUtils.positionVectorKeyBytes, CassandraUtils.emptyArray);
+    }
+    
     public IndexWriter()
     {
 
@@ -77,6 +84,7 @@ public class IndexWriter
             RowMutation rms[]) throws CorruptIndexException, IOException
     {
 
+       
         Map<ByteBuffer, RowMutation> workingMutations = new HashMap<ByteBuffer, RowMutation>();
 
         byte[] indexNameBytes = indexName.getBytes("UTF-8");
@@ -270,12 +278,9 @@ public class IndexWriter
                         CassandraUtils.delimeterBytes, field.name().getBytes("UTF-8"), CassandraUtils.delimeterBytes,
                         field.stringValue().getBytes("UTF-8"));
 
-                Map<ByteBuffer, List<Number>> termMap = new ConcurrentSkipListMap<ByteBuffer, List<Number>>();
-                termMap.put(CassandraUtils.termFrequencyKeyBytes, CassandraUtils.emptyArray);
-                termMap.put(CassandraUtils.positionVectorKeyBytes, CassandraUtils.emptyArray);
-
+                
                 CassandraUtils.addMutations(workingMutations, CassandraUtils.termVecColumnFamily, docId, key,
-                        new LucandraTermInfo(docNumber, termMap).serialize());
+                        new LucandraTermInfo(docNumber, emptyTermMap).serialize());
 
                 // Store all terms under a row
                 CassandraUtils.addMutations(workingMutations, CassandraUtils.metaInfoColumnFamily,

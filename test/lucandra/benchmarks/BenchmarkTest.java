@@ -90,7 +90,8 @@ public class BenchmarkTest {
                         {
                             if((server = streamingClients.get(url)) == null)
                             {
-                                server =  new StreamingUpdateSolrServer(url, 512, 1+(numClients/urls.length));
+                                server =  new StreamingUpdateSolrServer(url, numLoops, (numClients/urls.length));
+                                System.err.println("Connection added by :"+threadId);
                                 streamingClients.put(url, server);
                             }
                         }
