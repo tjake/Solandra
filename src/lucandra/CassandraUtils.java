@@ -188,6 +188,8 @@ public class CassandraUtils
    
     private static boolean               cassandraStarted       = false;
 
+    private static CassandraDaemon       daemon                 = null;
+
     public static String                 fakeToken              = String.valueOf(System.nanoTime());
 
     public static synchronized void setStartup()
@@ -250,7 +252,7 @@ public class CassandraUtils
 
         System.setProperty("cassandra-foreground", "1");
 
-        final CassandraDaemon daemon = new CassandraDaemon();
+        daemon = new CassandraDaemon();
 
         try
         {
@@ -282,6 +284,16 @@ public class CassandraUtils
             logger.error("Cassandra not started after 1 hour");
             System.exit(3);
         }
+    }
+
+    public static synchronized void stopServer()
+    {
+        if (!cassandraStarted)
+            return;
+
+        daemon.deactivate();
+        daemon = null;
+        cassandraStarted = false;
     }
 
     public static void createCassandraSchema() throws IOException
