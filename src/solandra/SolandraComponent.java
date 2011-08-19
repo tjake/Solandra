@@ -50,6 +50,7 @@ public final class SolandraComponent
     private static AtomicBoolean hasSolandraSchema = new AtomicBoolean(false);
     private static final Logger logger = Logger.getLogger(SolandraComponent.class);
     public final static Map<String,Long> cacheCheck = new MapMaker().makeMap();
+    private static final int port = Integer.parseInt(System.getProperty("solandra.port", "8983"));
 
     public static boolean flushCache(String indexName) throws IOException
     {   
@@ -165,7 +166,7 @@ public final class SolandraComponent
                     throw new IOException("can't locate index");
 
                 InetAddress addr = endpoints.get(0);
-                String shard = addr.getHostAddress() + ":8983/solandra/" + indexName + "~" + i;
+                String shard = addr.getHostAddress() + ":" + port + "/solandra/" + indexName + "~" + i;
 
                 if(logger.isDebugEnabled())
                     logger.debug("Adding shard(" + indexName + "): " + shard);

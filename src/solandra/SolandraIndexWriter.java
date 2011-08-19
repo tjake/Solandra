@@ -109,6 +109,8 @@ public class SolandraIndexWriter extends UpdateHandler
                                                                                                                       "solandra.write.buffer.queue.size",
                                                                                                                       "16"));
 
+    private static final int port = Integer.parseInt(System.getProperty("solandra.port", "8983"));
+
     public SolandraIndexWriter(SolrCore core)
     {
         super(core);
@@ -460,7 +462,7 @@ public class SolandraIndexWriter extends UpdateHandler
                     {
                         // delete from other shards via http
                         CommonsHttpSolrServer solrj = new CommonsHttpSolrServer("http://" + addr.getHostAddress()
-                                + ":8983/solandra/" + subIndex, new HttpClient(httpConnections));
+                                + ":" + port + "/solandra/" + subIndex, new HttpClient(httpConnections));
 
                         try
                         {
