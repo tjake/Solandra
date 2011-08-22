@@ -19,8 +19,6 @@
  */
 package lucandra.dht;
 
-import static com.google.common.base.Charsets.UTF_8;
-
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 
@@ -40,41 +38,30 @@ public class RandomPartitioner extends org.apache.cassandra.dht.RandomPartitione
     public static Logger      logger         = Logger.getLogger(RandomPartitioner.class);
     private static final byte DELIMITER_BYTE = ":".getBytes()[0];
 
-    public DecoratedKey<BigIntegerToken> decorateKey(ByteBuffer key)
+    @Override
+    public org.apache.cassandra.db.DecoratedKey<BigIntegerToken> decorateKey(ByteBuffer key)
     {
-        return new DecoratedKey<BigIntegerToken>(getToken(key), key);
-    }
-
-    public DecoratedKey<BigIntegerToken> convertFromDiskFormat(ByteBuffer fromdisk)
-    {
-        // find the delimiter position
-        int splitPoint = -1;
-        for (int i = fromdisk.position(); i < fromdisk.limit(); i++)
-        {
-            if (fromdisk.get(i) == DELIMITER_BYTE)
-            {
-                splitPoint = i;
-                break;
-            }
-        }
-        assert splitPoint != -1;
-
         
-        String token = null;
+        ByteBuffer extractedToken = extractSolandraToken(key);
+               
+        //non-solandra key passes through
+        if(extractedToken == null)    
+            return new org.apache.cassandra.db.DecoratedKey<BigIntegerToken>(super.getToken(key), key);
+          
+      
+        //the token is pre-processed
         try
         {
-            token = ByteBufferUtil.string(fromdisk, fromdisk.position(), splitPoint - fromdisk.position(), UTF_8);
-        }
+            return new DecoratedKey<BigIntegerToken>(new BigIntegerToken(ByteBufferUtil.string(extractedToken)), key);
+        } 
         catch (CharacterCodingException e)
         {
             throw new RuntimeException(e);
-        }
-        ByteBuffer key = fromdisk.duplicate();
-        key.position(splitPoint + 1);
-        return new DecoratedKey<BigIntegerToken>(new BigIntegerToken(token), key);
+        }        
     }
 
-    public BigIntegerToken getToken(ByteBuffer key)
+    
+    private ByteBuffer extractSolandraToken(ByteBuffer key)
     {
         int length = key.remaining();
 
@@ -124,23 +111,54 @@ public class RandomPartitioner extends org.apache.cassandra.dht.RandomPartitione
 
             if (found)
             {
-                String tokStr = null;
-                try
-                {
-                    tokStr = ByteBufferUtil.string(key, key.position(), firstNonChar - key.position(), UTF_8);
-                }
-                catch (CharacterCodingException e)
-                {
-                    throw new RuntimeException(e);
-                }
-                //logger.info("Token hijacked:" + tokStr);
-
-                return new BigIntegerToken(tokStr);
-            }
-            
+                //return extracted token
+                ByteBuffer extractedToken = key.duplicate();
+                extractedToken.position(key.position());
+                extractedToken.limit(firstNonChar - key.position());
+                
+                return extractedToken;
+            }           
         }
 
-        return super.getToken(key);
+        return null;
+    }
+    
+    public org.apache.cassandra.db.DecoratedKey<BigIntegerToken> convertFromDiskFormat(ByteBuffer fromdisk)
+    {
+        // find the delimiter position
+        int splitPoint = -1;
+        for (int i = fromdisk.position(); i < fromdisk.limit(); i++)
+        {
+            if (fromdisk.get(i) == DELIMITER_BYTE)
+            {
+                splitPoint = i;
+                break;
+            }
+        }
+        assert splitPoint != -1;
+        
+        ByteBuffer key = fromdisk.duplicate();
+        key.position(splitPoint + 1);
+        return decorateKey(key);
+    }
+
+    @Override
+    public BigIntegerToken getToken(ByteBuffer key)
+    {
+        ByteBuffer extractedToken = extractSolandraToken(key);
+
+        if(extractedToken == null)
+            return super.getToken(key);
+        
+        //the token is pre-processed
+        try
+        {
+            return new BigIntegerToken(ByteBufferUtil.string(extractedToken));
+        } 
+        catch (CharacterCodingException e)
+        {
+            throw new RuntimeException(e);
+        }   
     }
 
 }
