@@ -165,7 +165,7 @@ public final class SolandraComponent
                     throw new IOException("can't locate index");
 
                 InetAddress addr = endpoints.get(0);
-                String shard = addr.getHostAddress() + ":8983/solandra/" + indexName + "~" + i;
+                String shard = addr.getHostAddress() + ":" + CassandraUtils.port + "/solandra/" + indexName + "~" + i;
 
                 if(logger.isDebugEnabled())
                     logger.debug("Adding shard(" + indexName + "): " + shard);

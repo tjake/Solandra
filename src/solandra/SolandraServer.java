@@ -31,8 +31,6 @@ public class SolandraServer {
 
 		String context = System.getProperty("solandra.context", "/solandra");
 		
-		int port = Integer.parseInt(System.getProperty("solandra.port", "8983"));
-		
 		try {
 		    
 		    if(System.getProperty("solandra.clientmode", "false").equalsIgnoreCase("true"))
@@ -40,7 +38,7 @@ public class SolandraServer {
 		    else
 		        CassandraUtils.startupServer();
 
-			JettySolandraRunner jetty = new JettySolandraRunner(context, port);
+			JettySolandraRunner jetty = new JettySolandraRunner(context, CassandraUtils.port);
 			jetty.start(false);
 		} catch (Exception ex) {
 			ex.printStackTrace();
