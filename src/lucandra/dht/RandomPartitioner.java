@@ -114,7 +114,7 @@ public class RandomPartitioner extends org.apache.cassandra.dht.RandomPartitione
                 //return extracted token
                 ByteBuffer extractedToken = key.duplicate();
                 extractedToken.position(key.position());
-                extractedToken.limit(firstNonChar - key.position());
+                extractedToken.limit(key.position() + firstNonChar - key.position());
                 
                 return extractedToken;
             }           
