@@ -460,7 +460,7 @@ public class SolandraIndexWriter extends UpdateHandler
                     {
                         // delete from other shards via http
                         CommonsHttpSolrServer solrj = new CommonsHttpSolrServer("http://" + addr.getHostAddress()
-                                + ":8983/solandra/" + subIndex, new HttpClient(httpConnections));
+                                + ":" + CassandraUtils.port + "/solandra/" + subIndex, new HttpClient(httpConnections));
 
                         try
                         {
