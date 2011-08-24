@@ -96,7 +96,7 @@ public class SolandraDispatchFilter extends SolrDispatchFilter
                 }
                 catch (IOException e)
                 {
-                    resp.sendError(404);
+                    resp.sendError(404,e.toString());
                 }
 
                 return;
