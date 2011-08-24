@@ -195,12 +195,6 @@ public class SolandraCoreContainer extends CoreContainer
         String schemaXML = readSchemaXML(info.coreName);
         long   maxId     = IndexManagerService.instance.getMaxId(indexName);
         int    numShards = CassandraIndexManager.getShardFromDocId(maxId);        
-        long   totalDocs = 0;
-        
-        for(int i=0; i<=numShards; i++)
-        {
-        
-        }
         
         StringBuilder sb = new StringBuilder();
         
@@ -280,6 +274,10 @@ public class SolandraCoreContainer extends CoreContainer
 			resourceValue = rows.get(0).cf
 				.getColumn(coreNameBytes)
 				.getSubColumn(resourceNameBytes).value();
+		}
+		else
+		{
+		    logger.info("row was marked empty: "+rows);
 		}
 		
 		return resourceValue;
