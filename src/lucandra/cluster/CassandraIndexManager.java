@@ -319,7 +319,7 @@ public class CassandraIndexManager
             }
         }
 
-        synchronized (indexName)
+        synchronized (indexName.intern())
         {
 
             ByteBuffer key = CassandraUtils.hashKeyBytes(indexName.getBytes("UTF-8"), CassandraUtils.delimeterBytes,
@@ -361,7 +361,7 @@ public class CassandraIndexManager
                         }
                         catch(NumberFormatException e)
                         {
-                            logger.warn("invalid shard name encountered: "+shardStr+" "+c);
+                            logger.warn("invalid shard name encountered: "+shardStr+" "+c.getSubColumns().size());
                             continue;
                         }
                             
