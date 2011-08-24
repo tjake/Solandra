@@ -353,8 +353,18 @@ public class CassandraIndexManager
                     for (IColumn c : row.cf.getSortedColumns())
                     {
                         String shardStr = ByteBufferUtil.string(c.name());
-                        Integer shardNum = Integer.valueOf(shardStr);
-
+                        Integer shardNum = null;
+                        
+                        try
+                        {
+                            shardNum = Integer.valueOf(shardStr);
+                        }
+                        catch(NumberFormatException e)
+                        {
+                            logger.warn("invalid shard name encountered: "+shardStr+" "+ByteBufferUtil.string(c.value()));
+                            continue;
+                        }
+                            
                         assert c instanceof SuperColumn;
 
                         NodeInfo nodes = new NodeInfo(shardNum);
