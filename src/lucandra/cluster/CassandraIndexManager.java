@@ -361,7 +361,7 @@ public class CassandraIndexManager
                         }
                         catch(NumberFormatException e)
                         {
-                            logger.warn("invalid shard name encountered: "+shardStr+" "+ByteBufferUtil.string(c.value()));
+                            logger.warn("invalid shard name encountered: "+shardStr+" "+c);
                             continue;
                         }
                             
