@@ -44,46 +44,12 @@ public class JettySolandraRunner
   FilterHolder dispatchFilter;
   String context;
   
-  public JettySolandraRunner( String context, int port )
+  public JettySolandraRunner( String context, int port, String host)
   {
-    this.init( context, port );
-  }
-
-  public JettySolandraRunner( String context, int port, String solrConfigFilename )
-  {
-    this.init( context, port );
-    dispatchFilter.setInitParameter("solrconfig-filename", solrConfigFilename);
-  }
   
-  private void init( String context, int port ) 
-  {
     this.context = context;
     server = new Server( port );   
-    
-    InputStream configStream = JettySolandraRunner.class.getResourceAsStream("jetty.xml");  
-   
-    if(configStream != null)
-    {
-        XmlConfiguration configuration;
-        try
-        {
-            configuration = new XmlConfiguration(configStream);
-            configuration.configure(server); 
-        }
-        catch (SAXException e)
-        {
-            throw new RuntimeException(e);
-        }
-        catch (IOException e)
-        {
-            throw new RuntimeException(e);
-        }
-        catch (Exception e)
-        {
-            throw new RuntimeException(e);
-        } 
-      
-    }
+    server.getConnectors()[0].setHost(host);
   
     server.setStopAtShutdown( true );
 
@@ -185,7 +151,7 @@ public class JettySolandraRunner
     try {
       CassandraUtils.startupServer();
         
-      JettySolandraRunner jetty = new JettySolandraRunner( "/solandra", 8983 );
+      JettySolandraRunner jetty = new JettySolandraRunner( "/solandra", 8983, "0.0.0.0" );
       jetty.start();
     }
     catch( Exception ex ) {

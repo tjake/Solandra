@@ -38,7 +38,7 @@ public class SolandraServer {
 		    else
 		        CassandraUtils.startupServer();
 
-			JettySolandraRunner jetty = new JettySolandraRunner(context, CassandraUtils.port);
+			JettySolandraRunner jetty = new JettySolandraRunner(context, CassandraUtils.port, CassandraUtils.webHost);
 			jetty.start(false);
 		} catch (Exception ex) {
 			ex.printStackTrace();

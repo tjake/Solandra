@@ -53,7 +53,7 @@ public class SolandraTestRunner
                 {
                     try
                     {
-                        JettySolandraRunner jetty = new JettySolandraRunner("/solandra", port);
+                        JettySolandraRunner jetty = new JettySolandraRunner("/solandra", port, "0.0.0.0");
                         jetty.start();
                     }
                     catch (Exception ex)

@@ -67,7 +67,8 @@ public class CassandraUtils
     public static final ConsistencyLevel consistency;
     
     public static boolean useCompression;
-    public static int port;
+    public static final int port;
+    public static final String webHost;
     
     // Initialize logging in such a way that it checks for config changes every
     // 10 seconds.
@@ -113,6 +114,7 @@ public class CassandraUtils
             
             useCompression = Boolean.valueOf(properties.getProperty("solandra.compression", "true"));
             port = Integer.parseInt(properties.getProperty("solandra.port", "8983"));
+            webHost = properties.getProperty("solandra.host", "0.0.0.0");
             
             try
             {
