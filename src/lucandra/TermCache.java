@@ -50,7 +50,7 @@ public class TermCache
 
         Pair<Term, Term> range = null;
 
-        int bufferSize = termList.isEmpty() ? 4 : 64;
+        int bufferSize = termList.isEmpty() ? 1 : 3;
 
         // verify we've buffered sufficiently
         Map.Entry<Term, Pair<Term, Term>> tailEntry = termQueryBoundries.ceilingEntry(skip);
