@@ -30,6 +30,7 @@ import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.log4j.Logger;
 import org.apache.lucene.index.*;
 import org.apache.lucene.util.FieldCacheSanityChecker;
+import org.apache.lucene.util.OpenBitSet;
 import org.apache.lucene.util.StringHelper;
 import org.apache.solr.core.SolandraCoreContainer;
 
@@ -56,6 +57,7 @@ public class LucandraFieldCache implements FieldCache
         caches.put(Double.TYPE, new DoubleCache(this));
         caches.put(String.class, new StringCache(this));
         caches.put(StringIndex.class, new StringIndexCache(this));
+        caches.put(UnValuedDocsCache.class, new UnValuedDocsCache(this));
     }
 
     public synchronized void purgeAllCaches()
@@ -320,6 +322,42 @@ public class LucandraFieldCache implements FieldCache
         }
     }
 
+    static final class UnValuedDocsCache extends Cache {
+             UnValuedDocsCache(FieldCache wrapper) {
+               super(wrapper);
+             }
+             
+             @Override
+             protected Object createValue(IndexReader reader, Entry entryKey)
+             throws IOException {
+               Entry entry = entryKey;
+               String field = entry.field;
+               
+               if (reader.maxDoc() == reader.docFreq(new Term(field))) {
+                 return DocIdSet.EMPTY_DOCIDSET;
+               }
+               
+               OpenBitSet res = new OpenBitSet(reader.maxDoc());
+               TermDocs termDocs = reader.termDocs();
+               TermEnum termEnum = reader.terms (new Term (field));
+               try {
+                 do {
+                   Term term = termEnum.term();
+                   if (term==null || term.field() != field) break;
+                   termDocs.seek (termEnum);
+                   while (termDocs.next()) {
+                     res.fastSet(termDocs.doc());
+                   }
+                 } while (termEnum.next());
+               } finally {
+                 termDocs.close();
+                 termEnum.close();
+               }
+               res.flip(0, reader.maxDoc());
+               return res;
+             }
+           }
+    
     // inherit javadocs
     public byte[] getBytes(IndexReader reader, String field) throws IOException
     {
@@ -862,5 +900,11 @@ public class LucandraFieldCache implements FieldCache
     public PrintStream getInfoStream()
     {
         return infoStream;
+    }
+
+    @Override
+    public DocIdSet getUnValuedDocs(IndexReader reader, String field) throws IOException
+    {
+        return (DocIdSet) caches.get(UnValuedDocsCache.class).get(reader, new Entry(field, null));  
     }
 }
