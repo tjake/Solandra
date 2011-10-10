@@ -170,7 +170,7 @@ public class LucandraTermInfo implements Comparable<LucandraTermInfo>
     public ByteBuffer serialize()
     {
         //         flags, freq, norm, pos, numoff, off 
-        int size = 1 + 4 + (hasNorm ? 1 : 0) + (hasPositions ? positions.length*4 : 0) + (hasOffsets ? positions.length*4+4 : 0);
+        int size = 1 + 4 + (hasNorm ? 1 : 0) + (hasPositions ? positions.length*4 : 0) + (hasOffsets ? offsets.length*4+4 : 0);
         ByteBuffer r = ByteBuffer.allocate(size);
         
         //store the initial content flags in the inital byte
