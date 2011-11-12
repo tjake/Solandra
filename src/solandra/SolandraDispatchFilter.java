@@ -60,7 +60,7 @@ public class SolandraDispatchFilter extends SolrDispatchFilter
 
             // otherwise, we should find a index from the path
             int idx = path.indexOf("/", 1);
-            if (idx == schemaPrefix.length())
+            if (idx > 1 && path.startsWith("/"))
             {
                 // try to get the index as a request parameter first
                 indexName = path.substring(1, idx);
