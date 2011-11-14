@@ -241,6 +241,10 @@ public class SolandraCoreContainer extends CoreContainer
 		}
 		
 		ByteBuffer resourceValue = null;
+
+		ByteBuffer coreKey = CassandraUtils.hashKeyBytes(coreName.getBytes("UTF-8"),
+                CassandraUtils.delimeterBytes, "resources".getBytes("UTF-8"));
+       
 		
 		ByteBuffer coreNameBytes = ByteBufferUtil.bytes(coreName);
 		ByteBuffer resourceNameBytes = ByteBufferUtil.bytes(resourceName);
@@ -250,7 +254,7 @@ public class SolandraCoreContainer extends CoreContainer
 				coreNameBytes);
 		
 		List<Row> rows = CassandraUtils.robustRead(
-				coreNameBytes,
+				coreKey,
 				queryPath,
 				Arrays.asList(resourceNameBytes),
 				ConsistencyLevel.QUORUM);
@@ -294,11 +298,15 @@ public class SolandraCoreContainer extends CoreContainer
 			logger.debug(resourceValue);
 		}
 		
-		ByteBuffer coreNameBytes = ByteBufferUtil.bytes(coreName);
-		ByteBuffer resourceNameBytes = ByteBufferUtil.bytes(resourceName);
 		
-		RowMutation rm = new RowMutation(CassandraUtils.keySpace, coreNameBytes);
+		ByteBuffer coreKey = CassandraUtils.hashKeyBytes(coreName.getBytes("UTF-8"),
+                 CassandraUtils.delimeterBytes, "resources".getBytes("UTF-8"));
+		
+		RowMutation rm = new RowMutation(CassandraUtils.keySpace, coreKey);
 
+		ByteBuffer coreNameBytes = ByteBufferUtil.bytes(coreName);
+        ByteBuffer resourceNameBytes = ByteBufferUtil.bytes(resourceName);
+        
 		QueryPath queryPath = new QueryPath(
 				CassandraUtils.schemaInfoColumnFamily,
 				coreNameBytes,
