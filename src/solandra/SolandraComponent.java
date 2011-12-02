@@ -35,6 +35,7 @@ import lucandra.cluster.IndexManagerService;
 import com.google.common.collect.MapMaker;
 
 import org.apache.cassandra.config.DatabaseDescriptor;
+import org.apache.cassandra.config.Schema;
 import org.apache.cassandra.db.Row;
 import org.apache.cassandra.db.filter.QueryPath;
 import org.apache.cassandra.service.StorageService;
@@ -93,7 +94,7 @@ public final class SolandraComponent
         if(!hasSolandraSchema.get())
         {
             //Check is Solandra schema exists, if not die
-            if(! DatabaseDescriptor.getNonSystemTables().contains(CassandraUtils.keySpace) )
+            if(! Schema.instance.getNonSystemTables().contains(CassandraUtils.keySpace) )
                 throw new IOException("Solandra keyspace is missing, please import then retry");
             else
                 hasSolandraSchema.set(true);
