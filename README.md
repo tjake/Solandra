@@ -53,7 +53,7 @@ To use an existing Cassandra distribution perform the following steps.
 
 ####Limitations####
 
-Solandra uses Solr's built in distributed searching meachanism.
+Solandra uses Solr's built in distributed searching mechanism.
 Most of its limitations are covered here:
 
 [http://wiki.apache.org/solr/DistributedSearch#Distributed_Searching_Limitations](http://wiki.apache.org/solr/DistributedSearch#Distributed_Searching_Limitations)
