@@ -388,8 +388,13 @@ public class CassandraUtils
 
         cfs.add(cf);
 
-        KsDef solandraKS = new KsDef().setName(keySpace).setReplication_factor(1).setStrategy_class(
-                "org.apache.cassandra.locator.SimpleStrategy").setCf_defs(cfs);
+        Map<String, String> strategyOptions = new HashMap<String, String>();
+        strategyOptions.put("replication_factor", "1");
+        KsDef solandraKS = new KsDef()
+            .setName(keySpace)
+            .setStrategy_class("org.apache.cassandra.locator.SimpleStrategy")
+            .setStrategy_options(strategyOptions)
+            .setCf_defs(cfs);
 
         CassandraServer cs = new CassandraServer();
 
