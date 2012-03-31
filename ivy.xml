@@ -34,7 +34,7 @@
 
     <dependency org="org.apache.cassandra" name="cassandra-all" rev="1.1.0-beta2" conf="* -> *,!sources,!javadoc" />
 
-    <!-- TODO: Added only because missing from the Cassandra pom.  Can be deleted here when by Cassandra. -->
+    <!-- TODO: Added only because missing from the Cassandra pom.  Can be deleted here when added by Cassandra. -->
     <dependency org="com.yammer.metrics" name="metrics-core" rev="2.0.3" conf="* -> *,!sources,!javadoc"/>
     <dependency org="edu.stanford.ppl" name="snaptree" rev="0.1" conf="* -> *,!sources,!javadoc"/>
   </dependencies>
