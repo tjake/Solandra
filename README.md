@@ -23,6 +23,8 @@ I've written up [how Solandra and DataStax Enterprise Search differ here](http:/
 ####Requirements:####
 
 Java >= 1.6
+Cassandra >= 1.1
+Solr >= 3.1
 
 ####Features:######
 
