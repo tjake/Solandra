@@ -116,7 +116,7 @@ public class CassandraUtils
             port = Integer.parseInt(properties.getProperty("solandra.port", "8983"));
             webHost = properties.getProperty("solandra.host", "0.0.0.0");
             
-            try
+            /*try
             {
                 setFinalStatic(FieldCache.class.getDeclaredField("DEFAULT"), new org.apache.lucene.search.LucandraFieldCache());
                 logger.info("Sucessfully Hijacked FieldCacheImpl");
@@ -132,7 +132,7 @@ public class CassandraUtils
             catch (Exception e)
             {
               throw new RuntimeException(e);
-            }
+	      }*/
             
 
         }
