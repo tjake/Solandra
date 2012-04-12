@@ -30,13 +30,18 @@ import org.apache.cassandra.utils.ByteBufferUtil;
 public class VIntType extends AbstractType<BigInteger> {
 
     public static final VIntType instance = new VIntType();
-    
-    
+
+    @Override
     public String getString(ByteBuffer bytes) {
         return Integer.toString(CassandraUtils.readVInt(bytes));          
     }
 
-    
+    @Override
+    public ByteBuffer fromString(String source) {
+        return ByteBuffer.wrap(CassandraUtils.writeVInt(new Integer(source)));
+    }
+
+    @Override
     public int compare(ByteBuffer o1, ByteBuffer o2) {
         if(null == o1){
             if(null == o2) return 0;
@@ -65,11 +70,13 @@ public class VIntType extends AbstractType<BigInteger> {
         return i1 < i2 ?  -1 : 1;
     }
 
+    @Override
     public BigInteger compose(ByteBuffer bytes)
     {
         return new BigInteger(ByteBufferUtil.getArray(bytes));
     }
 
+    @Override
     public ByteBuffer decompose(BigInteger value)
     {
         return ByteBuffer.wrap(value.toByteArray());
@@ -79,7 +86,7 @@ public class VIntType extends AbstractType<BigInteger> {
         return bigInteger.toString();
     }
 
-
+    @Override
     public void validate(ByteBuffer bytes) throws MarshalException
     {
         
@@ -98,7 +105,6 @@ public class VIntType extends AbstractType<BigInteger> {
         return false;
     }
 
-
     public boolean isCurrency()
     {
         return false;
@@ -108,7 +114,6 @@ public class VIntType extends AbstractType<BigInteger> {
         return  obj.toString().length();
     }
 
-    
     public int getScale(BigInteger obj) {
         return 0;
     }
@@ -116,7 +121,6 @@ public class VIntType extends AbstractType<BigInteger> {
     public int getJdbcType() {
         return Types.BIGINT;
     }
-
 
     public boolean needsQuotes()
     {

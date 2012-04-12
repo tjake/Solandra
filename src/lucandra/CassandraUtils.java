@@ -34,7 +34,7 @@ import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 
 import org.apache.cassandra.config.ConfigurationException;
-import org.apache.cassandra.config.DatabaseDescriptor;
+import org.apache.cassandra.config.Schema;
 import org.apache.cassandra.db.*;
 import org.apache.cassandra.db.filter.QueryPath;
 import org.apache.cassandra.service.AbstractCassandraDaemon;
@@ -307,7 +307,7 @@ public class CassandraUtils
             return;
         }
 
-        if (DatabaseDescriptor.getNonSystemTables().contains(keySpace))
+        if (Schema.instance.getNonSystemTables().contains(keySpace))
         {
             logger.info("Found Solandra specific schema");
             return;
@@ -329,7 +329,7 @@ public class CassandraUtils
             System.exit(2);
         }
 
-        if (DatabaseDescriptor.getNonSystemTables().contains(keySpace))
+        if (Schema.instance.getNonSystemTables().contains(keySpace))
         {
             logger.info("Found Solandra specific schema");
             return;
@@ -388,8 +388,13 @@ public class CassandraUtils
 
         cfs.add(cf);
 
-        KsDef solandraKS = new KsDef().setName(keySpace).setReplication_factor(1).setStrategy_class(
-                "org.apache.cassandra.locator.SimpleStrategy").setCf_defs(cfs);
+        Map<String, String> strategyOptions = new HashMap<String, String>();
+        strategyOptions.put("replication_factor", "1");
+        KsDef solandraKS = new KsDef()
+            .setName(keySpace)
+            .setStrategy_class("org.apache.cassandra.locator.SimpleStrategy")
+            .setStrategy_options(strategyOptions)
+            .setCf_defs(cfs);
 
         CassandraServer cs = new CassandraServer();
 
