@@ -52,7 +52,7 @@ public class RandomPartitioner extends org.apache.cassandra.dht.RandomPartitione
         //the token is pre-processed
         try
         {
-            return new DecoratedKey<BigIntegerToken>(new BigIntegerToken(ByteBufferUtil.string(extractedToken)), key);
+            return new org.apache.cassandra.db.DecoratedKey<BigIntegerToken>(new BigIntegerToken(ByteBufferUtil.string(extractedToken)), key);
         } 
         catch (CharacterCodingException e)
         {
