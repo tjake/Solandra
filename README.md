@@ -14,11 +14,11 @@ For more information please see the [wiki](https://github.com/tjake/Solandra/wik
 Solandra is relatively stable, most of the common functionality used has been working and stable for users.
 I personally am no longer developing Solandra much beyond version changes and applying pull requests.
 
-If you are looking for a supported Solr + Cassandra integration beyond what Solandra offers then look at
-[DataStax Enterprise Search](http://www.datastax.com/products/enterprise)  
-(full disclosure I am a developer on this team).
+If you are looking for a supported Solr + Cassandra integration beyond what Solandra offers 
+look at [DataStax Enterprise Search](http://www.datastax.com/products/enterprise)  
+(Full disclosure I am a developer on that team).
 
-I've written up [how Solandra and DataStax Enterprise Search differ here](http://www.datastax.com/dev/blog/cassandra-with-solr-integration-details)
+I've written up [how Solandra and DataStax Enterprise Search differ here](http://www.datastax.com/dev/blog/cassandra-with-solr-integration-details).
 
 ####Requirements:####
 
