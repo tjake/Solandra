@@ -244,6 +244,15 @@ public class CassandraUtils
 
     }
 
+    
+    public static synchronized void setStartup(){
+    	if(cassandraStarted){
+    		throw new RuntimeException("You attempted to set the casandra started flag after it has started");
+    	}
+    	
+    	cassandraStarted = true;
+    }
+    
     // Start Cassandra up!!!
     public static synchronized void startupServer() throws IOException
     {
