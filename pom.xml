@@ -8,6 +8,7 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<appDir>${project.build.directory}/solandra-app</appDir>
+		<skipLongTests>true</skipLongTests>
 	</properties>
 
 	<build>
@@ -174,6 +175,7 @@
 				<version>2.12</version>
 				<executions>
 					<execution>
+						<id>tests</id>
 						<phase>integration-test</phase>
 						<goals>
 							<goal>test</goal>
@@ -185,6 +187,27 @@
 							<includes>
 								<include>**/SolandraTests.java</include>
 							</includes>
+							<redirectTestOutputToFile>true</redirectTestOutputToFile>
+							<additionalClasspathElements>
+								<additionalClasspathElement>${appDir}</additionalClasspathElement>
+								<additionalClasspathElement>${appDir}/conf</additionalClasspathElement>
+							</additionalClasspathElements>
+						</configuration>
+					</execution>
+					<execution>
+						<id>long-tests</id>
+						<phase>integration-test</phase>
+						<goals>
+							<goal>test</goal>
+						</goals>
+						<configuration>
+							<argLine>-Xmx1G
+								-Dlog4j.configuration=file:///${basedir}/resources/cassandra/log4j-tools.properties
+								-Dlog4j.defaultInitOverride=true</argLine>
+							<includes>
+								<include>**/IndexManagerTests.java</include>
+							</includes>
+							<skipTests>${skipLongTests}</skipTests>
 							<redirectTestOutputToFile>true</redirectTestOutputToFile>
 							<additionalClasspathElements>
 								<additionalClasspathElement>${appDir}</additionalClasspathElement>
