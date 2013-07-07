@@ -107,7 +107,10 @@ public class SolandraTests extends SolandraTestRunner
                 
                 testAllSearch(solrClient);
                 logger.info("testAllSearch");
-
+    			
+				testStringSort(solrClient);
+				logger.info("testStringSort");
+				
                 testHighlight(solrClient);
                 logger.info("testHighlight");
 
@@ -223,15 +226,94 @@ public class SolandraTests extends SolandraTestRunner
         assertEquals(1, r.getResults().getNumFound());
     }
 
-    public void testAllSearch(CommonsHttpSolrServer solrClient) throws Exception
+    public void testStringSort(CommonsHttpSolrServer solrClient) throws Exception
     {
+		SolrInputDocument doc = new SolrInputDocument();
+
+        doc.addField("title", "test9");
+        doc.addField("url", "http://www.test9.com");
+        doc.addField("text", "this is a test9 of Solandra \u5639\u563b");
+        doc.addField("user_id_i", 10);
+        doc.addField("price", 1000);
+
+        solrClient.add(doc);
+
+        doc = new SolrInputDocument();
+
+        doc.addField("title", "test5");
+        doc.addField("url", "http://www.test5.com");
+        doc.addField("text", "this is a test5 of Solandra");
+        doc.addField("user_id_i", 10);
+        doc.addField("price", 10000);
+
+        solrClient.add(doc);
+
+        doc = new SolrInputDocument();
+
+        doc.addField("title", "test8");
+        doc.addField("url", "http://www.test8.com");
+        doc.addField("text", "this is a test8 of Solandra");
+        doc.addField("user_id_i", 100);
+        doc.addField("price", 100000);
+
+        solrClient.add(doc);
+
+        doc = new SolrInputDocument();
+
+        doc.addField("title", "test7");
+        doc.addField("url", "http://www.test7.com");
+        doc.addField("text", "this is a test7 of Solandra");
+        doc.addField("user_id_i", 100);
+        doc.addField("price", 10);
+
+        solrClient.add(doc);
+
+		doc = new SolrInputDocument();
+
+        doc.addField("title", "test6");
+        doc.addField("url", "http://www.test6.com");
+        doc.addField("text", "this is a test6 of Solandra");
+        doc.addField("user_id_i", 100);
+        doc.addField("price", 10);
+
+        solrClient.add(doc);
+
+        solrClient.commit(true, true);
 
         SolrQuery q = new SolrQuery().setQuery("*:*").addField("*").addField("score");
-
+		q.setSortField("title", ORDER.asc);
+		
         QueryResponse r = solrClient.query(q);
-        assertEquals(4, r.getResults().getNumFound());
+        assertEquals(9, r.getResults().getNumFound());
+
+		assertEquals("test1", r.getResults().get(0).getFieldValue("title"));
+		assertEquals("test2", r.getResults().get(1).getFieldValue("title"));
+		assertEquals("test3", r.getResults().get(2).getFieldValue("title"));
+		assertEquals("test4", r.getResults().get(3).getFieldValue("title"));
+		assertEquals("test5", r.getResults().get(4).getFieldValue("title"));
+		assertEquals("test6", r.getResults().get(5).getFieldValue("title"));
+		assertEquals("test7", r.getResults().get(6).getFieldValue("title"));
+		assertEquals("test8", r.getResults().get(7).getFieldValue("title"));
+		assertEquals("test9", r.getResults().get(8).getFieldValue("title"));
+		
+		solrClient.deleteById("http://www.test5.com");
+		solrClient.deleteById("http://www.test6.com");
+		solrClient.deleteById("http://www.test7.com");
+		solrClient.deleteById("http://www.test8.com");
+		solrClient.deleteById("http://www.test9.com");
+        solrClient.commit(true, true);
+
     }
 
+	public void testAllSearch(CommonsHttpSolrServer solrClient) throws Exception
+	{
+
+	        SolrQuery q = new SolrQuery().setQuery("*:*").addField("*").addField("score");
+
+	        QueryResponse r = solrClient.query(q);
+	        assertEquals(4, r.getResults().getNumFound());
+	}
+	
     public void testHighlight(CommonsHttpSolrServer solrClient) throws Exception
     {
 
