@@ -16,13 +16,16 @@ public class Pair<T1, T2>
     @Override
     public final int hashCode()
     {
-        int hashCode = 31 + (left == null ? 0 : left.hashCode());
-        return 31*hashCode + (right == null ? 0 : right.hashCode());
+        return Objects.hashCode(left, right);
     }
     
     @Override
     public final boolean equals(Object o)
     {
+        if (o == null)
+            return false;
+        if (this == o)
+            return true;
         if(!(o instanceof Pair))
             return false;
         Pair that = (Pair)o;
