@@ -293,6 +293,22 @@ public class SolandraTests extends SolandraTestRunner
         QueryResponse r = solrClient.query(q);
         assertEquals(3, r.getResults().getNumFound());
 
+        // Try to check whether the document should be saved just after deleteById
+        SolrInputDocument doc = new SolrInputDocument();
+
+        doc.addField("title", "test4");
+        doc.addField("url", "http://www.test4.com");
+        doc.addField("text", "this is a test4 of Solandra");
+        doc.addField("user_id_i", 100);
+        doc.addField("price", 10);
+
+        solrClient.add(doc);
+
+        QueryResponse r2 = solrClient.query(q);
+        assertEquals(4, r2.getResults().getNumFound());
+
+        solrClient.deleteById("http://www.test4.com");
+        solrClient.commit(true, true);
     }
 
     public void testUpdateDocument(CommonsHttpSolrServer solrClient) throws Exception
@@ -331,6 +347,21 @@ public class SolandraTests extends SolandraTestRunner
         QueryResponse r = solrClient.query(q);
 
         assertEquals(0, r.getResults().getNumFound());
+
+        // Try to check whether the document should be saved just after deleteByQuery
+        SolrInputDocument doc = new SolrInputDocument();
+        doc.addField("title", "test1");
+        doc.addField("url", "http://www.test.com");
+        doc.addField("text", "this is a test of Solandra");
+        doc.addField("user_id_i", 10);
+        doc.addField("price", 1000);
+
+        solrClient.add(doc);
+        solrClient.commit(true, true);
+
+        QueryResponse r2 = solrClient.query(q);
+
+        assertEquals(1, r2.getResults().getNumFound());
     }
     
     public void testQueryFilter(CommonsHttpSolrServer solrClient) throws Exception
